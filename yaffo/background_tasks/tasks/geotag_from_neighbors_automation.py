@@ -130,7 +130,7 @@ def geotag_from_neighbors_automation_task(automation_id: int, media_item_ids: li
             updated = _geotag_from_neighbors(session, progress_reporter, media_item_ids, max_minutes)
             return f"geotagged {len(updated)}/{len(media_item_ids)} photo(s) within {max_minutes} min"
 
-        record_run(session, automation, work)
+        record_run(session, automation, work, media_item_ids=media_item_ids)
     finally:
         session.close()
         SessionFactory.remove()
@@ -139,8 +139,6 @@ def geotag_from_neighbors_automation_task(automation_id: int, media_item_ids: li
 @register_handler(AUTOMATION_HANDLER_GEOTAG_FROM_NEIGHBORS)
 def enqueue_geotag_from_neighbors(automation: Automation, context: EventContext | None = None) -> None:
     """Handler for the built-in geotag-from-neighbors automation: enqueue the geotag
-    for the photos the triggering event concerns. A schedule trigger (no context, no
-    photo subjects) has nothing to act on, so it's a no-op."""
+    for the photos selected by the event or schedule."""
     media_item_ids = context.media_item_ids if context else []
-    if media_item_ids:
-        geotag_from_neighbors_automation_task(automation.id, media_item_ids)
+    geotag_from_neighbors_automation_task(automation.id, media_item_ids)

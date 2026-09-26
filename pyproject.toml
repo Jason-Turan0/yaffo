@@ -4,6 +4,7 @@ exclude = ["yaffo_ui_tests", "yaffo_ui_tests.*"]
 
 [tool.setuptools.package-data]
 yaffo = [
+    "assistant_knowledge/*",
     "resources/**/*",
     "static/**/*",
     "templates/**/*",

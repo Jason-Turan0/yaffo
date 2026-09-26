@@ -4,6 +4,11 @@ This page covers the most common problems and how to narrow them down. Many
 issues come down to indexing or background jobs, so it is worth checking those
 first.
 
+[Ask Yaffo](../start-here/ask-yaffo.md) can run these checks for you: describe the
+problem, or click **Ask Yaffo** on the error message or failed job. It reads the
+logs, jobs, and media folders, explains what it found, and proposes a fix you can
+approve.
+
 ## Photos Do Not Appear
 
 ![The Index Photos utility showing the diagnostic library counts](assets/troubleshooting/index-photos-status.webp)
@@ -22,6 +27,8 @@ If photos are missing from the library:
 - **Check folder permissions.** Yaffo can only index files it is allowed to read.
 
 See [Indexing & Library Management](../library-basics/indexing-library.md).
+If your library is on another drive, follow
+[External Drive Not Showing](troubleshooting/external-drive-not-showing.md).
 
 ## Jobs Are Stuck or Slow
 
@@ -42,7 +49,9 @@ perfect. Some mistakes are expected, and each has a correction path:
 
 - **Wrong or missing faces.** Review unassigned faces, correct bad assignments
   from a person's page, and ignore low-quality faces. See
-  [Assigning Faces](../organize-review/assigning-faces.md).
+  [Assigning Faces](../organize-review/assigning-faces.md). If face processing
+  never finishes or assigned faces reappear, see
+  [Faces Stuck After Assigning](troubleshooting/faces-stuck-after-assigning.md).
 - **Wrong or missing labels.** Treat labels as search hints. Adjust the label
   vocabulary and re-classify if needed. See
   [Labels and Auto-Classification](../organize-review/labels.md).
@@ -51,6 +60,9 @@ perfect. Some mistakes are expected, and each has a correction path:
 
 Re-running the relevant step, or lowering a similarity threshold, often improves
 results as your library grows.
+
+If photos appear in the wrong year, follow
+[Photos Show the Wrong Year](troubleshooting/photos-wrong-year.md).
 
 ## Map or Location Suggestions Do Not Work
 

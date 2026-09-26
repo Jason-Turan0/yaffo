@@ -465,7 +465,7 @@ def build_query(query: dict, extra_conditions: tuple = ()) -> Select:
     return stmt
 
 
-def resolve_query(session: Session, query: dict) -> Any:
+def resolve_query(session: Session, query: dict, *, row_limit: int | None = None) -> Any:
     """Validate, translate, and run one query. The return shape depends on the
     query: rows -> list of column dicts; `count`/`count_distinct` -> a number;
     `facet` -> list of {value, count}; `range` -> {min, max}. Raises ValueError if
@@ -475,7 +475,10 @@ def resolve_query(session: Session, query: dict) -> Any:
         raise ValueError("; ".join(errors))
     source = query["source"]
     if source in _VIRTUAL_SOURCES:
-        return _VIRTUAL_SOURCES[source].resolve(session, query)
+        if source == "folders" and row_limit is not None:
+            return media_dir_repository.resolve_folders(session, query, row_limit=row_limit)
+        rows = _VIRTUAL_SOURCES[source].resolve(session, query)
+        return rows[:row_limit] if row_limit is not None else rows
     # Calculated-column filters (media_dir_id / relative_path) need the media-dir
     # registry, so they're translated here (with the session) and fed into build_query.
     extra = tuple(media_dir_repository.media_item_path_conditions(session, query)) if source == "media_items" else ()
@@ -486,6 +489,8 @@ def resolve_query(session: Session, query: dict) -> Any:
     if op == "range":
         return dict(session.execute(stmt).mappings().one())
     # rows and facet both come back as a list of dict rows
+    if row_limit is not None:
+        stmt = stmt.limit(min(query.get("limit", row_limit), row_limit))
     return [dict(row) for row in session.execute(stmt).mappings().all()]
 
 

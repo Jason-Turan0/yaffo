@@ -4,7 +4,7 @@ import pytest
 from yaffo.site_agents.model_clients import providers
 from yaffo.site_agents.model_clients.factory import create_model_client
 from yaffo.site_agents.model_clients import AnthropicModelClient, OpenAICompatibleModelClient
-from yaffo.site_agents.tool_providers.tool_provider_types import RawToolDefinition
+from yaffo.site_agents.common.tool_providers.tool_provider_types import RawToolDefinition
 
 pytestmark = pytest.mark.unit
 

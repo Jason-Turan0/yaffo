@@ -8,7 +8,7 @@ from yaffo.utils.file_sync import run_file_sync
 
 @task_queue.task()
 @task_queue.lock_task('file-sync')
-def file_sync_task(automation_id: int | None = None):
+def file_sync_task(automation_id: int | None = None, scope_paths: list[str] | None = None):
     """Reconcile the photo index with disk. Enqueued by the schedule dispatcher
     (the 'file_sync' automation handler) or directly; runs the same sync as the
     manual index-photos button (via run_file_sync), so the import/index Jobs it
@@ -17,7 +17,7 @@ def file_sync_task(automation_id: int | None = None):
     `automation_id` tags the created Jobs as that automation's run."""
     session = SessionFactory()
     try:
-        run_file_sync(session, automation_id=automation_id)
+        run_file_sync(session, automation_id=automation_id, scope_paths=scope_paths)
     finally:
         session.close()
         SessionFactory.remove()
@@ -26,6 +26,6 @@ def file_sync_task(automation_id: int | None = None):
 @register_handler(AUTOMATION_HANDLER_FILE_SYNC)
 def enqueue_file_sync(automation: Automation, context: EventContext | None = None) -> None:
     """Handler for the built-in file-sync automation: enqueue the task tagged
-    with the automation's id so its run Jobs link back. `context` is unused (a
-    full reconcile ignores the triggering event's subjects)."""
-    file_sync_task(automation.id)
+    with the automation's id so its run Jobs link back. Scheduled runs scan the
+    context's selected roots; other callers keep the full reconcile."""
+    file_sync_task(automation.id, context.scope_paths if context and context.event_type is None else None)

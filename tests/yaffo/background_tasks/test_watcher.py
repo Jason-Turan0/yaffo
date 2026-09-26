@@ -24,6 +24,7 @@ from watchdog.events import (
 from watchdog.observers import Observer
 
 from yaffo.background_tasks import watcher
+from yaffo.utils.thumbnail_marker import THUMBNAIL_DIR_MARKER
 from yaffo.background_tasks.watcher import (
     DirOp,
     Drained,
@@ -288,6 +289,17 @@ class TestHelpers:
         assert _is_indexable(Path("/photos/clip.avi"))  # cataloged (not inline-playable)
         assert _is_indexable(Path("/photos/clip.mkv"))
         assert not _is_indexable(Path("/photos/clip.webm"))  # genuinely unsupported
+
+    def test_is_indexable_skips_marked_thumbnail_dir(self, tmp_path):
+        thumbs = tmp_path / "photos" / "yaffo_thumbnails"
+        (thumbs / "nested").mkdir(parents=True)
+        assert _is_indexable(thumbs / "nested" / "face_1.jpg")
+        # Seen live, with no restart or cache expiry: the settings move marks the
+        # new dir just before files arrive there.
+        (thumbs / THUMBNAIL_DIR_MARKER).write_text("")
+        assert not _is_indexable(thumbs / "face_1.jpg")
+        assert not _is_indexable(thumbs / "nested" / "face_1.jpg")
+        assert _is_indexable(tmp_path / "photos" / "a.jpg")
 
 
 class _DummySessionFactory:

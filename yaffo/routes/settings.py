@@ -24,11 +24,13 @@ from yaffo.db.models import (
 from yaffo.db.repositories import automation_repository, classification_repository, media_repository
 from yaffo.distance_units import get_saved_distance_unit, set_distance_unit
 from yaffo.i18n import get_saved_locale, set_locale
+from yaffo.routes.assistant import assistant_settings_context
 from yaffo.site_agents import llm_config
 from yaffo.utils.exiftool_path import get_exiftool_path
 from yaffo.utils.face_analysis import get_model_location as get_face_model_location
 from yaffo.utils.ffmpeg_path import get_ffmpeg_path
 from yaffo.utils.image_classifier import get_model_location as get_classification_model_location
+from yaffo.utils.thumbnail_marker import THUMBNAIL_DIR_MARKER, ensure_thumbnail_dir
 from yaffo.version import get_build_info
 
 
@@ -133,19 +135,7 @@ def init_settings_routes(app: Flask):
     @app.route("/settings", methods=["GET"])
     def settings_index():
         media_dirs = yaffo.db.repositories.media_dir_repository.list_media_dirs(db.session)
-        llm_status = llm_config.status()
-        model_labels = {
-            "claude-opus-4-8": gettext("Claude Opus 4.8 — most capable"),
-            "claude-sonnet-4-6": gettext("Claude Sonnet 4.6 — balanced"),
-            "claude-haiku-4-5-20251001": gettext("Claude Haiku 4.5 — fastest"),
-        }
-        llm_status["models"] = [
-            {
-                **model,
-                "label": model_labels.get(model["id"], model["label"]),
-            }
-            for model in llm_status["models"]
-        ]
+        llm_status = llm_config.localized_status()
 
         # Get thumbnail directory setting
         thumbnail_setting = db.session.query(ApplicationSettings).filter_by(name="thumbnail_dir").first()
@@ -184,6 +174,7 @@ def init_settings_routes(app: Flask):
             asset_download_failed=asset_download_failed,
             build_info=get_build_info(),
             llm=llm_status,
+            assistant=assistant_settings_context(),
             labels=classification_repository.list_labels(db.session),
             selected_distance_unit=get_saved_distance_unit(db.session),
             selected_locale=get_saved_locale() or app.config["BABEL_DEFAULT_LOCALE"],
@@ -439,8 +430,11 @@ def init_settings_routes(app: Flask):
             }), 400
 
         try:
-            # Create new directory if it doesn't exist
-            new_dir_path.mkdir(parents=True, exist_ok=True)
+            # Create the new directory and mark it BEFORE moving anything in: it is
+            # usually inside a watched media dir, and the watcher only learns the new
+            # setting after the commit below (and caches it), so the marker is what
+            # keeps the arriving face crops and posters from being indexed as photos.
+            ensure_thumbnail_dir(new_dir_path)
 
             # Get stats before moving
             file_count, total_size = get_thumbnail_stats(current_dir)
@@ -448,7 +442,9 @@ def init_settings_routes(app: Flask):
             # Move files
             if current_dir and current_dir.exists() and file_count > 0:
                 for file_path in current_dir.rglob("*"):
-                    if file_path.is_file():
+                    # The old dir keeps its marker: anything left behind there is
+                    # still thumbnails, never media.
+                    if file_path.is_file() and file_path.name != THUMBNAIL_DIR_MARKER:
                         relative_path = file_path.relative_to(current_dir)
                         dest_path = new_dir_path / relative_path
                         dest_path.parent.mkdir(parents=True, exist_ok=True)

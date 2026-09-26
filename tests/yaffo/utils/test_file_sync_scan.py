@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from yaffo.db import db
 from yaffo.db.models import MediaItem, MEDIA_STATUS_INDEXED
+from yaffo.utils.thumbnail_marker import THUMBNAIL_DIR_MARKER
 from yaffo.utils.file_sync import (
     MediaScan,
     MediaScanLimitExceeded,
@@ -65,6 +66,24 @@ def test_scan_media_dirs_diffs_disk_against_index(session, media):
     assert [u["filename"] for u in scan.unindexed] == ["b.jpg"]
     assert [o["full_path"] for o in scan.orphaned] == [str(media / "gone.jpg")]
     assert scan.orphaned[0]["reason"] == ORPHAN_MISSING
+
+
+def test_scoped_scan_leaves_other_media_directories_untouched(tmp_path, session):
+    selected = tmp_path / "selected"
+    other = tmp_path / "other"
+    _touch(selected / "new.jpg")
+    missing_selected = selected / "missing.jpg"
+    missing_other = other / "missing.jpg"
+    session.add_all([
+        MediaItem(full_file_path=str(missing_selected), status=MEDIA_STATUS_INDEXED),
+        MediaItem(full_file_path=str(missing_other), status=MEDIA_STATUS_INDEXED),
+    ])
+    session.commit()
+
+    scan = scan_media_dirs(session, [selected], None, scoped=True)
+
+    assert [item["full_path"] for item in scan.unindexed] == [str(selected / "new.jpg")]
+    assert [item["full_path"] for item in scan.orphaned] == [str(missing_selected)]
 
 
 def test_removed_media_dir_orphans_its_photos_even_when_files_exist(tmp_path, session):
@@ -199,3 +218,18 @@ def test_scan_stops_after_configured_walk_limit(tmp_path, session):
 
     with pytest.raises(MediaScanLimitExceeded):
         list(iter_media_scan(session, [media_dir], None, max_walked=1))
+
+
+def test_scan_skips_any_marked_thumbnail_dir(tmp_path, session):
+    # Not the configured thumbnail dir (None here): a peer's or a previous one,
+    # recognised by its marker alone.
+    media_dir = tmp_path / "organized"
+    _touch(media_dir / "photo.jpg")
+    peer_thumbs = media_dir / "yaffo_peer_thumbnails"
+    _touch(peer_thumbs / "face_x_0_abc.jpg")
+    _touch(peer_thumbs / "nested" / "poster_07f9720053186a4d.jpg")
+    (peer_thumbs / THUMBNAIL_DIR_MARKER).write_text("")
+
+    scan = scan_media_dirs(session, [media_dir], None)
+
+    assert [u["filename"] for u in scan.unindexed] == ["photo.jpg"]

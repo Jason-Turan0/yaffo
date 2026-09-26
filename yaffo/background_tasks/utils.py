@@ -6,6 +6,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from yaffo.db.models import (
     Job, JOB_STATUS_CANCELLED,
     PageVersion, PAGE_VERSION_STATUS_CANCELLED, ApplicationSettings, Automation,
+    AssistantConversation,
 )
 from yaffo.common import DB_PATH
 from yaffo.logging_config import get_logger
@@ -61,6 +62,19 @@ def get_automation_status(slug: str) -> str | None:
     session = SessionFactory()
     try:
         row = session.query(Automation.status).filter_by(slug=slug).first()
+        return row[0] if row is not None else None
+    finally:
+        session.close()
+        SessionFactory.remove()
+
+
+def get_assistant_status(conversation_id: int) -> str | None:
+    """Current status of an assistant conversation -- the cancel signal the
+    assistant run polls between agent iterations. A deleted conversation reads as
+    None so the run stops."""
+    session = SessionFactory()
+    try:
+        row = session.query(AssistantConversation.status).filter_by(id=conversation_id).first()
         return row[0] if row is not None else None
     finally:
         session.close()

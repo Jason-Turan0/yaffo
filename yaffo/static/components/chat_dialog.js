@@ -30,6 +30,14 @@ window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
 //                   input / Send / Cancel / status bar.
 //   runningStatus   the status meaning "a run is active" (default 'IN_PROGRESS').
 //   cancelConfirm   { title, message, confirmText } for the cancel confirm dialog.
+//   renderMessages(messages) optional; build the transcript nodes yourself (e.g. to
+//                   group tool lines or link sources). Default: one text bubble each.
+//   afterCancel()   optional; what to do once a cancel request returns. Default:
+//                   reload the page (the host re-renders from the server).
+//
+// Besides enterRunning/isRunning, the returned API has load() (poll now: switch the
+// dialog to whatever statusUrl() now names) and clear(nodes) (stop following any run
+// and show the given nodes, e.g. an empty-state intro).
 /**
  * @param {string} id
  * @param {ChatDialogOptions} options
@@ -53,6 +61,8 @@ window.PHOTO_ORGANIZER.COMPONENTS.initChatDialog = (id, options) => {
         },
         pollIntervalMs = 1500,
         pollRetryMs = 3000,
+        renderMessages,
+        afterCancel = () => window.location.reload(),
     } = options;
 
     const form = document.getElementById(`${id}-form`);
@@ -120,6 +130,11 @@ window.PHOTO_ORGANIZER.COMPONENTS.initChatDialog = (id, options) => {
     const renderFeed = (messages) => {
         if (!messagesEl) return;
         messagesEl.innerHTML = '';
+        if (renderMessages) {
+            messagesEl.append(...renderMessages(messages || []));
+            scrollFeed();
+            return;
+        }
         for (const message of messages || []) {
             const el = document.createElement('div');
             el.className = `chat-message chat-message-${message.type}`;
@@ -149,6 +164,10 @@ window.PHOTO_ORGANIZER.COMPONENTS.initChatDialog = (id, options) => {
             refreshUi();
             if (onSettled) onSettled(body);
             return;
+        }
+        if (elapsedTimer === null) {  // a run found by load(), not started here
+            updateElapsed();
+            elapsedTimer = setInterval(updateElapsed, 1000);
         }
         refreshUi();
     };
@@ -209,7 +228,25 @@ window.PHOTO_ORGANIZER.COMPONENTS.initChatDialog = (id, options) => {
         if (!confirmed) return;
         stopPolling();
         if (onCancel) await onCancel();
-        window.location.reload();
+        afterCancel();
+    };
+
+    // Switch to whatever statusUrl() names now: poll once, and keep following if a
+    // run is active there.
+    const load = () => {
+        stopPolling();
+        poll();
+    };
+
+    /**
+     * @param {Node[]} nodes
+     */
+    const clear = (nodes) => {
+        stopPolling();
+        status = startStatus;
+        startedAt = null;
+        if (messagesEl) messagesEl.replaceChildren(...nodes);
+        refreshUi();
     };
 
     form.addEventListener('submit', sendMessage);
@@ -219,5 +256,5 @@ window.PHOTO_ORGANIZER.COMPONENTS.initChatDialog = (id, options) => {
     refreshUi();
     if (isRunning()) enterRunning();  // resume an in-flight run on load
 
-    return { enterRunning, isRunning };
+    return { enterRunning, isRunning, load, clear };
 };

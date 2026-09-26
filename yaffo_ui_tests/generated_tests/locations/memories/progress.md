@@ -140,3 +140,13 @@ this spec (not generated, not healed). They import `VIEWPORTS`,
 - `locations_configure_filter_sidebar` (pre-existing) flaked once across runs on
   `#filter-config-reset` not being visible on the modal's second open. It passed
   on re-run and is unrelated to the responsive work; worth watching.
+
+## 2026-09-24 — assign test drives the real input again
+
+`locations_select_clusters_and_assign_name` had set `#mass-location-input` and
+clicked `#mass-assign-btn` inside one `page.evaluate` (added 2026-07-18) because a
+panel re-render between fill and click wiped the input. That was an app bug — a
+user's typed name was lost the same way — fixed on 2026-09-04 by
+`pendingLocationName` in static/locations/list.js. The test now uses a real
+`fill()` then `click()`. If it flakes there again, treat it as the draft being
+lost (app bug), not as a reason to go back to the in-page script.

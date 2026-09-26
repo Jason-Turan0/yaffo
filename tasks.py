@@ -229,7 +229,7 @@ def app_local_peer(c, host="127.0.0.1", port=5004, p2p_port= 5005, debug=True, w
 @task
 def download_assets(c):
     _run_concurrently([
-        ("download_assets", _download_assets_command(), _peer_data_env()),
+        ("download_assets", _download_assets_command(), _data_env()),
     ])
 
 

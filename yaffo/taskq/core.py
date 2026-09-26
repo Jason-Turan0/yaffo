@@ -24,6 +24,7 @@ from typing import Any, Callable, Optional
 
 from yaffo.taskq.cron import CronSpec
 from yaffo.taskq.signatures import (
+    PRIORITY_INTERACTIVE, PRIORITY_NORMAL,
     ChordLink, Link, Pipeline, Signature, SingleLink,
     iter_signatures, links_from_json, links_to_json,
 )
@@ -60,12 +61,14 @@ class Task:
         *,
         context: bool = False,
         lock_name: Optional[str] = None,
+        priority: int = PRIORITY_NORMAL,
     ):
         self.queue = queue
         self.fn = fn
         self.name = name
         self.context = context
         self.lock_name = lock_name
+        self.priority = priority
 
     def s(self, *args, **kwargs) -> Signature:
         return Signature(
@@ -74,6 +77,7 @@ class Task:
             kwargs=dict(kwargs),
             context=self.context,
             lock_name=self.lock_name,
+            priority=self.priority,
         )
 
     def __call__(self, *args, **kwargs) -> Result:
@@ -101,20 +105,26 @@ class TaskQueue:
 
     # ---- registration ---------------------------------------------------
 
-    def task(self, context: bool = False) -> Callable[[Callable], Task]:
+    def task(self, context: bool = False, priority: int = PRIORITY_NORMAL) -> Callable[[Callable], Task]:
+        """Register a task. `priority=PRIORITY_INTERACTIVE` for work a person is
+        waiting on, so it is dispatched ahead of queued bulk work."""
         def deco(fn: Callable) -> Task:
             t = Task(
                 self, fn, fn.__name__,
                 context=context,
                 lock_name=getattr(fn, "_taskq_lock_name", None),
+                priority=priority,
             )
             self.registry[t.name] = t
             return t
         return deco
 
     def periodic_task(self, cron: CronSpec) -> Callable[[Callable], Task]:
+        """Register a periodic task. Its ticks are interactive priority (the host
+        inserts them so, see Host._tick_periodic): they're quick, and a tick stuck
+        behind bulk work would make every schedule late."""
         def deco(fn: Callable) -> Task:
-            t = Task(self, fn, fn.__name__)
+            t = Task(self, fn, fn.__name__, priority=PRIORITY_INTERACTIVE)
             self.registry[t.name] = t
             self.periodic.append((t.name, cron))
             return t
@@ -225,7 +235,7 @@ def enqueue_pipeline_rows(
             args.append(prev)
         return store.insert_task(
             sig.task_name, args, dict(sig.kwargs),
-            context=sig.context, lock_name=sig.lock_name, eta=eta,
+            context=sig.context, lock_name=sig.lock_name, priority=sig.priority, eta=eta,
             continuation=links_to_json(rest) if rest else None,
         )
 
@@ -241,7 +251,7 @@ def enqueue_pipeline_rows(
             cb = head.callback
             return store.insert_task(
                 cb.task_name, list(cb.args) + [[]], dict(cb.kwargs),
-                context=cb.context, lock_name=cb.lock_name,
+                context=cb.context, lock_name=cb.lock_name, priority=cb.priority,
                 continuation=links_to_json(rest) if rest else None,
             )
         if rest:
@@ -251,7 +261,7 @@ def enqueue_pipeline_rows(
     for m in members:
         store.insert_task(
             m.task_name, list(m.args), dict(m.kwargs),
-            context=m.context, lock_name=m.lock_name, group_id=group_id,
+            context=m.context, lock_name=m.lock_name, priority=m.priority, group_id=group_id,
         )
     return None
 
@@ -269,7 +279,7 @@ def on_task_finished(store: Store, row: TaskRow, result: Any) -> None:
             cb = Signature.from_dict(json.loads(group.callback_json))
             store.insert_task(
                 cb.task_name, list(cb.args) + [group.results], dict(cb.kwargs),
-                context=cb.context, lock_name=cb.lock_name,
+                context=cb.context, lock_name=cb.lock_name, priority=cb.priority,
                 continuation=links_to_json(continuation) if continuation else None,
             )
         elif continuation:

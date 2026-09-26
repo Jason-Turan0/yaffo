@@ -103,11 +103,18 @@ The global notification component is available as `window.notification`:
 
 ```javascript
 notification.success('Operation completed!');
-notification.error('Something went wrong');
+notification.error('Name is required');
+notification.failure('Could not scan the media folder');
 notification.warning('Please review this');
 notification.info('Just so you know');
 notification.show('Message', 'success', 5000);
 ```
+
+Use `failure()` when something went wrong that the user may want help with: a
+scan, sync, or automation run that failed, a file that won't open, a save the
+server rejected unexpectedly. It shows an error toast with the assistant's "Ask
+Yaffo" button. Use `error()` for validation and other messages the user can act
+on themselves ("Name is required", "Select a person first"); those get no button.
 
 The backward-compatible `showNotification('Message', 'error')` function is also
 available.

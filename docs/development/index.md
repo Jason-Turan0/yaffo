@@ -15,6 +15,9 @@ Reference material for contributors and agents working in the Yaffo codebase.
 
 ## Systems
 
+- [AI Assistant](ai-assistant.md) - implementation plan (proposed): docs Q&A,
+  bounded diagnostics, and allowlisted library edits and fixes that run only once
+  the user confirms them.
 - [AI Page Builder](ai-page-builder.md)
 - [Automations](automations.md)
 - [Distribution](distribution.md)

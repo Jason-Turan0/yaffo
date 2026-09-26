@@ -13,6 +13,7 @@ from flask_babel import get_locale
 
 from yaffo.common import is_browser_playable_video
 from yaffo.i18n import DEFAULT_LOCALE
+from yaffo.routes.utilities.run_history import run_status
 
 
 class DateFormat(Enum):
@@ -146,7 +147,9 @@ _NON_FILTER_QUERY_KEYS = frozenset({
 
 
 def applied_filter_count(args) -> int:
-    """How many distinct filters the current URL applies.
+    """How many distinct filters the current URL applies, for pages with their
+    own filters (Faces, a person's faces). The gallery-panel pages count by
+    filter control instead (filter_config.applied_count).
 
     Shared by every page that renders `_sidebar.html`, so the badge means the
     same thing everywhere without each route computing its own tally. A
@@ -167,6 +170,7 @@ def applied_filter_count(args) -> int:
 
 
 def init_template_filters(app) -> None:
+    app.add_template_global(run_status, "run_status")
     app.add_template_filter(format_duration, "format_duration")
     app.add_template_filter(format_integer, "format_integer")
     app.add_template_filter(format_decimal, "format_decimal")

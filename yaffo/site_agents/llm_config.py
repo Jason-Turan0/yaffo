@@ -15,6 +15,7 @@ import os
 from typing import Optional
 
 import keyring
+from flask_babel import gettext
 from cachetools import TTLCache, cached
 from keyring.errors import KeyringError, PasswordDeleteError
 
@@ -178,3 +179,19 @@ def status() -> dict:
         "selected_provider_status": provider_status(selected_provider),
         "providers": [{"id": p.id, "label": p.label} for p in providers.PROVIDERS],
     }
+
+
+def localized_status() -> dict:
+    """status() with the model labels that have translations localized, for the
+    AI Generation and Assistant model dropdowns. Needs a request/app context."""
+    result = status()
+    model_labels = {
+        "claude-opus-4-8": gettext("Claude Opus 4.8 — most capable"),
+        "claude-sonnet-4-6": gettext("Claude Sonnet 4.6 — balanced"),
+        "claude-haiku-4-5-20251001": gettext("Claude Haiku 4.5 — fastest"),
+    }
+    result["models"] = [
+        {**model, "label": model_labels.get(model["id"], model["label"])}
+        for model in result["models"]
+    ]
+    return result

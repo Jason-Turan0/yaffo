@@ -44,16 +44,17 @@ def get_saved_distance_unit(session=None) -> str:
     return normalize_distance_unit(row.value if row else None) or DEFAULT_DISTANCE_UNIT
 
 
-def set_distance_unit(unit: str) -> bool:
+def set_distance_unit(unit: str, session=None) -> bool:
     normalized = normalize_distance_unit(unit)
     if normalized is None:
         return False
-    row = db.session.query(ApplicationSettings).filter_by(name=DISTANCE_UNIT_SETTING).first()
+    session = session or db.session
+    row = session.query(ApplicationSettings).filter_by(name=DISTANCE_UNIT_SETTING).first()
     if row is None:
-        db.session.add(ApplicationSettings(name=DISTANCE_UNIT_SETTING, type="string", value=normalized))
+        session.add(ApplicationSettings(name=DISTANCE_UNIT_SETTING, type="string", value=normalized))
     else:
         row.value = normalized
-    db.session.commit()
+    session.commit()
     return True
 
 

@@ -2,62 +2,64 @@
 
 // Client-side counterpart of the home route's server-side filtering: reads the
 // shared sidebar filter form and builds a predicate over already-loaded media
-// items (the locations map filters its markers with it, no round trip). The
-// semantics must stay in step with yaffo/routes/home.py — same querystring
-// names, same matching rules, same proximity bounding box.
+// items (the locations map filters its markers with it, no round trip).
+//
+// Which fields exist, their names, types, allowed values and defaults are NOT
+// declared here: the page passes the server's table (client_filter_config() in
+// yaffo/domain/media_filter_params.py), and criteria use its keys. The matching
+// rules below are the browser's copy of media_filter_repository.apply_media_filters
+// and must stay in step with it.
+//
+// Exact media ids (the URL-only `item` filter, from the assistant's links) have no
+// form control: the page passes them in, they apply on load with the URL's other
+// filters, and the first Apply or Clear from the panel drops them (from the URL
+// too, so a reload doesn't bring them back). The page's Filters count is kept the
+// way the server's applied_count computes it.
 
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.filters = window.PHOTO_ORGANIZER.filters || {};
 
 (() => {
-    // Mirrors yaffo/distance_units.py: proximity distances are entered in the
-    // saved unit but the bounding box is computed in kilometers.
-    const KILOMETERS_PER_UNIT = { mi: 1.609344, km: 1 };
-
-    // Mirrors yaffo/common.py's SHAPES.
-    const SHAPES = ['portrait', 'landscape', 'square'];
-
     /**
-     * Read the sidebar form into a criteria object; empty controls become null
-     * (no filter), matching the server's querystring parsing.
+     * Read the sidebar form into criteria keyed like the server's selections
+     * (person_ids, media_type, …): each parameter in `config` read by its form
+     * name and kind. Empty or disallowed values become the parameter's default
+     * (null, [], false, or 'any' for a match type), as the server parses them.
      * @param {HTMLFormElement} form
+     * @param {ClientFilterConfig} config
      * @returns {ClientFilterCriteria}
      */
-    const readCriteria = (form) => {
+    const readCriteria = (form, config) => {
         const data = new FormData(form);
-        const str = (/** @type {string} */ name) => String(data.get(name) ?? '').trim();
-        const num = (/** @type {string} */ name) => {
-            const value = str(name);
-            if (value === '') return null;
-            const parsed = Number(value);
-            return Number.isNaN(parsed) ? null : parsed;
-        };
-        const mediaType = str('media-type');
-        const shape = str('shape');
-        const proximityLat = num('proximity-lat');
-        const proximityLon = num('proximity-lon');
-        const proximityDistance = num('proximity-distance');
-        return {
-            path: str('path') || null,
-            year: num('year'),
-            month: num('month'),
-            device: str('device') || null,
-            favorite: Boolean(num('favorite')),
-            mediaType: mediaType === 'photo' || mediaType === 'video' ? mediaType : null,
-            shape: SHAPES.includes(shape) ? /** @type {ClientFilterCriteria['shape']} */ (shape) : null,
-            personIds: data.getAll('person').map(Number),
-            personMatchType: str('person-match-type') || 'any',
-            gender: num('gender'),
-            labelIds: data.getAll('labels').map(Number),
-            labelsMatchType: str('labels-match-type') || 'any',
-            tagName: str('tag-name') || null,
-            tagValue: str('tag-value') || null,
-            locationNames: data.getAll('location').map(String),
-            unnamed: Boolean(num('unnamed')),
-            proximity: proximityLat !== null && proximityLon !== null && proximityDistance
-                ? { lat: proximityLat, lon: proximityLon, distance: proximityDistance }
-                : null,
-        };
+        /** @type {Record<string, unknown>} */
+        const criteria = {};
+        for (const param of config.params) {
+            const raw = data.getAll(param.param).map((value) => String(value).trim()).filter((value) => value !== '');
+            /** @type {unknown} */
+            let value;
+            if (param.kind === 'int_list') {
+                value = raw.map(Number).filter(Number.isInteger);
+            } else if (param.kind === 'str_list') {
+                value = raw;
+            } else if (param.kind === 'flag') {
+                value = raw.length > 0 && Number(raw[0]) !== 0;
+            } else if (raw.length === 0) {
+                value = null;
+            } else if (param.kind === 'int') {
+                const parsed = Number(raw[0]);
+                value = Number.isInteger(parsed) ? parsed : null;
+            } else if (param.kind === 'float') {
+                const parsed = Number(raw[0]);
+                value = Number.isNaN(parsed) ? null : parsed;
+            } else {
+                value = raw[0];
+            }
+            if (value !== null && !Array.isArray(value) && param.choices && !param.choices.includes(value)) {
+                value = null;
+            }
+            criteria[param.key] = value ?? param.default ?? null;
+        }
+        return /** @type {ClientFilterCriteria} */ (criteria);
     };
 
     /**
@@ -94,46 +96,47 @@ window.PHOTO_ORGANIZER.filters = window.PHOTO_ORGANIZER.filters || {};
 
     /**
      * @param {ClientFilterCriteria} criteria
-     * @param {{ distanceUnit?: string }} [options]
+     * @param {ClientFilterConfig} config
+     * @param {{ distanceUnit?: string, itemIds?: Set<number> | null }} [options]
      * @returns {(item: ClientFilterItem) => boolean}
      */
-    const buildPredicate = (criteria, options = {}) => {
+    const buildPredicate = (criteria, config, options = {}) => {
+        const itemIds = options.itemIds ?? null;
         const pathNeedle = criteria.path ? criteria.path.toLowerCase() : null;
-        const box = criteria.proximity
-            ? boundingBox(
-                criteria.proximity.lat,
-                criteria.proximity.lon,
-                criteria.proximity.distance * (KILOMETERS_PER_UNIT[options.distanceUnit ?? 'km'] ?? 1),
-            )
+        const { proximity_lat: lat, proximity_lon: lon, proximity_distance: distance } = criteria;
+        const kilometersPerUnit = config.kilometers_per_unit[options.distanceUnit ?? 'km'] ?? 1;
+        const box = lat !== null && lon !== null && distance
+            ? boundingBox(lat, lon, distance * kilometersPerUnit)
             : null;
 
         return (item) => {
+            if (itemIds && !itemIds.has(item.id)) return false;
             if (pathNeedle && !String(item.photo_path ?? '').toLowerCase().includes(pathNeedle)) return false;
             if (criteria.year !== null && item.year !== criteria.year) return false;
             if (criteria.month !== null && item.month !== criteria.month) return false;
             if (criteria.device && item.device !== criteria.device) return false;
             if (criteria.favorite && !item.favorite) return false;
-            if (criteria.mediaType && item.media_type !== criteria.mediaType) return false;
+            if (criteria.media_type && item.media_type !== criteria.media_type) return false;
             // The server precomputes `shape` from the stored dimensions; an item
             // without them has none, and matches no shape — same as the SQL, where
             // the NULL comparison is false.
             if (criteria.shape && item.shape !== criteria.shape) return false;
-            if (criteria.personIds.length > 0
-                && !matchesIds(item.person_ids, criteria.personIds, criteria.personMatchType)) return false;
+            if (criteria.person_ids.length > 0
+                && !matchesIds(item.person_ids, criteria.person_ids, criteria.person_match_type)) return false;
             if (criteria.gender !== null && !(item.genders || []).includes(criteria.gender)) return false;
-            if (criteria.labelIds.length > 0
-                && !matchesIds(item.label_ids, criteria.labelIds, criteria.labelsMatchType)) return false;
-            if (criteria.tagName) {
+            if (criteria.label_ids.length > 0
+                && !matchesIds(item.label_ids, criteria.label_ids, criteria.labels_match_type)) return false;
+            if (criteria.tag_name) {
                 const tags = item.tags || [];
-                const matched = criteria.tagValue
-                    ? tags.some((tag) => tag.name === criteria.tagName && tag.value === criteria.tagValue)
-                    : tags.some((tag) => tag.name === criteria.tagName);
+                const matched = criteria.tag_value
+                    ? tags.some((tag) => tag.name === criteria.tag_name && tag.value === criteria.tag_value)
+                    : tags.some((tag) => tag.name === criteria.tag_name);
                 if (!matched) return false;
             }
             // Like the server, 'all' is meaningless for locations (one per item)
             // and is treated as 'any'.
-            if (criteria.locationNames.length > 0
-                && !criteria.locationNames.includes(String(item.name ?? ''))) return false;
+            if (criteria.location_names.length > 0
+                && !criteria.location_names.includes(String(item.name ?? ''))) return false;
             // A falsy name (null or "") counts as unnamed, same as the server's
             // coalesce(location_name, '') = ''.
             if (criteria.unnamed && item.name) return false;
@@ -207,15 +210,73 @@ window.PHOTO_ORGANIZER.filters = window.PHOTO_ORGANIZER.filters || {};
     };
 
     /**
+     * Whether a criterion narrows anything: set, and not its default.
+     * @param {ClientFilterParam} param
+     * @param {unknown} value
+     */
+    const isApplied = (param, value) => {
+        if (param.modifier) return false;
+        if (Array.isArray(value)) return value.length > 0;
+        return value !== null && value !== undefined && value !== '' && value !== false && value !== param.default;
+    };
+
+    /**
+     * How many filters apply, as the server's applied_count counts them: each
+     * control once however many of its parameters are set, and exact media ids
+     * (no control) as one more.
+     * @param {ClientFilterCriteria} criteria
+     * @param {ClientFilterConfig} config
+     * @param {Record<string, string[]>} controls control key -> its parameter keys
+     * @param {boolean} hasItemIds
+     * @returns {number}
+     */
+    const countApplied = (criteria, config, controls, hasItemIds) => {
+        const values = /** @type {Record<string, unknown>} */ (criteria);
+        const applied = new Set(config.params.filter((param) => isApplied(param, values[param.key])).map((p) => p.key));
+        const count = Object.values(controls).filter((keys) => keys.some((key) => applied.has(key))).length;
+        return count + (hasItemIds ? 1 : 0);
+    };
+
+    /** Take the URL-only `item` ids out of the address bar, keeping everything else. */
+    const dropItemIdsFromUrl = () => {
+        const url = new URL(window.location.href);
+        if (!url.searchParams.has('item')) return;
+        url.searchParams.delete('item');
+        window.history.replaceState(window.history.state, '', url);
+    };
+
+    /**
      * Turn the sidebar into a client-side filter: intercept the form's GET
      * submit and hand a fresh predicate to `onApply` instead. Clear is also
-     * handled here so pages using client-side filters do not reload.
-     * @param {{ form: HTMLFormElement | null, distanceUnit?: string, onApply: (predicate: (item: ClientFilterItem) => boolean) => void }} opts
+     * handled here so pages using client-side filters do not reload. The URL's
+     * filters (already in the form) and `itemIds` apply once straight away.
+     * @param {ClientFilterInitOptions} opts
      * @returns {ClientFilterApi | undefined}
      */
-    window.PHOTO_ORGANIZER.filters.initClientFilter = ({ form, distanceUnit, onApply }) => {
+    window.PHOTO_ORGANIZER.filters.initClientFilter = ({
+        form, config, distanceUnit, onApply, itemIds = [], controls = null, countEl = null,
+    }) => {
         if (!form) return undefined;
-        const apply = () => onApply(buildPredicate(readCriteria(form), { distanceUnit }));
+        /** @type {Set<number> | null} */
+        let exactIds = itemIds.length ? new Set(itemIds) : null;
+        const run = () => {
+            const criteria = readCriteria(form, config);
+            onApply(buildPredicate(criteria, config, { distanceUnit, itemIds: exactIds }));
+            if (countEl && controls) {
+                const count = countApplied(criteria, config, controls, exactIds !== null);
+                countEl.textContent = String(count);
+                countEl.hidden = count === 0;
+            }
+        };
+        // Any filtering from the panel replaces the exact ids: they have no control
+        // to show or edit them.
+        const apply = () => {
+            if (exactIds) {
+                exactIds = null;
+                dropItemIdsFromUrl();
+            }
+            run();
+        };
         form.addEventListener('submit', (event) => {
             event.preventDefault();
             apply();
@@ -229,11 +290,12 @@ window.PHOTO_ORGANIZER.filters = window.PHOTO_ORGANIZER.filters || {};
             event.stopImmediatePropagation();
             clear();
         }, { capture: true });
-        const api = { apply, clear, readCriteria: () => readCriteria(form) };
+        const api = { apply, clear, readCriteria: () => readCriteria(form, config) };
         window.PHOTO_ORGANIZER.filters.clientFilter = api;
+        run();
         return api;
     };
 
     // Pure pieces exposed for reuse and unit tests.
-    window.PHOTO_ORGANIZER.filters.clientFilterCore = { readCriteria, buildPredicate };
+    window.PHOTO_ORGANIZER.filters.clientFilterCore = { readCriteria, buildPredicate, countApplied };
 })();

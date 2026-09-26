@@ -4,6 +4,8 @@ Use the shared throwaway-DB app fixture. The chat happy path (which enqueues a r
 generation) isn't exercised here; the request-side gating and the publish/status/
 discard endpoints are.
 """
+import json
+
 import pytest
 
 from yaffo.db import db
@@ -265,6 +267,54 @@ def test_run_now_fires_automation(app, client, monkeypatch):
     assert calls == [("a1", None)]  # fired with no event context, like a schedule tick
 
 
+def test_run_now_refuses_a_file_sync_while_one_is_queued(app, client, monkeypatch, queue_store):
+    _add(app, slug="sync", name="File sync", is_system=True, handler="file_sync")
+    calls = []
+    monkeypatch.setattr("yaffo.routes.utilities.automations.invoke_automation",
+                        lambda automation, context: calls.append(automation.slug) or True)
+    queue_store.insert_task("file_sync_task", [1], {})
+
+    resp = client.post("/utilities/automations/sync/run")
+
+    assert resp.status_code == 409 and resp.get_json()["code"] == "file_sync_running"
+    assert calls == []
+    _add(app, slug="other", name="Other")
+    assert client.post("/utilities/automations/other/run").status_code == 202  # other automations aren't held up
+
+
+def test_file_sync_runs_read_how_they_ended(app, client):
+    _add(app, slug="sync", name="File sync", is_system=True, handler="file_sync")
+    _add_job(app, slug="sync", id="r1", name="file_sync", task_count=1,
+             job_data=json.dumps({"outcome": "in_sync"}))
+    _add_job(app, slug="sync", id="r2", name="file_sync", task_count=1,
+             job_data=json.dumps({"outcome": "started", "indexed": 3, "removed": 1}))
+    _add_job(app, slug="sync", id="r3", name="file_sync", task_count=1, status="FAILED",
+             error="None of the media folders is connected: /Volumes/Photos.",
+             job_data=json.dumps({"outcome": "no_folder_connected"}))
+
+    body = client.get("/utilities/automations/sync").get_data(as_text=True)
+
+    assert "Already in sync" in body
+    assert "Indexing 3 new files, removed 1 missing item" in body
+    assert "Skipped: no media folder is connected" in body
+    assert "None of the media folders is connected: /Volumes/Photos." in body
+
+
+def test_schedule_scope_failure_appears_in_run_history(app, client):
+    _add(app)
+    _add_job(
+        app, slug="a1", id="scope-failure", name="a1", status="FAILED",
+        task_count=1, error_count=1, error="Scheduled folder is outside configured media directories",
+        job_data=json.dumps({"dispatch_error_code": "invalid_scope", "trigger_id": 7}),
+    )
+
+    body = client.get("/utilities/automations/a1/runs").get_data(as_text=True)
+
+    assert "Failed" in body
+    assert "The scheduled scope is no longer valid" in body
+    assert "Edit the trigger" in body
+
+
 def test_run_now_nothing_to_run_400(app, client, monkeypatch):
     _add(app)
     monkeypatch.setattr(
@@ -376,50 +426,83 @@ def test_no_triggers_show_run_picker(app, client):
 
 
 def test_run_view_summarizes_batch_job():
-    from yaffo.routes.utilities.automations import _run_view
+    from yaffo.routes.utilities.run_history import run_view
     from yaffo.db.models import Job
     job = Job(id="j", name="find_duplicates", status="COMPLETED",
               task_count=120, completed_count=118, error_count=2)
-    view = _run_view(job)
+    view = run_view(job)
     assert view.summary == "118 of 120 processed, 2 errors"
     assert view.is_finished is True
     assert view.is_error is True  # error_count > 0
 
 
+def test_run_view_flags_a_completed_run_with_errors_on_its_chip():
+    from yaffo.routes.utilities.run_history import run_view
+    from yaffo.db.models import Job
+    with_errors = run_view(Job(id="j", name="index_photos", status="COMPLETED",
+                               task_count=10, completed_count=9, error_count=1))
+    assert (with_errors.status_label, with_errors.status_chip) == ("Completed with errors", "chip-warning")
+    clean = run_view(Job(id="k", name="index_photos", status="COMPLETED",
+                         task_count=10, completed_count=10, error_count=0))
+    assert (clean.status_label, clean.status_chip) == ("Completed", "chip-success")
+
+
 def test_run_view_uses_message_for_single_task_run():
-    from yaffo.routes.utilities.automations import _run_view
+    from yaffo.routes.utilities.run_history import run_view
     from yaffo.db.models import Job
     job = Job(id="j", name="my-automation", status="COMPLETED",
               task_count=1, completed_count=1, message="My automation")
-    view = _run_view(job)
+    view = run_view(job)
     assert view.summary == "My automation"
     assert view.is_error is False
 
 
+def test_run_view_shows_empty_automation_run_summary():
+    from yaffo.routes.utilities.run_history import run_view
+    from yaffo.db.models import Job
+    job = Job(id="empty", name="duplicate_scan", status="COMPLETED",
+              automation_id=7, task_count=0,
+              job_data='{"output": "No indexed media items to process"}')
+    view = run_view(job)
+    assert view.summary == "No indexed media items to process"
+    assert view.status_label == "Completed"
+
+
+def test_run_view_shows_completed_automation_output_with_one_processed_photo():
+    from yaffo.routes.utilities.run_history import run_view
+    from yaffo.db.models import Job
+    job = Job(id="one-photo", name="classify_labels", status="COMPLETED",
+              automation_id=6, task_count=1, completed_count=1,
+              job_data='{"output": "labeled 0 of 1 photo(s) at threshold 0.24 (max 4 each)"}')
+    view = run_view(job)
+    assert view.summary == "labeled 0 of 1 photo(s) at threshold 0.24 (max 4 each)"
+    assert view.status_label == "Completed"
+
+
 def test_run_view_flags_failed():
-    from yaffo.routes.utilities.automations import _run_view
+    from yaffo.routes.utilities.run_history import run_view
     from yaffo.db.models import Job
     job = Job(id="j", name="x", status="FAILED", task_count=1, error="boom")
-    view = _run_view(job)
+    view = run_view(job)
     assert view.is_error is True
     assert view.error == "boom"
 
 
 def test_run_view_computes_progress_for_in_progress():
-    from yaffo.routes.utilities.automations import _run_view
+    from yaffo.routes.utilities.run_history import run_view
     from yaffo.db.models import Job
     job = Job(id="j", name="find_duplicates", status="RUNNING",
               task_count=50, completed_count=10, error_count=2)
-    view = _run_view(job)
+    view = run_view(job)
     assert view.is_finished is False
     assert view.progress == 24  # (10 + 2) / 50
 
 
 def test_run_view_progress_zero_when_no_task_count():
-    from yaffo.routes.utilities.automations import _run_view
+    from yaffo.routes.utilities.run_history import run_view
     from yaffo.db.models import Job
     job = Job(id="j", name="x", status="RUNNING", task_count=0)
-    assert _run_view(job).progress == 0
+    assert run_view(job).progress == 0
 
 
 def test_runs_fragment_polls_and_shows_in_progress(app, client):
@@ -450,8 +533,17 @@ def test_detail_page_shows_run_history(app, client):
     body = client.get("/utilities/automations/a1").get_data(as_text=True)
     assert "Run history" in body
     assert "10 of 10 processed" in body
-    assert 'class="automation-run-time"' in body
+    assert 'class="run-history-time"' in body
     assert 'data-local-datetime="2026-07-11T21:07:02+00:00"' in body
+
+
+def test_detail_page_shows_classification_result_for_single_photo(app, client):
+    _add(app, slug="classify_labels", name="Classify labels", is_system=True, handler="classify_labels")
+    _add_job(app, slug="classify_labels", id="classify-one", name="classify_labels",
+             task_count=1, completed_count=1,
+             job_data='{"output": "labeled 0 of 1 photo(s) at threshold 0.24 (max 4 each)"}')
+    body = client.get("/utilities/automations/classify_labels").get_data(as_text=True)
+    assert "labeled 0 of 1 photo(s) at threshold 0.24 (max 4 each)" in body
 
 
 def test_detail_page_run_history_empty_state(app, client):
@@ -488,7 +580,7 @@ def test_saved_locale_translates_system_run_history_job_labels(app, client, slug
     body = client.get(f"/utilities/automations/{slug}/runs").get_data(as_text=True)
 
     assert expected in body
-    assert f'<span class="automation-run-summary">{name}</span>' not in body
+    assert f'<span class="run-history-summary">{name}</span>' not in body
 
 
 def test_saved_locale_translates_run_history_empty_state(app, client):
@@ -834,6 +926,45 @@ def test_save_schedule_edits_existing(app, client):
     assert triggers[0].next_run_at is None  # reset so the dispatcher recomputes
 
 
+def test_schedule_scope_is_saved_and_invalid_folder_rejected(app, client, tmp_path):
+    from yaffo.db.repositories import media_dir_repository
+
+    _add(app)
+    root = tmp_path / "library"
+    root.mkdir()
+    folder = root / "trip"
+    folder.mkdir()
+    with app.app_context():
+        media_dir = media_dir_repository.add_media_dir(db.session, str(root))
+        media_dir_id = media_dir.id
+    response = client.post(
+        "/utilities/automations/a1/triggers",
+        data={"action": "save_schedule", "cron": "0 9 * * *",
+              "scope_type": "paths", "folder_paths": str(folder)},
+    )
+    assert response.status_code == 200
+    trigger = _triggers(app)[0]
+    assert trigger.config == {"scope_type": "paths", "media_dir_ids": [], "folder_paths": [str(folder)]}
+    assert "1 path" in response.get_data(as_text=True)
+
+    response = client.post(
+        "/utilities/automations/a1/triggers",
+        data={"action": "save_schedule", "cron": "0 9 * * *",
+              "edit_trigger_id": trigger.id, "scope_type": "media_dirs",
+              "media_dir_ids": media_dir_id},
+    )
+    assert response.status_code == 200
+    assert _triggers(app)[0].config == {"scope_type": "media_dirs", "media_dir_ids": [media_dir_id], "folder_paths": []}
+
+    response = client.post(
+        "/utilities/automations/a1/triggers",
+        data={"action": "save_schedule", "cron": "0 9 * * *",
+              "scope_type": "paths", "folder_paths": str(tmp_path / "outside")},
+    )
+    assert response.status_code == 200
+    assert len(_triggers(app)) == 1
+
+
 def test_save_schedule_edit_unknown_id_404(app, client):
     _add(app)
     resp = client.post(
@@ -990,3 +1121,35 @@ def test_cancel_settles_to_accepted(app, client):
     assert client.post("/utilities/automations/a1/cancel").status_code == 204
     with app.app_context():
         assert db.session.query(Automation).filter_by(slug="a1").first().status == AUTOMATION_STATUS_ACCEPTED
+
+
+@pytest.mark.parametrize("status,error_count,error,show_help", [
+    ("FAILED", 0, None, True),
+    ("COMPLETED", 2, None, True),
+    ("RUNNING", 1, None, True),
+    ("COMPLETED", 0, 'Test <error> "details"', True),
+    ("COMPLETED", 0, None, False),
+])
+@pytest.mark.parametrize("suffix", ["", "/runs"])
+def test_run_error_help_on_page_and_polled_fragment(app, client, monkeypatch, status, error_count, error, show_help, suffix):
+    monkeypatch.setattr("yaffo.site_agents.llm_config.get_api_key", lambda *a, **k: "key")
+    _add(app)
+    _add_job(app, id="help-run", status=status, task_count=3,
+             completed_count=1, error_count=error_count, error=error)
+    response = client.get(f"/utilities/automations/a1{suffix}")
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert ('data-job-id="help-run"' in body) is show_help
+    if show_help:
+        assert 'data-automation="a1"' in body
+        assert 'aria-label="Ask Yaffo about this run"' in body
+        assert 'data-page="/utilities/automations/a1"' in body
+        if error:
+            assert 'data-error="Test &lt;error&gt; &#34;details&#34;"' in body
+
+
+def test_run_error_help_hidden_without_assistant_key(app, client):
+    _add(app)
+    _add_job(app, id="help-run", status="FAILED", error="test")
+    body = client.get("/utilities/automations/a1/runs").get_data(as_text=True)
+    assert 'data-assistant-help' not in body

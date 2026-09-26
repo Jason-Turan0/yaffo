@@ -88,6 +88,8 @@ class AnthropicModelClient(ModelClient):
         # Default from config.toml ([ai] max_output_tokens).
         max_tokens: int = _MAX_OUTPUT_TOKENS,
         log_dir: Optional[Path] = None,
+        persistent_log: bool = False,
+        log_feature: str = "unknown",
         api_key: str,
     ):
         self.model: ModelAlias = model
@@ -97,7 +99,7 @@ class AnthropicModelClient(ModelClient):
         self.max_tokens = max_tokens
         self.messages: list[dict] = []
         self._client = anthropic.Anthropic(api_key=api_key)
-        self._log = CallLogger(log_dir)
+        self._log = CallLogger(log_dir, persistent=persistent_log, feature=log_feature)
 
     @classmethod
     def from_config(cls, config: ModelClientConfig, **kwargs: Any) -> "AnthropicModelClient":
@@ -121,6 +123,10 @@ class AnthropicModelClient(ModelClient):
         self.messages.append(
             {"role": "user", "content": [to_tool_result_part(r) for r in results]}
         )
+
+    def load_history(self, turns: list[tuple[str, str]]) -> None:
+        for role, text in turns:
+            self.messages.append({"role": role, "content": [to_text_part(text)]})
 
     def set_system_prompt(self, prompt: str) -> None:
         self.system_prompt = prompt

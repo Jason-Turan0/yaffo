@@ -1,0 +1,530 @@
+"""Routes for Ask Yaffo. The background run is replaced by a recorder, so these
+cover the HTTP contract: starting turns, polling, cancel, rename/delete, the
+settings switches, change-plan approve/decline/undo, and availability (setting and
+demo mode)."""
+import json
+
+import pytest
+
+from yaffo.db import db
+from yaffo.db.models import ASSISTANT_STATUS_FAILED, ASSISTANT_STATUS_IDLE, ASSISTANT_STATUS_RUNNING, Job, MediaItem, Tag
+from yaffo.db.repositories import assistant_repository as repo
+from yaffo.routes.assistant import action_groups_layout, diagnostic_labels, switch_help
+from yaffo.site_agents import llm_config
+from yaffo.site_agents.assistant import settings as assistant_settings
+from yaffo.site_agents.assistant.tool_providers.script_tool import RUN_SCRIPT, ScriptToolProvider
+
+pytestmark = pytest.mark.unit
+
+
+@pytest.fixture
+def runs(monkeypatch):
+    """Record enqueued runs instead of running them."""
+    started = []
+    monkeypatch.setattr("yaffo.routes.assistant.assistant_run_task", started.append)
+    return started
+
+
+@pytest.fixture
+def with_key(monkeypatch):
+    monkeypatch.setattr("yaffo.site_agents.llm_config.get_api_key", lambda *a, **k: "key")
+
+
+def _start(client, message="How do I add folders?"):
+    return client.post("/api/assistant/conversations", json={"message": message})
+
+
+def test_first_message_creates_a_titled_conversation_and_starts_a_run(client, runs, with_key):
+    response = _start(client)
+
+    assert response.status_code == 202
+    conversation = response.get_json()["conversation"]
+    assert conversation["title"] == "How do I add folders?"
+    assert conversation["status"] == ASSISTANT_STATUS_RUNNING
+    assert runs == [conversation["id"]]
+
+
+def test_poll_returns_the_chat_dialog_body(client, runs, with_key):
+    conversation_id = _start(client).get_json()["conversation"]["id"]
+    repo.add_event(db.session, conversation_id, "tool", "", {"tool": "search_docs", "count": 1})
+
+    body = client.get(f"/api/assistant/conversations/{conversation_id}").get_json()
+
+    assert body["status"] == ASSISTANT_STATUS_RUNNING
+    assert body["started_at"].endswith("+00:00")
+    assert [(m["type"], m["seq"]) for m in body["messages"]] == [("user", 0), ("tool", 1)]
+    assert body["messages"][1]["payload"] == {"tool": "search_docs", "count": 1}
+    assert body["conversation"]["id"] == conversation_id
+
+
+def test_poll_says_why_a_queued_reply_has_not_started(client, runs, with_key, queue_store):
+    conversation_id = _start(client).get_json()["conversation"]["id"]
+    url = f"/api/assistant/conversations/{conversation_id}"
+    assert client.get(url).get_json()["queue"] is None  # nothing queued in this test queue
+
+    busy = queue_store.insert_task("index_photo_task", [], {})
+    queue_store.mark_running(busy)
+    queue_store.insert_task("assistant_run_task", [conversation_id], {}, priority=10)
+    queue_store.write_heartbeat(pid=1, started_at=0, workers=1, busy=1)
+
+    queue = client.get(url).get_json()["queue"]
+    assert queue["state"] == "waiting"
+    assert queue["busy_with"] == "index_photo_task"
+    assert "busy indexing photos" in queue["message"]
+
+    repo.set_status(db.session, conversation_id, ASSISTANT_STATUS_IDLE)
+    assert client.get(url).get_json()["queue"] is None  # only while the run is active
+
+
+def test_follow_up_is_refused_while_answering_then_accepted(client, runs, with_key):
+    conversation_id = _start(client).get_json()["conversation"]["id"]
+    url = f"/api/assistant/conversations/{conversation_id}/messages"
+
+    busy = client.post(url, json={"message": "and then?"})
+    assert busy.status_code == 409
+    assert busy.get_json()["code"] == "run_in_progress"
+
+    repo.set_status(db.session, conversation_id, ASSISTANT_STATUS_FAILED)
+    assert client.post(url, json={"message": "and then?"}).status_code == 202
+    assert runs == [conversation_id, conversation_id]
+    kinds = [(e.kind, e.content) for e in repo.list_events(db.session, conversation_id)]
+    assert kinds[-1] == ("user", "and then?")
+
+
+@pytest.mark.parametrize("payload, code", [
+    ({}, "message_required"),
+    ({"message": "   "}, "message_required"),
+    ({"message": "x" * 4001}, "message_too_long"),
+])
+def test_invalid_messages(client, runs, with_key, payload, code):
+    response = client.post("/api/assistant/conversations", json=payload)
+    assert response.status_code == 400
+    assert response.get_json()["code"] == code
+    assert runs == []
+
+
+def test_missing_api_key_is_refused_before_anything_is_saved(client, runs):
+    response = _start(client)
+    assert response.status_code == 400
+    assert response.get_json()["code"] == "api_key_missing"
+    assert "Anthropic" in response.get_json()["error"]
+    assert repo.count_conversations(db.session) == 0
+
+
+def test_cancel_list_rename_and_delete(client, runs, with_key):
+    conversation_id = _start(client).get_json()["conversation"]["id"]
+    base = f"/api/assistant/conversations/{conversation_id}"
+
+    assert client.post(f"{base}/cancel").status_code == 204
+    assert repo.get_conversation(db.session, conversation_id).status == ASSISTANT_STATUS_IDLE
+
+    assert client.patch(base, json={"title": "  Folders  "}).status_code == 204
+    listed = client.get("/api/assistant/conversations").get_json()["conversations"]
+    assert [(c["id"], c["title"]) for c in listed] == [(conversation_id, "Folders")]
+    assert client.patch(base, json={"title": " "}).get_json()["code"] == "title_required"
+
+    assert client.delete(base).status_code == 204
+    assert client.delete(base).status_code == 404
+    assert client.get(base).status_code == 404
+
+
+def test_delete_all(client, runs, with_key):
+    _start(client)
+    _start(client, "Another")
+    body = client.post("/api/assistant/conversations/delete-all").get_json()
+    assert body == {"deleted": 2}
+    assert repo.count_conversations(db.session) == 0
+
+
+def test_turned_off_hides_everything(client, runs, with_key):
+    assistant_settings.set_enabled(False)
+
+    assert _start(client).status_code == 404
+    assert client.get("/api/assistant/conversations").status_code == 404
+    assert client.get("/assistant").status_code == 404
+    assert 'id="assistant-open"' not in client.get("/settings").get_data(as_text=True)
+
+
+def test_navbar_button_and_panel_render_when_on(client, with_key):
+    home = client.get("/settings").get_data(as_text=True)
+    assert 'id="assistant-open"' in home
+    assert 'id="assistant-panel"' in home
+    assert 'data-assistant-mode="floating"' in home
+
+    page = client.get("/assistant").get_data(as_text=True)
+    assert page.count('id="assistant-panel"') == 1
+    assert 'data-assistant-mode="page"' in page
+
+
+def test_floating_button_needs_an_api_key(client, monkeypatch):
+    # No key (the route-test default): neither entry point is shown.
+    html = client.get("/settings").get_data(as_text=True)
+    assert 'id="assistant-open"' not in html
+    assert 'id="assistant-fab"' not in html
+
+    monkeypatch.setattr("yaffo.site_agents.llm_config.get_api_key", lambda *a, **k: "key")
+    html = client.get("/settings").get_data(as_text=True)
+    assert 'id="assistant-fab"' in html
+    assert 'class="nav-assistant-item"' in html
+    # The full page has the chat inline; no floating entry there.
+    assert 'id="assistant-fab"' not in client.get("/assistant").get_data(as_text=True)
+
+
+def test_settings_section_and_switches(client):
+    html = client.get("/settings").get_data(as_text=True)
+    assert 'id="assistant-section"' in html
+    assert 'id="assistant-model"' not in html
+
+    off = client.post("/settings/assistant/enabled", data={})
+    assert off.headers["HX-Refresh"] == "true"
+    assert assistant_settings.is_enabled() is False
+    client.post("/settings/assistant/enabled", data={"enabled": "on"})
+    assert assistant_settings.is_enabled() is True
+
+    model = client.post("/settings/assistant/model", data={"model": "claude-haiku-4-5-20251001"})
+    assert model.status_code == 404
+    assert assistant_settings.resolve_model() == llm_config.DEFAULT_MODEL
+
+
+def test_demo_mode_hides_the_assistant(app, client, runs, with_key):
+    app.config["DEMO_MODE"] = True
+    try:
+        assert client.get("/api/assistant/conversations").status_code == 404
+        assert 'id="assistant-open"' not in client.get("/").get_data(as_text=True)
+    finally:
+        app.config["DEMO_MODE"] = False
+
+
+def test_empty_conversation_notice_links_to_settings(client, with_key):
+    html = client.get("/").get_data(as_text=True)
+    assert 'id="assistant-notice-template"' in html
+    assert "it can check this computer" in html
+    assert 'href="/settings#assistant-section"' in html
+
+    for group in assistant_settings.DIAGNOSTIC_GROUPS:
+        assistant_settings.set_diagnostics_enabled(group, False)
+    html = client.get("/").get_data(as_text=True)
+    assert "documentation only. Nothing from this computer is sent." in html
+    assert "it can check this computer" not in html
+
+
+def test_attached_context_is_allowlisted_and_capped(client, runs, with_key):
+    response = client.post("/api/assistant/conversations", json={
+        "message": "Why did this fail?",
+        "context": {"page": "Utilities → Index Photos", "error": "x" * 900, "job_id": "abc",
+                    "api_key": "sk-nope", "error_code": True},
+    })
+    conversation_id = response.get_json()["conversation"]["id"]
+    user = repo.list_events(db.session, conversation_id)[0]
+    context = json.loads(user.payload)["context"]
+    assert set(context) == {"page", "error", "job_id"}
+    assert len(context["error"]) == 500
+    assert repo.latest_user_context(db.session, conversation_id) == context
+
+
+def test_diagnostics_switches(client):
+    html = client.get("/settings").get_data(as_text=True)
+    assert 'id="assistant-diag-logs"' in html
+    # People-name redaction was removed; the setting and its route are gone.
+    assert 'id="assistant-redact-people"' not in html
+    assert client.post("/settings/assistant/redact-people", data={"enabled": "on"}).status_code in (404, 405)
+
+    client.post("/settings/assistant/diagnostics/files", data={})
+    assert "files" not in assistant_settings.enabled_diagnostics()
+    client.post("/settings/assistant/diagnostics/files", data={"enabled": "on"})
+    assert "files" in assistant_settings.enabled_diagnostics()
+    assert client.post("/settings/assistant/diagnostics/bogus", data={}).status_code == 404
+
+
+
+def test_flash_help_escapes_context_and_requires_ready_assistant(client, with_key, monkeypatch):
+    with client.session_transaction() as session:
+        session["_flashes"] = [("error", '<img src=x onerror=alert(1)>')]
+    html = client.get("/assistant").get_data(as_text=True)
+    assert 'data-assistant-help' in html
+    assert 'class="message-action" data-icon="assistant"' in html
+    assert 'data-error="&lt;img src=x onerror=alert(1)&gt;"' in html
+    assert "metadata" not in assistant_settings.enabled_diagnostics()
+    monkeypatch.setattr("yaffo.site_agents.llm_config.get_api_key", lambda *a, **k: None)
+    with client.session_transaction() as session:
+        session["_flashes"] = [("error", "Failed")]
+    html = client.get("/settings").get_data(as_text=True)
+    assert 'data-assistant-help\n' not in html
+
+
+def test_metadata_switch_is_independent_and_opt_in(client):
+    assert "metadata" not in assistant_settings.enabled_diagnostics()
+    assert client.post("/settings/assistant/diagnostics/metadata", data={"enabled": "on"}).status_code == 200
+    assert "metadata" in assistant_settings.enabled_diagnostics()
+    client.post("/settings/assistant/diagnostics/metadata", data={})
+    assert "metadata" not in assistant_settings.enabled_diagnostics()
+
+
+def test_settings_has_no_contextual_help_even_for_errors(client, with_key):
+    with client.session_transaction() as session:
+        session["_flashes"] = [("error", "Something failed")]
+    html = client.get("/settings").get_data(as_text=True)
+    assert 'data-assistant-help-disabled' in html
+    assert 'data-assistant-help\n' not in html
+    assert 'class="message-action"' not in html
+    assert 'id="assistant-diag-metadata"' in html
+
+
+@pytest.mark.parametrize("status,error,expected", [
+    ("FAILED", None, True), ("RUNNING", "Could not read media", True),
+    ("COMPLETED", None, False),
+])
+def test_job_help_is_shown_for_failed_or_error_cards(client, with_key, status, error, expected):
+    db.session.add(Job(id="help-job", name="index_photos", status=status, error=error,
+                       task_count=1, completed_count=0, error_count=0, cancelled_count=0, message="Checking"))
+    db.session.commit()
+    html = client.get("/jobs/help-job/fragment").get_data(as_text=True)
+    assert ('data-assistant-help' in html) is expected
+    if expected:
+        assert 'data-job-id="help-job"' in html
+        assert 'class="btn btn-secondary btn-sm" data-icon="assistant" data-assistant-help' in html
+        assert "Ask Yaffo" in html
+
+
+def test_job_help_attaches_the_page_the_card_is_on(client, with_key):
+    db.session.add(Job(id="page-job", name="index_photos", status="RUNNING", error="boom",
+                       task_count=3, completed_count=1, error_count=1, cancelled_count=0, message="Indexing"))
+    db.session.commit()
+    # Refreshed or cancelled, the card keeps the page it was shown on...
+    body = client.get("/jobs/page-job/fragment?page=/utilities/index-photos").get_data(as_text=True)
+    assert 'data-page="/utilities/index-photos"' in body
+    assert "fragment?has_results=0&amp;page=/utilities/index-photos" in body
+    assert '"page": "/utilities/index-photos"' in body
+    # ...and only takes an app path, never a full URL or anything else.
+    for bad in ("//evil.example/x", "https://evil.example", "no-slash", "/with space"):
+        body = client.get("/jobs/page-job/fragment", query_string={"page": bad}).get_data(as_text=True)
+        assert 'data-page="/jobs/page-job/fragment"' in body
+    cancelled = client.post("/jobs/page-job/cancel", data={"page": "/utilities/index-photos"}).get_data(as_text=True)
+    assert 'data-page="/utilities/index-photos"' in cancelled
+
+
+def test_one_flag_switches_contextual_help_off_on_settings(client, with_key):
+    settings = client.get("/settings").get_data(as_text=True)
+    assert "<body data-assistant-help-disabled>" in settings
+    page = client.get("/utilities/index-photos").get_data(as_text=True)
+    assert "data-assistant-help-disabled" not in page
+
+
+def test_job_help_is_shown_for_partial_errors(client, with_key):
+    db.session.add(Job(id="partial-error", name="index_photos", status="COMPLETED",
+                       task_count=3, completed_count=2, error_count=1, cancelled_count=0, message="Finished"))
+    db.session.commit()
+    body = client.get("/jobs/partial-error/fragment").get_data(as_text=True)
+    assert 'data-assistant-help' in body
+
+
+@pytest.fixture
+def opened(monkeypatch):
+    """Record what the open route would hand the OS instead of opening it."""
+    calls = []
+    monkeypatch.setattr("yaffo.routes.assistant.open_in_os", lambda path, reveal=False: calls.append((path, reveal)))
+    return calls
+
+
+@pytest.fixture
+def media_root(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    root = tmp_path / "Photos"
+    (root / "2019").mkdir(parents=True)
+    (root / "2019" / "a.jpg").write_bytes(b"x")
+    monkeypatch.setattr("yaffo.site_agents.assistant.file_targets.get_media_dir_entries",
+                        lambda session: [SimpleNamespace(id="m1", path=root)])
+    return root
+
+
+def test_open_button_opens_the_looked_up_path(client, opened, media_root):
+    photo = media_root / "2019" / "a.jpg"
+    item = MediaItem(full_file_path=str(photo))
+    db.session.add(item)
+    db.session.commit()
+
+    assert client.post("/api/assistant/open", json={"media_item_id": item.id, "show": "folder"}).status_code == 204
+    assert client.post("/api/assistant/open", json={"media_dir_id": "m1", "path": "2019", "show": "file"}).status_code == 204
+    # A file shown "in its folder" is revealed; a folder just opens.
+    assert opened == [(photo.resolve(), True), ((media_root / "2019").resolve(), False)]
+
+
+@pytest.mark.parametrize("body", [
+    {"media_dir_id": "m1", "path": "../..", "show": "file"},
+    {"media_dir_id": "m1", "path": "/etc", "show": "file"},
+    {"path": "/etc/passwd", "show": "file"},
+    {"media_dir_id": "m1", "path": "missing.jpg", "show": "file"},
+    {"media_item_id": 424242, "show": "file"},
+    "not an object",
+])
+def test_open_button_refuses_anything_else(client, opened, media_root, body):
+    response = client.post("/api/assistant/open", json=body)
+    assert response.status_code == 404
+    assert response.get_json()["code"] == "open_target_unavailable"
+    assert opened == []
+
+
+def test_open_button_reports_when_the_os_cannot_open(client, media_root, monkeypatch):
+    def fail(path, reveal=False):
+        raise OSError("no handler")
+    monkeypatch.setattr("yaffo.routes.assistant.open_in_os", fail)
+    response = client.post("/api/assistant/open", json={"media_dir_id": "m1", "path": "", "show": "file"})
+    assert response.status_code == 500 and response.get_json()["code"] == "open_failed"
+
+
+# ---- change plans ---------------------------------------------------------------------
+
+@pytest.fixture
+def no_events(monkeypatch):
+    monkeypatch.setattr("yaffo.background_tasks.automation_sandbox.automation_actions.emit_event",
+                        lambda *args: None)
+
+
+def _plan(conversation_id, code='tag_media_items([{"media_item_id": 1, "name": "beach"}])'):
+    """Record a plan the way a run does: a run_script tool call, then its tool event."""
+    provider = ScriptToolProvider(db.session, conversation_id=conversation_id,
+                                  actions=assistant_settings.enabled_actions())
+    result = provider.call_tool(RUN_SCRIPT, {"code": code, "purpose": "Tag it"})
+    repo.add_event(db.session, conversation_id, "tool", "", result.host_data)
+    repo.set_status(db.session, conversation_id, ASSISTANT_STATUS_IDLE)
+    return result.host_data["plan_id"]
+
+
+def _plans_url(conversation_id, plan_id, action):
+    return f"/api/assistant/conversations/{conversation_id}/plans/{plan_id}/{action}"
+
+
+def _tag_count():
+    return db.session.query(Tag).count()
+
+
+def test_poll_carries_the_plan_card_and_the_list_flags_it(client, runs, with_key, no_events):
+    db.session.add(MediaItem(id=1, full_file_path="/lib/1.jpg"))
+    db.session.commit()
+    conversation_id = _start(client).get_json()["conversation"]["id"]
+    plan_id = _plan(conversation_id)
+
+    body = client.get(f"/api/assistant/conversations/{conversation_id}").get_json()
+    payload = body["messages"][-1]["payload"]
+    assert payload["plan_id"] == plan_id
+    assert payload["plan"]["status"] == "PENDING"
+    assert payload["plan"]["steps"][0]["name"] == "tag_media_items"
+    assert payload["plan"]["steps"][0]["facts"]["names"] == ["beach"]
+    assert body["conversation"]["pending_plans"] == 1
+    listed = client.get("/api/assistant/conversations").get_json()["conversations"]
+    assert listed[0]["pending_plans"] == 1
+
+
+def test_approve_then_undo(client, runs, with_key, no_events):
+    db.session.add(MediaItem(id=1, full_file_path="/lib/1.jpg"))
+    db.session.commit()
+    conversation_id = _start(client).get_json()["conversation"]["id"]
+    plan_id = _plan(conversation_id)
+    assert _tag_count() == 0
+
+    approved = client.post(_plans_url(conversation_id, plan_id, "approve"), json={})
+    assert approved.status_code == 200
+    assert approved.get_json()["plan"]["status"] == "EXECUTED"
+    assert _tag_count() == 1
+    again = client.post(_plans_url(conversation_id, plan_id, "approve"), json={})
+    assert again.status_code == 409 and again.get_json()["code"] == "not_pending"
+
+    undone = client.post(_plans_url(conversation_id, plan_id, "undo"), json={})
+    assert undone.get_json()["plan"]["status"] == "UNDONE"
+    assert _tag_count() == 0
+    kinds = [m["type"] for m in client.get(f"/api/assistant/conversations/{conversation_id}").get_json()["messages"]]
+    assert kinds[-2:] == ["plan", "plan"]
+
+
+def test_decline_and_refusals(client, runs, with_key, no_events):
+    db.session.add(MediaItem(id=1, full_file_path="/lib/1.jpg"))
+    db.session.commit()
+    conversation_id = _start(client).get_json()["conversation"]["id"]
+    plan_id = _plan(conversation_id)
+
+    repo.set_status(db.session, conversation_id, ASSISTANT_STATUS_RUNNING)
+    busy = client.post(_plans_url(conversation_id, plan_id, "approve"), json={})
+    assert busy.status_code == 409 and busy.get_json()["code"] == "run_in_progress"
+    repo.set_status(db.session, conversation_id, ASSISTANT_STATUS_IDLE)
+
+    assert client.post(_plans_url(conversation_id, 999, "approve"), json={}).status_code == 404
+    declined = client.post(_plans_url(conversation_id, plan_id, "decline"))
+    assert declined.get_json()["plan"]["status"] == "DECLINED"
+    assert client.post(_plans_url(conversation_id, plan_id, "approve"), json={}).status_code == 409
+    assert _tag_count() == 0
+
+
+def test_count_confirmation_is_enforced_by_the_server(client, runs, with_key, no_events):
+    db.session.add_all([MediaItem(id=i, full_file_path=f"/lib/{i}.jpg") for i in (1, 2, 3)])
+    db.session.commit()
+    client.post("/settings/assistant/confirm-threshold", data={"confirm_threshold": "2"})
+    conversation_id = _start(client).get_json()["conversation"]["id"]
+    plan_id = _plan(conversation_id, 'tag_media_items([{"media_item_id": i, "name": "x"} for i in [1, 2, 3]])')
+
+    refused = client.post(_plans_url(conversation_id, plan_id, "approve"), json={"confirm_count": True})
+    assert refused.status_code == 400 and refused.get_json()["code"] == "confirmation_required"
+    accepted = client.post(_plans_url(conversation_id, plan_id, "approve"), json={"confirm_count": 3})
+    assert accepted.get_json()["plan"]["status"] == "EXECUTED" and _tag_count() == 3
+
+
+def test_action_switches_and_threshold(client):
+    page = client.get("/settings").get_data(as_text=True)
+    assert 'id="assistant-action-tag_media_items"' in page
+    assert 'id="assistant-action-delete_media_items"' in page
+    assert 'id="assistant-confirm-threshold"' in page and 'value="500"' in page
+    assert "delete_media_items" not in assistant_settings.enabled_actions()
+
+    assert client.post("/settings/assistant/actions/delete_media_items", data={"enabled": "on"}).status_code == 200
+    assert client.post("/settings/assistant/actions/tag_media_items", data={}).status_code == 200
+    enabled = assistant_settings.enabled_actions()
+    assert "delete_media_items" in enabled and "tag_media_items" not in enabled
+    assert client.post("/settings/assistant/actions/set_media_dirs", data={"enabled": "on"}).status_code == 404
+
+    assert client.post("/settings/assistant/confirm-threshold", data={"confirm_threshold": "25"}).status_code == 200
+    assert assistant_settings.confirm_threshold() == 25
+    assert client.post("/settings/assistant/confirm-threshold", data={"confirm_threshold": "0"}).status_code == 400
+    assert client.post("/settings/assistant/confirm-threshold", data={"confirm_threshold": "x"}).status_code == 400
+    assert assistant_settings.confirm_threshold() == 25
+
+
+def _settings_section(client) -> str:
+    """Settings → Assistant's markup: from its id to the end of its template (the
+    confirm-count threshold closes it)."""
+    page = client.get("/settings").get_data(as_text=True)
+    section = page[page.index('id="assistant-section"'):]
+    return section[:section.index("</fieldset>", section.index('id="assistant-confirm-threshold"'))]
+
+
+def test_delete_all_is_on_the_assistant_page_not_in_settings(client, with_key):
+    assert 'id="assistant-delete-all"' not in _settings_section(client)
+    assert 'id="assistant-delete-all"' in client.get("/assistant").get_data(as_text=True)
+
+
+def test_every_change_is_in_exactly_one_settings_group(app):
+    with app.test_request_context():
+        grouped = [name for _, _, labels in action_groups_layout() for name in labels]
+    assert sorted(grouped) == sorted(fn.name for fn in assistant_settings.action_functions())
+
+
+def test_settings_groups_the_changes_with_counts_and_undo_tags(client):
+    section = _settings_section(client)
+
+    assert section.count("data-assistant-action-group") == 8
+    assert "Files on disk" in section and "0 of 3 on" in section  # file changes start off
+    assert "3 of 3 on" in section  # tags and favorites start on
+    assert section.count("t be undone</span>") == section.count("chip-warning") == 11
+    files = section[section.index("Files on disk"):section.index("Library upkeep")]
+    assert files.count("chip-warning") == 3
+    assert 'id="assistant-diag-metadata"' in section
+
+
+def test_settings_labels_are_short_with_explanations_in_info_tips(app, client):
+    with app.test_request_context():
+        labels = [label for _, _, group in action_groups_layout() for label in group.values()]
+        labels += list(diagnostic_labels().values())
+        tips = switch_help()
+    assert not [label for label in labels if "(" in label]
+
+    section = _settings_section(client)
+    assert section.count('class="help-tip"') == len(tips) + 1 == 15  # + the confirm-count threshold
+    assert "Delete albums\n" in section and "The photos in the album stay in your library." in section

@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 
 from yaffo import themes
 from yaffo.background_tasks.config import task_queue
+from yaffo.taskq import PRIORITY_INTERACTIVE
 from yaffo.background_tasks.utils import SessionFactory, get_theme_status
 from yaffo.db.models import (
     CONVERSATION_TYPE_ASSISTANT,
@@ -37,7 +38,7 @@ from yaffo.i18n import DEFAULT_LOCALE, get_saved_locale
 from yaffo.logging_config import get_logger
 from yaffo.site_agents import llm_config
 from yaffo.site_agents.agent import create_theme_builder_agent
-from yaffo.site_agents.prompt_generator.theme_user_prompt import build_theme_user_message
+from yaffo.site_agents.theme.prompt_generator.theme_user_prompt import build_theme_user_message
 
 logger = get_logger(__name__, 'background_tasks')
 
@@ -120,7 +121,7 @@ def run_theme_generation(
         themes.set_theme_status(slug, PAGE_VERSION_STATUS_FAILED, session)
 
 
-@task_queue.task()
+@task_queue.task(priority=PRIORITY_INTERACTIVE)
 def generate_theme_task(slug: str, message: str) -> None:
     session = SessionFactory()
     try:

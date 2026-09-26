@@ -250,7 +250,7 @@ test.describe('Automations', () => {
     await expect(picker).toHaveClass(/active/);
     await picker.locator('#folder-picker-cancel').click();
     await expect(picker).not.toHaveClass(/active/);
-    await expect(page.locator('#automation-runs .automation-run-row')).toHaveCount(0);
+    await expect(page.locator('#automation-runs .run-history-row')).toHaveCount(0);
 
     await page.goto('/utilities/automations/file-favorite-kid-photos/triggers/edit');
     await expect(page.locator('#automation-triggers .automation-trigger-row')).toHaveCount(0);

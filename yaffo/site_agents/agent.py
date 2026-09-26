@@ -9,6 +9,7 @@ and edited as a side effect of the model's tool calls (server-side), so the
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable, Iterator, Optional
 
 from sqlalchemy.orm import Session
@@ -20,21 +21,26 @@ from yaffo.site_agents.model_clients import (
     ToolCallResult,
     create_model_client,
 )
-from yaffo.site_agents.prompt_generator import build_system_prompt
-from yaffo.site_agents.prompt_generator.theme_system_prompt import build_template_builder_system_prompt
-from yaffo.site_agents.prompt_generator.automation_system_prompt import build_automation_builder_system_prompt
-from yaffo.site_agents.tool_providers import (
-    AutomationToolProvider,
-    AutomationTriggerToolProvider,
-    ContentBlock,
-    DataQueryToolProvider,
-    ThemeCatalogToolProvider,
-    ThemeToolProvider,
-    ToolProvider,
-    ToolResult,
-    WidgetTemplateToolProvider,
-    WidgetToolProvider,
-)
+from yaffo.site_agents.page.prompt_generator import build_system_prompt
+from yaffo.site_agents.theme.prompt_generator.theme_system_prompt import build_template_builder_system_prompt
+from yaffo.site_agents.automation.prompt_generator.automation_system_prompt import build_automation_builder_system_prompt
+from yaffo.site_agents.assistant.prompt_generator.prompt import build_assistant_system_prompt
+from yaffo.site_agents.assistant.tool_providers.diagnostics.diagnostics import DiagnosticsToolProvider
+from yaffo.site_agents.assistant.tool_providers.links import LinkToolProvider
+from yaffo.site_agents.assistant.redact import Redactor
+from yaffo.site_agents.assistant.tool_providers.script_tool import ScriptToolProvider
+from yaffo.site_agents.assistant.settings import DIAG_LIBRARY
+from yaffo.site_agents.assistant.tool_providers.knowledge.tools import KnowledgeToolProvider
+from yaffo.site_agents.automation.tool_providers.automation_tool import AutomationToolProvider
+from yaffo.site_agents.automation.tool_providers.automation_trigger_tool import AutomationTriggerToolProvider
+from yaffo.site_agents.common.tool_providers.tool_provider_types import ContentBlock
+from yaffo.site_agents.common.tool_providers.data_query_tool import DataQueryToolProvider
+from yaffo.site_agents.theme.tool_providers.theme_catalog_tool import ThemeCatalogToolProvider
+from yaffo.site_agents.theme.tool_providers.theme_tool import ThemeToolProvider
+from yaffo.site_agents.common.tool_providers.tool_provider_types import ToolProvider
+from yaffo.site_agents.common.tool_providers.tool_provider_types import ToolResult
+from yaffo.site_agents.page.tool_providers.widget_template_tool import WidgetTemplateToolProvider
+from yaffo.site_agents.page.tool_providers.widget_tool import WidgetToolProvider
 from yaffo.config import get_int as get_config_int
 
 # Default cap on the agent's tool-use loop per generation, from config.toml
@@ -213,6 +219,7 @@ def create_page_builder_agent(
     client = create_model_client(
         model=model,
         system_prompt=build_system_prompt(),
+        log_feature="page",
         providers=providers,
         api_key=api_key,
     )
@@ -237,6 +244,7 @@ def create_theme_builder_agent(
     client = create_model_client(
         model=model,
         system_prompt=build_template_builder_system_prompt(),
+        log_feature="theme",
         providers=providers,
         api_key=api_key,
     )
@@ -264,7 +272,56 @@ def create_automation_builder_agent(
     client = create_model_client(
         model=model,
         system_prompt=build_automation_builder_system_prompt(),
+        log_feature="automation",
         providers=providers,
         api_key=api_key,
     )
+    return Agent(client, providers, max_iterations=max_iterations)
+
+
+def create_assistant_agent(
+    *,
+    model: ModelAlias,
+    api_key: str,
+    history: list[tuple[str, str]],
+    session: Optional[Session] = None,
+    diagnostics: frozenset[str] = frozenset(),
+    redactor: Optional[Redactor] = None,
+    model_label: str = "",
+    log_dir: Optional[Path] = None,
+    max_iterations: int = _MAX_ITERATIONS,
+    conversation_id: Optional[int] = None,
+    actions: frozenset[str] = frozenset(),
+) -> Agent:
+    """Wire the in-app assistant: the docs tools (search_docs / read_doc over the
+    bundled knowledge), plus the read-only diagnostic tools for the enabled
+    `diagnostics` groups and, with the library group, run_script and the link
+    tools. `actions` are the library changes switched on in Settings; with a
+    `conversation_id`, run_script records them as change plans for that
+    conversation. The system prompt matches the tools and changes offered. The conversation's earlier turns (normalized (role,
+    text) pairs) are seeded into the client. `model` and `api_key` are required —
+    the caller resolves them from the assistant settings; `session` is required
+    when any diagnostics group is enabled."""
+    providers: list[ToolProvider] = [KnowledgeToolProvider()]
+    if DIAG_LIBRARY not in diagnostics or conversation_id is None:
+        actions = frozenset()
+    if diagnostics:
+        if session is None:
+            raise ValueError("Diagnostics need a database session")
+        redactor = redactor or Redactor()
+        providers.append(DiagnosticsToolProvider(
+            session, groups=diagnostics, redactor=redactor, model_label=model_label))
+        if DIAG_LIBRARY in diagnostics:
+            providers.append(ScriptToolProvider(
+                session, redactor=redactor, conversation_id=conversation_id, actions=actions))
+            providers.append(LinkToolProvider(session))
+    client = create_model_client(
+        model=model,
+        system_prompt=build_assistant_system_prompt(diagnostics, actions),
+        log_feature="assistant",
+        log_dir=log_dir, persistent_log=log_dir is not None,
+        providers=providers,
+        api_key=api_key,
+    )
+    client.load_history(history)
     return Agent(client, providers, max_iterations=max_iterations)

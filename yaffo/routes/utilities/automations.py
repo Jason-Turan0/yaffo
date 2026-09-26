@@ -8,33 +8,31 @@ generate_automation_task; the run lives on the automation, so the browser polls
 code-backed built-ins: read-only chat, can't be deleted.
 """
 import re
+from pathlib import Path
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import timezone
 
 from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, url_for
-from flask_babel import gettext, ngettext
+from flask_babel import gettext
 
 from yaffo.background_tasks.automation_config import config_fields_for, config_value
 from yaffo.background_tasks.automation_dispatch import invoke_automation
+from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.automation_sandbox.preview import preview_automation
 from yaffo.background_tasks.events import EventContext, MANUAL_RUN_EVENT_TYPE
 from yaffo.background_tasks.schedule import is_valid_cron
 from yaffo.background_tasks.tasks.generate_automation import generate_automation_task
 from yaffo.db import db
+from yaffo.taskq.store import STATUS_READY, STATUS_RUNNING
 from yaffo.db.models import (
+    AUTOMATION_HANDLER_FILE_SYNC,
     Automation,
     AutomationTrigger,
-    Job,
     AUTOMATION_STATUS_ACCEPTED,
     AUTOMATION_STATUS_IN_PROGRESS,
     AUTOMATION_STATUS_READY,
     CONVERSATION_TYPE_USER,
     EVENTS,
-    JOB_STATUS_CANCELLED,
-    JOB_STATUS_COMPLETED,
-    JOB_STATUS_FAILED,
-    JOB_STATUS_PENDING,
-    JOB_STATUS_RUNNING,
 )
 from yaffo.db.repositories import automation_repository as repo
 from yaffo.db.repositories import media_dir_repository
@@ -48,27 +46,24 @@ from yaffo.distance_units import (
 )
 from yaffo.site_agents import llm_config
 from yaffo.routes.utilities.common import automations_sidebar_context
+from yaffo.routes.utilities.run_history import RunView, run_view
 
 _MAX_BASE_SLUG_LENGTH = 30
 
-_RUN_FINISHED_STATUSES = (JOB_STATUS_COMPLETED, JOB_STATUS_FAILED, JOB_STATUS_CANCELLED)
+# The queue task a file-sync run executes (tasks/file_sync.py).
+FILE_SYNC_TASK = "file_sync_task"
 
 
-@dataclass(frozen=True)
-class AutomationRunView:
-    """A single row of an automation's run history, rendered on the detail page.
-    Built from a Job (runs reuse the Job table) so the template stays dumb and the
-    per-run-kind display logic lives in one tested place."""
-    status: str
-    status_label: str
-    status_chip: str       # chip tone modifier for the status badge
-    is_finished: bool
-    is_error: bool
-    progress: int          # 0–100; shown for in-progress runs
-    started_at: datetime | None
-    finished_at: datetime | None
-    summary: str
-    error: str | None
+def _queue_store():
+    """The task queue's store (a function so tests can swap in a throwaway one)."""
+    return task_queue.store
+
+
+def file_sync_queued() -> bool:
+    """Whether a file sync is waiting in the queue or running now."""
+    counts = _queue_store().status_counts([FILE_SYNC_TASK])
+    return bool(counts.get(STATUS_READY, 0) + counts.get(STATUS_RUNNING, 0))
+
 
 
 @dataclass(frozen=True)
@@ -99,97 +94,10 @@ class AutomationRunStarted:
     media_count: int | None
 
 
-def _run_progress(job: Job) -> int:
-    """Percent complete (0–100) — processed (done + errored + cancelled) over the
-    task count, matching the live job card's math."""
-    if not job.task_count or job.task_count <= 0:
-        return 0
-    processed = (job.completed_count or 0) + (job.error_count or 0) + (job.cancelled_count or 0)
-    return min(100, int(processed / job.task_count * 100))
-
-
-def _run_label(job: Job) -> str:
-    if job.automation is not None and job.automation.is_system:
-        return job.automation.display_name
-    label = job.message or job.name
-    return {
-        "Imported {totalCount}/{taskCount} photos": gettext("Import photos"),
-        "Indexed {totalCount}/{taskCount} photos": gettext("Index photos"),
-        "Processed {totalCount}/{taskCount} media items": gettext("Find duplicates"),
-        "import_photos": gettext("Import photos"),
-        "index_photos": gettext("Index photos"),
-        "find_duplicates": gettext("Find duplicates"),
-    }.get(label, label)
-
-
-def _run_summary(job: Job) -> str:
-    """One-line result for a run: progress counts for batch jobs (find_duplicates /
-    index), else the job's message (custom runs carry the automation name)."""
-    completed = job.completed_count or 0
-    errors = job.error_count or 0
-    cancelled = job.cancelled_count or 0
-    if job.task_count and job.task_count > 1:
-        summary = gettext(
-            "%(completed)s of %(total)s processed",
-            completed=completed,
-            total=job.task_count,
-        )
-        if errors:
-            summary += ", " + ngettext(
-                "%(count)s error",
-                "%(count)s errors",
-                errors,
-                count=errors,
-            )
-        if cancelled:
-            summary += ", " + ngettext(
-                "%(count)s cancelled",
-                "%(count)s cancelled",
-                cancelled,
-                count=cancelled,
-            )
-        return summary
-    return _run_label(job)
-
-
-def _run_status_label(status: str) -> str:
-    return {
-        JOB_STATUS_PENDING: gettext("Pending"),
-        JOB_STATUS_RUNNING: gettext("Running"),
-        JOB_STATUS_COMPLETED: gettext("Completed"),
-        JOB_STATUS_CANCELLED: gettext("Cancelled"),
-        JOB_STATUS_FAILED: gettext("Failed"),
-    }.get(status, status.capitalize())
-
-
-def _run_status_chip(status: str) -> str:
-    return {
-        JOB_STATUS_PENDING: "chip-warning",
-        JOB_STATUS_RUNNING: "chip-warning",
-        JOB_STATUS_COMPLETED: "chip-success",
-        JOB_STATUS_FAILED: "chip-danger",
-    }.get(status, "")
-
-
-def _run_view(job: Job) -> AutomationRunView:
-    return AutomationRunView(
-        status=job.status,
-        status_label=_run_status_label(job.status),
-        status_chip=_run_status_chip(job.status),
-        is_finished=job.status in _RUN_FINISHED_STATUSES,
-        is_error=job.status == JOB_STATUS_FAILED or bool(job.error_count),
-        progress=_run_progress(job),
-        started_at=job.started_at or job.created_at,
-        finished_at=job.completed_at,
-        summary=_run_summary(job),
-        error=job.error,
-    )
-
-
-def _recent_runs(automation: Automation | None) -> list[AutomationRunView]:
+def _recent_runs(automation: Automation | None) -> list[RunView]:
     if automation is None:
         return []
-    return [_run_view(j) for j in repo.get_recent_jobs(db.session, automation.id)]
+    return [run_view(j) for j in repo.get_recent_jobs(db.session, automation.id)]
 
 
 def _slugify(name: str) -> str:
@@ -289,6 +197,7 @@ def init_automations_routes(app: Flask):
             "slug": automation.slug,
             "events": _localized_event_labels(),
             "error": error,
+            "media_dirs": media_dir_repository.list_media_dirs(db.session),
         }
 
     def _render_triggers(automation: Automation, error: str | None = None):
@@ -553,6 +462,14 @@ def init_automations_routes(app: Flask):
         automation = repo.get_by_slug(db.session, slug)
         if automation is None:
             abort(404)
+        # The queue skips a file sync while another holds its lock, leaving no trace
+        # of the click; say so instead.
+        if automation.handler == AUTOMATION_HANDLER_FILE_SYNC and file_sync_queued():
+            return _error(
+                gettext("A file sync is already running. Wait for it to finish, then run it again."),
+                "file_sync_running",
+                409,
+            )
 
         path = ((request.get_json(silent=True) or {}).get("path") or "").strip()
         context = None
@@ -607,14 +524,41 @@ def init_automations_routes(app: Flask):
             trigger = _find_trigger(automation, edit_id) if edit_id else None
             if edit_id and trigger is None:
                 abort(404)
+            media_dirs = media_dir_repository.get_media_dir_entries(db.session)
+            roots = {entry.id: entry.path.resolve() for entry in media_dirs}
+            scope_type = (request.form.get("scope_type") or "everything").strip()
+            media_dir_ids = (list(dict.fromkeys(request.form.getlist("media_dir_ids")))
+                             if scope_type == "media_dirs" else [])
+            folder_paths = (list(dict.fromkeys(request.form.getlist("folder_paths")))
+                            if scope_type == "paths" else [])
+            invalid_scope = any(entry_id not in roots for entry_id in media_dir_ids)
+            invalid_scope = invalid_scope or scope_type not in {"everything", "media_dirs", "paths"}
+            invalid_scope = invalid_scope or (scope_type == "media_dirs" and not media_dir_ids)
+            invalid_scope = invalid_scope or (scope_type == "paths" and not folder_paths)
+            normalized_paths = []
+            for raw_path in folder_paths:
+                path = Path(raw_path).expanduser()
+                if not path.is_absolute():
+                    invalid_scope = True
+                    break
+                path = path.resolve()
+                if not any(path == root or root in path.parents for root in roots.values()):
+                    invalid_scope = True
+                    break
+                normalized_paths.append(str(path))
+            config = {"scope_type": scope_type, "media_dir_ids": media_dir_ids,
+                      "folder_paths": list(dict.fromkeys(normalized_paths))}
             if not is_valid_cron(cron):
                 error = gettext("Enter a valid 5-field cron expression (e.g. */30 * * * *).")
+            elif invalid_scope:
+                error = gettext("Choose at least one configured media directory or a folder inside one.")
             elif trigger is not None:
                 trigger.cron = cron
+                trigger.config = config
                 trigger.next_run_at = None
                 db.session.commit()
             else:
-                repo.add_schedule_trigger(db.session, slug, cron)
+                repo.add_schedule_trigger(db.session, slug, cron, config)
         elif action == "add_event":
             event_type = (request.form.get("new_event_type") or "").strip()
             if event_type not in EVENTS:

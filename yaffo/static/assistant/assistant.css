@@ -1,0 +1,563 @@
+/* Ask Yaffo (templates/assistant/_panel.html). The floating panel sits above the
+   navbar (100) and below modals (1000), so its confirm dialogs cover it.
+
+   Entry points: on desktop a floating button in the corner (only once an API key
+   is set); below the navbar's collapse breakpoint (1200px) the "Ask Yaffo" item
+   in the Menu instead. */
+
+/* The Menu item is a <button>; reset it to look like the link items beside it. */
+.nav-assistant-toggle {
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+    text-align: start;
+}
+
+.assistant-fab {
+    position: fixed;
+    inset-block-end: calc(24px + env(safe-area-inset-bottom));
+    inset-inline-end: calc(24px + env(safe-area-inset-right));
+    z-index: 140;
+    width: 56px;
+    height: 56px;
+    border: var(--border-width) solid var(--color-accent);
+    border-radius: 50%;
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+    box-shadow: var(--shadow-lg);
+    cursor: pointer;
+}
+
+/* By id: several skins shrink every button icon to 15-16px with
+   `[data-theme] button[data-icon]::before`, which would outrank a class here and
+   leave a small glyph in the 56px circle. This one icon is meant to be large. */
+#assistant-fab[data-icon]::before {
+    width: 26px;
+    height: 26px;
+}
+
+.assistant-fab:hover {
+    background: var(--color-accent-hover);
+}
+
+.assistant-fab[hidden] {
+    display: none;
+}
+
+/* The timeline's date scrubber runs down the right edge; clear it. */
+html:not([dir="rtl"]) body:has(.timeline-scrubber) .assistant-fab {
+    inset-inline-end: calc(64px + env(safe-area-inset-right));
+}
+
+/* Desktop uses the floating button; the narrow shell's Menu gets the item. */
+.nav-assistant-item {
+    display: none;
+}
+
+@media (max-width: 1200px) {
+    .nav-assistant-item {
+        display: list-item;
+    }
+
+    /* Element + class, to outrank icons.css's button[data-icon] { display: inline-flex }. */
+    button.assistant-fab {
+        display: none;
+    }
+}
+
+.assistant-panel {
+    position: fixed;
+    inset-block-start: var(--navbar-height, 64px);
+    inset-block-end: 0;
+    inset-inline-end: 0;
+    z-index: 150;
+    /* --assistant-panel-width is set by the resize handle (assistant.js). */
+    width: min(var(--assistant-panel-width, 440px), 100vw);
+    display: flex;
+    flex-direction: column;
+    background: var(--color-surface);
+    border-inline-start: var(--border-width) solid var(--color-border);
+    box-shadow: var(--shadow-lg);
+}
+
+/* The panel's inner edge: drag to resize. Straddles the border so it's easy to hit. */
+.assistant-resize-handle {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: -4px;
+    z-index: 1;
+    width: 8px;
+    cursor: col-resize;
+    touch-action: none;
+}
+
+.assistant-resize-handle:hover,
+.assistant-resize-handle:focus-visible,
+.assistant-resizing .assistant-resize-handle {
+    background: var(--color-accent-soft);
+    outline: none;
+}
+
+/* While dragging, keep the resize cursor and stop text selection across the page. */
+body.assistant-resizing {
+    cursor: col-resize;
+    user-select: none;
+}
+
+@media (max-width: 640px) {
+    .assistant-resize-handle {
+        display: none;
+    }
+}
+
+.assistant-panel[hidden] {
+    display: none;
+}
+
+/* The chat fills the panel: the transcript takes the free height and scrolls. */
+.assistant-panel .chat-dialog {
+    flex: 1;
+    min-height: 0;
+}
+
+.assistant-panel .chat-dialog-messages {
+    flex: 1;
+    max-height: none;
+}
+
+.assistant-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.assistant-conversation-select,
+.assistant-toolbar .searchable-select-wrapper {
+    flex: 1;
+    min-width: 0;
+    width: 0;
+}
+
+.assistant-toolbar > button,
+.assistant-toolbar > a {
+    flex-shrink: 0;
+}
+
+.assistant-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.assistant-icon-button:hover:not(:disabled) {
+    color: var(--color-text);
+    border-color: var(--color-border-hover);
+}
+
+.assistant-icon-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.assistant-toolbar .modal-close {
+    margin-inline-start: auto;
+}
+
+/* Collapsed tool calls between the question and the answer. */
+.assistant-activity {
+    align-self: flex-start;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    padding: 2px 12px;
+}
+
+.assistant-activity summary {
+    cursor: pointer;
+}
+
+.assistant-activity ul {
+    margin: 4px 0 0;
+    padding-left: 18px;
+}
+
+/* One check, expandable to exactly what the model received (after redaction). */
+.assistant-tool summary {
+    cursor: pointer;
+}
+
+.assistant-tool-error > .assistant-tool > summary,
+li.assistant-tool-error {
+    color: var(--color-danger);
+}
+
+.assistant-tool-detail {
+    max-height: 240px;
+    overflow: auto;
+    margin: 4px 0;
+    padding: 8px;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-sunken);
+    color: var(--color-text);
+    font-size: var(--font-size-xs);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.assistant-tool-note {
+    margin: 0 0 4px;
+}
+
+.assistant-tool-script {
+    margin-block-end: 4px;
+}
+
+/* The doc sections a run used, and any app links it made, under its answer. */
+.assistant-links,
+.assistant-sources {
+    align-self: flex-start;
+    max-width: 90%;
+    font-size: var(--font-size-sm);
+    padding: 0 12px;
+}
+
+.assistant-sources-label {
+    color: var(--color-text-muted);
+}
+
+.assistant-links ul,
+.assistant-sources ul {
+    margin: 2px 0 0;
+    padding-left: 18px;
+}
+
+/* A link_to_file button: reads like the app links beside it, with a file or folder
+   icon to say it opens something on this computer rather than a page. */
+.assistant-open-link {
+    gap: 4px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--color-accent);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.assistant-open-link[data-icon]::before {
+    width: 14px;
+    height: 14px;
+}
+
+@media (hover: none), (pointer: coarse) {
+    .assistant-open-link {
+        min-height: 0;
+        padding-block: 8px;
+        margin-block: -8px;
+    }
+}
+
+.assistant-empty {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+}
+
+.assistant-empty p {
+    margin: 0;
+}
+
+.assistant-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.assistant-suggestions .chip {
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: var(--font-size-sm);
+    padding: 6px 10px;
+}
+
+/* Full page (/assistant): the conversation list beside an in-flow panel. */
+.assistant-page {
+    display: grid;
+    grid-template-columns: minmax(200px, 260px) 1fr;
+    gap: 16px;
+    height: calc(100vh - var(--navbar-height, 56px) - 48px);
+    height: calc(100dvh - var(--navbar-height, 56px) - 48px);
+    min-height: 420px;
+}
+
+.assistant-panel-page {
+    position: static;
+    width: auto;
+    min-width: 0;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.assistant-sidebar {
+    min-width: 0;
+    overflow-y: auto;
+}
+
+.assistant-sidebar-title {
+    font-size: var(--font-size-base);
+    margin: 0 0 8px;
+}
+
+.assistant-conversation-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.assistant-conversation-item {
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-text);
+    font: inherit;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.assistant-conversation-item:hover {
+    background: var(--color-surface-hover);
+}
+
+.assistant-conversation-item[aria-current="true"] {
+    background: var(--color-accent-soft);
+    color: var(--color-accent-soft-text);
+}
+
+.assistant-conversation-empty {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+}
+
+@media (max-width: 640px) {
+    .assistant-panel:not(.assistant-panel-page) {
+        width: 100vw;
+    }
+
+    .assistant-page {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        height: auto;
+    }
+
+    .assistant-sidebar {
+        max-height: 30vh;
+        max-height: 30dvh;
+    }
+
+    .assistant-panel-page {
+        min-height: 70vh;
+        min-height: 70dvh;
+    }
+}
+
+/* The notice at the top of an empty conversation: model, whether it checks this
+   computer, and a link to Settings. */
+.assistant-notice {
+    margin: 0;
+    padding-block-end: 8px;
+    border-block-end: var(--border-width) solid var(--color-border);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+}
+
+/* Context attached by a contextual "Ask Yaffo" button: a removable chip in the composer, and a
+   label above the message it went out with. */
+.assistant-context {
+    margin-block-end: 6px;
+}
+
+.assistant-context[hidden] {
+    display: none;
+}
+
+.assistant-context-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    font-size: var(--font-size-sm);
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.assistant-context-chip > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.assistant-context-remove {
+    border: none;
+    background: none;
+    color: inherit;
+    font-size: var(--font-size-lg);
+    line-height: 1;
+    cursor: pointer;
+}
+
+.assistant-context-sent {
+    align-self: flex-end;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    padding: 0 12px;
+}
+
+
+/* A change plan's card (plan_card.js): what a script proposes, from the server's
+   plan, with Approve / Decline, then what ran and Undo. */
+.assistant-plan {
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0 12px;
+    padding: 12px;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: var(--font-size-sm);
+}
+
+.assistant-plan-pending {
+    border-color: var(--color-accent);
+}
+
+.assistant-plan-pending.assistant-plan-high {
+    border-color: var(--color-danger-soft-border);
+    background: var(--color-danger-soft);
+}
+
+.assistant-plan-declined,
+.assistant-plan-expired,
+.assistant-plan-undone {
+    color: var(--color-text-muted);
+}
+
+.assistant-plan-title {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+}
+
+.assistant-plan-steps {
+    margin: 0;
+    padding-left: 20px;
+}
+
+ul.assistant-plan-steps {
+    list-style: none;
+    padding-left: 0;
+}
+
+.assistant-plan-step-failed {
+    color: var(--color-danger);
+}
+
+.assistant-plan-step-not_run,
+.assistant-plan-step-undone {
+    color: var(--color-text-muted);
+    text-decoration: line-through;
+}
+
+.assistant-plan-facts,
+.assistant-plan-outcome {
+    margin: 0;
+    color: var(--color-text-muted);
+}
+
+.assistant-plan-high .assistant-plan-facts {
+    color: var(--color-danger-soft-text);
+}
+
+.assistant-plan-failed .assistant-plan-outcome,
+.assistant-plan-partial .assistant-plan-outcome {
+    color: var(--color-danger);
+}
+
+.assistant-plan-confirm {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.assistant-plan-confirm input[type="text"] {
+    width: 8em;
+}
+
+.assistant-plan-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+}
+
+.assistant-plan-actions .hint-text {
+    flex-basis: 100%;
+    text-align: end;
+}
+
+/* Narrow screens: full-width buttons at the touch size (sketch 8). */
+@media (max-width: 640px) {
+    .assistant-plan-actions {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .assistant-plan-actions button {
+        min-height: 44px;
+    }
+}
+
+/* A conversation with a plan waiting for Approve or Decline. */
+.assistant-conversation-pending {
+    margin-inline-start: 6px;
+    padding: 0 6px;
+    border-radius: var(--radius-sm);
+    background: var(--color-accent-soft);
+    color: var(--color-accent-soft-text);
+    font-size: var(--font-size-sm);
+}
+
+/* Page mode: "Delete all conversations" closes the sidebar's list. */
+.assistant-delete-all {
+    margin-top: 12px;
+}

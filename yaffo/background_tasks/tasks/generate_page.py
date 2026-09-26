@@ -18,6 +18,7 @@ from typing import Callable, Optional
 from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.config import task_queue
+from yaffo.taskq import PRIORITY_INTERACTIVE
 from yaffo.background_tasks.utils import SessionFactory, get_version_status
 from yaffo.db.models import (
     CONVERSATION_TYPE_ASSISTANT,
@@ -32,7 +33,7 @@ from yaffo.i18n import DEFAULT_LOCALE, get_saved_locale
 from yaffo.logging_config import get_logger
 from yaffo.site_agents import llm_config
 from yaffo.site_agents.agent import create_page_builder_agent
-from yaffo.site_agents.prompt_generator import build_user_message
+from yaffo.site_agents.page.prompt_generator import build_user_message
 from yaffo.site_agents.serializers import widget_draft
 
 logger = get_logger(__name__, 'background_tasks')
@@ -124,7 +125,7 @@ def run_generation(
         )
 
 
-@task_queue.task()
+@task_queue.task(priority=PRIORITY_INTERACTIVE)
 def generate_page_task(version_id: int, message: str, widget_errors: Optional[dict] = None):
     session = SessionFactory()
     try:

@@ -4,7 +4,7 @@ in those child processes so worker crashes stay isolated. See
 docs/development/task-queue.md."""
 from yaffo.taskq.core import Result, Task, TaskContext, TaskQueue
 from yaffo.taskq.cron import CronSpec, crontab
-from yaffo.taskq.signatures import Pipeline, Signature, chord
+from yaffo.taskq.signatures import PRIORITY_INTERACTIVE, PRIORITY_NORMAL, Pipeline, Signature, chord
 
 __all__ = [
     "TaskQueue",
@@ -16,4 +16,6 @@ __all__ = [
     "chord",
     "Signature",
     "Pipeline",
+    "PRIORITY_NORMAL",
+    "PRIORITY_INTERACTIVE",
 ]

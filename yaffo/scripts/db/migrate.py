@@ -50,6 +50,16 @@ def _discover() -> list[tuple[int, Path]]:
     return found
 
 
+def bundled_migrations() -> list[tuple[int, str]]:
+    """(number, name) of every migration shipped with this build, in order."""
+    return [(number, path.stem) for number, path in _discover()]
+
+
+def migration_number(name: str) -> int | None:
+    match = _NAME_RE.match(f"{name}.py")
+    return int(match.group(1)) if match else None
+
+
 def _load_migration(path: Path):
     spec = importlib.util.spec_from_file_location(f"_yaffo_migration_{path.stem}", path)
     module = importlib.util.module_from_spec(spec)

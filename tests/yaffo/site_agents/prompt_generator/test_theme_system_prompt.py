@@ -6,7 +6,7 @@ so the cached prefix holds across every theme.
 """
 import pytest
 
-from yaffo.site_agents.prompt_generator.theme_system_prompt import (
+from yaffo.site_agents.theme.prompt_generator.theme_system_prompt import (
     _icon_names,
     _token_defaults,
     build_template_builder_system_prompt,

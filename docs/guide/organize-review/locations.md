@@ -106,3 +106,10 @@ If the map has no markers:
 - check that the selected media folders are configured;
 - remember that a saved location name by itself is not enough: the item must also
   have GPS coordinates to appear on the map.
+
+## Ask Yaffo for Location Names
+
+[Ask Yaffo](../start-here/ask-yaffo.md) can suggest location names for photos
+from photos already named nearby, and set names or GPS coordinates for a group of
+photos, as a change you approve: for example "these camera photos were in Paris,
+like the phone photos from that day". It never looks place names up online.

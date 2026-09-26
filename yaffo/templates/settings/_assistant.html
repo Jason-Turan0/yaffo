@@ -1,0 +1,93 @@
+{# Settings → Assistant. Two blocks: what Ask Yaffo may look at, and which changes it
+   may propose (grouped by what they touch, folded away). Deleting conversations is
+   on the Ask Yaffo page, beside the list.
+   Every switch saves on change with htmx; settings.js keeps each group's count.
+   Labels stay short; an explanation goes in an info tip beside the checkbox (outside
+   the label, so tapping the tip doesn't toggle it). #}
+{% macro help_tip(switch) %}
+{% if switch.help %}
+<button type="button" class="help-tip" data-icon="info"
+        aria-label="{{ switch.help }}" data-tooltip="{{ switch.help }}"></button>
+{% endif %}
+{% endmacro %}
+<div class="settings-section" id="assistant-section">
+    <div class="assistant-settings-head">
+        <div>
+            <h2>{{ _("Assistant") }}</h2>
+            <p class="section-description">
+                {{ _("Ask Yaffo answers questions and troubleshoots using your AI Generation key. Nothing in your library changes until you approve it.") }}
+            </p>
+        </div>
+        <label class="checkbox-label assistant-master-switch">
+            <input type="checkbox" name="enabled" id="assistant-enabled"
+                   hx-post="{{ url_for('settings_assistant_enabled') }}" hx-swap="none"
+                   {% if assistant.enabled %}checked{% endif %}>
+            {{ _("Enabled") }}
+        </label>
+    </div>
+
+    <fieldset class="assistant-settings-block">
+        <legend>{{ _("What it can look at") }}</legend>
+        <p class="hint-text">
+            {{ _("What it reads is sent with your question, without your home folder, email addresses or keys. Turn everything off to answer from the documentation only.") }}
+        </p>
+        <div class="assistant-check-grid">
+            {% for switch in assistant.diagnostics %}
+            <div class="assistant-check-item">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="enabled" id="assistant-diag-{{ switch.name }}"
+                           hx-post="{{ url_for('settings_assistant_diagnostics', group=switch.name) }}" hx-swap="none"
+                           {% if switch.on %}checked{% endif %}>
+                    {{ switch.label }}
+                </label>
+                {{ help_tip(switch) }}
+            </div>
+            {% endfor %}
+        </div>
+    </fieldset>
+
+    <fieldset class="assistant-settings-block">
+        <legend>{{ _("Changes it can propose") }}</legend>
+        <p class="hint-text">
+            {{ _("Each change appears as a card you approve or decline, with the exact items and counts. Needs Library contents.") }}
+        </p>
+        <div class="assistant-action-groups">
+            {% for group in assistant.action_groups %}
+            <details class="assistant-action-group" data-assistant-action-group>
+                <summary>
+                    <span class="assistant-action-group-title">{{ group.title }}</span>
+                    <span class="chip" data-assistant-group-count data-total="{{ group.switches|length }}">
+                        {% trans on=group.on_count, total=group.switches|length %}{{ on }} of {{ total }} on{% endtrans %}
+                    </span>
+                </summary>
+                <div class="assistant-check-grid">
+                    {% for switch in group.switches %}
+                    <div class="assistant-check-item">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="enabled" id="assistant-action-{{ switch.name }}"
+                                   hx-post="{{ url_for('settings_assistant_action', name=switch.name) }}" hx-swap="none"
+                                   {% if switch.on %}checked{% endif %}>
+                            {{ switch.label }}
+                        </label>
+                        {{ help_tip(switch) }}
+                        {% if switch.irreversible %}
+                        <span class="chip chip-warning">{{ _("Can't be undone") }}</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </details>
+            {% endfor %}
+        </div>
+        {% set threshold_help = _("When a change affects more items than this, Approve also asks you to confirm the count.") %}
+        <div class="assistant-confirm-threshold">
+            <label for="assistant-confirm-threshold">{{ _("Confirm large changes") }}</label>
+            <input type="number" min="1" step="1" class="form-control" name="confirm_threshold"
+                   id="assistant-confirm-threshold" value="{{ assistant.confirm_threshold }}"
+                   hx-post="{{ url_for('settings_assistant_confirm_threshold') }}" hx-trigger="change"
+                   hx-swap="none">
+            <button type="button" class="help-tip" data-icon="info"
+                    aria-label="{{ threshold_help }}" data-tooltip="{{ threshold_help }}"></button>
+        </div>
+    </fieldset>
+</div>

@@ -7,6 +7,11 @@ read-only image layer:
 - ``ROOT_DIR/Image-ExifTool-<latest>``
 - ``ROOT_DIR/models``
 - ``ROOT_DIR/ffmpeg``
+
+Each asset is skipped only when every file it needs is present, so running this
+again repairs a partial install (a deleted model file, an interrupted download).
+Downloaded files are written to ``<name>.part`` and renamed into place, so an
+interrupted download never leaves a truncated file that looks installed.
 """
 from __future__ import annotations
 
@@ -35,6 +40,9 @@ INSIGHTFACE_DIR = MODEL_CACHE_DIR / "insightface" / "models" / "buffalo_l"
 INSIGHTFACE_URL = "https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_l.zip"
 INSIGHTFACE_KEEP = {"det_10g.onnx", "w600k_r50.onnx", "genderage.onnx"}
 
+# The script and its Perl library; either alone can't run.
+EXIFTOOL_SOURCE_REQUIRED = ["exiftool", "lib/Image/ExifTool.pm"]
+
 CLIP_DIR = MODEL_CACHE_DIR / "clip" / "ViT-B-32__openai"
 CLIP_BASE = "https://huggingface.co/immich-app/ViT-B-32__openai/resolve/main"
 CLIP_FILES = ["visual/model.onnx", "textual/model.onnx"]
@@ -55,6 +63,22 @@ def _fetch(url: str) -> bytes:
     req = urllib.request.Request(url, headers={"User-Agent": "yaffo"})
     with urllib.request.urlopen(req) as resp:
         return resp.read()
+
+
+def _write_atomic(target: Path, data: bytes, mode: int | None = None) -> None:
+    """Write `data` to `target` via a temporary sibling and a rename, so `target`
+    either doesn't exist or is complete."""
+    target.parent.mkdir(parents=True, exist_ok=True)
+    partial = target.with_name(target.name + ".part")
+    partial.write_bytes(data)
+    if mode is not None:
+        partial.chmod(mode)
+    os.replace(partial, target)
+
+
+def _missing(directory: Path, names: set[str] | list[str]) -> list[str]:
+    """The names in `names` with no file under `directory`, sorted."""
+    return sorted(name for name in names if not (directory / name).is_file())
 
 
 def _fetch_text(url: str) -> str:
@@ -191,7 +215,7 @@ def _download_exiftool_windows() -> None:
 def _download_exiftool_source() -> None:
     version = _latest_exiftool_version(r"Image-ExifTool-(\d+\.\d+)\.tar\.gz")
     src_dir = _exiftool_src_dir(version)
-    if (src_dir / "exiftool").exists():
+    if not _missing(src_dir, EXIFTOOL_SOURCE_REQUIRED):
         logger.info("exiftool %s already present", version)
         _prune_exiftool_source(version)
         return
@@ -209,7 +233,7 @@ def _download_exiftool_source() -> None:
         tar.extractall(tmp)
 
     if src_dir.exists():
-        shutil.rmtree(src_dir)
+        _rm(src_dir)  # a partial install; _rm copes with read-only folders
     (tmp / root).rename(src_dir)
     shutil.rmtree(tmp, ignore_errors=True)
     (src_dir / "exiftool").chmod(0o755)
@@ -232,20 +256,24 @@ def _prune_insightface() -> None:
 
 
 def download_insightface() -> None:
-    if any(INSIGHTFACE_DIR.glob("*.onnx")):
+    missing = _missing(INSIGHTFACE_DIR, INSIGHTFACE_KEEP)
+    if not missing:
         logger.info("insightface already present")
         _prune_insightface()
         return
 
-    logger.info("downloading InsightFace buffalo_l")
+    logger.info("downloading InsightFace buffalo_l (missing: %s)", ", ".join(missing))
     blob = _fetch(INSIGHTFACE_URL)
-    INSIGHTFACE_DIR.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(io.BytesIO(blob)) as zf:
         for name in zf.namelist():
-            if name.endswith("/") or Path(name).name not in INSIGHTFACE_KEEP:
+            filename = Path(name).name
+            if name.endswith("/") or filename not in missing:
                 continue
-            target = INSIGHTFACE_DIR / Path(name).name
-            target.write_bytes(zf.read(name))
+            _write_atomic(INSIGHTFACE_DIR / filename, zf.read(name))
+    still_missing = _missing(INSIGHTFACE_DIR, INSIGHTFACE_KEEP)
+    if still_missing:
+        raise RuntimeError(f"InsightFace package did not contain {', '.join(still_missing)}")
+    _prune_insightface()
     logger.info("insightface installed at %s", INSIGHTFACE_DIR)
 
 
@@ -256,15 +284,15 @@ def download_clip() -> None:
             logger.info("clip %s already present", rel)
             continue
         logger.info("downloading CLIP %s", rel)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(_fetch(f"{CLIP_BASE}/{rel}"))
+        _write_atomic(target, _fetch(f"{CLIP_BASE}/{rel}"))
         logger.info("clip %s installed at %s", rel, target)
 
 
 def download_ffmpeg() -> None:
     is_windows = platform.system().lower() == "windows"
     target = FFMPEG_DIR / ("ffmpeg.exe" if is_windows else "ffmpeg")
-    if target.exists():
+    license_file = FFMPEG_DIR / "ffmpeg.LICENSE"
+    if target.is_file() and license_file.is_file():
         logger.info("ffmpeg already present")
         return
 
@@ -274,11 +302,11 @@ def download_ffmpeg() -> None:
         logger.warning("no ffmpeg static build mapped for %s; skipping", key)
         return
 
-    logger.info("downloading ffmpeg %s", slug)
-    FFMPEG_DIR.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(_fetch(f"{FFMPEG_BASE}/ffmpeg-{slug}"))
-    target.chmod(0o755)
-    (FFMPEG_DIR / "ffmpeg.LICENSE").write_bytes(_fetch(f"{FFMPEG_BASE}/{slug}.LICENSE"))
+    if not target.is_file():
+        logger.info("downloading ffmpeg %s", slug)
+        _write_atomic(target, _fetch(f"{FFMPEG_BASE}/ffmpeg-{slug}"), mode=0o755)
+    if not license_file.is_file():
+        _write_atomic(license_file, _fetch(f"{FFMPEG_BASE}/{slug}.LICENSE"))
     logger.info("ffmpeg installed at %s", target)
 
 

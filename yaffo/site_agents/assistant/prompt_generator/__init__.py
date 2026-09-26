@@ -1,0 +1,1 @@
+"""Assistant prompt generator package."""

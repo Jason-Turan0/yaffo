@@ -1,6 +1,7 @@
 from flask import Flask
 
 from yaffo.routes.albums import init_albums_routes
+from yaffo.routes.assistant import init_assistant_routes
 from yaffo.routes.base import init_base_routes
 from yaffo.routes.faces import init_faces_routes
 from yaffo.routes.filter_config import init_filter_config_routes
@@ -31,3 +32,4 @@ def init_routes(app: Flask):
     init_themes_page_routes(app)
     init_pages_routes(app)
     init_albums_routes(app)
+    init_assistant_routes(app)

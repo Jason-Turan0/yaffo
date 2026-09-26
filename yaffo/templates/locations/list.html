@@ -14,7 +14,7 @@
 {% from "components/nav_panel.html" import sidebar_toggles %}
 
 {% block nav_context_toggles %}
-    {{ sidebar_toggles('locations', filter_count=applied_filter_count(request.args)) }}
+    {{ sidebar_toggles('locations', filter_count=applied_gallery_filter_count(request.args)) }}
 {% endblock %}
 
 {% block content %}
@@ -61,10 +61,16 @@ document.addEventListener('yaffo:app-init-complete', (event) => {
     app.filters.initLocationAutocomplete(app.i18n, window.APP_CONFIG);
     app.filters.initConfig(app.i18n, window.APP_CONFIG);
     // The shared sidebar filters this page's markers in the browser — the form
-    // never round-trips; Apply hands a predicate to the map.
+    // never round-trips; Apply hands a predicate to the map. The URL's filters
+    // apply on load, including exact media ids (no control; dropped by the first
+    // Apply or Clear), and the Filters count follows every apply.
     app.filters.initClientFilter({
         form: document.getElementById('filter-form'),
+        config: {{ client_filter_config | tojson }},
         distanceUnit: {{ filters.selected_distance_unit | tojson }},
+        itemIds: {{ item_ids | tojson }},
+        controls: {{ filter_controls | tojson }},
+        countEl: document.querySelector('#locations-filters-toggle [data-nav-panel-count]'),
         onApply: (predicate) => app.locations.map.setClientFilter(predicate),
     });
 });

@@ -104,3 +104,11 @@ Lowering the **Similarity Threshold** can pull stragglers together, but review
 looser groups more carefully. As your catalog of people grows, the built-in
 **Auto-assign faces** automation can also assign confident matches when new
 photos are indexed.
+
+## Ask Yaffo for Help
+
+[Ask Yaffo](../start-here/ask-yaffo.md) can do some of this work in words: "find
+more photos of Maya", "group the unassigned faces that look alike", or "ignore
+the faces in the background of the concert photos". It proposes the assignments
+or ignores as a change you approve, with the number of faces it affects, and most
+of these changes can be undone.

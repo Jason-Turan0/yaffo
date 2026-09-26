@@ -793,14 +793,14 @@ pagesGridNamespace.initDesignGrid = (pageId, editVersionId, startStatus, config,
             });
             if (!response.ok) {
                 const body = await response.json().catch(() => ({}));
-                pagesGridWindow.notification.error(body.error || t('components:chat.startFailed'));
+                pagesGridWindow.notification.failure(body.error || t('components:chat.startFailed'));
                 messageInput.value = message;  // let the user retry
                 return;
             }
             const { version_id } = await response.json();
             enterRunning(version_id);
         } catch {
-            pagesGridWindow.notification.error(t('components:chat.startFailed'));
+            pagesGridWindow.notification.failure(t('components:chat.startFailed'));
             messageInput.value = message;
         }
     };

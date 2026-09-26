@@ -6,6 +6,16 @@ from typing import Optional
 import piexif
 from PIL import Image
 
+# Plausible capture years. Filename patterns match any digit run, so without this
+# bound a hash or ID ("poster_07f9720053186a4d.jpg") parses as year 9720 — and one
+# such date stretches the timeline scrubber across millennia.
+MIN_YEAR = 1900
+MAX_YEAR = 2100
+
+
+def _plausible_year(year: int) -> bool:
+    return MIN_YEAR <= year <= MAX_YEAR
+
 
 @dataclass
 class PhotoDateInfo:
@@ -31,7 +41,7 @@ def _parse_full_date_match(
             year = int(year)
             month_int, day_int = int(month), int(day)
 
-        if 1 <= month_int <= 12 and 1 <= day_int <= 31:
+        if _plausible_year(year) and 1 <= month_int <= 12 and 1 <= day_int <= 31:
             return PhotoDateInfo(
                 date=datetime(year, month_int, day_int),
                 year=year,
@@ -100,7 +110,7 @@ def get_date_from_filename(filename: str) -> PhotoDateInfo:
             try:
                 month_str, year_str = match.groups()
                 month_int, year_int = int(month_str), int(year_str)
-                if 1 <= month_int <= 12 and 1900 <= year_int <= 2100:
+                if 1 <= month_int <= 12 and _plausible_year(year_int):
                     month_year_results.append(PhotoDateInfo(date=None, year=year_int, month=month_int))
             except (ValueError, TypeError):
                 pass
@@ -115,7 +125,7 @@ def get_date_from_filename(filename: str) -> PhotoDateInfo:
         for match in re.finditer(pattern, filename):
             try:
                 year_int = int(match.group(1))
-                if 1900 <= year_int <= 2100:
+                if _plausible_year(year_int):
                     year_only_results.append(PhotoDateInfo(date=None, year=year_int, month=None))
             except (ValueError, TypeError):
                 pass
@@ -161,7 +171,7 @@ def get_photo_date_info(path: str, data: Optional[dict]) -> PhotoDateInfo:
     2. Filename patterns (full date, month+year, or year only)
     """
     date_from_metadata = get_date_from_metadata(path, data)
-    if date_from_metadata is not None:
+    if date_from_metadata is not None and _plausible_year(date_from_metadata.year):
         return PhotoDateInfo(
             date=date_from_metadata,
             year=date_from_metadata.year,

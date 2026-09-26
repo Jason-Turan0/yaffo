@@ -25,3 +25,15 @@ Rewrote API helper functions to use `page.evaluate()` with `fetch()` (as the fac
 
 ### Round 3: Flash message consumed by fetch redirect
 The `deletePersonViaApi` helper uses `fetch()` which follows redirects silently. When `fetch()` POSTs to `/people/<id>/delete`, the server sets a flash message and redirects to `/people` — but `fetch()` consumes the redirect response including the flash. By the time Playwright navigates to `/people`, the flash is gone. Fix: for the `people_can_delete_person` test body, use `page.evaluate()` to create and submit a form with CSRF token (via `window.APP_CONFIG.csrfToken`), which navigates the page naturally and renders the flash. The `deletePersonViaApi` helper (using fetch) is retained for cleanup calls where flash messages don't matter.
+
+## 2026-09-24 — workaround removed: the missing CSRF token was an app bug
+
+The page.evaluate() form described above masked a real bug: people/list.js
+`confirmDelete()` submitted a form with no `csrf_token`, so clicking Delete →
+Confirm in the real UI landed on "Request not verified". The app now adds the
+token (yaffo/static/people/list.js, covered by tests_js/people/list.test.js), and
+`people_can_delete_person` confirms through `#confirm-dialog-confirm` again.
+
+Do not reintroduce a hand-built form here. If a test can only pass by doing the
+user's action differently from the UI, the test has found an app bug: fail it and
+report the bug, don't route around it.

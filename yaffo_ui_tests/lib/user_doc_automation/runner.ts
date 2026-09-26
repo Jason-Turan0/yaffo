@@ -143,7 +143,9 @@ const captureOne = async (
     const shots: RawShot[] = [];
     let error: string | undefined;
     try {
-        for (const [filename, shot] of Object.entries(walkthrough.shots)) {
+        const shotEntries = Object.entries(walkthrough.shots);
+        for (const [index, [filename, shot]] of shotEntries.entries()) {
+            console.log(`    shot ${index + 1}/${shotEntries.length}: ${filename}`);
             const page = await context.newPage();
             try {
                 await page.setViewportSize(shot.viewport);
@@ -174,23 +176,27 @@ const captureOne = async (
                     height: Math.round(clip?.height ?? shot.viewport.height),
                     ignore,
                 });
+                console.log(`      captured ${filename}`);
             } finally {
                 await page.close();
             }
         }
 
         if (walkthrough.flows && !options.skipFlows) {
+            console.log("    running flow");
             const page = await context.newPage();
             try {
                 await page.setViewportSize({width: 1400, height: 1100});
                 await walkthrough.flows({
                     page,
                     visit: async (path: string) => {
+                        console.log(`      visiting ${path}`);
                         await page.goto(`${baseUrl}${path}`, {waitUntil: "domcontentloaded"});
                         await settle(page);
                     },
                     mediaIdByFilename: (filename) => mediaIdByFilename(baseUrl, filename),
                 });
+                console.log("    flow complete");
             } finally {
                 await page.close();
             }
@@ -226,8 +232,13 @@ export const captureWalkthroughs = async (
     const browser = await chromium.launch();
     const results: RawResult[] = [];
     try {
-        for (const walkthrough of walkthroughs) {
-            results.push(await captureOne(browser, walkthrough, options));
+        for (const [index, walkthrough] of walkthroughs.entries()) {
+            console.log(`  [${index + 1}/${walkthroughs.length}] ${walkthrough.page}`);
+            const startedAt = Date.now();
+            const result = await captureOne(browser, walkthrough, options);
+            results.push(result);
+            const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
+            console.log(`    ${result.error ? "failed" : "complete"}: ${result.shots.length} shot(s) in ${elapsed}s`);
         }
     } finally {
         await browser.close();

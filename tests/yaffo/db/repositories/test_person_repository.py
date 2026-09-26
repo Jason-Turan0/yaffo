@@ -8,9 +8,20 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from yaffo.db import db
-from yaffo.db.models import Person, MediaItem, Face, PersonFace, PersonEmbedding, FACE_STATUS_ASSIGNED
+from yaffo.db.models import (
+    FACE_STATUS_ASSIGNED,
+    FACE_STATUS_IGNORED,
+    FACE_STATUS_PROCESSING,
+    FACE_STATUS_UNASSIGNED,
+    Face,
+    MediaItem,
+    Person,
+    PersonEmbedding,
+    PersonFace,
+)
 from yaffo.domain.compare_utils import serialize_embedding, load_embedding
 from yaffo.db.repositories.person_repository import (
+    bulk_link_faces_to_people,
     update_person_embedding,
     get_similarity_bounds,
     recompute_person_similarities,
@@ -372,3 +383,60 @@ def test_falls_back_to_the_overall_medoid_for_a_stage_with_no_faces(session):
 
     # Scored against the overall medoid (which here is the adult face) rather than NULL.
     assert _similarities(session, person)[senior_face.id] == pytest.approx(1.0, abs=1e-6)
+
+
+# --- bulk_link_faces_to_people ------------------------------------------------------
+
+def _plain_face(sess, status: str) -> Face:
+    media_item = MediaItem(full_file_path=f"/photos/{status}-{sess.query(MediaItem).count()}.jpg")
+    sess.add(media_item)
+    sess.flush()
+    face = Face(media_item_id=media_item.id, status=status)
+    sess.add(face)
+    sess.commit()
+    return face
+
+
+def test_bulk_link_marks_linked_faces_assigned(session):
+    person = Person(name="Ada")
+    session.add(person)
+    session.commit()
+    faces = [_plain_face(session, FACE_STATUS_UNASSIGNED) for _ in range(3)]
+
+    linked = bulk_link_faces_to_people(session, [(person.id, face.id) for face in faces])
+
+    assert linked == 3
+    for face in faces:
+        session.refresh(face)
+        assert face.status == FACE_STATUS_ASSIGNED
+    assert {pf.face_id for pf in session.query(PersonFace)} == {face.id for face in faces}
+
+
+def test_bulk_link_never_overrides_ignored_processing_or_linked_faces(session):
+    ada, bob = Person(name="Ada"), Person(name="Bob")
+    session.add_all([ada, bob])
+    session.commit()
+    ignored = _plain_face(session, FACE_STATUS_IGNORED)
+    processing = _plain_face(session, FACE_STATUS_PROCESSING)
+    already = _plain_face(session, FACE_STATUS_ASSIGNED)
+    session.add(PersonFace(person_id=bob.id, face_id=already.id))
+    session.commit()
+
+    linked = bulk_link_faces_to_people(
+        session, [(ada.id, ignored.id), (ada.id, processing.id), (ada.id, already.id)])
+
+    assert linked == 0
+    for face, status in ((ignored, FACE_STATUS_IGNORED), (processing, FACE_STATUS_PROCESSING)):
+        session.refresh(face)
+        assert face.status == status
+    assert [(pf.person_id, pf.face_id) for pf in session.query(PersonFace)] == [(bob.id, already.id)]
+
+
+def test_bulk_link_first_match_wins_for_a_repeated_face(session):
+    ada, bob = Person(name="Ada"), Person(name="Bob")
+    session.add_all([ada, bob])
+    session.commit()
+    face = _plain_face(session, FACE_STATUS_UNASSIGNED)
+
+    assert bulk_link_faces_to_people(session, [(ada.id, face.id), (bob.id, face.id)]) == 1
+    assert [(pf.person_id, pf.face_id) for pf in session.query(PersonFace)] == [(ada.id, face.id)]

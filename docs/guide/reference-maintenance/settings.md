@@ -40,14 +40,40 @@ thumbnails to be generated.
 
 Powers Yaffo's AI features, such as the
 [page builder](../create-customize/custom-pages.md),
-[theme designer](../create-customize/themes.md), and custom
-[automations](../create-customize/automations.md).
+[theme designer](../create-customize/themes.md), custom
+[automations](../create-customize/automations.md), and
+[Ask Yaffo](../start-here/ask-yaffo.md).
 
 - **Model** — the model used for AI generation.
 
 The API key for the selected model's provider is stored securely in your
 operating system's credential store (the OS keychain), **not** in Yaffo's
 database.
+
+## Assistant
+
+Controls [Ask Yaffo](../start-here/ask-yaffo.md), the built-in assistant. It uses
+the model and key from **AI Generation**.
+
+- **Enabled** — show or hide Ask Yaffo. On by default.
+- **What it can look at** — what the assistant may check on this computer when
+  troubleshooting. What it reads is sent to the AI provider with your question.
+  Turn everything off and it answers from Yaffo's documentation only.
+  - **Logs** — recent errors and lines from Yaffo's logs.
+  - **Library contents** — counts, individual photos, faces, and scripts that
+    read your library. Proposing changes needs this.
+  - **Media folders** — whether folders exist and respond, free space, and file
+    names.
+  - **Background jobs** — jobs, the background task host, and automation runs.
+  - **Capture-date metadata** — read a photo's capture date from its file when
+    checking a date problem. Off by default.
+- **Changes it can propose** — one switch per kind of change, in groups: Tags and
+  favorites, Albums, People and faces, Dates and places, Labels, Files on disk,
+  Library upkeep, and Preferences. Each group shows how many are on, and changes
+  that can't be undone are marked **Can't be undone**. Changes to files on disk,
+  merging or deleting people, and running automations are off by default.
+- **Confirm large changes** — above this many items, **Approve** also asks you to
+  confirm the count. The default is 500.
 
 ## Photo Labels
 

@@ -95,7 +95,7 @@ def _assign_location_names(
         name = _nearest_name(media_item.latitude, media_item.longitude, candidates, radius_km) if reuse_enabled else None
         if name is None and geocode is not None:
             name = geocode(media_item.latitude, media_item.longitude)
-        if name:
+        if name and name != media_item.location_name:
             media_item.location_name = name
             candidates.append((media_item.latitude, media_item.longitude, name))
             updated.append(media_item.id)
@@ -166,7 +166,7 @@ def assign_location_name_automation_task(
 
         # Scope the run so the photo_modified it emits carries this automation (loop guard).
         with event_chain_scope(origin_automation_ids, automation_id):
-            record_run(session, automation, work)
+            record_run(session, automation, work, media_item_ids=media_item_ids)
     finally:
         session.close()
         SessionFactory.remove()
@@ -175,9 +175,7 @@ def assign_location_name_automation_task(
 @register_handler(AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME)
 def enqueue_assign_location_name(automation: Automation, context: EventContext | None = None) -> None:
     """Handler for the built-in assign-location-name automation: enqueue the naming
-    for the photos the triggering event concerns. A schedule trigger (no context,
-    no photo subjects) has nothing to act on, so it's a no-op."""
+    for the photos selected by the event or schedule."""
     media_item_ids = context.media_item_ids if context else []
-    if media_item_ids:
-        origin = context.origin_automation_ids if context else []
-        assign_location_name_automation_task(automation.id, media_item_ids, origin)
+    origin = context.origin_automation_ids if context else []
+    assign_location_name_automation_task(automation.id, media_item_ids, origin)

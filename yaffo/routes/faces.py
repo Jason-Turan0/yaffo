@@ -5,7 +5,6 @@ import numpy as np
 from flask import Flask, current_app, render_template, request, jsonify
 from flask_babel import gettext, ngettext
 from sqlalchemy import func
-from sklearn.cluster import DBSCAN
 
 from yaffo.background_tasks.tasks.assign_faces_to_person import (
     assign_faces_to_person,
@@ -18,25 +17,25 @@ import pydash as _
 from sqlalchemy.orm import joinedload
 from yaffo.db.models import db, Face, Person, PersonFace, FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED, \
     FACE_STATUS_ASSIGNED, MediaItem, FACE_STATUS_PROCESSING, \
-    ApplicationSettings
+    ApplicationSettings, EVENT_MEDIA_MODIFIED
 
 from sklearn.metrics.pairwise import cosine_similarity
 
-from yaffo.db.repositories.person_repository import get_similarity_bounds
+from yaffo.background_tasks.events import emit_event
+from yaffo.db.repositories.person_repository import clear_faces, get_similarity_bounds
 from yaffo.db.repositories.media_repository import get_distinct_years, get_distinct_months
 from yaffo.domain.compare_utils import load_embedding, ui_threshold_to_similarity
+from yaffo.domain.face_clusters import cluster_faces
 from yaffo.utils.context import context
 from yaffo.utils.photo_dates import parse_date_taken
 
 DEFAULT_THRESHOLD = 50  # UI similarity slider 0-100 (0 = least similar, 100 = most)
 DEFAULT_BATCH_SIZE = 2000  # max unassigned faces pulled + clustered per pass
-DEFAULT_MIN_SAMPLE_SIZE = 3
 DEFAULT_GROUP_BY = 'similarity'
 # Faces rendered as thumbnails per cluster. The whole cluster is still assigned;
 # this only caps how many we paint so a 50k batch stays responsive.
 SAMPLE_SIZE = 50
 SHORTCUT_LIMIT = 9
-DEMO_MAX_FACE_ASSIGNMENTS = 50
 FACE_SHORTCUT_PEOPLE_SETTING = "face_shortcut_people"
 
 
@@ -180,22 +179,11 @@ def make_suggestions_by_similarity(unassigned_faces: list[Face], min_similarity:
     for face in unassigned_faces:
         embeddings.append(load_embedding(face.embedding))
         face_ids.append(face.id)
-    embeddings = np.array(embeddings)
-    # ArcFace embeddings are L2-normalized -> cluster by cosine distance (1 - cos).
-    # min_similarity is the required cosine similarity (already scaled from the UI
-    # slider); eps is the complementary distance radius, so requiring more
-    # similarity tightens the clusters.
-    eps = 1.0 - min_similarity
-    clustering = DBSCAN(eps=eps, min_samples=DEFAULT_MIN_SAMPLE_SIZE, metric="cosine").fit(embeddings)
     embedding_by_face_id = dict(zip(face_ids, embeddings))
-    clusters = {}
-    for face_id, label in zip(face_ids, clustering.labels_):
-        if label == -1:  # skip noise faces
-            continue
-        label = gettext("Cluster %(number)s", number=label)
-        cluster = clusters[label] if label in clusters else {'label': label, 'face_ids': []}
-        clusters[label] = cluster
-        cluster["face_ids"].append(face_id)
+    clusters = {
+        label: {"label": gettext("Cluster %(number)s", number=label), "face_ids": ids}
+        for label, ids in cluster_faces(face_ids, embeddings, min_similarity)
+    }
 
     suggestions = []
     for cluster in clusters.values():
@@ -406,6 +394,45 @@ def init_faces_routes(app: Flask):
         _save_shortcut_person_ids(person_ids)
         return "", 204
 
+    @app.route("/api/faces/unassign", methods=["POST"])
+    @demo_unsafe_allowed(DEMO_ROLE_SOURCE, DEMO_ROLE_RECEIVER)
+    def faces_unassign():
+        """Clear faces back to unassigned: unlink them from their person (or undo
+        an ignore). The photo detail screen's "Clear" on a face."""
+        data = request.get_json(silent=True) or {}
+        face_ids = data.get("faces", [])
+        try:
+            if not isinstance(face_ids, list) or not face_ids:
+                raise ValueError
+            face_ids = list(dict.fromkeys(int(face_id) for face_id in face_ids))
+        except (TypeError, ValueError):
+            return jsonify({
+                "success": False,
+                "message": gettext("Faces must contain numeric identifiers"),
+                "code": "invalid_face_ids",
+            }), 400
+
+        cleared = clear_faces(db.session, face_ids)
+        if not cleared.face_ids:
+            return jsonify({
+                "success": False,
+                "message": gettext("This face isn't assigned to anyone"),
+                "code": "faces_not_assigned",
+            }), 409
+        if cleared.media_item_ids:
+            emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": cleared.media_item_ids})
+        return jsonify({
+            "success": True,
+            "message": ngettext(
+                "Cleared %(count)s face",
+                "Cleared %(count)s faces",
+                len(cleared.face_ids),
+                count=len(cleared.face_ids),
+            ),
+            "code": "faces_unassigned",
+            "face_ids": cleared.face_ids,
+        })
+
     @app.route("/api/faces/assign", methods=["POST"])
     @demo_unsafe_allowed(DEMO_ROLE_SOURCE, DEMO_ROLE_RECEIVER)
     def faces_assign():
@@ -414,11 +441,11 @@ def init_faces_routes(app: Flask):
         person_id = data.get("person")
         face_status = data.get("faceStatus")
         try:
-            if not isinstance(selected_face_ids, list) or len(selected_face_ids) > DEMO_MAX_FACE_ASSIGNMENTS:
+            if not isinstance(selected_face_ids, list):
                 return jsonify({
                     "success": False,
-                    "message": gettext("Too many faces were selected"),
-                    "code": "face_assignment_limit_exceeded",
+                    "message": gettext("Faces must contain numeric identifiers"),
+                    "code": "invalid_face_ids",
                 }), 400
 
             try:

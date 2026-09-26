@@ -317,6 +317,17 @@ class TestGetDateFromFilename:
             result = get_date_from_filename("photo_2200_test.jpg")
             assert result.year is None
 
+        @pytest.mark.parametrize("filename", [
+            "poster_07f9720053186a4d.jpg",
+            "poster_5375120253ddc2a2.jpg",
+            "50000118-8357_774_C8TG6VF_000_57384451-FP0013P.jpg",
+        ])
+        def test_digit_run_with_implausible_year_is_not_a_date(self, filename):
+            """A hash or ID whose digits happen to read as YYYYMMDD is not a date."""
+            result = get_date_from_filename(filename)
+            assert result.date is None
+            assert result.year is None
+
         def test_empty_filename(self):
             """Empty filename should return empty PhotoDateInfo."""
             result = get_date_from_filename("")
@@ -543,6 +554,12 @@ class TestGetPhotoDateInfo:
             assert result.date == datetime(2021, 12, 5)
             assert result.year == 2021
             assert result.month == 12
+
+
+def test_implausible_exif_year_falls_back_to_filename():
+    metadata = {"DateTimeOriginal": "9720:05:31 00:00:00"}
+    result = get_photo_date_info("/photos/IMG_20211205.jpg", metadata)
+    assert result.date == datetime(2021, 12, 5)
 
 
 class TestGetDateFromMetadata:

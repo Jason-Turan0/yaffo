@@ -9,13 +9,23 @@ const triggerFixture = () => {
   document.body.innerHTML = `
     <div id="automation-triggers">
       <button type="button" class="js-add-schedule">Add schedule</button>
-      <button type="button" class="js-edit-schedule" data-cron-value="0 9 * * 1" data-trigger-id="trigger-1">Edit</button>
+      <button type="button" class="js-edit-schedule" data-cron-value="0 9 * * 1" data-trigger-id="trigger-1"
+        data-scope='{"scope_type":"media_dirs","media_dir_ids":["dir-1"],"folder_paths":[]}'>Edit</button>
       <button type="button" class="js-add-event">Add event</button>
       <button type="button" class="js-cancel">Cancel</button>
-      <div class="automation-trigger-add">
+      <div class="automation-trigger-add" data-default-path="/photos" data-remove-label="Remove" data-selected-folder-label="Selected folder">
         <input type="hidden" name="edit_trigger_id">
         <h3 class="schedule-editor-title"></h3>
         <div data-cron-builder></div>
+        <select name="scope_type">
+          <option value="everything">Everything</option><option value="media_dirs">Media directories</option><option value="paths">Paths</option>
+        </select>
+        <p class="schedule-scope-everything"></p>
+        <div class="schedule-scope-media-dirs" hidden><input type="checkbox" name="media_dir_ids" value="dir-1"></div>
+        <div class="schedule-scope-paths" hidden>
+          <div class="schedule-scope-path-list"></div>
+          <button type="button" class="js-add-scope-path">Choose folder</button>
+        </div>
         <button type="submit" class="js-save-schedule"></button>
         <p class="schedule-editor-error"></p>
       </div>
@@ -46,6 +56,29 @@ describe('automations trigger editor', () => {
 
     expect(document.querySelector('[name="edit_trigger_id"]').value).toBe('trigger-1');
     expect(cronBuilder.setCron).toHaveBeenCalledWith(mount, '0 9 * * 1');
+    expect(document.querySelector('[name="scope_type"]').value).toBe('media_dirs');
+    expect(document.querySelector('[name="media_dir_ids"]').checked).toBe(true);
+    expect(document.querySelector('.schedule-scope-media-dirs').hidden).toBe(false);
+  });
+
+  it('adds and removes folders selected by the picker', async () => {
+    triggerFixture();
+    const PO = await loadAutomations();
+    PO.pickFolder = vi.fn().mockResolvedValue('/photos/trip');
+    PO.automations.initTriggerEditor(window.testI18n, {
+      initAll: vi.fn(), reset: vi.fn(), setCron: vi.fn(),
+    });
+    document.querySelector('.js-add-schedule').click();
+    const scope = document.querySelector('[name="scope_type"]');
+    scope.value = 'paths';
+    scope.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(document.querySelector('.schedule-scope-paths').hidden).toBe(false);
+
+    document.querySelector('.js-add-scope-path').click();
+    await vi.waitFor(() => expect(document.querySelector('[name="folder_paths"]')?.value).toBe('/photos/trip'));
+    expect(PO.pickFolder).toHaveBeenCalledWith({ mode: 'folder', startPath: '/photos' });
+    document.querySelector('.js-remove-scope-path').click();
+    expect(document.querySelector('[name="folder_paths"]')).toBeNull();
   });
 });
 

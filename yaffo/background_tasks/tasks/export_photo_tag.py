@@ -162,7 +162,7 @@ def export_photo_tag_task(automation_id: int, media_item_ids: list[int]):
                 f"favorite={export_favorite})"
             )
 
-        record_run(session, automation, work)
+        record_run(session, automation, work, media_item_ids=media_item_ids)
     finally:
         session.close()
         SessionFactory.remove()
@@ -171,8 +171,6 @@ def export_photo_tag_task(automation_id: int, media_item_ids: list[int]):
 @register_handler(AUTOMATION_HANDLER_EXPORT_PHOTO_TAG)
 def enqueue_export_photo_tag(automation: Automation, context: EventContext | None = None) -> None:
     """Handler for the built-in export-photo-tag automation: enqueue the write for
-    the photos the triggering event concerns. A schedule trigger (no context, no
-    photo subjects) has nothing to act on, so it's a no-op."""
+    the photos selected by the event or schedule."""
     media_item_ids = context.media_item_ids if context else []
-    if media_item_ids:
-        export_photo_tag_task(automation.id, media_item_ids)
+    export_photo_tag_task(automation.id, media_item_ids)

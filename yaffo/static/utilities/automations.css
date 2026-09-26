@@ -89,6 +89,74 @@
     font-size: var(--font-size-sm);
 }
 
+.automation-trigger-scope {
+    color: var(--color-text-muted);
+}
+
+.automation-trigger-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-sunken);
+}
+
+.automation-trigger-section .automation-section-title {
+    margin-bottom: 0;
+}
+
+.schedule-scope-choice {
+    align-items: center;
+}
+
+.schedule-scope-choice .form-control {
+    min-width: 240px;
+}
+
+.schedule-scope-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.schedule-scope-section .form-row:not(.schedule-scope-choice) {
+    align-items: flex-start;
+}
+
+.schedule-scope-directory-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.schedule-scope-directory {
+    padding: 8px 10px;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    overflow-wrap: anywhere;
+}
+
+.schedule-scope-path-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 10px 0;
+}
+
+.schedule-scope-path {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.schedule-scope-path-value {
+    flex: 1;
+    min-width: 0;
+}
+
 .automation-trigger-error {
     margin: 0 0 10px;
     color: var(--color-danger);
@@ -301,53 +369,10 @@
     color: var(--color-on-accent);
 }
 
-/* Run history: a compact list of recent runs (Jobs tagged with the automation). */
-.automation-run-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.automation-run-row {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 8px 0;
-    border-bottom: var(--border-width) solid var(--color-border);
-    font-size: var(--font-size-sm);
-}
-
-.automation-run-row:last-child {
-    border-bottom: none;
-}
-
-.automation-run-progress {
-    font-variant-numeric: tabular-nums;
-    font-weight: 600;
-    color: var(--color-text-muted);
-}
-
-.automation-run-spacer {
-    flex: 1;
-}
-
-.automation-run-time {
-    color: var(--color-text-muted);
-}
-
-.automation-run-error {
-    flex-basis: 100%;
-    margin: 0;
-    color: var(--color-danger);
-    font-size: var(--font-size-xs);
-}
-
 /* Keep user text contained while code and result tables own their scrolling. */
 .automation-detail,
 .automation-edit-screen > *,
-.automation-trigger-row > *,
-.automation-run-row > * {
+.automation-trigger-row > * {
     min-width: 0;
 }
 
@@ -361,7 +386,6 @@
 
 .automation-trigger-desc,
 .automation-trigger-event,
-.automation-run-row,
 .automation-test-meta,
 .automation-test-error,
 .automation-test-output {

@@ -24,6 +24,8 @@ from yaffo.db.models import (
     Automation,
     AutomationTrigger,
     EVENT_MEDIA_LABELED,
+    Job,
+    JOB_STATUS_FAILED,
     TRIGGER_TYPE_EVENT,
 )
 
@@ -121,6 +123,26 @@ def test_dispatch_runs_automation_not_in_chain(engine, monkeypatch):
     de.dispatch_event_task.fn(EVENT_MEDIA_LABELED, {"origin_automation_ids": [999]})
 
     assert calls == [automation_id]  # a fresh subscriber still runs
+
+
+@pytest.mark.parametrize("dispatch_result", [False, RuntimeError("queue unavailable")])
+def test_event_dispatch_failure_records_job(engine, monkeypatch, dispatch_result):
+    automation_id = _seed_automation(engine)
+    monkeypatch.setattr(de, "SessionFactory", _FakeSessionFactory(engine))
+
+    def dispatch(_automation, _context):
+        if isinstance(dispatch_result, Exception):
+            raise dispatch_result
+        return dispatch_result
+
+    monkeypatch.setattr(de, "invoke_automation", dispatch)
+    de.dispatch_event_task.fn(EVENT_MEDIA_LABELED, {})
+
+    with Session(engine) as session:
+        jobs = session.query(Job).filter_by(automation_id=automation_id).all()
+        assert len(jobs) == 1
+        assert jobs[0].status == JOB_STATUS_FAILED
+        assert jobs[0].error
 
 
 def test_self_emitting_automation_fires_once(engine, monkeypatch, caplog):

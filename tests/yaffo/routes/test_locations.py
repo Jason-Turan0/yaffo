@@ -129,6 +129,19 @@ class TestLocationsPageFilterPanel:
 
         assert _map_payload(client.get("/locations").data.decode()) == []
 
+    def test_item_list_in_the_url_goes_to_the_browser(self, client, app):
+        """The URL-only `item` filter (the assistant's map links) has no control:
+        every marker still loads, and the ids go to the client filter, which applies
+        them until the first Apply or Clear. The Filters count includes them."""
+        ids = _seed_located_media(app)
+
+        body = client.get(f"/locations?item={ids['named']}&item=99999").data.decode()
+
+        assert len(_map_payload(body)) == 2
+        assert f"itemIds: [{ids['named']}, 99999]" in body
+        assert 'name="item"' not in body
+        assert re.search(r'data-nav-panel-count\s*>1<', body)
+
     def test_locations_page_stores_assign_location_nearby_radius(self, client, app):
         _seed_located_media(app)
         with app.app_context():

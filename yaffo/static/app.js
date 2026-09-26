@@ -5,6 +5,11 @@ window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
 
 const app = window.PHOTO_ORGANIZER;
 
+// Flashes close themselves after this long; one with an action (e.g. "Ask Yaffo")
+// gets longer, to be reached.
+const ALERT_DISMISS_MS = 5000;
+const ACTION_ALERT_DISMISS_MS = 10000;
+
 app.domReady = app.domReady || new Promise((resolve) => {
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => resolve(), { once: true });
@@ -40,9 +45,16 @@ app.COMPONENTS.initAll = () => {
 
 const initBasePageBehavior = () => {
     document.querySelectorAll('.alert').forEach((alert) => {
-        setTimeout(() => {
+        const hasAction = alert.querySelector('.message-action') !== null;
+        const timer = setTimeout(() => {
             app.closeAlert?.(alert.querySelector('.alert-close'));
-        }, 5000);
+        }, hasAction ? ACTION_ALERT_DISMISS_MS : ALERT_DISMISS_MS);
+        // Reaching one with an action (pointer or keyboard) keeps it until closed.
+        if (hasAction) {
+            const keep = () => clearTimeout(timer);
+            alert.addEventListener('mouseenter', keep, { once: true });
+            alert.addEventListener('focusin', keep, { once: true });
+        }
     });
 
     app.utils?.initImageFallbacks?.();

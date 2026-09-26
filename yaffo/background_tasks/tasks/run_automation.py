@@ -14,8 +14,8 @@ def run_automation_code_task(automation_id: int, context_payload: dict | None = 
     Job (the run history).
 
     Enqueued by the dispatchers for code-backed automations (handler is None).
-    `context_payload` is the EventContext fields for an event-triggered run, or
-    None for a schedule. The sandbox returns failures as data, so a bad script
+    `context_payload` is the EventContext fields for an event or schedule run.
+    The sandbox returns failures as data, so a bad script
     becomes a FAILED Job, not a raised exception."""
     session = SessionFactory()
     try:

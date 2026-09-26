@@ -59,8 +59,8 @@ async function createPersonViaApi(page: Page, name: string): Promise<number> {
  * Deletes a person through the browser's fetch (includes CSRF token via
  * security.js). NOTE: fetch() follows redirects silently, which consumes
  * any server-side flash message. Use this for cleanup only — the
- * people_can_delete_person test body uses a form submission instead so the
- * flash message renders on the navigated page.
+ * people_can_delete_person test body confirms through the real dialog instead
+ * so the flash message renders on the navigated page.
  */
 async function deletePersonViaApi(page: Page, personId: number): Promise<void> {
   await page.evaluate(async (id) => {
@@ -276,27 +276,11 @@ test.describe('People', () => {
     await expect(dialog).toHaveClass(/active/);
     await expect(dialog).toContainText(DELETE_NAME);
 
-    // Cancel the dialog, then submit a form with a CSRF token via page.evaluate.
-    // people/list.js confirmDelete() creates a dynamic form without a CSRF token,
-    // and fetch()-based deletion consumes the server flash message on redirect —
-    // so we create and submit a proper form that navigates the page naturally.
-    await page.locator('#confirm-dialog-cancel').click();
+    // Confirm through the real dialog: people/list.js submits its own form, which
+    // must carry the CSRF token or the server answers "Request not verified".
+    await page.locator('#confirm-dialog-confirm').click();
 
-    await page.evaluate(async (id) => {
-      const csrfToken = (window as any).APP_CONFIG.csrfToken;
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = `/people/${id}/delete`;
-      const csrfInput = document.createElement('input');
-      csrfInput.type = 'hidden';
-      csrfInput.name = 'csrf_token';
-      csrfInput.value = csrfToken;
-      form.appendChild(csrfInput);
-      document.body.appendChild(form);
-      form.submit();
-    }, personId);
-
-    // The form submission redirects to /people with the flash message rendered.
+    // The delete redirects back to /people with the flash message rendered.
     await page.waitForURL('**/people');
     await expect(flashSuccess(page)).toContainText(DELETE_NAME);
     await expect(personRow(page, DELETE_NAME)).toHaveCount(0);

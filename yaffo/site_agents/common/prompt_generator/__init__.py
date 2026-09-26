@@ -1,0 +1,1 @@
+"""Common prompt generator package."""

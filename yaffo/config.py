@@ -146,6 +146,11 @@ def _load() -> dict[str, Any]:
 _config = _load()
 
 
+def as_dict() -> dict[str, dict[str, Any]]:
+    """A copy of the loaded config, section → key → value (for diagnostics)."""
+    return {section: dict(values) for section, values in _config.items() if isinstance(values, dict)}
+
+
 def get(section: str, key: str, default: Any = None) -> Any:
     """Read config[section][key], falling back to default if absent."""
     return _config.get(section, {}).get(key, default)

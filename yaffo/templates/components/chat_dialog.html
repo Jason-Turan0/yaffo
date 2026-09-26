@@ -18,7 +18,7 @@
 <div class="chat-dialog" id="{{ id }}">
     <div class="chat-dialog-header">
         <h2>{{ title }}</h2>
-        <p class="chat-dialog-subtitle">{{ subtitle }}</p>
+        {% if subtitle %}<p class="chat-dialog-subtitle">{{ subtitle }}</p>{% endif %}
     </div>
     <div class="chat-dialog-messages thin-scrollbar" id="{{ id }}-messages">
         {{ chat_messages(messages, empty_text) }}

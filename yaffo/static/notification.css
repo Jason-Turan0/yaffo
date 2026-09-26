@@ -7,7 +7,9 @@
        message can never widen past the viewport it is pinned to. */
     inset-block-start: calc(20px + env(safe-area-inset-top));
     inset-inline-end: calc(20px + env(safe-area-inset-right));
-    max-width: min(400px, calc(100vw - 40px));
+    box-sizing: border-box;
+    width: 400px;
+    max-width: calc(100vw - 40px);
     padding: 16px 24px;
     border-radius: var(--radius-md);
     font-size: var(--font-size-base);
@@ -43,4 +45,21 @@
 
 .notification.info {
     background: var(--color-info);
+}
+/* An optional action on the toast (e.g. "Ask Yaffo"), on the message's row, pinned
+   to the top of a message that wraps. The button itself is the shared
+   .message-action (base.css), which drops to its icon on a phone. */
+.notification:has(.message-action) {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.notification-message {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.notification .message-action {
+    flex: none;
 }

@@ -36,7 +36,7 @@ def test_script_reads_ctx_and_calls_host_api(monkeypatch):
     )
 
     session = object()
-    code = "data_query({'source': 'media_items', 'in_ids': ctx['media_item_ids']})"
+    code = "data_query({'source': 'media_items', 'id': {'in': ctx['media_item_ids']}})"
     context = EventContext(event_type="media_indexed", job_id="job-1", media_item_ids=[1, 2])
 
     result = run_automation(session, _FakeAutomation(code), context)
@@ -47,7 +47,7 @@ def test_script_reads_ctx_and_calls_host_api(monkeypatch):
     assert len(seen) == 1
     called_session, called_query = seen[0]
     assert called_session is session
-    assert called_query == {"source": "media_items", "in_ids": [1, 2]}
+    assert called_query == {"source": "media_items", "id": {"in": [1, 2]}, "limit": 5000}
 
 
 def test_schedule_run_has_empty_ctx(monkeypatch):
@@ -57,7 +57,7 @@ def test_schedule_run_has_empty_ctx(monkeypatch):
         lambda session, query: query,
     )
     # context=None (a schedule trigger) -> ctx fields are empty/None
-    code = "data_query({'event': ctx['event_type'], 'ids': ctx['media_item_ids']})"
+    code = "{'event': ctx['event_type'], 'ids': ctx['media_item_ids']}"
     result = run_automation(object(), _FakeAutomation(code), None)
     assert result.success is True, result.error
     assert result.value == {"event": None, "ids": []}

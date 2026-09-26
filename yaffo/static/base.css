@@ -105,8 +105,10 @@ textarea {
     border-radius: var(--radius-sm);
     font-size: var(--font-size-base);
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
+    gap: 8px 16px;
     animation: slideIn 0.3s ease-out;
 }
 
@@ -154,8 +156,16 @@ textarea {
     border: var(--border-width) solid var(--color-warning-soft-border);
 }
 
+/* The message takes the row; on a narrow screen the actions wrap below it. */
 .alert-message {
-    flex: 1;
+    flex: 1 1 16rem;
+}
+
+.alert-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-inline-start: auto;
 }
 
 .alert-close {
@@ -166,13 +176,96 @@ textarea {
     color: inherit;
     opacity: 0.5;
     padding: 0;
-    margin-left: 15px;
     line-height: 1;
     transition: opacity 0.2s;
 }
 
 .alert-close:hover {
     opacity: 1;
+}
+
+/* An action inside a message (a flash or a toast), e.g. "Ask Yaffo". Outlined in
+   the message's own text color, so it belongs to whatever tone and skin it sits in. */
+.message-action {
+    padding: 4px 10px;
+    border: var(--border-width) solid currentColor;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: var(--font-size-sm);
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.message-action:hover {
+    background: color-mix(in srgb, currentColor 15%, transparent);
+}
+
+.message-action[data-icon] {
+    gap: 6px;
+}
+
+.message-action[data-icon]::before {
+    width: 14px;
+    height: 14px;
+}
+
+/* Touch screens give every button a 44px minimum height (responsive.css). Inside a
+   message that towers over the text, so these keep their drawn size and get the
+   44px tap height from an invisible overlay. It grows only vertically, so
+   neighbouring buttons' tap areas don't overlap. */
+@media (hover: none), (pointer: coarse) {
+    .message-action,
+    .alert-close {
+        position: relative;
+        min-height: 0;
+    }
+
+    .message-action::after,
+    .alert-close::after {
+        content: "";
+        position: absolute;
+        inset-inline: 0;
+        inset-block-start: 50%;
+        height: 44px;
+        transform: translateY(-50%);
+    }
+
+    .alert-close {
+        padding-inline: 6px;
+    }
+}
+
+/* On a phone a message's action (flash or toast) is just its icon; the label stays
+   as its accessible name. */
+@media (max-width: 640px) {
+    /* With the icon alone the actions fit beside the message, so keep one row; a
+       long message wraps within its own column, the actions pinned to its top. */
+    .alert {
+        flex-wrap: nowrap;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .alert-message {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .message-action[data-icon] {
+        padding: 6px;
+    }
+
+    .message-action[data-icon] .message-action-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
 }
 
 .main-container {

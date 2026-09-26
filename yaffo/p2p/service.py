@@ -49,6 +49,7 @@ from yaffo.p2p.quic_transport import (
 )
 from yaffo.p2p.signaling import CallError, HubClient
 from yaffo.p2p.transfers import PeerSession, TransferManager
+from yaffo.process_status import register_web_extra
 
 if TYPE_CHECKING:
     from yaffo.p2p.pairing import PairingCode
@@ -64,6 +65,8 @@ DEFAULT_QUIC_PORT = 5002
 
 FACADE_TIMEOUT_SECONDS = 60.0
 LAN_CALL_TIMEOUT_SECONDS = 1.5
+# Transfer batches the web heartbeat publishes for diagnostics.
+STATUS_BATCHES = 10
 
 
 def resolve_hub_url() -> str:
@@ -89,6 +92,7 @@ def start_p2p_service(flask_app) -> Optional["P2PService"]:
         service.start()
         flask_app.extensions["p2p_service"] = service
         atexit.register(service.stop)
+        register_web_extra("sharing", service.status_snapshot)
         return service
     except Exception:
         logger.exception("p2p service failed to start; device sharing disabled")
@@ -242,6 +246,23 @@ class P2PService:
     @property
     def hub_connected(self) -> bool:
         return self._hub_client is not None and self._hub_client.connected
+
+    def status_snapshot(self) -> dict:
+        """What the web heartbeat publishes for diagnostics in other processes (the
+        assistant's sharing_status): engine, hub, and the latest transfer batches,
+        without paths."""
+        batches = self.transfers.snapshot()[:STATUS_BATCHES]
+        return {
+            "available": self.identity is not None,
+            "hub_connected": self.hub_connected,
+            "transfers": [
+                {key: batch.get(key) for key in (
+                    "peer_name", "label", "state", "active", "paused_for_budget", "files_total",
+                    "files_done", "files_failed", "error", "created_at", "finished_at")}
+                | {"failed_files": [f.get("error") for f in batch.get("failed_files") or []][:3]}
+                for batch in batches
+            ],
+        }
 
     def connected_device_ids(self, timeout: float = 5.0) -> Optional[set[str]]:
         """Presence from the hub: the device IDs currently online, or None

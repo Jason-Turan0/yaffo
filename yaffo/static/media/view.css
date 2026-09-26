@@ -510,6 +510,11 @@
     justify-content: flex-end;
 }
 
+/* Clear sits apart from Cancel/Apply: it acts on the face, not on the picker. */
+.face-reassign-clear {
+    margin-inline-end: auto;
+}
+
 /* Narrow viewers: one column, media first, and the DOCUMENT does the scrolling.
    The desktop presentation is a sticky card whose .sidebar-content is its own
    scroller beside a fixed-height media pane; keeping that under 900px produced

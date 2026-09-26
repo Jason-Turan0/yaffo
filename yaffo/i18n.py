@@ -146,17 +146,25 @@ def select_locale() -> str:
     return DEFAULT_LOCALE
 
 
-def set_locale(locale: str) -> bool:
+def set_locale(locale: str, session=None) -> bool:
     normalized = normalize_locale(locale)
     if normalized is None:
         return False
-    row = db.session.query(ApplicationSettings).filter_by(name=LOCALE_SETTING).first()
+    session = session or db.session
+    row = session.query(ApplicationSettings).filter_by(name=LOCALE_SETTING).first()
     if row is None:
-        db.session.add(ApplicationSettings(name=LOCALE_SETTING, type="string", value=normalized))
+        session.add(ApplicationSettings(name=LOCALE_SETTING, type="string", value=normalized))
     else:
         row.value = normalized
-    db.session.commit()
+    session.commit()
     return True
+
+
+def clear_locale(session=None) -> None:
+    """Forget the saved language, so Yaffo follows the browser's again."""
+    session = session or db.session
+    session.query(ApplicationSettings).filter_by(name=LOCALE_SETTING).delete()
+    session.commit()
 
 
 def text_direction(locale: str) -> str:

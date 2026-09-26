@@ -24,6 +24,7 @@ import threading
 import webbrowser
 
 from yaffo.logging_config import get_logger
+from yaffo.starlark_worker import main as starlark_main
 from yaffo.config import get as get_config
 from yaffo.config import get_int as get_config_int
 
@@ -211,7 +212,9 @@ def _run_watcher() -> None:
 
 def main() -> None:
     role = os.environ.get("YAFFO_ROLE", "web")
-    if role == "host":
+    if role == "starlark":
+        starlark_main()
+    elif role == "host":
         _run_host()
     elif role == "watcher":
         _run_watcher()

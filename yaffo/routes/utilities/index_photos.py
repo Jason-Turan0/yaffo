@@ -2,14 +2,17 @@ import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from sqlalchemy import and_, or_
 from flask import Flask, Response, current_app, jsonify, render_template, request, stream_with_context
 from flask_babel import gettext
 
 from yaffo.db import db
 from yaffo.db.models import Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, MediaItem
 from yaffo.routes.utilities.common import get_media_dirs, get_thumbnail_dir, automations_sidebar_context
-from yaffo.utils.file_sync import MediaScan, iter_media_scan, perform_sync
+from yaffo.routes.utilities.run_history import run_view
+from yaffo.utils.file_sync import FILE_SYNC_JOB, MediaScan, iter_media_scan, perform_sync
 from yaffo.utils.index_jobs import reindex_media_items
+from yaffo.utils.thumbnail_marker import ensure_thumbnail_dir
 
 
 # NDJSON records the scan stream emits (one JSON object per line). Named so the page
@@ -27,6 +30,8 @@ class ScanComplete:
     total_indexed: int
     unindexed: list[dict]
     orphaned: list[dict]
+    # Media folders that exist but hold no media files (a drive that didn't mount).
+    empty_roots: list[str]
     type: str = "done"
 
     @classmethod
@@ -37,6 +42,7 @@ class ScanComplete:
             total_indexed=scan.total_indexed,
             unindexed=scan.unindexed,
             orphaned=scan.orphaned,
+            empty_roots=scan.empty_roots,
         )
 
 
@@ -56,6 +62,37 @@ class SyncStarted:
 class ReindexStarted:
     job_id: str
     media_item_count: int
+
+
+# The page's job kinds, in pipeline order: import (new files) runs before index.
+INDEX_JOB_NAMES = ("import_photos", "index_photos")
+# The run history also lists file-sync runs that need attention (skipped, failed, or
+# left items alone); its "Already in sync" runs stay on the automation's own page.
+# Runs listed in the run history.
+RUN_HISTORY_LIMIT = 10
+_IN_PROGRESS = (JOB_STATUS_PENDING, JOB_STATUS_RUNNING)
+
+
+def _in_progress_and_history() -> tuple[list[Job], list[Job]]:
+    """Each kind's latest run while it is still in progress (shown as a job card),
+    and every other run of either kind, newest first (the run history). A finished
+    latest run is history too; so is an older run that never finished."""
+    in_progress = []
+    for name in INDEX_JOB_NAMES:
+        job = db.session.query(Job).filter(Job.name == name).order_by(Job.created_at.desc()).first()
+        if job is not None and job.status in _IN_PROGRESS:
+            in_progress.append(job)
+    history = (
+        db.session.query(Job)
+        .filter(
+            or_(Job.name.in_(INDEX_JOB_NAMES), and_(Job.name == FILE_SYNC_JOB, Job.error.isnot(None))),
+            Job.id.notin_([job.id for job in in_progress]),
+        )
+        .order_by(Job.created_at.desc())
+        .limit(RUN_HISTORY_LIMIT)
+        .all()
+    )
+    return in_progress, history
 
 
 def init_index_photos_routes(app: Flask):
@@ -106,20 +143,22 @@ def init_index_photos_routes(app: Flask):
         can_sync = len(media_dirs) > 0 and all(d.exists() for d in media_dirs) and thumbnail_dir is not None
         can_scan = any(d.exists() for d in media_dirs)
 
-        active_jobs = db.session.query(Job).filter(
-            Job.status.in_([JOB_STATUS_PENDING, JOB_STATUS_RUNNING]),
-            Job.name.in_(['index_photos', 'import_photos']),
-        ).all()
+        in_progress_jobs, history_jobs = _in_progress_and_history()
+        has_active_jobs = db.session.query(Job.id).filter(
+            Job.status.in_(_IN_PROGRESS),
+            Job.name.in_(INDEX_JOB_NAMES),
+        ).first() is not None
 
         return render_template(
             "utilities/index_photos.html",
             **automations_sidebar_context(),
             media_dirs=[str(d) for d in media_dirs],
-            active_jobs=[job.to_dict_with_view_props() for job in active_jobs],
+            in_progress_jobs=[job.to_dict_with_view_props() for job in in_progress_jobs],
+            run_history=[run_view(job) for job in history_jobs],
             warnings=warnings,
             can_sync=can_sync,
             can_scan=can_scan,
-            has_active_jobs=len(active_jobs) > 0,
+            has_active_jobs=has_active_jobs,
         )
 
     @app.route("/utilities/index-photos/scan", methods=["GET"])
@@ -190,7 +229,7 @@ def init_index_photos_routes(app: Flask):
                 "code": "thumbnail_directory_not_configured",
             }), 400
 
-        thumbnail_dir.mkdir(parents=True, exist_ok=True)
+        ensure_thumbnail_dir(thumbnail_dir)
 
         jobs = perform_sync(db.session, files_to_index, files_to_delete, thumbnail_dir)
         return jsonify(asdict(SyncStarted(job_id=jobs.import_job_id))), 202
@@ -211,7 +250,7 @@ def init_index_photos_routes(app: Flask):
                 "error": gettext("No thumbnail directory configured"),
                 "code": "thumbnail_directory_not_configured",
             }), 400
-        thumbnail_dir.mkdir(parents=True, exist_ok=True)
+        ensure_thumbnail_dir(thumbnail_dir)
 
         # Sourced from the index, not a filesystem walk: "reindex the library" means
         # the items in it. Files that have since vanished are skipped — indexing them

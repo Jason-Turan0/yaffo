@@ -83,7 +83,9 @@ one-off cleanups.
 
 Every run — scheduled, event-driven, or manual — is recorded under **Run
 history**, with a status such as **COMPLETED** and a timestamp. If an automation
-misbehaves, check its run history first to see what happened and when.
+misbehaves, check its run history first to see what happened and when. A run that
+failed or finished with errors has an **Ask Yaffo** icon at the end of its row;
+it opens the [assistant](../start-here/ask-yaffo.md) with that run attached.
 
 ## Related
 

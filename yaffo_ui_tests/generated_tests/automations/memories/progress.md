@@ -60,7 +60,7 @@
 - Detail actions: `.automation-actions`; `.js-run-files` "Run…";
   `#configure-automation-button`
   (only with config fields); `#edit-automation-button`/`#delete-automation-button`
-  (custom only). Run history: `#automation-runs` / `.automation-run-row` (self-polls 5s).
+  (custom only). Run history: `#automation-runs` / `.run-history-row` (self-polls 5s).
   Run history is capped at the **10 most recent** jobs — on a long-lived environment a
   row-count comparison saturates and never increases; detect a new run as an
   innerText change of `#automation-runs` instead (see automations_run_now).

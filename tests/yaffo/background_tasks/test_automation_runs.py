@@ -148,3 +148,17 @@ def test_record_run_captures_work_failure(session):
     assert "disk on fire" in job.error
     assert job.automation_id == automation.id
     assert job.completed_at is not None
+
+
+def test_record_run_completes_empty_media_scope_without_calling_work(session):
+    automation = _system_automation(session, "duplicate_scan")
+
+    def work(_reporter):
+        pytest.fail("empty scope should not execute automation work")
+
+    job = record_run(session, automation, work, media_item_ids=[])
+
+    assert job.automation_id == automation.id
+    assert job.status == JOB_STATUS_COMPLETED
+    assert job.started_at is not None and job.completed_at is not None
+    assert json.loads(job.job_data)["output"] == "No indexed media items to process"

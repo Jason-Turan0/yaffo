@@ -158,8 +158,8 @@ def read_theme_css(slug: str, session: Optional[Session] = None) -> Optional[The
     return custom.published_theme if custom else None
 
 
-def theme_exists(slug: str) -> bool:
-    return is_builtin(slug) or get_custom_theme(slug) is not None
+def theme_exists(slug: str, session: Optional[Session] = None) -> bool:
+    return is_builtin(slug) or get_custom_theme(slug, session) is not None
 
 
 def save_custom_theme(theme: CustomTheme, session: Optional[Session] = None) -> None:
@@ -327,20 +327,27 @@ def get_theme() -> str:
         _cached_theme = DEFAULT_THEME
     return _cached_theme
 
-def set_theme(theme: str) -> None:
+def saved_theme(session: Session) -> str:
+    """The default theme as stored, without the process cache."""
+    setting = session.query(ApplicationSettings).filter_by(name=THEME_SETTING_NAME).first()
+    return setting.value if setting and theme_exists(setting.value, session) else DEFAULT_THEME
+
+
+def set_theme(theme: str, session: Optional[Session] = None) -> None:
     global _cached_theme
-    if not theme_exists(theme):
+    session = session or db.session
+    if not theme_exists(theme, session):
         raise ValueError(f"Unknown theme: {theme!r}")
     setting = (
-        db.session.query(ApplicationSettings)
+        session.query(ApplicationSettings)
         .filter_by(name=THEME_SETTING_NAME)
         .first()
     )
     if setting:
         setting.value = theme
     else:
-        db.session.add(
+        session.add(
             ApplicationSettings(name=THEME_SETTING_NAME, type="str", value=theme)
         )
-    db.session.commit()
+    session.commit()
     _cached_theme = theme

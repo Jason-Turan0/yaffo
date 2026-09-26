@@ -57,8 +57,15 @@ run.
 
 ## Watch Background Jobs
 
-Yaffo shows active indexing work as job cards. A job card may show progress and a
-cancel control when cancellation is available.
+The **Index Photos** page shows the import or index run in progress as a job
+card, with its progress, any error count, and **Cancel** when cancellation is
+available. Finished runs move to the page's **Run history**, each with a status
+chip: **Completed**, **Completed with errors** when some files failed,
+**Cancelled**, or **Failed**.
+
+A failed run, or one with errors, has an **Ask Yaffo** button that opens the
+[assistant](../start-here/ask-yaffo.md) with that run attached, so it can look up
+what went wrong.
 
 If you close the browser tab, the app and its background worker can continue
 running as long as Yaffo itself is still running. Use the Yaffo tray/menu icon to

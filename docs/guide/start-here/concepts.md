@@ -89,6 +89,15 @@ A single interactive part of a custom page.
 **Theme**  
 A visual style for Yaffo's interface.
 
+**Ask Yaffo**  
+The built-in assistant. It answers from Yaffo's documentation, checks this
+computer when troubleshooting, and proposes changes to your library. See
+[Ask Yaffo](ask-yaffo.md).
+
+**Change card**  
+A change the assistant proposes, shown with the exact number of items it
+affects. Nothing changes until you approve it, and most changes can be undone.
+
 ## Sharing
 
 **Sharing**  

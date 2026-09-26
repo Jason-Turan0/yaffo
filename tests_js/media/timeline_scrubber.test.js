@@ -3,9 +3,22 @@ import { loadModule } from '../support/load_module.js';
 const loadScrubber = async () => (await loadModule('media/timeline_scrubber.js')).media.timelineScrubber;
 
 // July 2025 (30 items), June 2024 (1 item) — newest first, cumulative offsets.
+// The 10 empty months between are short enough to stay to scale, so the rail is
+// 14 equal month slices; top/height are what the server computes for that.
+const SLICE = 100 / 14;
 const months = [
-  { year: 2025, month: 7, count: 30, offset: 0 },
-  { year: 2024, month: 6, count: 1, offset: 30 },
+  { year: 2025, month: 7, count: 30, offset: 0, top: 0, height: SLICE },
+  { year: 2024, month: 6, count: 1, offset: 30, top: 13 * SLICE, height: SLICE },
+];
+
+// The same library plus one photo dated January 5000. The ~2,975 empty years
+// collapse to a 3-month break: units 0 (Jan 5000), 1-3 (break), 4 (Jul 2025),
+// 5-16 (empty, to scale), 17 (Jun 2024) — 18 units in all.
+const UNIT = 100 / 18;
+const withOutlier = [
+  { year: 5000, month: 1, count: 1, offset: 0, top: 0, height: UNIT },
+  { year: 2025, month: 7, count: 30, offset: 1, top: 4 * UNIT, height: UNIT },
+  { year: 2024, month: 6, count: 1, offset: 31, top: 17 * UNIT, height: UNIT },
 ];
 
 const config = { i18n: { locale: 'en' } };
@@ -46,6 +59,17 @@ describe('monthAtFraction', () => {
     expect(scrubber.monthAtFraction(months, -1)).toEqual(months[0]);
     expect(scrubber.monthAtFraction(months, 2)).toEqual(months[1]);
   });
+
+  it('reads server positions, so a collapsed break snaps to the photos below it', async () => {
+    const scrubber = await loadScrubber();
+
+    expect(scrubber.monthAtFraction(withOutlier, 0.02)).toEqual(withOutlier[0]);
+    // Inside the break (units 1-3): the next older month with photos.
+    expect(scrubber.monthAtFraction(withOutlier, 0.1)).toEqual(withOutlier[1]);
+    // The real library keeps most of the rail: Jul 2025 → Jun 2024 spans 4/18 → 1.
+    expect(scrubber.monthAtFraction(withOutlier, 0.24)).toEqual(withOutlier[1]);
+    expect(scrubber.monthAtFraction(withOutlier, 0.6)).toEqual(withOutlier[2]);
+  });
 });
 
 describe('jumpUrl', () => {
@@ -71,9 +95,20 @@ describe('railPercentForDate', () => {
     const scrubber = await loadScrubber();
 
     expect(scrubber.railPercentForDate(months, '2025-07-31')).toBe(0);
-    expect(scrubber.railPercentForDate(months, '2024-12-31')).toBe(50);
+    expect(scrubber.railPercentForDate(months, '2024-12-31')).toBeCloseTo(50);
     expect(scrubber.railPercentForDate(months, '2023-01-01')).toBe(100);
     expect(scrubber.railPercentForDate(months, 'unknown')).toBeNull();
+  });
+
+  it('places dates on the collapsed axis the server laid out', async () => {
+    const scrubber = await loadScrubber();
+
+    expect(scrubber.railPercentForDate(withOutlier, '5000-01-31')).toBe(0);
+    // Jul 2025 starts below the break, not a sliver from the bottom.
+    expect(scrubber.railPercentForDate(withOutlier, '2025-07-31')).toBeCloseTo(4 * UNIT);
+    // An empty month in the to-scale stretch: Dec 2024 is 6 months below Jul 2025's band.
+    expect(scrubber.railPercentForDate(withOutlier, '2024-12-31')).toBeCloseTo(11 * UNIT);
+    expect(scrubber.railPercentForDate(withOutlier, '2024-06-30')).toBeCloseTo(17 * UNIT);
   });
 });
 

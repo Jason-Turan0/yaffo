@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% from "assistant/_panel.html" import assistant_panel with context %}
+
+{% block title %}{{ _("Ask Yaffo - Yaffo") }}{% endblock %}
+
+{% block content %}
+<div class="assistant-page">
+    <nav class="assistant-sidebar" aria-label="{{ _('Conversations') }}">
+        <h2 class="assistant-sidebar-title">{{ _("Conversations") }}</h2>
+        <ul class="assistant-conversation-list" id="assistant-conversation-list"></ul>
+        <p class="assistant-conversation-empty" id="assistant-conversation-empty" hidden>
+            {{ _("No conversations yet.") }}
+        </p>
+        <button type="button" class="btn-danger btn-sm assistant-delete-all" id="assistant-delete-all"
+                data-icon="delete" disabled>{{ _("Delete all conversations") }}</button>
+    </nav>
+    {{ assistant_panel(page=true) }}
+</div>
+{% endblock %}

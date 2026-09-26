@@ -97,6 +97,14 @@ window.PHOTO_ORGANIZER.people.initList = (i18n, config) => {
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = config.buildUrl('people_delete', { person_id: personId });
+        // A native form submit bypasses the fetch/htmx hooks in security.js that
+        // attach X-CSRF-Token, so carry the token as a field like the server-
+        // rendered forms do.
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = config.csrfToken || '';
+        form.appendChild(csrfInput);
         document.body.appendChild(form);
         form.submit();
     };

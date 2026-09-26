@@ -13,13 +13,14 @@ logger = get_logger(__name__, 'background_tasks')
 
 def context_globals(context) -> dict:
     """The `ctx` global a script reads: what triggered this run. `context` is an
-    EventContext for event-driven runs, or None for a schedule (then ctx fields
-    are empty)."""
+    EventContext for event and scheduled runs, or None for a context-free manual
+    run."""
     return {
         "event_type": context.event_type if context else None,
         "job_id": context.job_id if context else None,
         "media_item_ids": list(context.media_item_ids) if context else [],
         "groups": [list(g) for g in context.groups] if context else [],
+        "scope_paths": list(context.scope_paths) if context else [],
     }
 
 

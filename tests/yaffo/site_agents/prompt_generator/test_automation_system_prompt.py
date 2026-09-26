@@ -7,7 +7,7 @@ the sandbox actually provides.
 import pytest
 
 from yaffo.background_tasks.automation_sandbox.executor import context_globals
-from yaffo.site_agents.prompt_generator.automation_system_prompt import (
+from yaffo.site_agents.automation.prompt_generator.automation_system_prompt import (
     _context,
     build_automation_builder_system_prompt,
 )

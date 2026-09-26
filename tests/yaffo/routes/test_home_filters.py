@@ -319,3 +319,21 @@ def test_shape_filter_ignores_garbage(client, shaped_media_ids):
     response = client.get("/?shape=bogus")
 
     assert _rendered_ids(response.data.decode()) == set(shaped_media_ids.values())
+
+
+def test_item_filter_shows_exactly_those_items_and_pages_keep_them(client, app):
+    """A URL-only filter (the assistant's links): no panel control, but it
+    narrows the gallery and rides along in pagination links."""
+    with app.app_context():
+        rows = [MediaItem(full_file_path=f"/media/{i}.jpg") for i in range(5)]
+        db.session.add_all(rows)
+        db.session.commit()
+        ids = [row.id for row in rows]
+
+    body = client.get(f"/?item={ids[0]}&item={ids[2]}&item={ids[4]}&page-size=2").data.decode()
+
+    assert _rendered_ids(body) <= {ids[0], ids[2], ids[4]} and len(_rendered_ids(body)) == 2
+    assert f"item={ids[4]}" in body  # the next page's link keeps the list
+    assert 'name="item"' not in body  # no control in the filter panel
+    page_two = client.get(f"/?item={ids[0]}&item={ids[2]}&item={ids[4]}&page-size=2&page=2").data.decode()
+    assert len(_rendered_ids(page_two)) == 1

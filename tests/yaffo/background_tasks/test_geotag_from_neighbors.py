@@ -170,7 +170,7 @@ def test_handler_enqueues_for_event_photos(monkeypatch):
     assert calls == [(9, [1, 2])]
 
 
-def test_handler_noop_without_context_or_photos(monkeypatch):
+def test_handler_enqueues_even_without_indexed_photos(monkeypatch):
     calls = []
     monkeypatch.setattr(
         mod, "geotag_from_neighbors_automation_task",
@@ -178,4 +178,4 @@ def test_handler_noop_without_context_or_photos(monkeypatch):
     )
     mod.enqueue_geotag_from_neighbors(SimpleNamespace(id=9), None)
     mod.enqueue_geotag_from_neighbors(SimpleNamespace(id=9), SimpleNamespace(media_item_ids=[]))
-    assert calls == []
+    assert calls == [(9, []), (9, [])]

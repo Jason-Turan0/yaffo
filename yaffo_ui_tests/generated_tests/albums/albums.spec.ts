@@ -341,9 +341,16 @@ test.describe('Albums Feature', () => {
     expect(tileCoverSrc).toContain(`/media/${coverId}`);
 
     // Remove a different photo (confirmation states photos are not deleted)
-    await page.goto(albumPath);
+    // Drive it as the user does: Edit, tick the card, Remove, confirm. (The
+    // removeMembers helper jumps straight to a pre-selected URL; that's fine for
+    // cleanup elsewhere, but here the tick → remove path is what's under test.)
     const removeId = (await memberIds(page, albumPath)).find((id) => id !== coverId)!;
-    await removeMembers(page, albumPath, [removeId]);
+    await page.locator('.page-header a', { hasText: 'Edit' }).first().click();
+    await page.waitForURL(/edit=1/);
+    await page.locator(`#album-grid .photo-card[data-select-id="${removeId}"]`).click();
+    await page.locator('#remove-from-album-button').click();
+    await acceptConfirmDialog(page, /not deleted/);
+    await page.waitForURL(/edit=1/);
     await expect(page.locator(`#album-grid .photo-card[data-select-id="${removeId}"]`)).toHaveCount(0);
     expect(await memberIds(page, albumPath)).toHaveLength(SEEDED_MEMBER_COUNT - 1);
 

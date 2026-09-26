@@ -1,15 +1,23 @@
 {% from "macros/local_datetime.html" import local_datetime %}
+{# show_dismiss=false leaves a finished job without Dismiss (which deletes it), for
+   pages that keep finished runs as history, like Index Photos. #}
+{% set dismissible = show_dismiss | default(true) %}
+{# The page the card is shown on, which "Ask Yaffo" attaches. On a page it's that
+   page's path; the card's refresh and Cancel requests pass it back (as `page`),
+   since their own path is /jobs/…. #}
+{% set help_page = help_page | default(none) or request.path %}
+{% set status = run_status(job.status, job.error_count) %}
 <div class="job-card"
      id="job-{{ job.id }}"
         {% if not is_finished %}
-     hx-get="{{ url_for('job_fragment', job_id=job.id, has_results=has_results|int, results_route=results_route) }}"
+     hx-get="{{ url_for('job_fragment', job_id=job.id, has_results=has_results|int, results_route=results_route, dismiss=none if dismissible else 0, page=help_page) }}"
      hx-trigger="every 5s"
      hx-swap="outerHTML"
         {% endif %}>
 
     <div class="job-header">
-        <div>
-            <span class="job-status">{{ job.status }}</span>
+        <div class="job-meta">
+            <span class="chip {{ status.chip }} job-status">{{ status.label }}</span>
             <span class="job-time">{{ _("Started:") }} {{ local_datetime(job.started_at or job.created_at) }}</span>
         </div>
         <div class="job-actions">
@@ -20,10 +28,18 @@
                 </a>
             {% endif %}
 
-            {% if show_cancel %}
+            {% if assistant_help | default(false) and (job.status == 'FAILED' or job.error or job.error_count) %}
+                <button type="button" class="btn btn-secondary btn-sm" data-icon="assistant" data-assistant-help
+                        data-job-id="{{ job.id }}" data-page="{{ help_page }}"
+                        data-error="{{ (job.error or '')[:500] }}">
+                    {{ _("Ask Yaffo") }}
+                </button>
+            {% endif %}
+
+            {% if show_cancel and (dismissible or not is_finished) %}
                 <button class="btn {{ 'btn-secondary' if is_finished else 'btn-danger' }} btn-sm"
                         hx-post="{{ url_for('job_delete' if is_finished else 'job_cancel', job_id=job.id) }}"
-                        hx-vals='{"has_results": {{ has_results|tojson }}, "job_name": "{{ job.name }}"}'
+                        hx-vals='{"has_results": {{ has_results|tojson }}, "job_name": "{{ job.name }}", "dismiss": {{ dismissible|tojson }}, "page": {{ help_page|tojson }}}'
                         hx-target="#job-{{ job.id }}"
                         hx-swap="outerHTML">
                     {{ _("Dismiss") if is_finished else _("Cancel") }}
@@ -32,11 +48,21 @@
         </div>
     </div>
 
-    <div class="job-message">{{ job.message.replace('{totalCount}', total_count|string).replace('{taskCount}', job.task_count|string) }}</div>
+    {# Some jobs (e.g. file sync runs) are created without a message. #}
+    <div class="job-message">{{ (job.message or '').replace('{totalCount}', total_count|string).replace('{taskCount}', job.task_count|string) }}</div>
 
     <div class="progress-bar-container">
         <div class="progress-bar" style="width: {{ progress }}%"></div>
     </div>
 
     <div class="progress-text">{{ (progress / 100) | format_percent(2) }}</div>
+
+    {% if job.error_count or job.error %}
+    <div class="job-errors">
+        {% if job.error_count %}
+        <span class="job-error-count">{{ ngettext("%(count)s error", "%(count)s errors", job.error_count, count=job.error_count) }}</span>
+        {% endif %}
+        {% if job.error %}<p class="job-error-message">{{ job.error }}</p>{% endif %}
+    </div>
+    {% endif %}
 </div>

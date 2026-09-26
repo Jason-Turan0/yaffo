@@ -84,7 +84,7 @@ describe('initFavoriteToggles', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(window.notification.error).toHaveBeenCalledWith('media:favorite.updateFailed');
+    expect(window.notification.failure).toHaveBeenCalledWith('media:favorite.updateFailed');
     expect(button.disabled).toBe(false);
     consoleError.mockRestore();
   });

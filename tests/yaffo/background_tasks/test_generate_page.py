@@ -197,9 +197,9 @@ class TestProgressLabelsCoverAgentTools:
     with the page agent's real tool set so a new/renamed tool gets a label."""
 
     def _agent_tool_names(self) -> set[str]:
-        from yaffo.site_agents.tool_providers.data_query_tool import DataQueryToolProvider
-        from yaffo.site_agents.tool_providers.widget_template_tool import WidgetTemplateToolProvider
-        from yaffo.site_agents.tool_providers.widget_tool import WidgetToolProvider
+        from yaffo.site_agents.common.tool_providers.data_query_tool import DataQueryToolProvider
+        from yaffo.site_agents.page.tool_providers.widget_template_tool import WidgetTemplateToolProvider
+        from yaffo.site_agents.page.tool_providers.widget_tool import WidgetToolProvider
 
         session = object()  # get_tools doesn't touch the session
         providers = [

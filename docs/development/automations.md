@@ -72,12 +72,22 @@ nullable and shared with the page builder's `version_id`).
 One automation → many triggers, so it can run on a schedule *and* react to events.
 - `trigger_type` = `schedule` | `event`, plus a per-trigger `enabled`.
 - **schedule**: `cron` (5-field) + the dispatcher bookkeeping `next_run_at` / `last_run_at`.
+  `config` selects media-directory IDs and/or absolute folder paths inside configured
+  media directories. Empty selections mean every configured media directory.
 - **event**: `event_type` (from the `EVENTS` catalog) + `config` (JSON: filters / args).
 
 ### Runs reuse `Job`
 There is **no `automation_runs` table**. A run is a `Job` tagged with
 `jobs.automation_id` (`ON DELETE SET NULL`), so the existing job status / progress
 / UI machinery *is* the run history. `Automation.jobs` ↔ `Job.automation`.
+
+**Run-recording convention:** Every automation execution attempt must create a
+`Job` with its `automation_id`, regardless of whether it was started by a
+schedule, an event, or a manual action. Record RUNNING when work starts and a
+terminal COMPLETED or FAILED status when it ends. A valid run with nothing to do
+should complete with a no-work summary; an attempt that cannot dispatch should
+fail with an error. Do not silently return after a trigger fires: the Jobs table
+supplies the status, progress, and errors shown in the UI's run history.
 
 - **Schedule-driven system** automations record via their concrete tasks (e.g.
   file_sync's import/index Jobs are tagged with `automation_id`).
@@ -87,12 +97,17 @@ There is **no `automation_runs` table**. A run is a `Job` tagged with
   returns a one-line summary, then the Job is finalised to COMPLETED (summary in
   `job_data.output`) or FAILED (the work's exception captured, not re-raised). So an
   event-triggered run now shows up in the detail page's run history like a scheduled
-  one.
+  one. Media-based handlers also enqueue empty scopes; `record_run` completes those
+  runs with a no-work summary without calling the work function.
 - **Custom** automations record via the same module's `run_and_record`: a RUNNING
   Job is opened, the sandboxed code runs, then the Job is finalised to
   COMPLETED/FAILED with the captured print `output` in `job_data` (and `error` on
   failure). The sandbox returns failures as data, so a bad script becomes a FAILED
   Job, not an exception.
+- **Schedule dispatch failures** record a FAILED Job via `record_dispatch_failure`
+  so invalid trigger scopes and other dispatch errors appear in run history.
+- **Event dispatch failures** use the same recorder, so a missing handler or
+  enqueue error also appears as a FAILED run instead of only a log entry.
 
 Both `record_run` and `run_and_record` share `_open_run_job` and, like the custom
 path, **never hand their Jobs to `complete_job_task`** — so an automation run emits
@@ -120,6 +135,19 @@ enabled automations and, per trigger:
   fire this tick.
 - `next_run_at <= now` → fire via `invoke_automation`, stamp `last_run_at`,
   advance `next_run_at = compute_next_run(cron, now)`.
+
+The trigger editor offers an explicit scope: **Everything**, **Media directories**,
+or **Paths**. Paths are selected with the folder picker. The dispatcher resolves
+selected roots against the current media-directory registry
+and passes indexed media IDs beneath them to every automation. `file_sync` scans
+the selected roots; `duplicate_scan` scans the selected IDs. If a selected root is
+no longer configured, dispatch records a failed Job visible in Run history and
+advances to the next cron slot. Custom scripts
+receive the IDs in `ctx['media_item_ids']` and filter media queries to that set.
+Built-in media writes are replay-safe: face links skip assigned faces, location
+names skip unchanged values, label replacement skips unchanged assignments, and
+metadata export merges unique values. Custom scripts should use the idempotent
+host actions and avoid depending on a run executing only once.
 
 Cron math is `croniter` (`background_tasks/schedule.py`: `compute_next_run`,
 `is_valid_cron`).
@@ -193,13 +221,13 @@ Both dispatchers funnel through `invoke_automation(automation, context) -> bool`
 `@register_handler(key)` at task-definition time. The registry imports **no task
 code**; handlers self-register when their task module loads, and dispatchers read
 `HANDLERS` at call time. This is what keeps the task ↔ dispatcher mapping free of
-import-order cycles. The schedule dispatcher passes `context=None`; the event
-dispatcher passes the `EventContext`.
+import-order cycles. Both dispatchers pass an `EventContext`; a schedule has
+`event_type=None` with resolved `media_item_ids` and `scope_paths`.
 
 ## The sandbox (`yaffo/background_tasks/automation_sandbox/`)
 
 Custom automation `code` is **Starlark** (Python-like, deterministic, hermetic:
-no I/O, no imports, no `while`/recursion) run via the `starlark-pyo3` binding.
+no I/O, no imports, no `while`) run via the `starlark-pyo3` binding.
 
 ```
 automation_sandbox/
@@ -274,7 +302,8 @@ automation_sandbox/
   (`data_query_tool._json_default`).
 - **`executor.run_automation(session, automation, context)`** — runs
   `automation.published_code` with `inputs={"ctx": …}` (the trigger context:
-  `event_type`/`job_id`/`media_item_ids`, empty for a schedule) and
+  `event_type`/`job_id`/`media_item_ids`/`scope_paths`; schedules have selected
+  media IDs and `event_type=None`) and
   `functions=build_host_functions(session)`. Returns the `StarlarkResult`.
 - **`tasks/run_automation.py::run_automation_code_task`** — the registered
   task wrapping the executor (loads the automation, rebuilds the `EventContext`,
@@ -332,7 +361,7 @@ package — formerly `page_builder` — that the page and theme builders also us
   (Conversation rows via `automation_id`), `set_status`, `write_working_code`,
   **`publish`** (working → published, `ACCEPTED`), `discard_draft`, `get_status`.
 - **Tools** — `write_automation_code`
-  (`site_agents/tool_providers/automation_tool.py`): parse-checks via
+  (`site_agents/automation/tool_providers/automation_tool.py`): parse-checks via
   `validate_starlark` and persists into `working_code`, returning syntax errors to
   the model to retry. And **`add_automation_trigger` / `remove_automation_trigger`**
   (`automation_trigger_tool.py`): the model decides *when* the automation runs (the
@@ -347,7 +376,7 @@ package — formerly `page_builder` — that the page and theme builders also us
   when the generation finishes, so the trigger changes show up then. The system
   prompt's `<triggers>` section tells the model to set up the triggers that fit the
   request.
-- **Prompts** — `prompt_generator/automation_system_prompt.py` (stable: language
+- **Prompts** — `automation/prompt_generator/automation_system_prompt.py` (stable: language
   rules, the `ctx` contract, the host API via `render_host_api()`, data sources via
   `FIELDS_BY_SOURCE` (incl. the FK join map from `source_catalog.relationship_summary()`,
   derived from the models), the `EVENTS` catalog — all *derived*, none restated — plus
@@ -393,7 +422,8 @@ offers a preset list + a Period-driven single-value builder (Hourly/Daily/Weekly
 Monthly) + an Advanced raw-cron escape hatch, composes one 5-field cron into a
 hidden `cron` input, and live-previews it via `describeCron` (which also fills the
 `data-cron` text on existing rows). The server stays the trust boundary: the
-`save_schedule` action only validates the submitted `cron` with `is_valid_cron`
+`save_schedule` action validates the submitted `cron` with `is_valid_cron` and the
+selected scope against configured media directories
 before persisting (`automations_validate_cron` also gates the Save button live for
 the Advanced field) — no cron-building logic lives in Python. The component
 re-inits itself on load and on `htmx:afterSwap`, so it survives the fragment
@@ -438,13 +468,13 @@ the old manual "Auto-Assign People" utility page — that page, its route, and i
 `tasks/duplicate_scan.py` — a system automation (`handler='duplicate_scan'`, seeded
 disabled with a **daily** `0 3 * * *` schedule trigger). Its handler
 `enqueue_duplicate_scan` enqueues `duplicate_scan_task`, which opens a
-`find_duplicates` Job over **every indexed photo** (`media_repository.get_all_media_item_paths`),
+`find_duplicates` Job over the trigger's selected indexed photos,
 tags it with `automation_id`, and hands it to the existing `find_duplicates_task`
 — the exact perceptual-hash scan the manual **Remove Duplicates** tool runs, so its
 results show up there identically. Same shape as `file_sync`: a lightweight handler
-→ task → reuse of an existing job. (`_open_scan_job` is the testable core; a schedule
-run passes `context=None`, which the handler ignores — a full-library scan has no
-event subjects.)
+→ task → reuse of an existing job. When no indexed media matches, the task uses
+`record_run` to save a completed no-work Job instead of starting the hash scan.
+(`_open_scan_job` is the testable core.)
 
 ### `export_photo_tag`
 
@@ -462,10 +492,9 @@ is the event-driven replacement for the deleted Sync Metadata page — instead o
 batch button, the on-disk file stays in sync as you tag.
 
 **Known gaps (pick up later):**
-- **Backfill is manual, scoped by Run-now.** Events only name the photos they
-  concern, so existing photos aren't touched until you re-edit them — but **Run on a
-  folder…/file…** (see *Run-now* below) now re-runs the handler for real over a
-  picked path's photos, so you can apply it to existing files without re-editing.
+- Events only name the photos they concern. Existing photos can be updated with
+  **Run on a folder…/file…** (see *Run-now* below) or a scheduled run scoped to
+  selected media directories or folders.
 - **Format is dispatched by file *extension*** (`write_metadata.py`), so a WebP
   file mislabeled `.jpg` takes the JPEG path. exiftool usually copes, but
   detecting the real format (magic bytes / exiftool) would be more robust.
@@ -765,6 +794,40 @@ Watcher suppression (unit, no real observer):
 - **`find_duplicates`** emits `duplicates_found` outside the handler-context path, so
   with an empty chain. Harmless while `duplicate_scan` is schedule-triggered.
 
+## Sandbox limits, profiles, and preview references
+
+`run_starlark(..., limits=RunLimits(...))` launches a disposable evaluator, including
+when called from a daemon task worker. It exchanges bounded JSON messages over
+pipes; Python objects, sessions, and callbacks remain in the owning process.
+Defaults: 60 seconds, 1,000 host calls, 65,536 print characters including line
+breaks, and 4 MiB per message. A timeout kills/reaps the evaluator; output emitted
+before failure is retained within its cap. Host calls already in progress finish
+on their owning thread; no further calls run after the deadline.
+
+`data_query` row/facet results are capped at 5,000 before materializing database
+rows. Counts/ranges keep their aggregate meaning. Folder queries fail if computing
+accurate counts would scan over 5,000 indexed paths. Face comparisons are bounded
+and fail rather than silently choosing from truncated match candidates.
+
+`build_host_functions`, `build_recording_host_functions`, and `render_host_api`
+accept `profile="automation"` (the default) or `"assistant"`. Only explicitly
+registered functions enter the assistant profile; `report_progress` is excluded.
+The registry also carries risk, settings, network, precondition, and undo metadata
+for reviewed assistant plans. Those metadata do not add approval gates to
+existing automation runs.
+
+Preview mutations with return values now return opaque `$ref:N` tokens instead
+of `None`. Indices count mutations only. For example, creating an album then
+calling `add_to_album` records the reference and the selected media ids without
+writing anything. Pass the token unchanged to later mutations; it cannot be used
+in live reads. Preview summaries name the referenced album. The inverse helpers
+and reference-resolution contract are described in [AI Assistant](ai-assistant.md#change-plans).
+
+Shared batch edit helpers now include `untag_media_items`, `unassign_faces`,
+`set_favorites`, `set_media_dates`, and `set_location_names`. Value setters accept
+an optional `expected` value to skip later edits during undo. `add_to_album`
+accepts optional per-item positions for restoring removed membership.
+
 ## Dependencies
 
 `croniter` (schedule next-run math) and `starlark-pyo3` (the sandbox) — both in
@@ -772,15 +835,11 @@ Watcher suppression (unit, no real observer):
 
 ## Deferred (flagged, not built)
 
-- **Hard CPU/time limit.** Starlark blocks `while`, but in this `starlark-pyo3` build
-  **recursion is NOT blocked** (verified — a recursive call runs), and a large bounded
-  `for` can still burn CPU; the binding exposes no step budget and a thread soft-timeout
-  can't kill a runaway eval. Real hardening = subprocess + kill / resource limits before
-  exposing arbitrary user scripts. **More pressing now** that mutating actions
-  (move/rename/tag/assign/delete) run real file/DB writes on a triggered run. (The other
-  containment guarantees — no imports, no I/O, no network, no eval/introspection
-  builtins, no attribute-walking to host internals, host surface = injected callables
-  only — are pinned by `tests/.../test_starlark_containment.py`.)
+- **Host-call I/O deadlines.** Starlark evaluation now runs in a killable subprocess
+  with wall-clock, host-call, output, and message-size limits (see below). Trusted
+  host callbacks still execute on the owning thread and must supply their own
+  I/O timeouts. A deadline stops the evaluator and prevents later calls, but does
+  not interrupt a callback already modifying files or committing a transaction.
 - **`media_dir_id` / `relative_path` aren't filterable.** They're enrichment, not
   `FIELDS_BY_SOURCE` columns, so a script can read them on a photo row but can't
   `data_query` *by* them (e.g. "photos in media dir X"). Would need a real filter
@@ -838,8 +897,8 @@ Watcher suppression (unit, no real observer):
 | System-automation config schema | `yaffo/background_tasks/automation_config.py` |
 | Seed examples | `yaffo/scripts/seed_automations.py` |
 | Builder persistence (publish/chat) | `yaffo/db/repositories/automation_repository.py` |
-| Builder tools (write-code + add-trigger) | `yaffo/site_agents/tool_providers/{automation_tool,automation_trigger_tool}.py` |
-| Builder prompts | `yaffo/site_agents/prompt_generator/automation_{system,user}_prompt.py` |
+| Builder tools (write-code + add-trigger) | `yaffo/site_agents/automation/tool_providers/{automation_tool,automation_trigger_tool}.py` |
+| Builder prompts | `yaffo/site_agents/automation/prompt_generator/automation_{system,user}_prompt.py` |
 | Builder agent + task | `yaffo/site_agents/agent.py`, `yaffo/background_tasks/tasks/generate_automation.py` |
 | UI routes | `yaffo/routes/utilities/automations.py` (+ `common.automations_sidebar_context`) |
 | UI templates / static | `yaffo/templates/utilities/{_base,automations,automations_triggers,automations_triggers_edit}.html`, `yaffo/static/utilities/{_base,automations}.{js,css}` |

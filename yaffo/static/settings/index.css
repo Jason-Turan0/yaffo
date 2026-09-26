@@ -413,3 +413,152 @@
         min-height: 44px;
     }
 }
+
+/* Linked from the assistant panel (/settings#assistant-section); clear the sticky navbar. */
+#assistant-section {
+    scroll-margin-top: calc(var(--navbar-height, 56px) + 10px);
+}
+
+/* Settings → Assistant: a head with the on/off switch, then three blocks (what it
+   can look at, what it can change, conversations) separated by rules. */
+.assistant-settings-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px 24px;
+}
+
+.assistant-settings-head .section-description {
+    margin-bottom: 0;
+}
+
+.assistant-master-switch {
+    flex: none;
+    margin-top: 6px;
+    font-weight: 600;
+}
+
+.assistant-settings-block {
+    margin: 20px 0 0;
+    padding: 16px 0 0;
+    border: none;
+    border-top: var(--border-width) solid var(--color-border);
+}
+
+.assistant-settings-block legend {
+    float: left;
+    width: 100%;
+    margin-bottom: 4px;
+    padding: 0;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.assistant-settings-block .hint-text {
+    clear: both;
+    margin: 0 0 12px;
+    font-size: var(--font-size-sm);
+}
+
+/* Checkboxes in even columns rather than a ragged wrap. */
+.assistant-check-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 8px 20px;
+}
+
+/* A checkbox, then its info tip and "can't be undone" chip, on one line. */
+.assistant-check-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+/* The changes, one folded row per kind of thing they touch. */
+.assistant-action-groups {
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-md);
+    margin-bottom: 16px;
+}
+
+.assistant-action-group + .assistant-action-group {
+    border-top: var(--border-width) solid var(--color-border);
+}
+
+.assistant-action-group summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.assistant-action-group summary::-webkit-details-marker {
+    display: none;
+}
+
+/* A chevron that turns when the group opens. */
+.assistant-action-group-title::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-inline-end: 10px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform 0.15s ease;
+}
+
+.assistant-action-group[open] .assistant-action-group-title::before {
+    transform: rotate(45deg);
+}
+
+.assistant-action-group summary:hover {
+    background: var(--color-surface-hover);
+}
+
+.assistant-action-group .assistant-check-grid {
+    padding: 4px 14px 14px 30px;
+}
+
+/* "Confirm large changes [500] (i)": one row, the shared input style at a fixed width. */
+.assistant-confirm-threshold {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.assistant-confirm-threshold .form-control {
+    width: 7em;
+}
+
+.assistant-confirm-threshold .form-control:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: var(--focus-ring);
+}
+
+.assistant-conversations {
+    clear: both;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.assistant-conversations .hint-text {
+    margin: 0;
+}
+
+@media (hover: none), (pointer: coarse) {
+    .assistant-action-group summary {
+        min-height: 44px;
+    }
+}

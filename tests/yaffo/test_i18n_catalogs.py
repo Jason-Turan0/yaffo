@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 import pytest
+from deep_translator.exceptions import TooManyRequests
 
 from yaffo.i18n import normalize_locale, text_direction
 import scripts.i18n_catalogs as i18n_catalogs
@@ -182,6 +183,44 @@ def test_translate_missing_overwrite_regenerates_existing_browser_entries(
     assert catalog == {"common": {"greeting": "Hola {{name}}", "save": "Guardar"}}
 
 
+def test_translate_missing_retries_rejected_entries_then_skips_them(monkeypatch, tmp_path):
+    locales_dir = tmp_path / "locales"
+    locales_dir.mkdir()
+    english_path = locales_dir / "en.json"
+    english_path.write_text(
+        json.dumps({"common": {"count": "{{count}} photo", "greeting": "Hello {{name}}", "save": "Save"}}),
+        encoding="utf-8",
+    )
+    (locales_dir / "fr.json").write_text(json.dumps({}), encoding="utf-8")
+
+    monkeypatch.setattr(i18n_catalogs, "BROWSER_LOCALES_DIR", locales_dir)
+    monkeypatch.setattr(i18n_catalogs, "ENGLISH_BROWSER_PATH", english_path)
+    monkeypatch.setattr(i18n_catalogs, "_missing_gettext_entries", lambda locale: [])
+    requests = []
+
+    def fake_engine(entries, locale, engine):
+        requests.append([entry.id for entry in entries])
+        greeting = "Bonjour {{name}}" if len(requests) > 1 else "Bonjour"
+        return {
+            "browser:common.count": "une photo",
+            "browser:common.greeting": greeting,
+            "browser:common.save": "Enregistrer",
+        }
+
+    monkeypatch.setattr(i18n_catalogs, "_translate_batch_with_engine", fake_engine)
+
+    translated = i18n_catalogs.translate_missing("fr")
+
+    assert requests == [
+        ["browser:common.count", "browser:common.greeting", "browser:common.save"],
+        ["browser:common.count", "browser:common.greeting"],
+        ["browser:common.count"],
+    ]
+    assert translated == ["browser:common.greeting", "browser:common.save"]
+    catalog = json.loads((locales_dir / "fr.json").read_text(encoding="utf-8"))
+    assert catalog == {"common": {"count": "", "greeting": "Bonjour {{name}}", "save": "Enregistrer"}}
+
+
 def test_generated_translation_must_preserve_placeholders():
     entry = TranslationEntry(
         id="browser:common.greeting",
@@ -214,6 +253,47 @@ def test_deep_translator_backend_preserves_placeholders_and_html(monkeypatch):
     assert translated == {
         "browser:people.delete.message": 'Eliminar <strong>{{name}}</strong> de {totalCount}'
     }
+
+
+def test_throttled_translator_spaces_requests_and_retries_rate_limits(monkeypatch):
+    sleeps = []
+    clock = [100.0]
+
+    def fake_sleep(seconds):
+        sleeps.append(seconds)
+        clock[0] += seconds
+
+    monkeypatch.setattr(i18n_catalogs.time, "sleep", fake_sleep)
+    monkeypatch.setattr(i18n_catalogs.time, "monotonic", lambda: clock[0])
+
+    class FlakyTranslator:
+        calls = 0
+
+        def translate(self, value):
+            self.calls += 1
+            if self.calls == 2:
+                raise TooManyRequests()
+            return value.upper()
+
+    translator = i18n_catalogs._ThrottledTranslator(FlakyTranslator())
+
+    assert translator.translate("one") == "ONE"
+    assert translator.translate("two") == "TWO"
+    assert sleeps == [
+        pytest.approx(i18n_catalogs.DEEP_TRANSLATOR_MIN_INTERVAL_SECONDS),
+        i18n_catalogs.DEEP_TRANSLATOR_BACKOFF_SECONDS,
+    ]
+
+
+def test_throttled_translator_gives_up_after_max_retries(monkeypatch):
+    monkeypatch.setattr(i18n_catalogs.time, "sleep", lambda seconds: None)
+
+    class AlwaysLimited:
+        def translate(self, value):
+            raise TooManyRequests()
+
+    with pytest.raises(TooManyRequests):
+        i18n_catalogs._ThrottledTranslator(AlwaysLimited()).translate("hello")
 
 
 def test_i18next_bootstrap_treats_top_level_catalog_objects_as_namespaces():
@@ -373,7 +453,9 @@ def test_settings_llm_forms_use_gettext_and_localized_notifications():
     assert '_("%(provider)s API key:"' in key_template
     assert "_('API key')" in key_template
     assert 'gettext("AI model updated.")' in routes
-    assert '"claude-sonnet-4-6": gettext(' in routes
+    # The translated model labels are shared with the Assistant settings dropdown.
+    llm_config = Path("yaffo/site_agents/llm_config.py").read_text(encoding="utf-8")
+    assert '"claude-sonnet-4-6": gettext(' in llm_config
 
 
 def test_themes_page_uses_gettext_and_localized_javascript():

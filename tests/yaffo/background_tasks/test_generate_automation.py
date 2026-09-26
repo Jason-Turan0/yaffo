@@ -9,9 +9,9 @@ gets a label instead of silently defaulting to "Working…".
 import pytest
 
 from yaffo.background_tasks.tasks.generate_automation import _TOOL_STATUS
-from yaffo.site_agents.tool_providers.automation_tool import AutomationToolProvider
-from yaffo.site_agents.tool_providers.automation_trigger_tool import AutomationTriggerToolProvider
-from yaffo.site_agents.tool_providers.data_query_tool import DataQueryToolProvider
+from yaffo.site_agents.automation.tool_providers.automation_tool import AutomationToolProvider
+from yaffo.site_agents.automation.tool_providers.automation_trigger_tool import AutomationTriggerToolProvider
+from yaffo.site_agents.common.tool_providers.data_query_tool import DataQueryToolProvider
 
 pytestmark = pytest.mark.unit
 

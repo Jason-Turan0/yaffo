@@ -27,7 +27,7 @@ def test_host_returns_are_coerced_to_sandbox_safe_types(monkeypatch):
 
     monkeypatch.setattr(
         "yaffo.background_tasks.automation_sandbox.automation_actions.resolve_query",
-        lambda session, query: [{"name": "Chase", "birthdate": datetime.date(2015, 6, 1), "score": Decimal("0.5")}],
+        lambda session, query: [{"name": "Billy", "birthdate": datetime.date(2015, 6, 1), "score": Decimal("0.5")}],
     )
     monkeypatch.setattr(
         "yaffo.background_tasks.automation_sandbox.automation_actions.enrich_media_rows",
@@ -40,7 +40,7 @@ def test_host_returns_are_coerced_to_sandbox_safe_types(monkeypatch):
     )
 
     assert result.success is True, result.error
-    assert result.value == [{"name": "Chase", "birthdate": "2015-06-01", "score": 0.5}]
+    assert result.value == [{"name": "Billy", "birthdate": "2015-06-01", "score": 0.5}]
 
 
 def test_data_query_callable_is_invoked_from_starlark(monkeypatch):
@@ -93,16 +93,22 @@ def test_data_query_not_called_when_script_omits_it(monkeypatch):
 def test_runtime_surface_matches_declared_api():
     # build_host_functions and the docs both derive from HOST_API, so the live
     # callables are exactly the advertised ones -- no drift between them.
-    declared = {fn.name for fn in HOST_API}
-    assert set(build_host_functions(object()).keys()) == declared
+    # Each profile binds exactly its declared functions (some are assistant-only).
+    for profile in ("automation", "assistant"):
+        declared = {fn.name for fn in HOST_API if profile in fn.profiles}
+        assert set(build_host_functions(object(), profile=profile).keys()) == declared
 
 
 def test_rendered_docs_cover_every_host_function():
-    docs = render_host_api()
-    for fn in HOST_API:
-        assert fn.signature in docs
-        assert fn.example in docs
-        assert fn.returns in docs
+    for profile in ("automation", "assistant"):
+        docs = render_host_api(profile)
+        for fn in HOST_API:
+            if profile not in fn.profiles:
+                assert f"{fn.signature}\n" not in docs
+                continue
+            assert fn.signature in docs
+            assert fn.example in docs
+            assert fn.returns in docs
 
 
 def test_report_progress_is_bound_to_the_injected_reporter():

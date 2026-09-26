@@ -92,3 +92,11 @@ If Yaffo reports **No Duplicates Found**, the scan completed without finding two
 readable files of the same media type with the same visual fingerprint. Try a
 broader directory or verify that the files are readable. Files do not need to be
 indexed before this utility can scan them.
+
+## Review Results With Ask Yaffo
+
+[Ask Yaffo](../start-here/ask-yaffo.md) can read a finished scan's results and
+suggest which copy in each group to keep, such as the higher-resolution copy or the
+one with faces and tags. It proposes moving the others to the system trash or into
+a folder for review, as a change you approve. Moving files is off until you turn
+it on in **Settings** → **Assistant**.

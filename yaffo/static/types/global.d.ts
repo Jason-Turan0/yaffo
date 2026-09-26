@@ -36,17 +36,29 @@ type AppConfig = {
     urls: Record<string, string>;
     buildUrl(endpoint: string, params?: Record<string, string | number | undefined>): string;
     i18n: I18nConfig;
+    /** Session CSRF token (base.html); fetch/htmx attach it automatically, a
+     *  natively submitted form must carry it as a `csrf_token` field. */
+    csrfToken?: string;
 };
 
 type NotificationType = 'success' | 'error' | 'warning' | 'info';
 
+type NotificationAction = {
+    label: string;
+    /** A data-icon name shown before the label (e.g. 'assistant'). */
+    icon?: string;
+    run(message: string): void;
+};
+
 type NotificationApi = {
-    show(message: string, type?: NotificationType, duration?: number): void;
+    setErrorAction?(action: NotificationAction | null): void;
+    show(message: string, type?: NotificationType, duration?: number, offerAction?: boolean): void;
     hide(): void;
     flash(message: string, type?: NotificationType, duration?: number): void;
     showPendingFlash(): void;
     success(message: string, duration?: number): void;
     error(message: string, duration?: number): void;
+    failure(message: string, duration?: number): void;
     warning(message: string, duration?: number): void;
     info(message: string, duration?: number): void;
 };
@@ -134,13 +146,16 @@ type OverlayApi = {
     init(targetElementId: string, overlayContent: string, options?: OverlayOptions): OverlayControl;
 };
 
+type ChatMessage = {
+    type: string;
+    content: string;
+    [key: string]: unknown;
+};
+
 type ChatStatusBody = {
     status: string;
     started_at?: string | null;
-    messages?: Array<{
-        type: string;
-        content: string;
-    }>;
+    messages?: ChatMessage[];
     [key: string]: unknown;
 };
 
@@ -161,11 +176,15 @@ type ChatDialogOptions = {
     cancelConfirm?: Pick<ConfirmDialogOptions, 'title' | 'message' | 'confirmText'>;
     pollIntervalMs?: number;
     pollRetryMs?: number;
+    renderMessages?: (messages: ChatMessage[]) => Node[];
+    afterCancel?: () => void;
 };
 
 type ChatDialogApi = {
     enterRunning(): void;
     isRunning(): boolean;
+    load(): void;
+    clear(nodes: Node[]): void;
 };
 
 type DateUtils = {
@@ -284,6 +303,9 @@ type TimelineMonthEntry = {
     month: number;
     count: number;
     offset: number;
+    /** Rail position of the month's band, 0-100 (0 = newest); server-computed. */
+    top: number;
+    height: number;
 };
 
 type TimelineScrubberNamespace = {
@@ -389,24 +411,58 @@ type LocationMediaItem = {
 
 type ClientFilterItem = LocationMediaItem;
 
+/** One filter parameter, from the server's table (client_filter_config()). */
+type ClientFilterParam = {
+    param: string;
+    key: string;
+    kind: 'str' | 'int' | 'float' | 'flag' | 'int_list' | 'str_list';
+    choices: Array<string | number> | null;
+    default: string | number | null;
+    /** Only qualifies another filter (a match type); never counted as applied. */
+    modifier: boolean;
+};
+
+type ClientFilterInitOptions = {
+    form: HTMLFormElement | null;
+    config: ClientFilterConfig;
+    distanceUnit?: string;
+    onApply: (predicate: (item: ClientFilterItem) => boolean) => void;
+    /** Exact media ids from the URL (no form control); dropped by the first Apply or Clear. */
+    itemIds?: number[];
+    /** Control key -> its parameter keys, for the Filters count. */
+    controls?: Record<string, string[]> | null;
+    /** The Filters toggle's count badge, kept in step with every apply. */
+    countEl?: HTMLElement | null;
+};
+
+type ClientFilterConfig = {
+    params: ClientFilterParam[];
+    kilometers_per_unit: Record<string, number>;
+};
+
+/** The form read by the table; keys match the server's selections. */
 type ClientFilterCriteria = {
     path: string | null;
     year: number | null;
     month: number | null;
     device: string | null;
     favorite: boolean;
-    mediaType: 'photo' | 'video' | null;
+    media_type: 'photo' | 'video' | null;
     shape: 'portrait' | 'landscape' | 'square' | null;
-    personIds: number[];
-    personMatchType: string;
+    person_ids: number[];
+    person_match_type: string;
     gender: number | null;
-    labelIds: number[];
-    labelsMatchType: string;
-    tagName: string | null;
-    tagValue: string | null;
-    locationNames: string[];
+    label_ids: number[];
+    labels_match_type: string;
+    tag_name: string | null;
+    tag_value: string | null;
+    location_names: string[];
+    location_match_type: string;
     unnamed: boolean;
-    proximity: { lat: number; lon: number; distance: number } | null;
+    proximity_lat: number | null;
+    proximity_lon: number | null;
+    proximity_distance: number | null;
+    proximity_location: string | null;
 };
 
 type ClientFilterApi = {
@@ -442,18 +498,21 @@ type FiltersNamespace = {
     initLocationAutocomplete?: (i18n: I18nService, config: AppConfig) => LocationAutocompleteApi | undefined;
     initTags?: (i18n: I18nService, config: AppConfig) => TagsFilterApi;
     tags?: TagsFilterApi;
-    initClientFilter?: (opts: {
-        form: HTMLFormElement | null;
-        distanceUnit?: string;
-        onApply: (predicate: (item: ClientFilterItem) => boolean) => void;
-    }) => ClientFilterApi | undefined;
+    initClientFilter?: (opts: ClientFilterInitOptions) => ClientFilterApi | undefined;
     clientFilter?: ClientFilterApi;
     clientFilterCore?: {
-        readCriteria(form: HTMLFormElement): ClientFilterCriteria;
+        readCriteria(form: HTMLFormElement, config: ClientFilterConfig): ClientFilterCriteria;
         buildPredicate(
             criteria: ClientFilterCriteria,
-            options?: { distanceUnit?: string },
+            config: ClientFilterConfig,
+            options?: { distanceUnit?: string, itemIds?: Set<number> | null },
         ): (item: ClientFilterItem) => boolean;
+        countApplied(
+            criteria: ClientFilterCriteria,
+            config: ClientFilterConfig,
+            controls: Record<string, string[]>,
+            hasItemIds: boolean,
+        ): number;
     };
 };
 
@@ -616,6 +675,128 @@ type ThemesNamespace = {
     chat?: ChatDialogApi | null;
 };
 
+type AssistantDocSource = {
+    title: string;
+    heading: string;
+    url: string;
+    scope: string;
+};
+
+type AssistantAppLink = {
+    title: string;
+    url: string;
+};
+
+/** A link_to_file button: opens a file or folder on the user's computer. `target`
+ *  holds only ids; the server looks up the path when it's clicked. */
+type AssistantOpenLink = {
+    title: string;
+    show: 'file' | 'folder';
+    target: Record<string, unknown>;
+};
+
+type AssistantConversationSummary = {
+    id: number;
+    title: string;
+    status: string;
+    updated_at: string | null;
+    /** Change plans still waiting for Approve or Decline. */
+    pending_plans?: number;
+};
+
+/** One step of a change plan (PlanStepView). The card words it from name, count
+ *  and facts; `summary` is the server's English fallback. */
+type AssistantPlanStep = {
+    seq: number;
+    name: string;
+    summary: string;
+    count: number;
+    facts: {
+        names?: string[];
+        more?: number;
+        album?: string | null;
+        name?: string;
+        new_album?: boolean;
+        value?: unknown;
+        person?: string | null;
+        target?: string | null;
+        faces?: number;
+        automation?: string | null;
+        read_only?: boolean;
+    };
+    risk: 'low' | 'medium' | 'high';
+    reversible: boolean;
+    state: 'pending' | 'done' | 'failed' | 'not_run' | 'undone';
+    error: string | null;
+    /** Background work: its Job id once the step ran, and the app page where it shows. */
+    starts_job: boolean;
+    job_id: string | null;
+    job_page: string | null;
+};
+
+/** A change plan's card (PlanView), carried on the run_script tool event. */
+type AssistantPlan = {
+    id: number;
+    status: 'PENDING' | 'APPROVED' | 'EXECUTED' | 'PARTIAL' | 'FAILED' | 'DECLINED' | 'EXPIRED' | 'UNDONE';
+    risk: 'low' | 'medium' | 'high';
+    count: number;
+    reversible: boolean;
+    /** Nothing in the plan changes the library (a scan). */
+    read_only: boolean;
+    confirm: 'type' | 'check' | null;
+    steps: AssistantPlanStep[];
+    error: string | null;
+    created_at: string | null;
+    expires_at: string | null;
+    finished_at: string | null;
+};
+
+type AssistantPlanCardOptions = {
+    i18n: I18nService;
+    /** The recording script, offered under a multi-step card. */
+    script?: string;
+    /** Buttons stay off (a reply is being written, or an action is in flight). */
+    busy?: boolean;
+    onApprove(plan: AssistantPlan, confirmCount: number | null): void;
+    onDecline(plan: AssistantPlan): void;
+    onUndo(plan: AssistantPlan): void;
+};
+
+/** Why a reply hasn't started (the poll's `queue`); `message` is ready to show. */
+type AssistantRunQueue = {
+    state: 'waiting' | 'host_stopped';
+    ahead: number;
+    workers: number;
+    busy: number;
+    busy_with: string | null;
+    wait_seconds: number | null;
+    message: string;
+};
+
+type AssistantContext = {
+    page?: string;
+    job_id?: string;
+    automation?: string;
+    error_code?: string;
+    error?: string;
+};
+
+type AssistantApi = {
+    open(options?: { focus?: boolean }): void;
+    close(): void;
+    isOpen(): boolean;
+    switchTo(conversationId: number | null, options?: { focus?: boolean }): void;
+    refreshList(): Promise<void>;
+    openWithContext(context: AssistantContext, message?: string): void;
+};
+
+type AssistantNamespace = {
+    init?: (i18n: I18nService, config: AppConfig) => AssistantApi | null;
+    instance?: AssistantApi | null;
+    initSettings?: (i18n: I18nService) => void;
+    renderPlanCard?: (plan: AssistantPlan, options: AssistantPlanCardOptions) => HTMLElement;
+};
+
 type SearchableSelectConstructor = {
     new(selectElement: HTMLSelectElement): unknown;
     i18n: Pick<I18nService, 't'>;
@@ -647,6 +828,7 @@ type PhotoOrganizerApp = {
     automations?: AutomationsNamespace;
     themes?: ThemesNamespace;
     utilities?: UtilitiesNamespace;
+    assistant?: AssistantNamespace;
     confirmDialog: ConfirmDialogApi;
     pickFolder: PickFolderApi;
     widgetErrors?: Record<string, string[]>;

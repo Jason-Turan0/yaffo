@@ -61,6 +61,7 @@ nav:
       - Start Here:
           - Getting Started: guide/start-here/getting-started.md
           - Concepts and Glossary: guide/start-here/concepts.md
+          - Ask Yaffo: guide/start-here/ask-yaffo.md
       - Library Basics:
           - Indexing & Library Management: guide/library-basics/indexing-library.md
           - Browsing, Filtering, and Search: guide/library-basics/browsing-filtering.md
@@ -80,4 +81,7 @@ nav:
           - Settings Reference: guide/reference-maintenance/settings.md
           - Comparison: guide/reference-maintenance/comparison.md
           - Troubleshooting: guide/reference-maintenance/troubleshooting.md
+          - Photos Show the Wrong Year: guide/reference-maintenance/troubleshooting/photos-wrong-year.md
+          - External Drive Not Showing: guide/reference-maintenance/troubleshooting/external-drive-not-showing.md
+          - Faces Stuck After Assigning: guide/reference-maintenance/troubleshooting/faces-stuck-after-assigning.md
           - Uninstalling Yaffo: guide/reference-maintenance/uninstalling.md

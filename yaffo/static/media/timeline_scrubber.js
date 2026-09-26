@@ -4,6 +4,10 @@
  * The timeline view's date scrubber. The rail is a TIME axis over the filtered
  * library — newest month at the top, oldest at the bottom, every calendar month
  * an equal slice — with per-month density bars rendered server-side alongside.
+ * A long empty stretch is collapsed to a short break (so one far-off date can't
+ * squeeze the real library into a sliver), which makes the axis only piecewise
+ * linear: the server sends each month's rail position (top/height, in %) and
+ * the math below reads those rather than assuming a single linear scale.
  * Dragging or hovering shows a month/year bubble; a point in an empty month
  * snaps to the next older month that has photos (what you'd actually reach).
  * Releasing navigates to the page where that month starts — exact because the
@@ -13,7 +17,7 @@
  * active the whole rail is one pointer target and handled clicks are suppressed.
  */
 
-/** @typedef {{ year: number, month: number, count: number, offset: number }} TimelineMonth */
+/** @typedef {{ year: number, month: number, count: number, offset: number, top: number, height: number }} TimelineMonth */
 
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.media = window.PHOTO_ORGANIZER.media || {};
@@ -24,19 +28,16 @@ const timelineScrubberApi = window.PHOTO_ORGANIZER.media.timelineScrubber =
 const monthKey = (month) => month.year * 12 + month.month;
 
 /**
- * The month at `fraction` of the time axis (0 = top = newest). A fraction that
- * lands in an empty calendar month snaps to the next older month with photos.
- * @param {TimelineMonth[]} months newest-first, offsets cumulative
+ * The month at `fraction` of the rail (0 = top = newest). A fraction that lands
+ * in an empty stretch (to scale, or a collapsed break) snaps to the next older
+ * month with photos (what you'd actually reach).
+ * @param {TimelineMonth[]} months newest-first, with server-computed positions
  * @param {number} fraction
  * @returns {TimelineMonth}
  */
 timelineScrubberApi.monthAtFraction = (months, fraction) => {
-    const newest = monthKey(months[0]);
-    const oldest = monthKey(months[months.length - 1]);
-    const totalMonths = newest - oldest + 1;
-    const clamped = Math.min(Math.max(fraction, 0), 1);
-    const targetKey = newest - Math.min(Math.floor(clamped * totalMonths), totalMonths - 1);
-    return months.find((month) => monthKey(month) <= targetKey) || months[months.length - 1];
+    const percent = Math.min(Math.max(fraction, 0), 1) * 100;
+    return months.find((month) => month.top + month.height > percent) || months[months.length - 1];
 };
 
 /**
@@ -48,24 +49,39 @@ timelineScrubberApi.monthAtFraction = (months, fraction) => {
 timelineScrubberApi.pageForMonth = (month, pageSize) => Math.floor(month.offset / pageSize) + 1;
 
 /**
- * Where a viewed date sits on the rail, as a 0-100 percentage of the time axis
- * (0 = newest). Interpolates within the month band — later days of a month are
- * NEWER, so day 31 sits at the band's top edge. Returns null for a date the
- * axis can't place (e.g. the "unknown" tail marker).
- * @param {TimelineMonth[]} months newest-first
+ * Where a viewed date sits on the rail, as a 0-100 percentage (0 = newest).
+ * Interpolates within the month band — later days of a month are NEWER, so day
+ * 31 sits at the band's top edge. A month without photos is placed between its
+ * neighbours: to scale across a short gap, proportionally across a collapsed
+ * break. Returns null for a date the axis can't place (e.g. the "unknown" tail
+ * marker).
+ * @param {TimelineMonth[]} months newest-first, with server-computed positions
  * @param {string} isoDate "YYYY-MM-DD"
  * @returns {number | null}
  */
 timelineScrubberApi.railPercentForDate = (months, isoDate) => {
     const [year, month, day] = isoDate.split('-').map(Number);
     if (!year || !month) return null;
-    const newest = monthKey(months[0]);
-    const oldest = monthKey(months[months.length - 1]);
-    const totalMonths = newest - oldest + 1;
+    const key = year * 12 + month;
     const daysInMonth = new Date(year, month, 0).getDate();
     const intraMonth = day ? (daysInMonth - day) / daysInMonth : 0;
-    const raw = ((newest - (year * 12 + month)) + intraMonth) / totalMonths * 100;
-    return Math.min(Math.max(raw, 0), 100);
+    if (key > monthKey(months[0])) return 0;
+    for (let i = 0; i < months.length; i += 1) {
+        const current = months[i];
+        if (monthKey(current) === key) {
+            return current.top + intraMonth * current.height;
+        }
+        const older = months[i + 1];
+        if (older && monthKey(current) > key && key > monthKey(older)) {
+            // The empty months strictly between the two, spread over the space
+            // between the newer band's bottom and the older band's top.
+            const newerBottom = current.top + current.height;
+            const emptyMonths = monthKey(current) - monthKey(older) - 1;
+            const monthsIn = (monthKey(current) - 1 - key) + intraMonth;
+            return newerBottom + (monthsIn / emptyMonths) * (older.top - newerBottom);
+        }
+    }
+    return 100;
 };
 
 /**

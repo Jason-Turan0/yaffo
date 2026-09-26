@@ -6,8 +6,14 @@ from sqlalchemy import func
 from sqlalchemy.orm import joinedload, aliased
 
 from yaffo.db import db
-from yaffo.db.models import Person, PersonFace, Face, FACE_STATUS_UNASSIGNED, MediaItem, EVENT_MEDIA_MODIFIED
-from yaffo.db.repositories.person_repository import update_person_embedding, get_media_item_ids_for_person, get_similarity_bounds
+from yaffo.db.models import Person, PersonFace, Face, MediaItem, EVENT_MEDIA_MODIFIED
+from yaffo.db.repositories.person_repository import (
+    clear_faces,
+    delete_person,
+    get_media_item_ids_for_person,
+    get_similarity_bounds,
+    update_person_embedding,
+)
 from yaffo.db.repositories.media_repository import get_distinct_months, get_distinct_years
 from yaffo.domain.compare_utils import ui_threshold_to_similarity, similarity_to_ui_percent
 from yaffo.background_tasks.events import emit_event
@@ -179,27 +185,8 @@ def init_people_routes(app: Flask):
             return redirect(url_for("people_list"))
 
         name = person.name
-
-        # Update face statuses back to unassigned
-        face_ids = (
-            db.session.query(PersonFace.face_id)
-            .filter(PersonFace.person_id == person_id)
-            .all()
-        )
-        if face_ids:
-            Face.query.filter(Face.id.in_([fid for (fid,) in face_ids])).update(
-                {Face.status: FACE_STATUS_UNASSIGNED},
-                synchronize_session=False
-            )
-
-        # Delete all PersonFace associations
-        PersonFace.query.filter(PersonFace.person_id == person_id).delete()
-
-
-
-        # Delete the person
-        db.session.delete(person)
-        db.session.commit()
+        # Faces go back to unassigned; shared with the assistant's delete_person.
+        delete_person(db.session, person_id)
 
         flash(gettext("Deleted %(name)s", name=name), "success")
         return redirect(url_for("people_list"))
@@ -302,27 +289,8 @@ def init_people_routes(app: Flask):
             flash(gettext("No faces selected"), "error")
             return redirect(request.referrer or url_for("faces_index"))
 
-        if selected_face_ids:
-            # Convert to ints
-            face_ids = [int(fid) for fid in selected_face_ids]
-
-            media_item_ids = [
-                pid for (pid,) in db.session.query(Face.media_item_id)
-                .filter(Face.id.in_(face_ids), Face.media_item_id.isnot(None))
-                .distinct()
-            ]
-
-            # Step 1: delete from bridge table (PersonFace)
-            PersonFace.query.filter(PersonFace.face_id.in_(face_ids)).delete(synchronize_session=False)
-
-            # Step 2: update statuses of the faces
-            db.session.query(Face).filter(Face.id.in_(face_ids)).update(
-                {Face.status: FACE_STATUS_UNASSIGNED},
-                synchronize_session=False
-            )
-            db.session.commit()
-            if media_item_ids:
-                emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": media_item_ids})
+        cleared = clear_faces(db.session, [int(fid) for fid in selected_face_ids])
+        if cleared.media_item_ids:
+            emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": cleared.media_item_ids})
         flash(gettext("Person updated"), "success")
-        update_person_embedding(person_id, db.session)
         return redirect(request.referrer or url_for("faces_index"))

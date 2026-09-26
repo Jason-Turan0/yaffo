@@ -2,7 +2,7 @@ import {afterEach, beforeEach, describe, expect, it} from "@jest/globals";
 import {execFileSync} from "child_process";
 import {mkdirSync, mkdtempSync, rmSync, writeFileSync} from "fs";
 import {tmpdir} from "os";
-import {dirname, join, relative, resolve} from "path";
+import {dirname, join} from "path";
 import {buildEvidence} from "../evidence";
 import type {EvidenceOptions} from "../evidence";
 import type {ShotResult, WalkthroughResult} from "../runner";

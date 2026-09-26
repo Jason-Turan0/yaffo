@@ -7,18 +7,18 @@ theme, automation), including the non-English and ambiguous-message cases.
 """
 import pytest
 
-from yaffo.site_agents.prompt_generator.automation_system_prompt import (
+from yaffo.site_agents.automation.prompt_generator.automation_system_prompt import (
     build_automation_builder_system_prompt,
 )
-from yaffo.site_agents.prompt_generator.automation_user_prompt import (
+from yaffo.site_agents.automation.prompt_generator.automation_user_prompt import (
     build_automation_user_message,
 )
-from yaffo.site_agents.prompt_generator.system_prompt import build_system_prompt
-from yaffo.site_agents.prompt_generator.theme_system_prompt import (
+from yaffo.site_agents.page.prompt_generator.system_prompt import build_system_prompt
+from yaffo.site_agents.theme.prompt_generator.theme_system_prompt import (
     build_template_builder_system_prompt,
 )
-from yaffo.site_agents.prompt_generator.theme_user_prompt import build_theme_user_message
-from yaffo.site_agents.prompt_generator.user_prompt import build_user_message
+from yaffo.site_agents.theme.prompt_generator.theme_user_prompt import build_theme_user_message
+from yaffo.site_agents.page.prompt_generator.user_prompt import build_user_message
 
 pytestmark = pytest.mark.unit
 

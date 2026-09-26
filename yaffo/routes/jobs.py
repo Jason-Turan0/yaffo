@@ -6,6 +6,20 @@ import json
 from yaffo.utils.request_helpers import parse_boolean_from_form
 
 
+# Longest page path a job card passes back for "Ask Yaffo" (the assistant caps it too).
+HELP_PAGE_MAX_LENGTH = 200
+
+
+def _help_page(value: object) -> str | None:
+    """The page a job card is shown on, as its refresh or Cancel request passes it
+    back: an app path (/…), or None for anything else."""
+    if not isinstance(value, str) or not value.startswith("/") or value.startswith("//"):
+        return None
+    if len(value) > HELP_PAGE_MAX_LENGTH or any(ch.isspace() for ch in value):
+        return None
+    return value
+
+
 def init_jobs_routes(app: Flask):
     @app.route("/jobs/section", methods=["GET"])
     def jobs_section():
@@ -23,9 +37,10 @@ def init_jobs_routes(app: Flask):
 
         return render_template(
             "fragments/job_section_fragment.html",
-            active_jobs=active_jobs,
+            # The job card reads view properties (has_results, results_route), like the
+            # Index Photos and Remove Duplicates pages' cards.
+            active_jobs=[job.to_dict_with_view_props(has_results=has_results) for job in active_jobs],
             show_cancel=True,
-            has_results=has_results
         )
 
     @app.route("/jobs/<job_id>/status", methods=["GET"])
@@ -58,6 +73,8 @@ def init_jobs_routes(app: Flask):
         # Get has_results from query parameter (defaults to False)
         has_results = request.args.get('has_results', '0') == '1'
         results_route = request.args.get('results_route')
+        # dismiss=0: the page keeps finished runs as history, so no Dismiss (it deletes).
+        show_dismiss = request.args.get('dismiss', '1') != '0'
 
         return render_template(
             "fragments/job_status_fragment.html",
@@ -67,7 +84,9 @@ def init_jobs_routes(app: Flask):
             is_finished=is_finished,
             has_results=has_results,
             results_route=results_route,
-            show_cancel=True
+            show_cancel=True,
+            show_dismiss=show_dismiss,
+            help_page=_help_page(request.args.get('page')),
         )
 
     @app.route("/jobs/<job_id>/cancel", methods=["POST"])
@@ -88,6 +107,7 @@ def init_jobs_routes(app: Flask):
 
             # Get has_results from request (htmx sends it via hx-vals)
             has_results = request.form.get('has_results', 'false').lower() == 'true'
+            show_dismiss = parse_boolean_from_form(request, "dismiss", True)
 
             return render_template(
                 "fragments/job_status_fragment.html",
@@ -96,7 +116,9 @@ def init_jobs_routes(app: Flask):
                 total_count=total_count,
                 is_finished=is_finished,
                 has_results=has_results,
-                show_cancel=True
+                show_cancel=True,
+                show_dismiss=show_dismiss,
+                help_page=_help_page(request.form.get('page')),
             )
 
         return "", 400

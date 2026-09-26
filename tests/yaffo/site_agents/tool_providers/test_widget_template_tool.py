@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from yaffo.site_agents.tool_providers.widget_template_tool import WidgetTemplateToolProvider
+from yaffo.site_agents.page.tool_providers.widget_template_tool import WidgetTemplateToolProvider
 from yaffo.site_agents.widget_templates import TEMPLATES, TEMPLATES_BY_NAME
 
 pytestmark = pytest.mark.unit

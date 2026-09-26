@@ -1,5 +1,6 @@
 import os
 import logging
+import threading
 from pathlib import Path
 from typing import Optional
 
@@ -14,6 +15,7 @@ from yaffo.distance_units import supported_distance_unit_options
 from yaffo.doc_observer import init_doc_observer
 from yaffo.i18n import init_i18n, select_locale, supported_locale_options, text_direction
 from yaffo.logging_config import get_logger
+from yaffo.process_status import start_web_status
 from yaffo.security import init_request_security
 from yaffo.template_filters import init_template_filters
 from yaffo.routes.init_routes import init_routes
@@ -39,7 +41,7 @@ def create_app(db_path: Path = DB_PATH, config: Optional[dict] = None,
     app.logger.handlers = logger.handlers
     app.logger.setLevel(logger.level)
 
-    logger.info("Starting Photo Organizer application")
+    logger.info("Starting YAFFO")
     app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SQLALCHEMY_ECHO"] = os.environ.get("SQLALCHEMY_ECHO", "").lower() == "true"
@@ -136,6 +138,18 @@ def create_app(db_path: Path = DB_PATH, config: Optional[dict] = None,
         from yaffo.p2p.service import start_p2p_service
 
         start_p2p_service(app)
+
+    if not app.config.get("TESTING") and not reloader_parent:
+        status_lock = threading.Lock()
+        status_started = False
+
+        @app.before_request
+        def ensure_web_status():
+            nonlocal status_started
+            with status_lock:
+                if not status_started:
+                    start_web_status()
+                    status_started = True
 
     return app
 

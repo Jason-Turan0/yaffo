@@ -19,12 +19,14 @@ from __future__ import annotations
 
 import argparse
 import multiprocessing as mp
+import os
 import queue as _queue
 import signal
 import time
 from typing import Any, Optional
 
 from yaffo.taskq.core import on_task_finished
+from yaffo.taskq.signatures import PRIORITY_INTERACTIVE
 from yaffo.taskq.cron import CronSpec
 from yaffo.taskq.store import Store, TaskRow
 from yaffo.taskq.worker import DEFAULT_BOOTSTRAP, DEFAULT_QUEUE_REF, DONE, worker_main
@@ -34,6 +36,8 @@ from yaffo.site_agents import llm_config
 logger = get_logger(__name__, "background_tasks")
 
 POLL_INTERVAL = 0.1
+# How often the host records that it's alive (read by the assistant's worker_status).
+HEARTBEAT_INTERVAL = 5.0
 
 
 class WorkerHandle:
@@ -65,6 +69,8 @@ class Host:
         self.outbox: "mp.Queue" = self.ctx.Queue()
         self.workers: dict[int, WorkerHandle] = {}
         self.running = True
+        self.started_at = time.time()
+        self._last_heartbeat = 0.0
 
     # ---- lifecycle ------------------------------------------------------
 
@@ -116,6 +122,7 @@ class Host:
         self._check_crashes()
         self._tick_periodic()
         self._dispatch()
+        self._beat()
 
     def _loop(self) -> None:
         while self.running:
@@ -185,8 +192,20 @@ class Host:
         minute = int(time.time()) // 60
         for name, _cron in self.periodic:
             if self.store.claim_periodic_minute(name, minute):
-                self.store.insert_task(name, [], {})
+                self.store.insert_task(name, [], {}, priority=PRIORITY_INTERACTIVE)
                 logger.debug(f"enqueued periodic task {name} for minute {minute}")
+
+    def _beat(self) -> None:
+        now = time.monotonic()
+        if now - self._last_heartbeat < HEARTBEAT_INTERVAL:
+            return
+        self._last_heartbeat = now
+        alive = [w for w in self.workers.values() if w.proc.is_alive()]
+        try:
+            self.store.write_heartbeat(
+                os.getpid(), self.started_at, len(alive), sum(1 for w in alive if w.busy_task is not None))
+        except Exception:
+            logger.exception("could not write the host heartbeat")
 
     def _dispatch(self) -> None:
         free = [w for w in self.workers.values() if w.busy_task is None and w.proc.is_alive()]
@@ -222,7 +241,6 @@ class Host:
 
 
 def main() -> None:
-    import os
     from yaffo.background_tasks.periodic import PERIODIC_TASKS
     from yaffo.common import QUEUE_DB_PATH
     from yaffo.config import get_int as get_config_int

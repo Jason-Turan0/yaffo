@@ -479,3 +479,25 @@ def test_pull_file_eof_chunk_carries_mtime_and_whole_file_hash(serving_context):
     assert final["status"] == "ok"
     assert final["eof"] is True
     assert final["file_sha256"] == hashlib.sha256(content).hexdigest()
+
+
+def test_list_files_shape_filter(serving_context):
+    """Shape reaches the peer like every other filter (it used to be dropped:
+    neither side of the request knew it)."""
+    app, service, requester, media_dir, root = serving_context
+    with app.app_context():
+        _index_file(root / "trip" / "tall.jpg", b"1", width=600, height=900)
+        _index_file(root / "trip" / "wide.jpg", b"2", width=900, height=600)
+        p2p_repository.create_grant(
+            db.session, requester.device_id, GRANT_SCOPE_FOLDER, media_dir_id=media_dir.id, relative_path="trip")
+
+    portrait = service._handle_stream_request(
+        build_list_files_request(requester, media_dir.id, "trip", filters={"shape": "portrait"}, offset=0, limit=10)
+    )
+    assert _file_names(portrait) == ["trip/tall.jpg"]
+
+    round_shape = service._handle_stream_request(
+        build_list_files_request(requester, media_dir.id, "trip", filters={"shape": "round"}, offset=0, limit=10)
+    )
+    assert round_shape["status"] == "error"
+    assert "invalid value for filter 'shape'" in round_shape["detail"]

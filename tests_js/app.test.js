@@ -11,7 +11,15 @@ const setupBaseDom = () => {
       <div id="navbar-context-panels" hidden></div>
       <div id="navbar-pages-bar"></div>
     </nav>
-    <div class="alert">
+    <div class="alert" id="plain-alert">
+      <button class="alert-close"></button>
+    </div>
+    <div class="alert" id="action-alert">
+      <button type="button" class="message-action">Ask Yaffo</button>
+      <button class="alert-close"></button>
+    </div>
+    <div class="alert" id="hovered-alert">
+      <button type="button" class="message-action">Ask Yaffo</button>
       <button class="alert-close"></button>
     </div>
     <div class="percentage-slider">
@@ -27,7 +35,12 @@ const setupBaseDom = () => {
 };
 
 describe('app initializer', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('waits for app dependencies, initializes global components, and dispatches completion', async () => {
+    vi.useFakeTimers();
     setupBaseDom();
     await loadModule('utils.js');
     await loadModule('nav.js');
@@ -55,5 +68,15 @@ describe('app initializer', () => {
 
     document.getElementById('new-automation-button').click();
     expect(document.getElementById('newAutomationModal').classList.contains('active')).toBe(true);
+
+    // Flashes close themselves; one with an action gets longer, and hovering keeps it.
+    vi.advanceTimersByTime(5300);
+    expect(document.getElementById('plain-alert')).toBeNull();
+    expect(document.getElementById('action-alert')).not.toBeNull();
+    expect(document.getElementById('hovered-alert')).not.toBeNull();
+    document.getElementById('hovered-alert').dispatchEvent(new MouseEvent('mouseenter'));
+    vi.advanceTimersByTime(5000);
+    expect(document.getElementById('action-alert')).toBeNull();
+    expect(document.getElementById('hovered-alert')).not.toBeNull();
   });
 });

@@ -145,13 +145,13 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (
         .then(response => response.json())
         .then(data => {
             if (data.error) {
-                window.notification.error(i18n.t('media:actions.openFileFailedWithReason', { reason: data.error }));
+                window.notification.failure(i18n.t('media:actions.openFileFailedWithReason', { reason: data.error }));
             } else {
                 window.notification.success(i18n.t('media:actions.openingFile'));
             }
         })
         .catch(error => {
-            window.notification.error(i18n.t('media:actions.openFileFailed'));
+            window.notification.failure(i18n.t('media:actions.openFileFailed'));
             console.error('Error:', error);
         });
     };
@@ -167,13 +167,13 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (
         .then(response => response.json())
         .then(data => {
             if (data.error) {
-                window.notification.error(i18n.t('media:actions.openFolderFailedWithReason', { reason: data.error }));
+                window.notification.failure(i18n.t('media:actions.openFolderFailedWithReason', { reason: data.error }));
             } else {
                 window.notification.success(i18n.t('media:actions.openingFolder'));
             }
         })
         .catch(error => {
-            window.notification.error(i18n.t('media:actions.openFolderFailed'));
+            window.notification.failure(i18n.t('media:actions.openFolderFailed'));
             console.error('Error:', error);
         });
     };
@@ -194,14 +194,14 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (
             const response = await fetch(`/api/media/${mediaItemId}/reindex`, { method: 'POST' });
             const data = await response.json();
             if (!response.ok) {
-                window.notification.error(
+                window.notification.failure(
                     i18n.t('media:reindex.failedWithReason', { reason: data.error })
                 );
                 return;
             }
             window.notification.success(i18n.t('media:reindex.started'));
         } catch (error) {
-            window.notification.error(i18n.t('media:reindex.failed'));
+            window.notification.failure(i18n.t('media:reindex.failed'));
             console.error('Error:', error);
         }
     };

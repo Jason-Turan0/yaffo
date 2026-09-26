@@ -47,6 +47,11 @@ def delete_label(session: Session, label_id: int) -> None:
         session.commit()
 
 
+def label_use_count(session: Session, label_id: int) -> int:
+    """How many photos the classifier has given this label."""
+    return session.query(MediaLabel).filter_by(label_id=label_id).count()
+
+
 def set_enabled(session: Session, label_id: int, enabled: bool) -> None:
     label = session.get(ClassificationLabel, label_id)
     if label is not None:
@@ -56,24 +61,42 @@ def set_enabled(session: Session, label_id: int, enabled: bool) -> None:
 
 def bulk_replace_media_labels(
     session: Session, results: list[tuple[int, list[tuple[int, float]]]]
-) -> None:
+) -> list[int]:
     """Set each photo's labels to exactly its assignments, for a batch of photos in
     one short transaction: wipe those photos' prior rows, then bulk-insert the new
     ones (one executemany). `results` is [(media_item_id, [(label_id, confidence), ...])].
     A photo with an empty assignment list is still included, so its stale labels are
-    cleared. Idempotent; commits once. Callers compute (e.g. CLIP inference) *before*
-    calling this so no write lock is held during the slow work."""
+    cleared. Unchanged assignments keep their existing rows. Returns IDs whose
+    assignments changed; commits once when there are changes. Callers compute
+    (e.g. CLIP inference) *before* calling this so no write lock is held during
+    the slow work."""
     if not results:
-        return
+        return []
     media_item_ids = [media_item_id for media_item_id, _ in results]
+    existing: dict[int, set[tuple[int, float]]] = {}
+    for start in range(0, len(media_item_ids), _DELETE_CHUNK):
+        chunk = media_item_ids[start:start + _DELETE_CHUNK]
+        for media_item_id, label_id, confidence in session.query(
+            MediaLabel.media_item_id, MediaLabel.label_id, MediaLabel.confidence
+        ).filter(MediaLabel.media_item_id.in_(chunk)).all():
+            existing.setdefault(media_item_id, set()).add((label_id, confidence))
+    changed = [
+        (media_item_id, assignments)
+        for media_item_id, assignments in results
+        if existing.get(media_item_id, set()) != set(assignments)
+    ]
+    if not changed:
+        return []
+    media_item_ids = [media_item_id for media_item_id, _ in changed]
     for start in range(0, len(media_item_ids), _DELETE_CHUNK):
         chunk = media_item_ids[start:start + _DELETE_CHUNK]
         session.query(MediaLabel).filter(MediaLabel.media_item_id.in_(chunk)).delete(synchronize_session=False)
     rows = [
         {"media_item_id": media_item_id, "label_id": label_id, "confidence": confidence}
-        for media_item_id, assignments in results
+        for media_item_id, assignments in changed
         for label_id, confidence in assignments
     ]
     if rows:
         session.execute(insert(MediaLabel), rows)
     session.commit()
+    return media_item_ids

@@ -21,10 +21,10 @@ type PersonInfo = {
 test.describe.configure({ mode: 'serial' });
 
 /**
- * Deletes a person by POSTing to the server via the browser's fetch (which
- * automatically includes the CSRF token via security.js), then reloading the
- * people list to verify. The UI's confirm-dialog path creates a form without a
- * CSRF token, so we bypass it entirely.
+ * Cleanup: deletes a person by POSTing to the server via the browser's fetch
+ * (which automatically includes the CSRF token via security.js), then reloading
+ * the people list to verify. The UI delete flow is covered by
+ * people.spec.ts people_can_delete_person; this helper is setup/teardown only.
  * @param page The Playwright Page object.
  * @param personName The name of the person to delete.
  */

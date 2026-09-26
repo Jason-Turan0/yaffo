@@ -10,8 +10,9 @@ from yaffo.db.models import Face, PersonFace, MediaItem, MediaLabel, Tag, MEDIA_
 _DELETE_CHUNK = 500
 
 
-def get_faces_for_media_item(session: Session, media_item_id: int) -> list[Face]:
-    return session.query(Face).filter_by(media_item_id=media_item_id).all()
+def get_faces_for_media_item(session: Session, media_item_id: int, limit: int | None = None) -> list[Face]:
+    query = session.query(Face).filter_by(media_item_id=media_item_id)
+    return (query.limit(limit) if limit is not None else query).all()
 
 
 def get_media_item_ids_for_faces(session: Session, face_ids: list[int]) -> list[int]:
@@ -31,18 +32,19 @@ def get_media_item_ids_for_faces(session: Session, face_ids: list[int]) -> list[
 
 def get_media_item_ids_under_path(session: Session, path: str) -> list[int]:
     """Ids of indexed photos at `path` (an exact file) or under it (a directory)."""
-    path = path.rstrip("/\\")
-    under = f"{path}{os.sep}%"
+    path = str(Path(path))
+    prefix = path.rstrip("/\\") + os.sep
+    under = prefix.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
     rows = (
         session.query(MediaItem.id)
-        .filter(or_(MediaItem.full_file_path == path, MediaItem.full_file_path.like(under)))
+        .filter(or_(MediaItem.full_file_path == path, MediaItem.full_file_path.like(under, escape="\\")))
         .order_by(MediaItem.id)
         .all()
     )
     return [row[0] for row in rows]
 
 
-def get_media_item_paths_under_path(session: Session, path: str) -> list[tuple[int, str]]:
+def get_media_item_paths_under_path(session: Session, path: str, limit: int | None = None) -> list[tuple[int, str]]:
     """(id, full_file_path) of indexed photos at `path` (an exact file) or under it
     (a directory), ordered by id — for walking the indexed folder tree."""
     path = path.rstrip("/\\")
@@ -51,6 +53,7 @@ def get_media_item_paths_under_path(session: Session, path: str) -> list[tuple[i
         session.query(MediaItem.id, MediaItem.full_file_path)
         .filter(or_(MediaItem.full_file_path == path, MediaItem.full_file_path.like(under)))
         .order_by(MediaItem.id)
+        .limit(limit)
         .all()
     )
     return [(row[0], row[1]) for row in rows]
@@ -219,6 +222,27 @@ def get_media_items_missing_gps(session: Session, media_item_ids: list[int]) -> 
         .filter(MediaItem.latitude.is_(None))
         .all()
     )
+
+
+def get_media_items_with_gps(session: Session, media_item_ids: list[int]) -> list[MediaItem]:
+    """The listed photos that have GPS coordinates."""
+    if not media_item_ids:
+        return []
+    return (session.query(MediaItem)
+            .filter(MediaItem.id.in_(media_item_ids), MediaItem.latitude.isnot(None), MediaItem.longitude.isnot(None))
+            .all())
+
+
+def named_coordinates_in_box(
+    session: Session, lat_min: float, lat_max: float, lon_min: float, lon_max: float,
+) -> list[tuple[int, float, float, str]]:
+    """(id, latitude, longitude, location_name) of the named, GPS-tagged photos
+    inside a bounding box."""
+    return [tuple(row) for row in (
+        session.query(MediaItem.id, MediaItem.latitude, MediaItem.longitude, MediaItem.location_name)
+        .filter(MediaItem.location_name.isnot(None), MediaItem.location_name != "")
+        .filter(MediaItem.latitude.between(lat_min, lat_max), MediaItem.longitude.between(lon_min, lon_max))
+        .all())]
 
 
 def get_gps_timestamps(session: Session) -> list[tuple[str, float, float, str | None]]:

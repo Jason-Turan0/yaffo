@@ -874,13 +874,13 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
                     return true;
                 } else {
                     const data = await response.json().catch(() => ({}));
-                    window.notification.error(
+                    window.notification.failure(
                         data.error || i18n.t('locations:update.failed'),
                     );
                     return false;
                 }
             } catch (error) {
-                window.notification.error(i18n.t('locations:update.failed'));
+                window.notification.failure(i18n.t('locations:update.failed'));
                 console.error(error);
                 return false;
             }

@@ -10,7 +10,7 @@ import re
 
 import pytest
 
-from yaffo.site_agents.prompt_generator.system_prompt import build_system_prompt
+from yaffo.site_agents.page.prompt_generator.system_prompt import build_system_prompt
 from yaffo.site_agents.widget_templates import TEMPLATES
 
 pytestmark = pytest.mark.unit

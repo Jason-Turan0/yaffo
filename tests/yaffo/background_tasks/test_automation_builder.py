@@ -15,8 +15,8 @@ from yaffo.db.models import (
 )
 from yaffo.db.repositories import automation_repository as repo
 from yaffo.db.repositories.media_dir_repository import add_media_dir
-from yaffo.site_agents.tool_providers.automation_tool import AutomationToolProvider
-from yaffo.site_agents.tool_providers.tool_provider_types import ToolResult
+from yaffo.site_agents.automation.tool_providers.automation_tool import AutomationToolProvider
+from yaffo.site_agents.common.tool_providers.tool_provider_types import ToolResult
 
 pytestmark = pytest.mark.unit
 
