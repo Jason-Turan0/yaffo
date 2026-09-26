@@ -27,6 +27,7 @@ def invoke_automation(automation: Automation, context: EventContext | None) -> b
             "media_item_ids": context.media_item_ids,
             "groups": context.groups,
             "origin_automation_ids": context.origin_automation_ids,
+            "scope_paths": context.scope_paths,
         }
         run_automation_code_task(automation.id, payload)
         return True

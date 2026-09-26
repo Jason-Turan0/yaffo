@@ -137,6 +137,8 @@ def rename_file(session: Session, media_item_id: int, new_name: str) -> None:
         return
     # basename only + in-place, so `new_name` can't escape the photo's folder
     new_path = Path(current).with_name(Path(new_name).name)
+    if new_path == Path(current):
+        return
     Path(current).rename(new_path)
     media_repository.update_media_item_path(session, media_item_id, str(new_path))
 

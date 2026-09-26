@@ -1,4 +1,5 @@
 from yaffo.background_tasks.automation_dispatch import invoke_automation
+from yaffo.background_tasks.automation_runs import record_dispatch_failure
 from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.utils import SessionFactory
@@ -48,15 +49,27 @@ def dispatch_event_task(event_type: str, payload: dict):
                 )
                 continue
             try:
-                if invoke_automation(automation, context):
-                    logger.debug(
-                        f"Dispatched automation '{automation.slug}' for event {event_type}"
-                    )
-            except Exception:
+                if not invoke_automation(automation, context):
+                    raise ValueError("Automation has no runnable handler or published code")
+                logger.debug(
+                    f"Dispatched automation '{automation.slug}' for event {event_type}"
+                )
+            except Exception as exc:
                 logger.exception(
                     f"Dispatching automation '{automation.slug}' failed on event "
                     f"{event_type}"
                 )
+                automation_id, trigger_id = automation.id, trigger.id
+                session.rollback()
+                try:
+                    automation = session.get(Automation, automation_id)
+                    if automation is not None:
+                        record_dispatch_failure(session, automation, trigger_id, None, exc,
+                                                trigger_type="event")
+                        session.commit()
+                except Exception:
+                    session.rollback()
+                    logger.exception(f"Could not record event dispatch failure for trigger {trigger_id}")
     finally:
         session.close()
         SessionFactory.remove()

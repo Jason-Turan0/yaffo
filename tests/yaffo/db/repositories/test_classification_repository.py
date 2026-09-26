@@ -54,6 +54,14 @@ def test_bulk_replace_wipes_prior_labels(session, seeded):
     assert _labels_for(session, p0) == {(beach, 0.5)}
 
 
+def test_bulk_replace_skips_unchanged_labels(session, seeded):
+    (p0, _), (dog, _) = seeded
+    assert repo.bulk_replace_media_labels(session, [(p0, [(dog, 0.9)])]) == [p0]
+
+    assert repo.bulk_replace_media_labels(session, [(p0, [(dog, 0.9)])]) == []
+    assert _labels_for(session, p0) == {(dog, 0.9)}
+
+
 def test_empty_assignments_clears_photo(session, seeded):
     (p0, _), (dog, _) = seeded
     repo.bulk_replace_media_labels(session, [(p0, [(dog, 0.9)])])

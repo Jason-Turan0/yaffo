@@ -8,6 +8,7 @@ generate_automation_task; the run lives on the automation, so the browser polls
 code-backed built-ins: read-only chat, can't be deleted.
 """
 import re
+from pathlib import Path
 from dataclasses import asdict, dataclass
 from datetime import timezone
 
@@ -196,6 +197,7 @@ def init_automations_routes(app: Flask):
             "slug": automation.slug,
             "events": _localized_event_labels(),
             "error": error,
+            "media_dirs": media_dir_repository.list_media_dirs(db.session),
         }
 
     def _render_triggers(automation: Automation, error: str | None = None):
@@ -522,14 +524,41 @@ def init_automations_routes(app: Flask):
             trigger = _find_trigger(automation, edit_id) if edit_id else None
             if edit_id and trigger is None:
                 abort(404)
+            media_dirs = media_dir_repository.get_media_dir_entries(db.session)
+            roots = {entry.id: entry.path.resolve() for entry in media_dirs}
+            scope_type = (request.form.get("scope_type") or "everything").strip()
+            media_dir_ids = (list(dict.fromkeys(request.form.getlist("media_dir_ids")))
+                             if scope_type == "media_dirs" else [])
+            folder_paths = (list(dict.fromkeys(request.form.getlist("folder_paths")))
+                            if scope_type == "paths" else [])
+            invalid_scope = any(entry_id not in roots for entry_id in media_dir_ids)
+            invalid_scope = invalid_scope or scope_type not in {"everything", "media_dirs", "paths"}
+            invalid_scope = invalid_scope or (scope_type == "media_dirs" and not media_dir_ids)
+            invalid_scope = invalid_scope or (scope_type == "paths" and not folder_paths)
+            normalized_paths = []
+            for raw_path in folder_paths:
+                path = Path(raw_path).expanduser()
+                if not path.is_absolute():
+                    invalid_scope = True
+                    break
+                path = path.resolve()
+                if not any(path == root or root in path.parents for root in roots.values()):
+                    invalid_scope = True
+                    break
+                normalized_paths.append(str(path))
+            config = {"scope_type": scope_type, "media_dir_ids": media_dir_ids,
+                      "folder_paths": list(dict.fromkeys(normalized_paths))}
             if not is_valid_cron(cron):
                 error = gettext("Enter a valid 5-field cron expression (e.g. */30 * * * *).")
+            elif invalid_scope:
+                error = gettext("Choose at least one configured media directory or a folder inside one.")
             elif trigger is not None:
                 trigger.cron = cron
+                trigger.config = config
                 trigger.next_run_at = None
                 db.session.commit()
             else:
-                repo.add_schedule_trigger(db.session, slug, cron)
+                repo.add_schedule_trigger(db.session, slug, cron, config)
         elif action == "add_event":
             event_type = (request.form.get("new_event_type") or "").strip()
             if event_type not in EVENTS:

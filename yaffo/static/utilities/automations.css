@@ -89,6 +89,74 @@
     font-size: var(--font-size-sm);
 }
 
+.automation-trigger-scope {
+    color: var(--color-text-muted);
+}
+
+.automation-trigger-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-sunken);
+}
+
+.automation-trigger-section .automation-section-title {
+    margin-bottom: 0;
+}
+
+.schedule-scope-choice {
+    align-items: center;
+}
+
+.schedule-scope-choice .form-control {
+    min-width: 240px;
+}
+
+.schedule-scope-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.schedule-scope-section .form-row:not(.schedule-scope-choice) {
+    align-items: flex-start;
+}
+
+.schedule-scope-directory-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.schedule-scope-directory {
+    padding: 8px 10px;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    overflow-wrap: anywhere;
+}
+
+.schedule-scope-path-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 10px 0;
+}
+
+.schedule-scope-path {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.schedule-scope-path-value {
+    flex: 1;
+    min-width: 0;
+}
+
 .automation-trigger-error {
     margin: 0 0 10px;
     color: var(--color-danger);

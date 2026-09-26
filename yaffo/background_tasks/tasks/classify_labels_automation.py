@@ -82,7 +82,9 @@ def classify_media_items(
 
     def flush():
         if pending:
-            classification_repository.bulk_replace_media_labels(session, pending)
+            changed = set(classification_repository.bulk_replace_media_labels(session, pending))
+            labeled.extend(media_item_id for media_item_id, assignments in pending
+                           if assignments and media_item_id in changed)
             pending.clear()
 
     def media_item_processor(media_item_id: int):
@@ -108,8 +110,6 @@ def classify_media_items(
         order = np.argsort(-sims)[:max_labels]
         assignments = [(labels[i].id, float(sims[i])) for i in order if sims[i] >= threshold]
         pending.append((media_item_id, assignments))
-        if assignments:
-            labeled.append(media_item_id)
         if len(pending) >= _FLUSH_SIZE:
             flush()
 
@@ -174,7 +174,7 @@ def classify_labels_automation_task(
 
         # Scope the run so the photo_labeled it emits carries this automation (loop guard).
         with event_chain_scope(origin_automation_ids, automation_id):
-            record_run(session, automation, work)
+            record_run(session, automation, work, media_item_ids=media_item_ids)
             # Emit after record_run so the labels are committed before subscribers run
             # (record_run commits work's writes); fire only when something was labeled.
             if labeled:
@@ -187,8 +187,7 @@ def classify_labels_automation_task(
 @register_handler(AUTOMATION_HANDLER_CLASSIFY_LABELS)
 def enqueue_classify_labels(automation: Automation, context: EventContext | None = None) -> None:
     """Handler for the built-in classify-labels automation: enqueue the task for the
-    photos the triggering event concerns. A schedule trigger (no context) is a no-op."""
+    photos selected by the event or schedule."""
     media_item_ids = context.media_item_ids if context else []
-    if media_item_ids:
-        origin = context.origin_automation_ids if context else []
-        classify_labels_automation_task(automation.id, media_item_ids, origin)
+    origin = context.origin_automation_ids if context else []
+    classify_labels_automation_task(automation.id, media_item_ids, origin)

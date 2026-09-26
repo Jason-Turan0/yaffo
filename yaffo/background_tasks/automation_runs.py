@@ -6,6 +6,7 @@ from yaffo.utils.time import utcnow
 from yaffo.background_tasks.automation_sandbox.executor import run_automation
 from yaffo.background_tasks.events import EventContext, event_chain_scope
 from yaffo.background_tasks.progress_reporter import ProgressReporter
+from yaffo.background_tasks.schedule_scope import ScheduleScopeError
 from yaffo.db.models import (
     Automation,
     Job,
@@ -33,7 +34,34 @@ def _open_run_job(session: Session, automation: Automation) -> Job:
     return job
 
 
-def record_run(session: Session, automation: Automation, work: Callable[[ProgressReporter], str]) -> Job:
+def record_dispatch_failure(session: Session, automation: Automation, trigger_id: int,
+                            scheduled_for, error: Exception, *, trigger_type: str = "schedule") -> Job:
+    """Record a trigger that could not enqueue a run as a failed Job.
+
+    The dispatcher commits the Job. Schedules also advance to the next cron slot,
+    so a persistent scope error produces one visible failure per occurrence.
+    """
+    now = utcnow()
+    job = Job(
+        id=str(uuid.uuid4()), name=automation.slug, message=automation.name,
+        automation_id=automation.id, status=JOB_STATUS_FAILED,
+        task_count=1, completed_count=0, error_count=1, cancelled_count=0,
+        started_at=now, completed_at=now, error=str(error),
+        job_data=json.dumps({
+            "trigger_id": trigger_id,
+            "scheduled_for": scheduled_for.isoformat() if scheduled_for else None,
+            "dispatch_error_code": (
+                "invalid_scope" if isinstance(error, ScheduleScopeError) else
+                "event_dispatch_failed" if trigger_type == "event" else "dispatch_failed"
+            ),
+        }),
+    )
+    session.add(job)
+    return job
+
+
+def record_run(session: Session, automation: Automation, work: Callable[[ProgressReporter], str],
+               media_item_ids: list[int] | None = None) -> Job:
     """Record one run of a *system* automation as a Job (the run history).
 
     Opens a RUNNING Job tagged with `automation_id`, runs `work` (which performs the
@@ -45,7 +73,8 @@ def record_run(session: Session, automation: Automation, work: Callable[[Progres
     trigger loop)."""
     job = _open_run_job(session, automation)
     try:
-        summary = work(ProgressReporter(session, job.id))
+        summary = ("No indexed media items to process" if media_item_ids is not None and not media_item_ids
+                   else work(ProgressReporter(session, job.id)))
     except Exception as e:
         session.rollback()
         job = session.get(Job, job.id)

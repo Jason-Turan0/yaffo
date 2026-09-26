@@ -72,12 +72,22 @@ nullable and shared with the page builder's `version_id`).
 One automation → many triggers, so it can run on a schedule *and* react to events.
 - `trigger_type` = `schedule` | `event`, plus a per-trigger `enabled`.
 - **schedule**: `cron` (5-field) + the dispatcher bookkeeping `next_run_at` / `last_run_at`.
+  `config` selects media-directory IDs and/or absolute folder paths inside configured
+  media directories. Empty selections mean every configured media directory.
 - **event**: `event_type` (from the `EVENTS` catalog) + `config` (JSON: filters / args).
 
 ### Runs reuse `Job`
 There is **no `automation_runs` table**. A run is a `Job` tagged with
 `jobs.automation_id` (`ON DELETE SET NULL`), so the existing job status / progress
 / UI machinery *is* the run history. `Automation.jobs` ↔ `Job.automation`.
+
+**Run-recording convention:** Every automation execution attempt must create a
+`Job` with its `automation_id`, regardless of whether it was started by a
+schedule, an event, or a manual action. Record RUNNING when work starts and a
+terminal COMPLETED or FAILED status when it ends. A valid run with nothing to do
+should complete with a no-work summary; an attempt that cannot dispatch should
+fail with an error. Do not silently return after a trigger fires: the Jobs table
+supplies the status, progress, and errors shown in the UI's run history.
 
 - **Schedule-driven system** automations record via their concrete tasks (e.g.
   file_sync's import/index Jobs are tagged with `automation_id`).
@@ -87,12 +97,17 @@ There is **no `automation_runs` table**. A run is a `Job` tagged with
   returns a one-line summary, then the Job is finalised to COMPLETED (summary in
   `job_data.output`) or FAILED (the work's exception captured, not re-raised). So an
   event-triggered run now shows up in the detail page's run history like a scheduled
-  one.
+  one. Media-based handlers also enqueue empty scopes; `record_run` completes those
+  runs with a no-work summary without calling the work function.
 - **Custom** automations record via the same module's `run_and_record`: a RUNNING
   Job is opened, the sandboxed code runs, then the Job is finalised to
   COMPLETED/FAILED with the captured print `output` in `job_data` (and `error` on
   failure). The sandbox returns failures as data, so a bad script becomes a FAILED
   Job, not an exception.
+- **Schedule dispatch failures** record a FAILED Job via `record_dispatch_failure`
+  so invalid trigger scopes and other dispatch errors appear in run history.
+- **Event dispatch failures** use the same recorder, so a missing handler or
+  enqueue error also appears as a FAILED run instead of only a log entry.
 
 Both `record_run` and `run_and_record` share `_open_run_job` and, like the custom
 path, **never hand their Jobs to `complete_job_task`** — so an automation run emits
@@ -120,6 +135,19 @@ enabled automations and, per trigger:
   fire this tick.
 - `next_run_at <= now` → fire via `invoke_automation`, stamp `last_run_at`,
   advance `next_run_at = compute_next_run(cron, now)`.
+
+The trigger editor offers an explicit scope: **Everything**, **Media directories**,
+or **Paths**. Paths are selected with the folder picker. The dispatcher resolves
+selected roots against the current media-directory registry
+and passes indexed media IDs beneath them to every automation. `file_sync` scans
+the selected roots; `duplicate_scan` scans the selected IDs. If a selected root is
+no longer configured, dispatch records a failed Job visible in Run history and
+advances to the next cron slot. Custom scripts
+receive the IDs in `ctx['media_item_ids']` and filter media queries to that set.
+Built-in media writes are replay-safe: face links skip assigned faces, location
+names skip unchanged values, label replacement skips unchanged assignments, and
+metadata export merges unique values. Custom scripts should use the idempotent
+host actions and avoid depending on a run executing only once.
 
 Cron math is `croniter` (`background_tasks/schedule.py`: `compute_next_run`,
 `is_valid_cron`).
@@ -193,8 +221,8 @@ Both dispatchers funnel through `invoke_automation(automation, context) -> bool`
 `@register_handler(key)` at task-definition time. The registry imports **no task
 code**; handlers self-register when their task module loads, and dispatchers read
 `HANDLERS` at call time. This is what keeps the task ↔ dispatcher mapping free of
-import-order cycles. The schedule dispatcher passes `context=None`; the event
-dispatcher passes the `EventContext`.
+import-order cycles. Both dispatchers pass an `EventContext`; a schedule has
+`event_type=None` with resolved `media_item_ids` and `scope_paths`.
 
 ## The sandbox (`yaffo/background_tasks/automation_sandbox/`)
 
@@ -274,7 +302,8 @@ automation_sandbox/
   (`data_query_tool._json_default`).
 - **`executor.run_automation(session, automation, context)`** — runs
   `automation.published_code` with `inputs={"ctx": …}` (the trigger context:
-  `event_type`/`job_id`/`media_item_ids`, empty for a schedule) and
+  `event_type`/`job_id`/`media_item_ids`/`scope_paths`; schedules have selected
+  media IDs and `event_type=None`) and
   `functions=build_host_functions(session)`. Returns the `StarlarkResult`.
 - **`tasks/run_automation.py::run_automation_code_task`** — the registered
   task wrapping the executor (loads the automation, rebuilds the `EventContext`,
@@ -393,7 +422,8 @@ offers a preset list + a Period-driven single-value builder (Hourly/Daily/Weekly
 Monthly) + an Advanced raw-cron escape hatch, composes one 5-field cron into a
 hidden `cron` input, and live-previews it via `describeCron` (which also fills the
 `data-cron` text on existing rows). The server stays the trust boundary: the
-`save_schedule` action only validates the submitted `cron` with `is_valid_cron`
+`save_schedule` action validates the submitted `cron` with `is_valid_cron` and the
+selected scope against configured media directories
 before persisting (`automations_validate_cron` also gates the Save button live for
 the Advanced field) — no cron-building logic lives in Python. The component
 re-inits itself on load and on `htmx:afterSwap`, so it survives the fragment
@@ -438,13 +468,13 @@ the old manual "Auto-Assign People" utility page — that page, its route, and i
 `tasks/duplicate_scan.py` — a system automation (`handler='duplicate_scan'`, seeded
 disabled with a **daily** `0 3 * * *` schedule trigger). Its handler
 `enqueue_duplicate_scan` enqueues `duplicate_scan_task`, which opens a
-`find_duplicates` Job over **every indexed photo** (`media_repository.get_all_media_item_paths`),
+`find_duplicates` Job over the trigger's selected indexed photos,
 tags it with `automation_id`, and hands it to the existing `find_duplicates_task`
 — the exact perceptual-hash scan the manual **Remove Duplicates** tool runs, so its
 results show up there identically. Same shape as `file_sync`: a lightweight handler
-→ task → reuse of an existing job. (`_open_scan_job` is the testable core; a schedule
-run passes `context=None`, which the handler ignores — a full-library scan has no
-event subjects.)
+→ task → reuse of an existing job. When no indexed media matches, the task uses
+`record_run` to save a completed no-work Job instead of starting the hash scan.
+(`_open_scan_job` is the testable core.)
 
 ### `export_photo_tag`
 
@@ -462,10 +492,9 @@ is the event-driven replacement for the deleted Sync Metadata page — instead o
 batch button, the on-disk file stays in sync as you tag.
 
 **Known gaps (pick up later):**
-- **Backfill is manual, scoped by Run-now.** Events only name the photos they
-  concern, so existing photos aren't touched until you re-edit them — but **Run on a
-  folder…/file…** (see *Run-now* below) now re-runs the handler for real over a
-  picked path's photos, so you can apply it to existing files without re-editing.
+- Events only name the photos they concern. Existing photos can be updated with
+  **Run on a folder…/file…** (see *Run-now* below) or a scheduled run scoped to
+  selected media directories or folders.
 - **Format is dispatched by file *extension*** (`write_metadata.py`), so a WebP
   file mislabeled `.jpg` takes the JPEG path. exiftool usually copes, but
   detecting the real format (magic bytes / exiftool) would be more robust.

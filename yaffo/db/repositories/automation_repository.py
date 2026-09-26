@@ -23,7 +23,7 @@ def get_by_slug(session: Session, slug: str) -> Automation | None:
     return session.query(Automation).filter_by(slug=slug).first()
 
 
-def add_schedule_trigger(session: Session, slug: str, cron: str) -> AutomationTrigger | None:
+def add_schedule_trigger(session: Session, slug: str, cron: str, config: dict | None = None) -> AutomationTrigger | None:
     """Add an enabled schedule trigger (caller validates `cron` first). next_run_at
     is left NULL so the dispatcher initialises it from the cron on its next tick.
     Returns None when the automation is gone."""
@@ -32,7 +32,7 @@ def add_schedule_trigger(session: Session, slug: str, cron: str) -> AutomationTr
         return None
     trigger = AutomationTrigger(
         automation_id=automation.id, trigger_type=TRIGGER_TYPE_SCHEDULE,
-        enabled=True, cron=cron,
+        enabled=True, cron=cron, config=config,
     )
     session.add(trigger)
     session.commit()

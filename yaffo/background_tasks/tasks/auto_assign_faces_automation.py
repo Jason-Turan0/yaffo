@@ -118,7 +118,7 @@ def auto_assign_faces_automation_task(automation_id: int, media_item_ids: list[i
                 f"{match_policy})"
             )
 
-        record_run(session, automation, work)
+        record_run(session, automation, work, media_item_ids=media_item_ids)
     finally:
         session.close()
         SessionFactory.remove()
@@ -127,8 +127,6 @@ def auto_assign_faces_automation_task(automation_id: int, media_item_ids: list[i
 @register_handler(AUTOMATION_HANDLER_AUTO_ASSIGN_FACES)
 def enqueue_auto_assign_faces(automation: Automation, context: EventContext | None = None) -> None:
     """Handler for the built-in auto-assign-faces automation: enqueue the task for
-    the photos the triggering event concerns. A schedule trigger (no context, no
-    photo subjects) has nothing to act on, so it's a no-op."""
+    the photos selected by the event or schedule."""
     media_item_ids = context.media_item_ids if context else []
-    if media_item_ids:
-        auto_assign_faces_automation_task(automation.id, media_item_ids)
+    auto_assign_faces_automation_task(automation.id, media_item_ids)

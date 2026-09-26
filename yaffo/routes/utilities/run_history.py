@@ -116,6 +116,13 @@ def _run_summary(job: Job) -> str:
     the automation name)."""
     if job.name == FILE_SYNC_JOB:
         return _file_sync_summary(job)
+    if job.automation_id and job.status == JOB_STATUS_COMPLETED and not job.task_count:
+        try:
+            output = json.loads(job.job_data or "{}").get("output")
+        except (ValueError, TypeError, AttributeError):
+            output = None
+        if output:
+            return output
     completed = job.completed_count or 0
     errors = job.error_count or 0
     cancelled = job.cancelled_count or 0
@@ -162,6 +169,18 @@ def _run_status_chip(status: str) -> str:
     }.get(status, "")
 
 
+def _run_error(job: Job) -> str | None:
+    try:
+        data = json.loads(job.job_data or "{}")
+    except ValueError:
+        data = {}
+    if data.get("dispatch_error_code") == "invalid_scope":
+        return gettext("The scheduled scope is no longer valid. Edit the trigger to choose a configured media directory or a folder inside one.")
+    if data.get("dispatch_error_code") == "dispatch_failed":
+        return gettext("The scheduled run could not start: %(error)s", error=job.error or "")
+    return job.error
+
+
 @dataclass(frozen=True)
 class RunStatus:
     label: str  # translated, e.g. "Completed with errors"
@@ -191,6 +210,6 @@ def run_view(job: Job) -> RunView:
         finished_at=job.completed_at,
         label=_kind_label(job),
         summary=_run_summary(job),
-        error=job.error,
+        error=_run_error(job),
         automation_slug=job.automation.slug if job.automation is not None else None,
     )

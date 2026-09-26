@@ -68,6 +68,24 @@ def test_scan_media_dirs_diffs_disk_against_index(session, media):
     assert scan.orphaned[0]["reason"] == ORPHAN_MISSING
 
 
+def test_scoped_scan_leaves_other_media_directories_untouched(tmp_path, session):
+    selected = tmp_path / "selected"
+    other = tmp_path / "other"
+    _touch(selected / "new.jpg")
+    missing_selected = selected / "missing.jpg"
+    missing_other = other / "missing.jpg"
+    session.add_all([
+        MediaItem(full_file_path=str(missing_selected), status=MEDIA_STATUS_INDEXED),
+        MediaItem(full_file_path=str(missing_other), status=MEDIA_STATUS_INDEXED),
+    ])
+    session.commit()
+
+    scan = scan_media_dirs(session, [selected], None, scoped=True)
+
+    assert [item["full_path"] for item in scan.unindexed] == [str(selected / "new.jpg")]
+    assert [item["full_path"] for item in scan.orphaned] == [str(missing_selected)]
+
+
 def test_removed_media_dir_orphans_its_photos_even_when_files_exist(tmp_path, session):
     """A photo whose media dir was dropped from config is orphaned even though the
     file still sits on disk -- so syncing removes rows for de-configured dirs."""

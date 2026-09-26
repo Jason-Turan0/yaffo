@@ -28,11 +28,12 @@ class EventContext:
     have already fired in the chain of events leading to this one. dispatch_event_task
     skips any automation already in it, so an automation fires at most once per chain
     (see event_chain_scope / the Loop guard section in docs/development/automations.md)."""
-    event_type: str
+    event_type: str | None
     job_id: str | None = None
     media_item_ids: list[int] = field(default_factory=list)
     groups: list[list[int]] = field(default_factory=list)
     origin_automation_ids: list[int] = field(default_factory=list)
+    scope_paths: list[str] = field(default_factory=list)
 
 
 # The causal chain in force for the current automation run, set by event_chain_scope.

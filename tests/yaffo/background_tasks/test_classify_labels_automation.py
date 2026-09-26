@@ -37,6 +37,7 @@ def _patch(monkeypatch, *, labels, label_vectors, image_vectors):
     def _bulk_replace(session, results):
         for media_item_id, assignments in results:
             written[media_item_id] = assignments
+        return [media_item_id for media_item_id, _ in results]
 
     monkeypatch.setattr(mod.classification_repository, "bulk_replace_media_labels", _bulk_replace)
     return written
@@ -174,11 +175,11 @@ def test_handler_enqueues_for_event_photos(monkeypatch):
     assert calls == [(3, [11, 12], [9])]
 
 
-def test_handler_noop_without_context(monkeypatch):
+def test_handler_enqueues_even_without_context(monkeypatch):
     calls: list = []
     monkeypatch.setattr(
         mod, "classify_labels_automation_task",
-        lambda automation_id, media_item_ids: calls.append((automation_id, media_item_ids)),
+        lambda automation_id, media_item_ids, origin: calls.append((automation_id, media_item_ids, origin)),
     )
     mod.enqueue_classify_labels(SimpleNamespace(id=3), None)
-    assert calls == []
+    assert calls == [(3, [], [])]

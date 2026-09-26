@@ -51,11 +51,12 @@ def _language() -> str:
 _CTX_FIELD_DOCS = {
     "event_type": "the event name for an event run, or None for a schedule.",
     "job_id": "the id of the job that emitted the event (or None).",
-    "media_item_ids": "the media ids the event concerns (empty for a schedule).",
+    "media_item_ids": "the media ids selected by the event or schedule (all configured media directories if a schedule has no scope).",
     "groups": (
         "related-media groupings — one list of media ids per group (e.g. each "
         "duplicate set, keeper first); empty for events without groupings."
     ),
+    "scope_paths": "selected folder roots for a schedule; empty for event runs.",
 }
 
 
@@ -74,17 +75,12 @@ def _context() -> str:
 
 def _scoping() -> str:
     return block("scoping", [
-        "Scope an event run to its photos — never sweep the whole library on an event.",
-        "When ctx['event_type'] is set, the run is about exactly ctx['media_item_ids'] (the",
-        "photos that event concerns), so every photos query MUST filter to them:",
+        "Scope every run to exactly ctx['media_item_ids'] (the photos selected by",
+        "its event or schedule), so every photos query MUST filter to them:",
         '  data_query({"source": "media_items", "id": {"in": ctx["media_item_ids"]}, ...})',
         "and derive faces/people/labels from that set. Querying photos without an `id`",
-        "filter on an event run re-scans the entire library on every event — that is the",
-        "wrong behaviour: slow, and it acts on photos the event never mentioned.",
-        "If ctx['media_item_ids'] is empty on an event run, there's nothing to do — stop.",
-        "Operate library-wide ONLY on a schedule run (ctx['event_type'] is None and",
-        "ctx['media_item_ids'] is empty) — that's the one case where you query without an id",
-        "filter.",
+        "filter acts on photos outside the trigger scope.",
+        "If ctx['media_item_ids'] is empty, there's nothing to do — stop.",
     ])
 
 

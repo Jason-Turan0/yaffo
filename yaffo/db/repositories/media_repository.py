@@ -32,11 +32,12 @@ def get_media_item_ids_for_faces(session: Session, face_ids: list[int]) -> list[
 
 def get_media_item_ids_under_path(session: Session, path: str) -> list[int]:
     """Ids of indexed photos at `path` (an exact file) or under it (a directory)."""
-    path = path.rstrip("/\\")
-    under = f"{path}{os.sep}%"
+    path = str(Path(path))
+    prefix = path.rstrip("/\\") + os.sep
+    under = prefix.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
     rows = (
         session.query(MediaItem.id)
-        .filter(or_(MediaItem.full_file_path == path, MediaItem.full_file_path.like(under)))
+        .filter(or_(MediaItem.full_file_path == path, MediaItem.full_file_path.like(under, escape="\\")))
         .order_by(MediaItem.id)
         .all()
     )

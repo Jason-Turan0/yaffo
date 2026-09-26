@@ -122,7 +122,7 @@ def test_task_scales_ui_threshold_to_cosine_against_the_band(monkeypatch, progre
         lambda automation, field: 50 if field.key == "threshold" else True,
     )  # UI midpoint + assign multiple matches enabled
     monkeypatch.setattr(mod, "get_similarity_bounds", lambda session: (0.40, 0.80))
-    monkeypatch.setattr(mod, "record_run", lambda session, automation, work: work(progress_reporter))
+    monkeypatch.setattr(mod, "record_run", lambda session, automation, work, media_item_ids: work(progress_reporter))
 
     def _capture(session, reporter, media_item_ids, threshold, assign_multiple_matches=False):
         captured["threshold"] = threshold
@@ -154,7 +154,7 @@ def test_handler_enqueues_for_event_photos(monkeypatch):
     assert calls == [(3, [11, 12])]
 
 
-def test_handler_noop_without_context_or_photos(monkeypatch):
+def test_handler_enqueues_even_without_indexed_photos(monkeypatch):
     calls: list = []
     monkeypatch.setattr(
         mod, "auto_assign_faces_automation_task",
@@ -163,4 +163,4 @@ def test_handler_noop_without_context_or_photos(monkeypatch):
     automation = SimpleNamespace(id=3)
     mod.enqueue_auto_assign_faces(automation, None)
     mod.enqueue_auto_assign_faces(automation, SimpleNamespace(media_item_ids=[]))
-    assert calls == []
+    assert calls == [(3, []), (3, [])]

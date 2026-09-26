@@ -1,4 +1,4 @@
-"""System automation `duplicate_scan`: on a schedule, scan all indexed media for
+"""System automation `duplicate_scan`: on a schedule, scan selected indexed media for
 perceptual-hash duplicates. The handler enqueues `duplicate_scan_task`, which
 creates a `find_duplicates` Job (tagged with `automation_id` as the run, like
 file_sync) and hands it to `find_duplicates_task` -- the exact scan the manual
@@ -9,6 +9,7 @@ import json
 import uuid
 
 from yaffo.background_tasks.config import task_queue
+from yaffo.background_tasks.automation_runs import record_run
 from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.tasks.find_duplicates import find_duplicates_task
@@ -20,11 +21,12 @@ from yaffo.logging_config import get_logger
 logger = get_logger(__name__, 'background_tasks')
 
 
-def _open_scan_job(session, automation_id: int | None) -> tuple[str, list[str]] | None:
-    """Create a find_duplicates Job over every indexed media item, tagged with
-    `automation_id` as the run. Returns (job_id, file_paths), or None when there's
-    nothing to scan."""
-    file_paths = media_repository.get_all_media_item_paths(session)
+def _open_scan_job(session, automation_id: int | None, media_item_ids: list[int] | None = None) -> tuple[str, list[str]] | None:
+    """Create a find_duplicates Job over selected indexed media items, tagged with
+    `automation_id` as the run. Returns None when there is nothing to scan;
+    the caller records that empty automation run through `record_run`."""
+    file_paths = (media_repository.get_all_media_item_paths(session) if media_item_ids is None
+                  else list(media_repository.get_paths_by_ids(session, media_item_ids).values()))
     if not file_paths:
         return None
     job_id = str(uuid.uuid4())
@@ -45,13 +47,17 @@ def _open_scan_job(session, automation_id: int | None) -> tuple[str, list[str]] 
 
 
 @task_queue.task()
-def duplicate_scan_task(automation_id: int | None = None):
+def duplicate_scan_task(automation_id: int | None = None, media_item_ids: list[int] | None = None):
     """Open a find_duplicates Job over every indexed media item and enqueue the scan.
-    `automation_id` tags the Job as that automation's run. No-op when there are no
-    indexed media items."""
+    `automation_id` tags the Job as that automation's run. An empty automation
+    scan is recorded through the shared run handler."""
     session = SessionFactory()
     try:
-        opened = _open_scan_job(session, automation_id)
+        opened = _open_scan_job(session, automation_id, media_item_ids)
+        if opened is None and automation_id is not None:
+            automation = session.get(Automation, automation_id)
+            if automation is not None:
+                record_run(session, automation, lambda _: "", media_item_ids=[])
     finally:
         session.close()
         SessionFactory.remove()
@@ -66,6 +72,8 @@ def duplicate_scan_task(automation_id: int | None = None):
 @register_handler(AUTOMATION_HANDLER_DUPLICATE_SCAN)
 def enqueue_duplicate_scan(automation: Automation, context: EventContext | None = None) -> None:
     """Handler for the built-in duplicate-scan automation: enqueue the task tagged
-    with the automation's id so its find_duplicates Job links back. `context` is
-    unused (a full-library scan ignores any triggering event's subjects)."""
-    duplicate_scan_task(automation.id)
+    with the automation's id and limited to the trigger's selected media IDs."""
+    if context is None:
+        duplicate_scan_task(automation.id)
+    else:
+        duplicate_scan_task(automation.id, context.media_item_ids)

@@ -364,17 +364,60 @@ automations.initTriggerEditor = (
         return /** @type {HTMLElement | null} */ (container?.querySelector('.automation-trigger-add') ?? null);
     };
 
+    /** @param {HTMLElement} area */
+    const showScope = (area) => {
+        const type = /** @type {HTMLSelectElement} */ (area.querySelector('[name="scope_type"]')).value;
+        /** @type {HTMLElement} */ (area.querySelector('.schedule-scope-media-dirs')).hidden = type !== 'media_dirs';
+        /** @type {HTMLElement} */ (area.querySelector('.schedule-scope-paths')).hidden = type !== 'paths';
+        /** @type {HTMLElement} */ (area.querySelector('.schedule-scope-everything')).hidden = type !== 'everything';
+    };
+
+    /** @param {HTMLElement} area @param {string} path */
+    const addScopePath = (area, path) => {
+        const list = /** @type {HTMLElement} */ (area.querySelector('.schedule-scope-path-list'));
+        if ([...list.querySelectorAll('input[name="folder_paths"]')].some((input) => /** @type {HTMLInputElement} */ (input).value === path)) return;
+        const row = document.createElement('div');
+        row.className = 'schedule-scope-path';
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'folder_paths';
+        input.value = path;
+        const value = document.createElement('input');
+        value.type = 'text';
+        value.className = 'form-control schedule-scope-path-value';
+        value.value = path;
+        value.readOnly = true;
+        value.setAttribute('aria-label', area.dataset.selectedFolderLabel || '');
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'btn-secondary js-remove-scope-path';
+        remove.textContent = area.dataset.removeLabel || '';
+        remove.setAttribute('aria-label', `${remove.textContent} ${path}`);
+        row.append(input, value, remove);
+        list.append(row);
+    };
+
     /**
      * @param {HTMLElement | null} area
-     * @param {{ cron?: string, triggerId?: string, title: string }} opts
+     * @param {{ cron?: string, triggerId?: string, title: string, scope?: {scope_type?: string, media_dir_ids?: string[], folder_paths?: string[]} }} opts
      */
-    const openSchedule = (area, { cron, triggerId, title }) => {
+    const openSchedule = (area, { cron, triggerId, title, scope = {} }) => {
         if (!area) return;
         /** @type {HTMLInputElement} */ (area.querySelector('[name="edit_trigger_id"]')).value = triggerId || '';
         /** @type {HTMLElement} */ (area.querySelector('.schedule-editor-title')).textContent = title;
         const mount = /** @type {HTMLElement} */ (area.querySelector('[data-cron-builder]'));
         cronBuilder.initAll(mount);
         if (cron) cronBuilder.setCron(mount, cron); else cronBuilder.reset(mount);
+        const selectedDirs = new Set(scope.media_dir_ids || []);
+        area.querySelectorAll('[name="media_dir_ids"]').forEach((input) => {
+            const checkbox = /** @type {HTMLInputElement} */ (input);
+            checkbox.checked = selectedDirs.has(checkbox.value);
+        });
+        const scopeType = scope.scope_type || (scope.folder_paths?.length ? 'paths' : (scope.media_dir_ids?.length ? 'media_dirs' : 'everything'));
+        /** @type {HTMLSelectElement} */ (area.querySelector('[name="scope_type"]')).value = scopeType;
+        /** @type {HTMLElement} */ (area.querySelector('.schedule-scope-path-list')).replaceChildren();
+        (scope.folder_paths || []).forEach((path) => addScopePath(area, path));
+        showScope(area);
         area.classList.remove('adding-event');
         area.classList.add('adding-schedule');
         area.scrollIntoView({ block: 'nearest' });
@@ -436,6 +479,13 @@ automations.initTriggerEditor = (
         else { clearTimeout(validateTimer); applyValidity(area, { valid: true, showError: false }); }
     });
 
+    document.addEventListener('change', (event) => {
+        if (event.target instanceof Element && event.target.matches('[name="scope_type"]')) {
+            const area = areaFor(event.target);
+            if (area) showScope(area);
+        }
+    });
+
     document.addEventListener('click', (event) => {
         const origin = event.target instanceof Element ? event.target : null;
         if (!origin) return;
@@ -443,18 +493,29 @@ automations.initTriggerEditor = (
         const edit = /** @type {HTMLElement | null} */ (origin.closest('.js-edit-schedule'));
         const addEvent = origin.closest('.js-add-event');
         const cancel = origin.closest('.js-cancel');
+        const addPath = origin.closest('.js-add-scope-path');
+        const removePath = origin.closest('.js-remove-scope-path');
         if (add) {
             openSchedule(areaFor(add), { title: i18n.t('utilities:automations.triggers.addSchedule') });
         } else if (edit) {
             openSchedule(areaFor(edit), {
                 cron: edit.dataset.cronValue,
                 triggerId: edit.dataset.triggerId,
+                scope: JSON.parse(edit.dataset.scope || '{}'),
                 title: i18n.t('utilities:automations.triggers.editSchedule'),
             });
         } else if (addEvent) {
             openEvent(areaFor(addEvent));
         } else if (cancel) {
             collapse(areaFor(cancel));
+        } else if (removePath) {
+            removePath.closest('.schedule-scope-path')?.remove();
+        } else if (addPath) {
+            const area = areaFor(addPath);
+            const previous = /** @type {HTMLInputElement | null} */ (area?.querySelector('.schedule-scope-path input:last-of-type') ?? null)?.value;
+            automationsWindow.PHOTO_ORGANIZER.pickFolder({
+                mode: 'folder', startPath: previous || area?.dataset.defaultPath || null,
+            }).then((path) => { if (path && area?.isConnected) addScopePath(area, path); });
         }
     });
 };

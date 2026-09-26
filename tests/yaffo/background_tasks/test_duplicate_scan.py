@@ -53,8 +53,38 @@ def test_open_scan_job_noop_when_no_photos(monkeypatch):
     assert session.added == []
 
 
+def test_empty_automation_scan_records_run(monkeypatch):
+    automation = SimpleNamespace(id=7)
+    calls = []
+
+    class FakeFactory:
+        def __call__(self):
+            return SimpleNamespace(get=lambda model, automation_id: automation, close=lambda: None)
+
+        def remove(self):
+            pass
+
+    monkeypatch.setattr(mod, "SessionFactory", FakeFactory())
+    monkeypatch.setattr(mod, "_open_scan_job", lambda session, automation_id, ids: None)
+    monkeypatch.setattr(mod, "record_run", lambda session, target, work, media_item_ids: calls.append((target, media_item_ids)))
+    monkeypatch.setattr(mod, "find_duplicates_task", lambda **kwargs: pytest.fail("empty scan enqueued hashing"))
+
+    mod.duplicate_scan_task.fn(automation_id=7, media_item_ids=[])
+
+    assert calls == [(automation, [])]
+
+
 def test_handler_enqueues_with_automation_id(monkeypatch):
     calls = []
     monkeypatch.setattr(mod, "duplicate_scan_task", lambda automation_id: calls.append(automation_id))
     mod.enqueue_duplicate_scan(SimpleNamespace(id=42), context=None)
     assert calls == [42]
+
+
+def test_scheduled_duplicate_scan_uses_selected_ids(monkeypatch):
+    from yaffo.background_tasks.events import EventContext
+
+    calls = []
+    monkeypatch.setattr(mod, "duplicate_scan_task", lambda automation_id, media_item_ids: calls.append((automation_id, media_item_ids)))
+    mod.enqueue_duplicate_scan(SimpleNamespace(id=42), EventContext(event_type=None, media_item_ids=[3, 7]))
+    assert calls == [(42, [3, 7])]

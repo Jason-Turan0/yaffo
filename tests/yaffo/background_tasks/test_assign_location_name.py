@@ -100,6 +100,20 @@ def test_overwrite_renames_already_named(monkeypatch, progress_reporter):
     assert progress_reporter.run_with_progress_calls == [[media_item]]
 
 
+def test_overwrite_same_name_is_noop(monkeypatch, progress_reporter):
+    media_item = _photo(1, 38.6, -90.2, location_name="Same")
+    _stub_repo(monkeypatch, batch=[media_item], named=[])
+    session = _FakeSession()
+
+    updated = mod._assign_location_names(
+        session, progress_reporter, [1], reuse_enabled=False, radius_km=1,
+        overwrite=True, geocode=_counting_geocoder("Same"),
+    )
+
+    assert updated == []
+    assert session.commits == 0
+
+
 def test_within_batch_reuse_geocodes_once_per_cluster(monkeypatch, progress_reporter):
     # Two unnamed photos ~55 m apart: the first geocodes, the second reuses it.
     a = _photo(1, 38.6000, -90.2000)
@@ -178,7 +192,7 @@ def test_handler_enqueues_for_event_photos(monkeypatch):
     assert calls == [(7, [11, 12], [9])]
 
 
-def test_handler_noop_without_context_or_photos(monkeypatch):
+def test_handler_enqueues_even_without_indexed_photos(monkeypatch):
     calls: list = []
     monkeypatch.setattr(
         mod, "assign_location_name_automation_task",
@@ -188,4 +202,4 @@ def test_handler_noop_without_context_or_photos(monkeypatch):
     mod.enqueue_assign_location_name(
         SimpleNamespace(id=7), SimpleNamespace(media_item_ids=[], origin_automation_ids=[])
     )
-    assert calls == []
+    assert calls == [(7, [], []), (7, [], [])]

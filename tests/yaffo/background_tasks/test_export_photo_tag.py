@@ -182,7 +182,7 @@ def test_handler_enqueues_for_event_photos(monkeypatch):
     assert calls == [(3, [11, 12])]
 
 
-def test_handler_noop_without_context_or_photos(monkeypatch):
+def test_handler_enqueues_even_without_indexed_photos(monkeypatch):
     calls: list = []
     monkeypatch.setattr(
         mod, "export_photo_tag_task",
@@ -190,4 +190,4 @@ def test_handler_noop_without_context_or_photos(monkeypatch):
     )
     mod.enqueue_export_photo_tag(SimpleNamespace(id=3), None)
     mod.enqueue_export_photo_tag(SimpleNamespace(id=3), SimpleNamespace(media_item_ids=[]))
-    assert calls == []
+    assert calls == [(3, []), (3, [])]

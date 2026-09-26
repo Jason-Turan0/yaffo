@@ -131,6 +131,7 @@ def iter_media_scan(
     progress_every: int = 500,
     max_walked: int | None = None,
     max_seconds: float | None = None,
+    scoped: bool = False,
 ) -> "Iterator[int | MediaScan]":
     """Walk the media dirs and diff them against the index, yielding the running
     count of photo files found every `progress_every` files walked (so a caller can
@@ -140,6 +141,10 @@ def iter_media_scan(
     count incrementally lets the page show progress instead of blocking on the whole
     scan. `scan_media_dirs` consumes this for callers that just want the result."""
     db_photos = session.query(MediaItem.id, MediaItem.full_file_path, MediaItem.status).all()
+    if scoped:
+        db_photos = [row for row in db_photos if any(
+            Path(row[1]).is_relative_to(root) for root in media_dirs
+        )]
     indexed_paths = {
         str(Path(path).expanduser().resolve(strict=False))
         for _id, path, status in db_photos
@@ -227,11 +232,11 @@ def root_has_media(root: Path) -> bool:
 
 
 def scan_media_dirs(
-    session: Session, media_dirs: list[Path], thumbnail_dir: Path | None
+    session: Session, media_dirs: list[Path], thumbnail_dir: Path | None, scoped: bool = False
 ) -> MediaScan:
     """Compare what's on disk under `media_dirs` against the index (non-streaming)."""
     scan: MediaScan | None = None
-    for event in iter_media_scan(session, media_dirs, thumbnail_dir):
+    for event in iter_media_scan(session, media_dirs, thumbnail_dir, scoped=scoped):
         if isinstance(event, MediaScan):
             scan = event
     assert scan is not None  # iter_media_scan always yields a final MediaScan
@@ -279,7 +284,8 @@ def _close_run(session: Session, job: Job, outcome: str, data: dict | None = Non
     session.commit()
 
 
-def run_file_sync(session: Session, automation_id: int | None = None) -> IndexJobs | None:
+def run_file_sync(session: Session, automation_id: int | None = None,
+                  scope_paths: list[str] | None = None) -> IndexJobs | None:
     """Full reconcile for the file-sync automation (scheduled, or Run now): scan
     the configured media dirs and run the same sync the user would trigger by
     hand. Each run records its own FILE_SYNC_JOB with how it ended, so the run
@@ -288,7 +294,7 @@ def run_file_sync(session: Session, automation_id: int | None = None) -> IndexJo
     `automation_id` tags the Jobs as that automation's run."""
     run = _open_run(session, automation_id)
     try:
-        return _file_sync(session, run)
+        return _file_sync(session, run, scope_paths)
     except Exception as exc:
         logger.error(f"file_sync: run {run.id} failed: {exc}", exc_info=True)
         session.rollback()
@@ -296,8 +302,8 @@ def run_file_sync(session: Session, automation_id: int | None = None) -> IndexJo
         raise
 
 
-def _file_sync(session: Session, run: Job) -> IndexJobs | None:
-    media_dirs = get_media_dirs(session)
+def _file_sync(session: Session, run: Job, scope_paths: list[str] | None = None) -> IndexJobs | None:
+    media_dirs = [Path(path) for path in scope_paths] if scope_paths is not None else get_media_dirs(session)
     thumbnail_dir = get_thumbnail_dir(session)
     if not media_dirs:
         logger.info("file_sync: no media directories configured; skipping")
@@ -314,7 +320,7 @@ def _file_sync(session: Session, run: Job) -> IndexJobs | None:
         return None
 
     ensure_thumbnail_dir(thumbnail_dir)
-    scan = scan_media_dirs(session, media_dirs, thumbnail_dir)
+    scan = scan_media_dirs(session, media_dirs, thumbnail_dir, scoped=scope_paths is not None)
     # Nobody reviews an unattended sync: a media folder that came back empty is far
     # likelier a failed mount than a deletion, so its items stay.
     orphaned_ids = [o['id'] for o in scan.orphaned if not under_empty_root(o['full_path'], scan.empty_roots)]

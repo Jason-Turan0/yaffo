@@ -300,6 +300,21 @@ def test_file_sync_runs_read_how_they_ended(app, client):
     assert "None of the media folders is connected: /Volumes/Photos." in body
 
 
+def test_schedule_scope_failure_appears_in_run_history(app, client):
+    _add(app)
+    _add_job(
+        app, slug="a1", id="scope-failure", name="a1", status="FAILED",
+        task_count=1, error_count=1, error="Scheduled folder is outside configured media directories",
+        job_data=json.dumps({"dispatch_error_code": "invalid_scope", "trigger_id": 7}),
+    )
+
+    body = client.get("/utilities/automations/a1/runs").get_data(as_text=True)
+
+    assert "Failed" in body
+    assert "The scheduled scope is no longer valid" in body
+    assert "Edit the trigger" in body
+
+
 def test_run_now_nothing_to_run_400(app, client, monkeypatch):
     _add(app)
     monkeypatch.setattr(
@@ -440,6 +455,17 @@ def test_run_view_uses_message_for_single_task_run():
     view = run_view(job)
     assert view.summary == "My automation"
     assert view.is_error is False
+
+
+def test_run_view_shows_empty_automation_run_summary():
+    from yaffo.routes.utilities.run_history import run_view
+    from yaffo.db.models import Job
+    job = Job(id="empty", name="duplicate_scan", status="COMPLETED",
+              automation_id=7, task_count=0,
+              job_data='{"output": "No indexed media items to process"}')
+    view = run_view(job)
+    assert view.summary == "No indexed media items to process"
+    assert view.status_label == "Completed"
 
 
 def test_run_view_flags_failed():
@@ -878,6 +904,45 @@ def test_save_schedule_edits_existing(app, client):
     assert len(triggers) == 1  # edited in place, not added
     assert triggers[0].cron == "0 9 * * 1"
     assert triggers[0].next_run_at is None  # reset so the dispatcher recomputes
+
+
+def test_schedule_scope_is_saved_and_invalid_folder_rejected(app, client, tmp_path):
+    from yaffo.db.repositories import media_dir_repository
+
+    _add(app)
+    root = tmp_path / "library"
+    root.mkdir()
+    folder = root / "trip"
+    folder.mkdir()
+    with app.app_context():
+        media_dir = media_dir_repository.add_media_dir(db.session, str(root))
+        media_dir_id = media_dir.id
+    response = client.post(
+        "/utilities/automations/a1/triggers",
+        data={"action": "save_schedule", "cron": "0 9 * * *",
+              "scope_type": "paths", "folder_paths": str(folder)},
+    )
+    assert response.status_code == 200
+    trigger = _triggers(app)[0]
+    assert trigger.config == {"scope_type": "paths", "media_dir_ids": [], "folder_paths": [str(folder)]}
+    assert "1 path" in response.get_data(as_text=True)
+
+    response = client.post(
+        "/utilities/automations/a1/triggers",
+        data={"action": "save_schedule", "cron": "0 9 * * *",
+              "edit_trigger_id": trigger.id, "scope_type": "media_dirs",
+              "media_dir_ids": media_dir_id},
+    )
+    assert response.status_code == 200
+    assert _triggers(app)[0].config == {"scope_type": "media_dirs", "media_dir_ids": [media_dir_id], "folder_paths": []}
+
+    response = client.post(
+        "/utilities/automations/a1/triggers",
+        data={"action": "save_schedule", "cron": "0 9 * * *",
+              "scope_type": "paths", "folder_paths": str(tmp_path / "outside")},
+    )
+    assert response.status_code == 200
+    assert len(_triggers(app)) == 1
 
 
 def test_save_schedule_edit_unknown_id_404(app, client):

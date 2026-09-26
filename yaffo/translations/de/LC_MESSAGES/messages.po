@@ -4441,3 +4441,82 @@ msgstr "Zielordner auswählen"
 msgid "Remove Selected Duplicates"
 msgstr "Ausgewählte Duplikate entfernen"
 
+
+#: yaffo/templates/utilities/automations_triggers.html:24
+#, python-format
+msgid "%(count)s media directory"
+msgid_plural "%(count)s media directories"
+msgstr[0] ""
+msgstr[1] ""
+
+#: yaffo/templates/utilities/automations_triggers.html:26
+#, python-format
+msgid "%(count)s path"
+msgid_plural "%(count)s paths"
+msgstr[0] ""
+msgstr[1] ""
+
+#: yaffo/templates/utilities/automations_triggers.html:27 yaffo/templates/utilities/automations_triggers.html:78
+msgid "Everything"
+msgstr ""
+
+#: yaffo/templates/utilities/automations_triggers.html:59
+msgid "Selected folder"
+msgstr ""
+
+#: yaffo/templates/utilities/automations_triggers.html:74
+msgid "Scope"
+msgstr ""
+
+#: yaffo/templates/utilities/automations_triggers.html:76
+msgid "Run on"
+msgstr ""
+
+#: yaffo/templates/utilities/automations_triggers.html:79
+msgid "Media directories"
+msgstr ""
+
+#: yaffo/templates/utilities/automations_triggers.html:80
+msgid "Paths"
+msgstr ""
+
+#: yaffo/templates/utilities/automations_triggers.html:85
+msgid "All indexed media in every configured media directory."
+msgstr ""
+
+#: yaffo/templates/utilities/automations_triggers.html:88
+msgid "Include"
+msgstr ""
+
+#: yaffo/templates/utilities/automations_triggers.html:90
+msgid "Choose the media directories to include."
+msgstr ""
+
+#: yaffo/templates/utilities/automations_triggers.html:98
+msgid "No media directories are configured."
+msgstr ""
+
+#: yaffo/templates/utilities/automations_triggers.html:104
+msgid "Folders"
+msgstr ""
+
+#: yaffo/templates/utilities/automations_triggers.html:106
+msgid "Choose one or more folders inside your media directories."
+msgstr ""
+
+#: yaffo/templates/utilities/automations_triggers.html:109
+msgid "Choose folder"
+msgstr ""
+
+#: yaffo/routes/utilities/run_history.py:171
+msgid "The scheduled scope is no longer valid. Edit the trigger to choose a configured media directory or a folder inside one."
+msgstr ""
+
+#: yaffo/routes/utilities/run_history.py:173
+#, python-format
+msgid "The scheduled run could not start: %(error)s"
+msgstr ""
+
+#: yaffo/routes/utilities/automations.py:554
+msgid "Choose at least one configured media directory or a folder inside one."
+msgstr ""
