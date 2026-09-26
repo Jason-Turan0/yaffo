@@ -168,8 +168,8 @@ class TestProgressLabelsCoverAgentTools:
     with the theme agent's real tool set so a new/renamed tool gets a label."""
 
     def _agent_tool_names(self) -> set[str]:
-        from yaffo.site_agents.tool_providers.theme_tool import ThemeToolProvider
-        from yaffo.site_agents.tool_providers.theme_catalog_tool import ThemeCatalogToolProvider
+        from yaffo.site_agents.theme.tool_providers.theme_tool import ThemeToolProvider
+        from yaffo.site_agents.theme.tool_providers.theme_catalog_tool import ThemeCatalogToolProvider
 
         session = object()  # get_tools doesn't touch the session
         providers = [

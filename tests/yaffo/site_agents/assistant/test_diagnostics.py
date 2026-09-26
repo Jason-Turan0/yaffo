@@ -20,9 +20,9 @@ from yaffo.db.models import (
     PersonFace,
     Tag,
 )
-from yaffo.site_agents.assistant import diagnostics as diag
-from yaffo.site_agents.assistant.diagnostics import DiagnosticsToolProvider, tool_names
-from yaffo.site_agents.assistant.fs import AssistantFS
+from yaffo.site_agents.assistant.tool_providers.diagnostics import diagnostics as diag
+from yaffo.site_agents.assistant.tool_providers.diagnostics.diagnostics import DiagnosticsToolProvider, tool_names
+from yaffo.site_agents.assistant.tool_providers.diagnostics.fs import AssistantFS
 from yaffo.site_agents.assistant.redact import Redactor
 from yaffo.taskq.store import Store
 

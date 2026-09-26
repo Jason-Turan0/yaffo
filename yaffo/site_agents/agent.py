@@ -20,28 +20,26 @@ from yaffo.site_agents.model_clients import (
     ToolCallResult,
     create_model_client,
 )
-from yaffo.site_agents.prompt_generator import build_system_prompt
-from yaffo.site_agents.prompt_generator.theme_system_prompt import build_template_builder_system_prompt
-from yaffo.site_agents.prompt_generator.automation_system_prompt import build_automation_builder_system_prompt
-from yaffo.site_agents.assistant.prompt import build_assistant_system_prompt
-from yaffo.site_agents.assistant.diagnostics import DiagnosticsToolProvider
-from yaffo.site_agents.assistant.links import LinkToolProvider
+from yaffo.site_agents.page.prompt_generator import build_system_prompt
+from yaffo.site_agents.theme.prompt_generator.theme_system_prompt import build_template_builder_system_prompt
+from yaffo.site_agents.automation.prompt_generator.automation_system_prompt import build_automation_builder_system_prompt
+from yaffo.site_agents.assistant.prompt_generator.prompt import build_assistant_system_prompt
+from yaffo.site_agents.assistant.tool_providers.diagnostics.diagnostics import DiagnosticsToolProvider
+from yaffo.site_agents.assistant.tool_providers.links import LinkToolProvider
 from yaffo.site_agents.assistant.redact import Redactor
-from yaffo.site_agents.assistant.script_tool import ScriptToolProvider
+from yaffo.site_agents.assistant.tool_providers.script_tool import ScriptToolProvider
 from yaffo.site_agents.assistant.settings import DIAG_LIBRARY
-from yaffo.site_agents.assistant.tools import KnowledgeToolProvider
-from yaffo.site_agents.tool_providers import (
-    AutomationToolProvider,
-    AutomationTriggerToolProvider,
-    ContentBlock,
-    DataQueryToolProvider,
-    ThemeCatalogToolProvider,
-    ThemeToolProvider,
-    ToolProvider,
-    ToolResult,
-    WidgetTemplateToolProvider,
-    WidgetToolProvider,
-)
+from yaffo.site_agents.assistant.tool_providers.knowledge.tools import KnowledgeToolProvider
+from yaffo.site_agents.automation.tool_providers.automation_tool import AutomationToolProvider
+from yaffo.site_agents.automation.tool_providers.automation_trigger_tool import AutomationTriggerToolProvider
+from yaffo.site_agents.common.tool_providers.tool_provider_types import ContentBlock
+from yaffo.site_agents.common.tool_providers.data_query_tool import DataQueryToolProvider
+from yaffo.site_agents.theme.tool_providers.theme_catalog_tool import ThemeCatalogToolProvider
+from yaffo.site_agents.theme.tool_providers.theme_tool import ThemeToolProvider
+from yaffo.site_agents.common.tool_providers.tool_provider_types import ToolProvider
+from yaffo.site_agents.common.tool_providers.tool_provider_types import ToolResult
+from yaffo.site_agents.page.tool_providers.widget_template_tool import WidgetTemplateToolProvider
+from yaffo.site_agents.page.tool_providers.widget_tool import WidgetToolProvider
 from yaffo.config import get_int as get_config_int
 
 # Default cap on the agent's tool-use loop per generation, from config.toml

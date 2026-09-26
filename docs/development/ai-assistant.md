@@ -17,7 +17,7 @@ the user before it runs.
 
 It builds on what the page and automation builders already have: the
 provider-neutral model clients (`site_agents/model_clients/`), the `Agent` tool
-loop (`site_agents/agent.py`), `ToolProvider` (`site_agents/tool_providers/`), key
+loop (`site_agents/agent.py`), `ToolProvider` (`site_agents/common/tool_providers/`), key
 storage in the OS keychain (`site_agents/llm_config.py`), the call log, and the
 shared chat dialog (`templates/components/chat_dialog.html`).
 
@@ -1144,3 +1144,16 @@ Settled during review (2026-09-25):
   stay in the builder rather than being duplicated here.
 - **Remote issue filing.** For now the diagnostics bundle is saved locally and the
   user decides where it goes.
+
+## Tool provider packages
+
+Under `yaffo/site_agents/assistant/tool_providers/`:
+
+- `knowledge/` groups the bundled documentation search (`knowledge.py`) and
+  its tool provider (`tools.py`).
+- `diagnostics/` groups the diagnostic tool provider (`diagnostics.py`),
+  filesystem access (`fs.py`), and health checks (`health.py`).
+- `links.py` and `script_tool.py` provide navigation and script execution.
+
+Shared assistant support, including redaction, settings, history, and response
+schemas, lives in the parent `assistant/` package.

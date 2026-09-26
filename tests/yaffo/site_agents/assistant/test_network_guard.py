@@ -17,13 +17,14 @@ from sqlalchemy.orm import Session
 from yaffo.background_tasks.automation_sandbox.automation_host import host_api
 from yaffo.db import db
 from yaffo.db.models import ApplicationSettings, MediaItem, Person
-from yaffo.site_agents.assistant import diagnostics as diag
-from yaffo.site_agents.assistant.diagnostics import TOOLS, DiagnosticsToolProvider
-from yaffo.site_agents.assistant.fs import AssistantFS
-from yaffo.site_agents.assistant.knowledge import DocSection, KnowledgeBase
-from yaffo.site_agents.assistant.links import LINK_TO_PAGE, LINK_TO_PHOTOS, LinkToolProvider
-from yaffo.site_agents.assistant.script_tool import RUN_SCRIPT, ScriptToolProvider
-from yaffo.site_agents.assistant.tools import READ_DOC, SEARCH_DOCS, KnowledgeToolProvider
+from yaffo.site_agents import assistant
+from yaffo.site_agents.assistant.tool_providers.diagnostics import diagnostics as diag
+from yaffo.site_agents.assistant.tool_providers.diagnostics.diagnostics import TOOLS, DiagnosticsToolProvider
+from yaffo.site_agents.assistant.tool_providers.diagnostics.fs import AssistantFS
+from yaffo.site_agents.assistant.tool_providers.knowledge.knowledge import DocSection, KnowledgeBase
+from yaffo.site_agents.assistant.tool_providers.links import LINK_TO_PAGE, LINK_TO_PHOTOS, LinkToolProvider
+from yaffo.site_agents.assistant.tool_providers.script_tool import RUN_SCRIPT, ScriptToolProvider
+from yaffo.site_agents.assistant.tool_providers.knowledge.tools import READ_DOC, SEARCH_DOCS, KnowledgeToolProvider
 from yaffo.taskq.store import Store
 
 pytestmark = pytest.mark.unit
@@ -59,10 +60,10 @@ def _imports(path: Path) -> set[str]:
 
 
 def test_assistant_modules_import_no_network_library():
-    package_dir = Path(diag.__file__).parent
+    package_dir = Path(assistant.__file__).parent
     offenders = {
-        path.name: sorted(name for name in _imports(path) if name.split(".")[0] in NETWORK_MODULES or name in NETWORK_MODULES)
-        for path in package_dir.glob("*.py")
+        str(path.relative_to(package_dir)): sorted(name for name in _imports(path) if name.split(".")[0] in NETWORK_MODULES or name in NETWORK_MODULES)
+        for path in package_dir.rglob("*.py")
     }
     assert {name: found for name, found in offenders.items() if found} == {}
 

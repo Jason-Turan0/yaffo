@@ -1,7 +1,7 @@
 import pytest
 
-from yaffo.site_agents.assistant.knowledge import DocSection, KnowledgeBase
-from yaffo.site_agents.assistant.tools import READ_DOC, SEARCH_DOCS, KnowledgeToolProvider
+from yaffo.site_agents.assistant.tool_providers.knowledge.knowledge import DocSection, KnowledgeBase
+from yaffo.site_agents.assistant.tool_providers.knowledge.tools import READ_DOC, SEARCH_DOCS, KnowledgeToolProvider
 
 pytestmark = pytest.mark.unit
 

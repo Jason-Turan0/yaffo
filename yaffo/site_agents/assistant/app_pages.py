@@ -22,7 +22,7 @@ from typing import Any, Mapping, Optional
 
 from werkzeug.routing import BuildError, Map, Rule
 
-from yaffo.site_agents.assistant.knowledge import KNOWLEDGE_DIR
+from yaffo.site_agents.assistant.tool_providers.knowledge.knowledge import KNOWLEDGE_DIR
 
 PAGES_FILE = KNOWLEDGE_DIR / "pages.json"
 

@@ -14,7 +14,7 @@ from yaffo.site_agents.model_clients.model_client import AnthropicModelClient
 from yaffo.site_agents.model_clients.model_client_types import ModelClient
 from yaffo.site_agents.model_clients.openai_client import OpenAICompatibleModelClient
 from yaffo.site_agents.model_clients.providers import provider_for_model
-from yaffo.site_agents.tool_providers.tool_provider_types import (
+from yaffo.site_agents.common.tool_providers.tool_provider_types import (
     ToolProvider,
     to_anthropic_tools,
     to_openai_tools,

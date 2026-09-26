@@ -393,7 +393,7 @@ Page tabs are injected into every template via a context processor.
 | Models + statuses | `yaffo/db/models.py` (`CustomPage`, `PageVersion`, `Widget`, `Conversation`, `PAGE_VERSION_STATUS_*`) |
 | Version repo | `yaffo/db/repositories/custom_page_repository.py` (`fork_version`, `restart_version`, `save_version_widgets`, `set_version_status`, `publish_version`, `delete_version`) |
 | Data-query engine | `yaffo/db/repositories/data_query_repository.py` (`validate_data_query`, `resolve_query`, `resolve_data_query`) + serializers |
-| Agent + tools | `yaffo/site_agents/` (`agent.py` `run_events`, `model_clients/`, `tool_providers/widget_tool.py`) |
+| Agent + tools | `yaffo/site_agents/` (`agent.py` `run_events`, `model_clients/`, `page/tool_providers/widget_tool.py`) |
 | Generation task | `yaffo/background_tasks/tasks/generate_page.py` (`generate_page_task` → `run_generation`) on `yaffo/taskq` |
 | Routes | `yaffo/routes/pages.py` |
 | Client | `yaffo/static/pages/` (grid + poll loop + elapsed timer + Save/Cancel) |
@@ -438,3 +438,14 @@ returns `400`).
 Shows **presence only** — "Key configured ✓ / Not set" with **Set / Replace /
 Clear**. The value is never sent to the browser. It deliberately does **not** go in
 `ApplicationSettings`, which holds only non-sensitive paths and renders verbatim.
+
+## Agent package organization
+
+`yaffo/site_agents/common/tool_providers/` owns shared tool contracts, result
+helpers, and data-query tools. `common/prompt_generator/` owns shared XML,
+language, and source-catalog helpers.
+
+Each agent type (`page/`, `theme/`, `automation/`, and `assistant/`) has its own
+`tool_providers/` and `prompt_generator/` packages for agent-specific behavior.
+The shared agent loop, model clients, and model configuration remain at the
+`site_agents/` level. Import tools and prompts from their owning packages.

@@ -9,7 +9,7 @@ from yaffo.background_tasks.automation_sandbox.starlark_runner import RunLimits
 from yaffo.db import db
 from yaffo.db.models import MediaItem, Tag
 from yaffo.site_agents.assistant.redact import Redactor
-from yaffo.site_agents.assistant.script_tool import DESCRIBE_SOURCE, RUN_SCRIPT, ScriptToolProvider
+from yaffo.site_agents.assistant.tool_providers.script_tool import DESCRIBE_SOURCE, RUN_SCRIPT, ScriptToolProvider
 
 pytestmark = pytest.mark.unit
 

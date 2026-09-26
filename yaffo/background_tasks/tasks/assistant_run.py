@@ -33,7 +33,7 @@ from yaffo.logging_config import get_logger
 from yaffo.site_agents.agent import create_assistant_agent
 from yaffo.site_agents.assistant import settings as assistant_settings
 from yaffo.site_agents.assistant.history import ROLE_USER, normalize_turns
-from yaffo.site_agents.assistant.prompt import build_assistant_user_message
+from yaffo.site_agents.assistant.prompt_generator.prompt import build_assistant_user_message
 from yaffo.site_agents.assistant.redact import redactor_for
 
 logger = get_logger(__name__, 'background_tasks')

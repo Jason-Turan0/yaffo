@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from yaffo.site_agents.assistant import fs as fs_module
-from yaffo.site_agents.assistant.fs import AssistantFS, FsError, FsTimeout, run_with_timeout
+from yaffo.site_agents.assistant.tool_providers.diagnostics import fs as fs_module
+from yaffo.site_agents.assistant.tool_providers.diagnostics.fs import AssistantFS, FsError, FsTimeout, run_with_timeout
 
 pytestmark = pytest.mark.unit
 

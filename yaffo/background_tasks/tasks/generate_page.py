@@ -32,7 +32,7 @@ from yaffo.i18n import DEFAULT_LOCALE, get_saved_locale
 from yaffo.logging_config import get_logger
 from yaffo.site_agents import llm_config
 from yaffo.site_agents.agent import create_page_builder_agent
-from yaffo.site_agents.prompt_generator import build_user_message
+from yaffo.site_agents.page.prompt_generator import build_user_message
 from yaffo.site_agents.serializers import widget_draft
 
 logger = get_logger(__name__, 'background_tasks')

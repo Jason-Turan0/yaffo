@@ -1,8 +1,8 @@
 """Health checks, one fixture per known incident."""
 import pytest
 
-from yaffo.site_agents.assistant import health
-from yaffo.site_agents.assistant.health import OK, PROBLEM, WARNING
+from yaffo.site_agents.assistant.tool_providers.diagnostics import health
+from yaffo.site_agents.assistant.tool_providers.diagnostics.health import OK, PROBLEM, WARNING
 
 pytestmark = pytest.mark.unit
 

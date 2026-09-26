@@ -15,11 +15,9 @@ from yaffo.site_agents.model_clients import (
     ToolCallResult,
     Usage,
 )
-from yaffo.site_agents.tool_providers import (
-    RawToolDefinition,
-    ToolProvider,
-    ToolResult,
-)
+from yaffo.site_agents.common.tool_providers.tool_provider_types import RawToolDefinition
+from yaffo.site_agents.common.tool_providers.tool_provider_types import ToolProvider
+from yaffo.site_agents.common.tool_providers.tool_provider_types import ToolResult
 
 pytestmark = pytest.mark.unit
 

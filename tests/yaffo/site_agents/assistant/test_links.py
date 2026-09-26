@@ -5,7 +5,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from yaffo.db import db
 from yaffo.db.models import Face, MediaItem, Person, PersonFace, FACE_STATUS_ASSIGNED
-from yaffo.site_agents.assistant.links import LINK_TO_PAGE, LINK_TO_PHOTOS, LinkToolProvider, gallery_url
+from yaffo.site_agents.assistant.tool_providers.links import LINK_TO_PAGE, LINK_TO_PHOTOS, LinkToolProvider, gallery_url
 
 pytestmark = pytest.mark.unit
 

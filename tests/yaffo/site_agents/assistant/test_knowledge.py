@@ -1,6 +1,6 @@
 import pytest
 
-from yaffo.site_agents.assistant.knowledge import DocSection, KnowledgeBase, knowledge_base, tokenize
+from yaffo.site_agents.assistant.tool_providers.knowledge.knowledge import DocSection, KnowledgeBase, knowledge_base, tokenize
 
 pytestmark = pytest.mark.unit
 

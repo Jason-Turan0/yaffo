@@ -1,7 +1,7 @@
 import pytest
 
 from yaffo.site_agents.assistant.history import normalize_turns
-from yaffo.site_agents.assistant.prompt import build_assistant_system_prompt, build_assistant_user_message
+from yaffo.site_agents.assistant.prompt_generator.prompt import build_assistant_system_prompt, build_assistant_user_message
 
 pytestmark = pytest.mark.unit
 

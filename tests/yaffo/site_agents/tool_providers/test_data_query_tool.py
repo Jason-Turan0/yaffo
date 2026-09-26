@@ -1,4 +1,4 @@
-"""Unit tests for the run_data_query tool (yaffo/site_agents/tool_providers/
+"""Unit tests for the run_data_query tool (yaffo/site_agents/common/tool_providers/
 data_query_tool.py).
 
 The tool previews real query results before the model writes a widget. For the
@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from yaffo.site_agents.tool_providers import data_query_tool
+from yaffo.site_agents.common.tool_providers import data_query_tool
 from yaffo.db.repositories.media_dir_repository import MediaDir
 
 pytestmark = pytest.mark.unit
@@ -25,7 +25,7 @@ def _patch(monkeypatch, target, fn):
 
 def _provider(monkeypatch, rows):
     """A provider whose resolver returns `rows` for any query (no DB)."""
-    _patch(monkeypatch, "yaffo.site_agents.tool_providers.data_query_tool.resolve_query",
+    _patch(monkeypatch, "yaffo.site_agents.common.tool_providers.data_query_tool.resolve_query",
            lambda session, args: rows)
     return data_query_tool.DataQueryToolProvider(session=object())
 
@@ -131,7 +131,7 @@ class TestCallToolContract:
         def _raise(session, args):
             raise ValueError("unknown source 'widgets'")
 
-        _patch(monkeypatch, "yaffo.site_agents.tool_providers.data_query_tool.resolve_query", _raise)
+        _patch(monkeypatch, "yaffo.site_agents.common.tool_providers.data_query_tool.resolve_query", _raise)
         provider = data_query_tool.DataQueryToolProvider(session=object())
 
         assert provider.call_tool("run_data_query", {"source": "widgets"}) == (

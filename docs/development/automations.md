@@ -332,7 +332,7 @@ package — formerly `page_builder` — that the page and theme builders also us
   (Conversation rows via `automation_id`), `set_status`, `write_working_code`,
   **`publish`** (working → published, `ACCEPTED`), `discard_draft`, `get_status`.
 - **Tools** — `write_automation_code`
-  (`site_agents/tool_providers/automation_tool.py`): parse-checks via
+  (`site_agents/automation/tool_providers/automation_tool.py`): parse-checks via
   `validate_starlark` and persists into `working_code`, returning syntax errors to
   the model to retry. And **`add_automation_trigger` / `remove_automation_trigger`**
   (`automation_trigger_tool.py`): the model decides *when* the automation runs (the
@@ -347,7 +347,7 @@ package — formerly `page_builder` — that the page and theme builders also us
   when the generation finishes, so the trigger changes show up then. The system
   prompt's `<triggers>` section tells the model to set up the triggers that fit the
   request.
-- **Prompts** — `prompt_generator/automation_system_prompt.py` (stable: language
+- **Prompts** — `automation/prompt_generator/automation_system_prompt.py` (stable: language
   rules, the `ctx` contract, the host API via `render_host_api()`, data sources via
   `FIELDS_BY_SOURCE` (incl. the FK join map from `source_catalog.relationship_summary()`,
   derived from the models), the `EVENTS` catalog — all *derived*, none restated — plus
@@ -868,8 +868,8 @@ accepts optional per-item positions for restoring removed membership.
 | System-automation config schema | `yaffo/background_tasks/automation_config.py` |
 | Seed examples | `yaffo/scripts/seed_automations.py` |
 | Builder persistence (publish/chat) | `yaffo/db/repositories/automation_repository.py` |
-| Builder tools (write-code + add-trigger) | `yaffo/site_agents/tool_providers/{automation_tool,automation_trigger_tool}.py` |
-| Builder prompts | `yaffo/site_agents/prompt_generator/automation_{system,user}_prompt.py` |
+| Builder tools (write-code + add-trigger) | `yaffo/site_agents/automation/tool_providers/{automation_tool,automation_trigger_tool}.py` |
+| Builder prompts | `yaffo/site_agents/automation/prompt_generator/automation_{system,user}_prompt.py` |
 | Builder agent + task | `yaffo/site_agents/agent.py`, `yaffo/background_tasks/tasks/generate_automation.py` |
 | UI routes | `yaffo/routes/utilities/automations.py` (+ `common.automations_sidebar_context`) |
 | UI templates / static | `yaffo/templates/utilities/{_base,automations,automations_triggers,automations_triggers_edit}.html`, `yaffo/static/utilities/{_base,automations}.{js,css}` |
