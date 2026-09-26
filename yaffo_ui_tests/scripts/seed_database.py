@@ -24,7 +24,6 @@ from yaffo.db.models import (
     Person,
     CLASSIFY_LABELS_DEFAULT_MAX,
     CLASSIFY_LABELS_DEFAULT_THRESHOLD,
-    FACE_STATUS_ASSIGNED,
     FACE_STATUS_IGNORED,
     FACE_STATUS_UNASSIGNED,
     MEDIA_STATUS_INDEXED,
@@ -212,7 +211,9 @@ def seed_bennett_face_assignments(
                 continue
             selected_paths = BENNETT_SEEDED_FACE_PATHS[person.name]
             if relative_path in selected_paths and relative_path not in assigned_paths[person.name]:
-                face.status = FACE_STATUS_ASSIGNED
+                # Left UNASSIGNED here: bulk_link_faces_to_people only takes unassigned,
+                # unlinked faces, and it marks the ones it links ASSIGNED itself.
+                face.status = FACE_STATUS_UNASSIGNED
                 links.append((person.id, face.id))
                 assigned_paths[person.name].add(relative_path)
             else:
@@ -232,7 +233,9 @@ def seed_bennett_face_assignments(
         details = "; ".join(missing + [f"unannotated detected face ids: {unmatched_detected}"])
         raise RuntimeError(f"Bennett face fixture no longer matches detection output: {details}")
 
-    bulk_link_faces_to_people(db.session, links)
+    linked = bulk_link_faces_to_people(db.session, links)
+    if linked != len(links):
+        raise RuntimeError(f"Bennett fixture linked {linked} of {len(links)} seeded faces")
     for person_name, _gender, _birthdate in BENNETT_PEOPLE:
         update_person_embedding(people_by_name[person_name].id, db.session)
 

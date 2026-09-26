@@ -48,7 +48,8 @@
         </div>
     </div>
 
-    <div class="job-message">{{ job.message.replace('{totalCount}', total_count|string).replace('{taskCount}', job.task_count|string) }}</div>
+    {# Some jobs (e.g. file sync runs) are created without a message. #}
+    <div class="job-message">{{ (job.message or '').replace('{totalCount}', total_count|string).replace('{taskCount}', job.task_count|string) }}</div>
 
     <div class="progress-bar-container">
         <div class="progress-bar" style="width: {{ progress }}%"></div>

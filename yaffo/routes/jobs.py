@@ -37,9 +37,10 @@ def init_jobs_routes(app: Flask):
 
         return render_template(
             "fragments/job_section_fragment.html",
-            active_jobs=active_jobs,
+            # The job card reads view properties (has_results, results_route), like the
+            # Index Photos and Remove Duplicates pages' cards.
+            active_jobs=[job.to_dict_with_view_props(has_results=has_results) for job in active_jobs],
             show_cancel=True,
-            has_results=has_results
         )
 
     @app.route("/jobs/<job_id>/status", methods=["GET"])

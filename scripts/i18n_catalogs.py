@@ -4,12 +4,13 @@ import argparse
 import importlib
 import json
 import re
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
 from babel.messages.catalog import Catalog, Message
 from babel.messages.pofile import read_po, write_po
-from deep_translator.exceptions import TranslationNotFound
+from deep_translator.exceptions import TooManyRequests, TranslationNotFound
 from tqdm import tqdm
 
 from yaffo.common import BUNDLE_ROOT
@@ -26,6 +27,12 @@ I18NEXT_PLACEHOLDER_RE = re.compile(r"{{\s*([\w.-]+)\s*}}")
 GETTEXT_PLACEHOLDER_RE = re.compile(r"%\(([\w.-]+)\)[#0 +\-]?\d*(?:\.\d+)?[a-zA-Z]")
 HTML_TAG_RE = re.compile(r"</?[^>]+>")
 BRACE_PLACEHOLDER_RE = re.compile(r"\{[\w.-]+\}")
+# Google Translate allows 5 requests/second; stay under it and back off when throttled.
+DEEP_TRANSLATOR_MIN_INTERVAL_SECONDS = 0.3
+DEEP_TRANSLATOR_MAX_RETRIES = 5
+# Rounds per batch before an entry whose translation keeps failing validation is skipped.
+TRANSLATION_MAX_ATTEMPTS = 3
+DEEP_TRANSLATOR_BACKOFF_SECONDS = 5.0
 DEEP_TRANSLATOR_TARGETS = {
     "ar": "ar",
     "de": "de",
@@ -319,11 +326,36 @@ def _translate_plain_text(value: str, translator, retry_count =0) -> str:
 
 
 
+class _ThrottledTranslator:
+    """Serializes calls to a deep-translator backend under its request-rate limit."""
+
+    def __init__(self, translator):
+        self._translator = translator
+        self._last_request = 0.0
+
+    def translate(self, value: str) -> str:
+        attempt = 0
+        while True:
+            wait = DEEP_TRANSLATOR_MIN_INTERVAL_SECONDS - (time.monotonic() - self._last_request)
+            if wait > 0:
+                time.sleep(wait)
+            self._last_request = time.monotonic()
+            try:
+                return self._translator.translate(value)
+            except TooManyRequests:
+                if attempt >= DEEP_TRANSLATOR_MAX_RETRIES:
+                    raise
+                backoff = DEEP_TRANSLATOR_BACKOFF_SECONDS * 2 ** attempt
+                logger.warning(f"Translation rate limited; retrying in {backoff:.0f}s")
+                time.sleep(backoff)
+                attempt += 1
+
+
 def _deep_translator(locale: str):
     from deep_translator import GoogleTranslator
 
     target = DEEP_TRANSLATOR_TARGETS.get(locale, locale)
-    return GoogleTranslator(source="en", target=target)
+    return _ThrottledTranslator(GoogleTranslator(source="en", target=target))
 
 
 def _translate_batch_with_deep_translator(
@@ -375,6 +407,8 @@ def _translate_batch_with_engine(
                 "You translate application UI text. Return only valid JSON with this shape: "
                 '{"translations":[{"id":"unchanged id","value":"translation or array"}]}. '
                 "Preserve every placeholder, HTML tag, and array shape exactly. "
+                "Every placeholder such as {{formattedCount}} must appear in the translation, "
+                "including singular plural forms; never replace a count placeholder with a word. "
                 "Do not translate product names, identifiers, or placeholders."
             ),
             providers=[],
@@ -429,14 +463,32 @@ def translate_missing(
     translated_values: dict[str, str | list[str]] = {}
     batches = [entries[i: i + batch_size] for i in range(0, len(entries), batch_size)]
     logger.info(f"Translating {len(batches)} batches for {locale}")
+    skipped: list[str] = []
     for batch in batches:
-        batch_values = _translate_batch_with_engine(batch, locale, engine=engine)
-        for entry in batch:
-            if entry.id not in batch_values:
-                raise ValueError(f"Model response omitted {entry.id}")
-            _validate_translation(entry, batch_values[entry.id])
-            translated_values[entry.id] = batch_values[entry.id]
-        logger.info(f"Translated {len(batch)} entries")
+        pending = batch
+        for attempt in range(TRANSLATION_MAX_ATTEMPTS):
+            batch_values = _translate_batch_with_engine(pending, locale, engine=engine)
+            rejected = []
+            for entry in pending:
+                try:
+                    if entry.id not in batch_values:
+                        raise ValueError(f"{entry.id}: response omitted this entry")
+                    _validate_translation(entry, batch_values[entry.id])
+                except ValueError as error:
+                    logger.warning(f"Rejected translation (attempt {attempt + 1}): {error}")
+                    rejected.append(entry)
+                    continue
+                translated_values[entry.id] = batch_values[entry.id]
+            pending = rejected
+            if not pending:
+                break
+        skipped.extend(entry.id for entry in pending)
+        logger.info(f"Translated {len(batch) - len(pending)} entries")
+    if skipped:
+        logger.warning(
+            f"Left {len(skipped)} {locale} entries untranslated; rerun to retry: {', '.join(skipped)}"
+        )
+    entries = [entry for entry in entries if entry.id in translated_values]
     if dry_run:
         return [f"{entry.id} = {translated_values[entry.id]}" for entry in entries]
 

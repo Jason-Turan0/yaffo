@@ -4,6 +4,11 @@ This page covers the most common problems and how to narrow them down. Many
 issues come down to indexing or background jobs, so it is worth checking those
 first.
 
+[Ask Yaffo](../start-here/ask-yaffo.md) can run these checks for you: describe the
+problem, or click **Ask Yaffo** on the error message or failed job. It reads the
+logs, jobs, and media folders, explains what it found, and proposes a fix you can
+approve.
+
 ## Photos Do Not Appear
 
 ![The Index Photos utility showing the diagnostic library counts](assets/troubleshooting/index-photos-status.webp)

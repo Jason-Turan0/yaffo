@@ -394,6 +394,8 @@
         "job_detail": "Looked at a job",
         "failed_tasks": "Looked at failed background tasks",
         "automation_runs": "Looked at runs of “{{slug}}”",
+        "automation_config": "Looked at the settings of “{{slug}}”",
+        "sharing_status": "Checked device sharing",
         "link_to_photos": "Made a link to “{{title}}”",
         "link_to_media_item": "Made a link to “{{title}}”",
         "link_to_page": "Made a link to “{{title}}”",

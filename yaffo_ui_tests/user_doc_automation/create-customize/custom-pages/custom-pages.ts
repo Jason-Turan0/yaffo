@@ -9,6 +9,7 @@ import type {Locator, Page} from "@playwright/test";
 import {defineWalkthrough} from "../../_support";
 
 const SEEDED_PAGE = "Florida Trip";
+const NAV_START = "/settings";
 const TEMP_TITLE = "Documentation Example";
 const GENERATED_VERSION_ID = 990001;
 const GENERATED_WIDGET_ID = "docsphotocount";
@@ -47,7 +48,7 @@ const waitForSeededWidgets = async (page: Page): Promise<void> => {
 };
 
 const deletePageById = async (page: Page, pageId: number): Promise<void> => {
-    const response = await page.request.get("/");
+    const response = await page.request.get(NAV_START);
     const html = await response.text();
     const csrfToken = html.match(/name="csrf_token" value="([^"]+)"/)?.[1];
     if (!csrfToken) throw new Error("Could not read a CSRF token for page cleanup");
@@ -65,7 +66,7 @@ export default defineWalkthrough({
     shots: {
         "custom-page-view.webp": {
             viewport: {width: 1400, height: 1500},
-            goto: "/",
+            goto: NAV_START,
             clip: ".page-presentation",
             setup: async (page) => {
                 await openSeededPage(page);
@@ -75,7 +76,7 @@ export default defineWalkthrough({
         },
         "custom-page-design.webp": {
             viewport: {width: 1400, height: 1200},
-            goto: "/",
+            goto: NAV_START,
             clip: ".page-design",
             setup: async (page) => {
                 await openSeededPage(page, true);
@@ -89,7 +90,7 @@ export default defineWalkthrough({
     flows: async ({page, visit}) => {
         let temporaryPageId: number | undefined;
         try {
-            await visit("/");
+            await visit(NAV_START);
             await Promise.all([
                 page.waitForURL(/\/pages\/\d+\/design$/, {waitUntil: "domcontentloaded"}),
                 page.locator(".nav-new-page").click(),

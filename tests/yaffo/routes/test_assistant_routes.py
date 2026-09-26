@@ -10,6 +10,7 @@ from yaffo.db import db
 from yaffo.db.models import ASSISTANT_STATUS_FAILED, ASSISTANT_STATUS_IDLE, ASSISTANT_STATUS_RUNNING, Job, MediaItem, Tag
 from yaffo.db.repositories import assistant_repository as repo
 from yaffo.routes.assistant import action_groups_layout, diagnostic_labels, switch_help
+from yaffo.site_agents import llm_config
 from yaffo.site_agents.assistant import settings as assistant_settings
 from yaffo.site_agents.assistant.tool_providers.script_tool import RUN_SCRIPT, ScriptToolProvider
 
@@ -180,9 +181,9 @@ def test_settings_section_and_switches(client):
     client.post("/settings/assistant/enabled", data={"enabled": "on"})
     assert assistant_settings.is_enabled() is True
 
-    model = client.post("/settings/assistant/model", data={"model": "claude-sonnet-4-6"})
+    model = client.post("/settings/assistant/model", data={"model": "claude-haiku-4-5-20251001"})
     assert model.status_code == 404
-    assert assistant_settings.resolve_model() == "claude-haiku-4-5-20251001"
+    assert assistant_settings.resolve_model() == llm_config.DEFAULT_MODEL
 
 
 def test_demo_mode_hides_the_assistant(app, client, runs, with_key):

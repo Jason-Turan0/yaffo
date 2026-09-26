@@ -9,7 +9,7 @@
   default; high-risk ones (files on disk) are off until the user turns them on.
 - `assistant_confirm_threshold`: above this many items, Approve also asks the user
   to confirm the count. 500 by default.
-The model is automatically the cheapest model of the AI Generation provider.
+The model is the one selected under AI Generation, like the page and theme builders.
 """
 from __future__ import annotations
 
@@ -125,17 +125,9 @@ def set_confirm_threshold(count: int) -> None:
     _set(CONFIRM_THRESHOLD_SETTING, str(max(1, min(int(count), MAX_CONFIRM_THRESHOLD))))
 
 
-def default_model(session: Optional[Session] = None) -> str:
-    """The cheapest model (by output price) of the AI Generation provider."""
-    provider_id = llm_config.selected_model_provider(session)
-    candidates = [m for m in providers.models() if m.provider_id == provider_id]
-    if not candidates:
-        return llm_config.get_model(session)
-    return min(candidates, key=lambda m: (m.pricing.output, m.pricing.input)).id
-
-
 def resolve_model(session: Optional[Session] = None) -> str:
-    return default_model(session)
+    """The model selected under AI Generation; the assistant has no model of its own."""
+    return llm_config.get_model(session)
 
 
 def model_label(session: Optional[Session] = None) -> str:

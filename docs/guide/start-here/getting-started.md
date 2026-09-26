@@ -120,6 +120,8 @@ Once your first photos are indexed, Yaffo can help you:
 - Use automatic labels such as `dog`, `beach`, `wedding`, or your own custom
   labels.
 - Create custom pages from your photo library.
+- Ask questions, troubleshoot problems, and make changes in plain words with
+  Ask Yaffo.
 
 ## Next Steps
 
@@ -127,5 +129,6 @@ Once your first photos are indexed, Yaffo can help you:
 - [Faces & People](../organize-review/faces-and-people.md)
 - [Finding Duplicates](../organize-review/duplicates.md)
 - [Custom Pages](../create-customize/custom-pages.md)
+- [Ask Yaffo](ask-yaffo.md)
 - [Settings Reference](../reference-maintenance/settings.md)
 - [Uninstalling Yaffo](../reference-maintenance/uninstalling.md)

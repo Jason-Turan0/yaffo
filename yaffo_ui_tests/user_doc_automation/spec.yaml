@@ -54,6 +54,21 @@ pages:
     also_depends_on:
       - yaffo/db/models.py    # the entities the glossary names
 
+  start-here/ask-yaffo:
+    covers: >-
+      The built-in assistant: opening it (panel, full page, conversations),
+      contextual Ask Yaffo on errors and failed jobs, how-to answers with
+      sources, library questions answered by scripts, links and open buttons,
+      troubleshooting checks and their activity lines, change cards (approve,
+      decline, large and on-disk confirmations, expiry, undo), what it can change
+      by default, what is sent to the AI provider, and what it won't do.
+    walkthrough: true
+    also_depends_on:
+      - yaffo/background_tasks/automation_sandbox/automation_host.py  # what it can change
+      - yaffo/site_agents/assistant/prompt_generator/prompt.py        # what it can check
+      - yaffo/site_agents/assistant/redact.py                         # what is sent
+      - yaffo/site_agents/assistant/plans.py                          # expiry, confirmations, undo
+
   library-basics/indexing-library:
     covers: >-
       The whole indexing lifecycle: adding media folders, scanning, syncing new
