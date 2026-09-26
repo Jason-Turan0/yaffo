@@ -290,16 +290,21 @@ def create_assistant_agent(
     model_label: str = "",
     log_dir: Optional[Path] = None,
     max_iterations: int = _MAX_ITERATIONS,
+    conversation_id: Optional[int] = None,
+    actions: frozenset[str] = frozenset(),
 ) -> Agent:
     """Wire the in-app assistant: the docs tools (search_docs / read_doc over the
     bundled knowledge), plus the read-only diagnostic tools for the enabled
     `diagnostics` groups and, with the library group, run_script and the link
-    tools. The system prompt
-    matches the tools offered. The conversation's earlier turns (normalized (role,
+    tools. `actions` are the library changes switched on in Settings; with a
+    `conversation_id`, run_script records them as change plans for that
+    conversation. The system prompt matches the tools and changes offered. The conversation's earlier turns (normalized (role,
     text) pairs) are seeded into the client. `model` and `api_key` are required —
     the caller resolves them from the assistant settings; `session` is required
     when any diagnostics group is enabled."""
     providers: list[ToolProvider] = [KnowledgeToolProvider()]
+    if DIAG_LIBRARY not in diagnostics or conversation_id is None:
+        actions = frozenset()
     if diagnostics:
         if session is None:
             raise ValueError("Diagnostics need a database session")
@@ -307,11 +312,12 @@ def create_assistant_agent(
         providers.append(DiagnosticsToolProvider(
             session, groups=diagnostics, redactor=redactor, model_label=model_label))
         if DIAG_LIBRARY in diagnostics:
-            providers.append(ScriptToolProvider(session, redactor=redactor))
+            providers.append(ScriptToolProvider(
+                session, redactor=redactor, conversation_id=conversation_id, actions=actions))
             providers.append(LinkToolProvider(session))
     client = create_model_client(
         model=model,
-        system_prompt=build_assistant_system_prompt(diagnostics),
+        system_prompt=build_assistant_system_prompt(diagnostics, actions),
         log_feature="assistant",
         log_dir=log_dir, persistent_log=log_dir is not None,
         providers=providers,

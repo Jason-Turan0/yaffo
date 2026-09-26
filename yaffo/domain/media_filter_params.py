@@ -12,6 +12,10 @@ Values are keyed by `key` (the name apply_media_filters and the templates'
 sharing peer's list_files request (None when the parameter isn't sent: the
 proximity radius travels converted, as `proximity_km`).
 
+A parameter with `panel=False` has no control in the filter panel: it arrives
+only in a URL (the assistant's links), is kept in pagination links, and is left
+out of the configurator and the locations map's in-browser filtering.
+
 Driven from here: the filter panel's parsing and links (routes/filter_panel.py),
 the sharing request both ways (routes/sharing.py, p2p/handlers/sharing.py), the
 locations map's in-browser filtering (static/filters/client_filter.js, through
@@ -65,6 +69,8 @@ class FilterParam:
     # Only qualifies another filter (a match type: any/all of the people). It
     # doesn't narrow anything by itself, so it never counts as an applied filter.
     modifier: bool = False
+    # False for a URL-only parameter with no filter-panel control (see above).
+    panel: bool = True
 
 
 MEDIA_FILTER_PARAMS: tuple[FilterParam, ...] = (
@@ -97,6 +103,9 @@ MEDIA_FILTER_PARAMS: tuple[FilterParam, ...] = (
     FilterParam("favorite", "favorite", FLAG, "Only favorites.", wire="favorite"),
     FilterParam("media-type", "media_type", STR, "'photo' or 'video'.", choices=(MEDIA_TYPE_PHOTO, MEDIA_TYPE_VIDEO), wire="media_type"),
     FilterParam("shape", "shape", STR, "Orientation as displayed.", choices=tuple(SHAPES), wire="shape"),
+    # Ids are local to this library, so they never go to a sharing peer.
+    FilterParam("item", "media_item_ids", INT_LIST,
+                "Specific photos/videos by media item id, e.g. the ids a script found.", panel=False),
 )
 
 _BY_KEY = {p.key: p for p in MEDIA_FILTER_PARAMS}
@@ -295,8 +304,10 @@ def selections_from_wire(filters: Mapping[str, Any]) -> dict[str, Any]:
 
 def client_filter_config() -> dict[str, Any]:
     """What static/filters/client_filter.js needs to read the filter form the
-    way the server does: each parameter's form name, key, kind, allowed values
-    and default, plus kilometers per distance unit."""
+    way the server does: each parameter's form name, key, kind, allowed values,
+    default and whether it only qualifies another filter (so it isn't counted),
+    plus kilometers per distance unit. URL-only parameters have no form field and
+    are left out; a page hands those to the browser itself."""
     return {
         "params": [
             {
@@ -305,8 +316,9 @@ def client_filter_config() -> dict[str, Any]:
                 "kind": param.kind,
                 "choices": list(param.choices) if param.choices is not None else None,
                 "default": param.default,
+                "modifier": param.modifier,
             }
-            for param in MEDIA_FILTER_PARAMS
+            for param in MEDIA_FILTER_PARAMS if param.panel
         ],
         "kilometers_per_unit": {
             unit: kilometers_per_unit(unit) for unit in (DISTANCE_UNIT_KILOMETERS, DISTANCE_UNIT_MILES)

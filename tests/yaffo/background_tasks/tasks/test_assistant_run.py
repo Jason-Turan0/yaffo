@@ -43,9 +43,11 @@ def agent_factory(monkeypatch):
     def install(events, api_key="key", model="claude-haiku-4-5-20251001"):
         agent = ScriptedAgent(events)
 
-        def create(*, model, api_key, history, session=None, diagnostics=frozenset(), redactor=None, model_label="", log_dir=None):
+        def create(*, model, api_key, history, session=None, diagnostics=frozenset(), redactor=None, model_label="",
+                   log_dir=None, conversation_id=None, actions=frozenset()):
             calls.update(model=model, api_key=api_key, history=history, diagnostics=diagnostics,
-                         redactor=redactor, model_label=model_label)
+                         redactor=redactor, model_label=model_label, conversation_id=conversation_id,
+                         actions=actions)
             return agent
 
         monkeypatch.setattr(run_module, "create_assistant_agent", create)

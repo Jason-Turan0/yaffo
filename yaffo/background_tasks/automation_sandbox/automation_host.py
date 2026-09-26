@@ -15,12 +15,13 @@ from copy import deepcopy
 from typing import get_type_hints, get_origin, get_args, Annotated
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_sandbox import automation_actions as actions
 from yaffo.background_tasks.automation_sandbox import automation_compare as compare
+from yaffo.background_tasks.automation_sandbox import maintenance_actions as maintenance
 from yaffo.background_tasks.automation_sandbox import undo
 from yaffo.background_tasks.automation_sandbox.host_types import HostCall, reference, resolve_references
 
@@ -88,8 +89,11 @@ class HostFunction:
     risk: str = "low"
     undo: Callable[[list[Any], Session], list[HostCall] | None] | None = None
     precondition: Callable[[list[Any], Session], str | None] | None = None
-    uses_network: bool = False
     setting_key: str | None = None
+    # Returns a Job id: the work goes on in the background after the step "ran".
+    # `job_page` is the endpoint where that job shows up, if any.
+    starts_job: bool = False
+    job_page: str | None = None
 
     def __post_init__(self) -> None:
         if not self.profiles or not self.profiles <= {"automation", "assistant"}:
@@ -371,6 +375,158 @@ HOST_API: tuple[HostFunction, ...] = (
         undo=undo.set_media_dates,
     ),
     HostFunction(
+        description=(
+            "Create a person (with no faces yet), or return the id of the existing person with "
+            "that name. IDEMPOTENT on the name. Assign faces to the id with assign_faces."
+        ),
+        example='person_id = create_person("Chase")',
+        impl=actions.create_person,
+        profiles=frozenset({"automation", "assistant"}),
+        risk="low",
+        setting_key="assistant_action_create_person",
+        undo=undo.create_person,
+        summarize=actions.summarize_create_person,
+        mutating=True,
+    ),
+    HostFunction(
+        description=(
+            "Rename a person. The name must not belong to another person (merge_people them "
+            "instead). The new name is written into their photos' files by export automations."
+        ),
+        example='rename_person(person_id, "Chase Smith")',
+        impl=actions.rename_person,
+        profiles=frozenset({"automation", "assistant"}),
+        risk="low",
+        setting_key="assistant_action_rename_person",
+        undo=undo.rename_person,
+        precondition=undo.person_exists,
+        summarize=actions.summarize_rename_person,
+        mutating=True,
+    ),
+    HostFunction(
+        description=(
+            "Merge two people who are the same person: every face of the source moves to the "
+            "target, and the source is deleted. Can't be undone."
+        ),
+        example="merge_people(duplicate_id, person_id)",
+        impl=actions.merge_people,
+        profiles=frozenset({"automation", "assistant"}),
+        risk="high",
+        setting_key="assistant_action_merge_people",
+        precondition=undo.people_exist,
+        summarize=actions.summarize_merge_people,
+        mutating=True,
+    ),
+    HostFunction(
+        description=(
+            "Delete a person. Their faces become unassigned (the photos stay). Can't be undone."
+        ),
+        example="delete_person(person_id)",
+        impl=actions.delete_person,
+        profiles=frozenset({"automation", "assistant"}),
+        risk="high",
+        setting_key="assistant_action_delete_person",
+        precondition=undo.person_exists,
+        summarize=actions.summarize_delete_person,
+        mutating=True,
+    ),
+    # ---- maintenance (assistant only) ----
+    HostFunction(
+        description=(
+            "Turn an automation on or off by its slug (settings_summary lists every automation). "
+            "Only the switch changes, never its code or settings."
+        ),
+        example='set_automation_enabled("file-sync", False)',
+        impl=maintenance.set_automation_enabled,
+        profiles=frozenset({"assistant"}),
+        risk="low",
+        setting_key="assistant_action_set_automation_enabled",
+        undo=maintenance.undo_set_automation_enabled,
+        precondition=maintenance.automation_exists,
+        summarize=maintenance.summarize_set_automation_enabled,
+        mutating=True,
+    ),
+    HostFunction(
+        description=(
+            "Queue the files of a failed or cancelled import/index job again (job ids from "
+            "recent_jobs). Files already indexed are skipped. Starts a background job."
+        ),
+        example="retry_job(job_id)",
+        impl=maintenance.retry_job,
+        profiles=frozenset({"assistant"}),
+        risk="low",
+        setting_key="assistant_action_retry_job",
+        precondition=maintenance.job_retryable,
+        summarize=maintenance.summarize_retry_job,
+        mutating=True,
+        starts_job=True,
+        job_page="utilities_index_photos",
+    ),
+    HostFunction(
+        description=(
+            "Scan the media folders against the index in the background: files not indexed yet, "
+            "and indexed items whose file is gone. Changes nothing. Read the result from the "
+            "job's message (job_detail) once it has finished."
+        ),
+        example="start_library_scan()",
+        impl=maintenance.start_library_scan,
+        profiles=frozenset({"assistant"}),
+        risk="low",
+        setting_key="assistant_action_start_library_scan",
+        precondition=maintenance.library_scannable,
+        summarize=maintenance.summarize_start_library_scan,
+        mutating=True,
+        starts_job=True,
+    ),
+    HostFunction(
+        description=(
+            "Index items again from their files (e.g. after a failed or wrong index). Their faces "
+            "are detected again, so person assignments on them are removed. Starts a background job."
+        ),
+        example="reindex_media([r[\"id\"] for r in rows])",
+        impl=maintenance.reindex_media,
+        profiles=frozenset({"assistant"}),
+        risk="medium",
+        setting_key="assistant_action_reindex_media",
+        precondition=maintenance.thumbnails_configured,
+        summarize=maintenance.summarize_reindex_media,
+        mutating=True,
+        starts_job=True,
+        job_page="utilities_index_photos",
+    ),
+    HostFunction(
+        description=(
+            "Fix faces in inconsistent states (see face_consistency): linked to a person but not "
+            "assigned, stuck processing, or ignored but still linked (the link is removed)."
+        ),
+        example="repair_face_statuses()",
+        impl=maintenance.repair_face_statuses,
+        profiles=frozenset({"assistant"}),
+        risk="medium",
+        setting_key="assistant_action_repair_face_statuses",
+        precondition=maintenance.faces_need_repair,
+        summarize=maintenance.summarize_repair_face_statuses,
+        mutating=True,
+    ),
+    HostFunction(
+        description=(
+            "Sync the library with the media folders in the background, like Index Photos → Sync: "
+            "index new files and remove items whose files are gone. Refused when it would remove "
+            "more than a small share of the library (usually a disconnected drive). Starts a "
+            "background job; the job's message says what it did."
+        ),
+        example="run_sync()",
+        impl=maintenance.run_sync,
+        profiles=frozenset({"assistant"}),
+        risk="medium",
+        setting_key="assistant_action_run_sync",
+        precondition=maintenance.library_syncable,
+        summarize=maintenance.summarize_run_sync,
+        mutating=True,
+        starts_job=True,
+        job_page="utilities_index_photos",
+    ),
+    HostFunction(
         impl=actions.set_location_names,
         description='Set per-item location names (or null). Optional expected skips later edits.',
         example='set_location_names([{"id": 1, "location_name": "Yellowstone"}])',
@@ -416,6 +572,15 @@ def host_api(profile: str = "automation") -> tuple[HostFunction, ...]:
 
 
 _HOST_BY_NAME = {fn.name: fn for fn in HOST_API}
+
+
+def host_function(name: str, profile: str = "automation") -> HostFunction:
+    """The HostFunction `name` in `profile`; unknown names and functions outside the
+    profile raise, so a stored call can't reach anything the profile doesn't bind."""
+    fn = _HOST_BY_NAME.get(name)
+    if fn is None or profile not in fn.profiles:
+        raise ValueError(f"Unknown host function: {name}")
+    return fn
 
 
 def summarize_call(call: HostCall, session: Session, mutations: list[HostCall] | None = None) -> str:
@@ -477,11 +642,16 @@ def build_recording_host_functions(
     return {fn.name: record(fn) for fn in host_api(profile)}, calls
 
 
-def render_host_api(profile: str = "automation", *, include_mutating: bool = True) -> str:
+def render_host_api(
+    profile: str = "automation", *, include_mutating: bool = True, mutations: Optional[frozenset[str]] = None,
+) -> str:
     """The host API as agent-facing docs for the automation system prompt -- one
     block per callable. Single source with build_host_functions, so the advertised
     API can't drift from what the sandbox actually provides. `include_mutating=False`
-    documents only the read-only functions (for a caller that binds only those)."""
+    documents only the read-only functions (for a caller that binds only those);
+    `mutations` narrows the mutating ones to those names (the assistant binds only
+    the changes switched on in Settings)."""
+    include_mutating = include_mutating and mutations != frozenset()
     blocks: list[str] = []
     if include_mutating:
         blocks.append(
@@ -491,7 +661,7 @@ def render_host_api(profile: str = "automation", *, include_mutating: bool = Tru
         )
     blocks.append("data_query returns at most 5,000 rows per call. Runs have time, call and output limits.")
     for fn in host_api(profile):
-        if fn.mutating and not include_mutating:
+        if fn.mutating and (not include_mutating or (mutations is not None and fn.name not in mutations)):
             continue
         blocks.append(
             f"{fn.signature}\n"

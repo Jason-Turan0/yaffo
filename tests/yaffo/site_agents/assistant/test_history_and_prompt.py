@@ -101,3 +101,33 @@ def test_the_latest_messages_context_is_not_repeated_in_history():
     from yaffo.site_agents.assistant.history import transcript_turns
     events = _events((0, "user", "Why did this fail?", {"context": {"job_id": "job-7"}}))
     assert transcript_turns(events, frozenset(), str) == [("user", "Why did this fail?")]
+
+
+def test_plan_decisions_are_replayed_as_app_recorded_data():
+    from yaffo.site_agents.assistant.history import transcript_turns
+    events = _events(
+        (0, "user", "Tag the trip", None),
+        (1, "assistant", "Here's a plan; approve it on the card.", None),
+        (2, "plan", "The user approved plan #3; step 1 failed: /Users/alex/<x>.jpg", {"plan_id": 3, "status": "PARTIAL"}),
+        (3, "user", "Did it work?", None),
+    )
+    redact = lambda text: text.replace("/Users/alex", "~")
+    turns = transcript_turns(events, frozenset(), redact)
+
+    assert [role for role, _ in turns] == ["user", "assistant", "user"]
+    assert turns[1][1].endswith(
+        '<plan_update plan="3" status="PARTIAL">The user approved plan #3; step 1 failed: ~/&lt;x&gt;.jpg</plan_update>')
+
+
+def test_changes_block_needs_scripts_and_lists_only_enabled_changes():
+    actions = frozenset({"tag_media_items", "create_album"})
+    prompt = build_assistant_system_prompt(frozenset({"library"}), actions)
+    assert "<changes>" in prompt and "<plan_update>" in prompt
+    assert "tag_media_items(tags)" in prompt and "create_album(" in prompt
+    assert "delete_media_items" not in prompt and "untag_media_items" not in prompt
+    assert "$ref" in prompt
+    assert "can't change anything in the app or the library" not in prompt
+
+    assert "<changes>" not in build_assistant_system_prompt(frozenset({"logs"}), actions)
+    read_only = build_assistant_system_prompt(frozenset({"library"}), frozenset())
+    assert "<changes>" not in read_only and "Scripts can only read" in read_only

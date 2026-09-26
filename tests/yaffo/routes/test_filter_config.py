@@ -82,13 +82,14 @@ class TestSharedLayout:
 
 
 def test_every_filter_parameter_belongs_to_exactly_one_control():
-    """The configurator's controls cover the filter table: nothing unowned (it
-    would have no control) and nothing owned twice."""
+    """The configurator's controls cover the filter table's panel parameters:
+    nothing unowned (it would have no control) and nothing owned twice. URL-only
+    parameters (panel=False, e.g. the assistant's exact media ids) have none."""
     owners = {}
     for control in fc.FILTERS:
         for key in control.params:
             owners.setdefault(key, []).append(control.key)
-    assert {p.key for p in MEDIA_FILTER_PARAMS} == set(owners)
+    assert {p.key for p in MEDIA_FILTER_PARAMS if p.panel} == set(owners)
     assert {key: keys for key, keys in owners.items() if len(keys) > 1} == {}
 
 
@@ -110,6 +111,8 @@ def test_each_control_template_renders_the_parameters_it_owns():
     ("page=2&view=grid&shape=round", 0),  # page state, and an invalid value
     ("view=grid&favorite=true&person=1&person=2&page=1", 2),  # an on/off filter spelled true
     ("favorite=0", 0),  # off
+    ("item=3&item=4", 1),  # exact media ids: no control, counted as one filter
+    ("item=3&year=2020&person=1", 3),
 ])
 def test_badge_counts_filter_controls(query, expected):
     assert fc.applied_count(MultiDict(parse_qsl(query))) == expected

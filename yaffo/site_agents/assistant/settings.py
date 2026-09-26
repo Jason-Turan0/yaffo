@@ -4,6 +4,11 @@
 - `assistant_diag_<group>`: what the assistant may look at (logs, library, files,
   jobs). On by default; all off means knowledge-only. Capture-date metadata is
   a separate, off-by-default group.
+- `assistant_action_<host function>`: which library changes a script may propose
+  (the HostFunction's `setting_key`). Low- and medium-risk changes are on by
+  default; high-risk ones (files on disk) are off until the user turns them on.
+- `assistant_confirm_threshold`: above this many items, Approve also asks the user
+  to confirm the count. 500 by default.
 The model is automatically the cheapest model of the AI Generation provider.
 """
 from __future__ import annotations
@@ -12,6 +17,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
+from yaffo.background_tasks.automation_sandbox.automation_host import HostFunction, host_api
 from yaffo.db import db
 from yaffo.db.models import ApplicationSettings
 from yaffo.runtime_mode import reject_in_demo
@@ -27,6 +33,10 @@ DIAG_FILES = "files"
 DIAG_JOBS = "jobs"
 DIAG_METADATA = "metadata"
 DIAGNOSTIC_GROUPS = (DIAG_LOGS, DIAG_LIBRARY, DIAG_FILES, DIAG_JOBS, DIAG_METADATA)
+
+CONFIRM_THRESHOLD_SETTING = "assistant_confirm_threshold"
+DEFAULT_CONFIRM_THRESHOLD = 500
+MAX_CONFIRM_THRESHOLD = 1_000_000
 
 
 def _diag_setting(group: str) -> str:
@@ -71,6 +81,48 @@ def enabled_diagnostics(session: Optional[Session] = None) -> frozenset[str]:
 def set_diagnostics_enabled(group: str, enabled: bool) -> None:
     reject_in_demo("Assistant settings changes")
     _set(_diag_setting(group), "true" if enabled else "false")
+
+
+def action_functions() -> tuple[HostFunction, ...]:
+    """The library changes the assistant may propose: the assistant profile's
+    mutating host functions, in HOST_API order."""
+    return tuple(fn for fn in host_api("assistant") if fn.mutating)
+
+
+def _action(name: str) -> HostFunction:
+    fn = next((fn for fn in action_functions() if fn.name == name), None)
+    if fn is None:
+        raise ValueError(f"Unknown assistant action: {name}")
+    return fn
+
+
+def action_enabled(name: str, session: Optional[Session] = None) -> bool:
+    fn = _action(name)
+    value = _get(session or db.session, fn.setting_key)
+    return value == "true" if fn.risk == "high" else value != "false"
+
+
+def enabled_actions(session: Optional[Session] = None) -> frozenset[str]:
+    session = session or db.session
+    return frozenset(fn.name for fn in action_functions() if action_enabled(fn.name, session))
+
+
+def set_action_enabled(name: str, enabled: bool) -> None:
+    reject_in_demo("Assistant settings changes")
+    _set(_action(name).setting_key, "true" if enabled else "false")
+
+
+def confirm_threshold(session: Optional[Session] = None) -> int:
+    value = _get(session or db.session, CONFIRM_THRESHOLD_SETTING)
+    try:
+        return max(1, min(int(value), MAX_CONFIRM_THRESHOLD)) if value is not None else DEFAULT_CONFIRM_THRESHOLD
+    except ValueError:
+        return DEFAULT_CONFIRM_THRESHOLD
+
+
+def set_confirm_threshold(count: int) -> None:
+    reject_in_demo("Assistant settings changes")
+    _set(CONFIRM_THRESHOLD_SETTING, str(max(1, min(int(count), MAX_CONFIRM_THRESHOLD))))
 
 
 def default_model(session: Optional[Session] = None) -> str:

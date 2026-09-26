@@ -3,11 +3,13 @@ from dataclasses import dataclass
 from datetime import date
 
 import numpy as np
-from sqlalchemy import insert, text
+from sqlalchemy import insert, select, text
 from sqlalchemy.orm import Session
 import pydash as _
 from yaffo.db.models import (
     FACE_STATUS_ASSIGNED,
+    FACE_STATUS_IGNORED,
+    FACE_STATUS_PROCESSING,
     FACE_STATUS_UNASSIGNED,
     Face,
     Person,
@@ -156,6 +158,73 @@ def existing_person_ids(session: Session, person_ids: list[int]) -> set[int]:
         chunk = unique[start:start + _LINK_CHUNK]
         found.update(row[0] for row in session.query(Person.id).filter(Person.id.in_(chunk)).all())
     return found
+
+
+def get_person_by_name(session: Session, name: str) -> Person | None:
+    return session.query(Person).filter(Person.name == name).first()
+
+
+def count_person_faces(session: Session, person_id: int) -> int:
+    return session.query(PersonFace).filter(PersonFace.person_id == person_id).count()
+
+
+def create_person(session: Session, name: str) -> Person:
+    """A new person with no faces. The caller checks the name is free."""
+    person = Person(name=name)
+    session.add(person)
+    session.commit()
+    return person
+
+
+def rename_person(session: Session, person_id: int, name: str) -> None:
+    """Rename a person. Names are unique among people; a clash raises ValueError."""
+    name = (name or "").strip()
+    if not name:
+        raise ValueError("A person's name can't be empty")
+    clash = session.query(Person.id).filter(Person.name == name, Person.id != person_id).first()
+    if clash is not None:
+        raise ValueError(f"Another person is already named '{name}'")
+    person = session.get(Person, person_id)
+    if person is None:
+        raise ValueError(f"Person {person_id} not found")
+    person.name = name
+    session.commit()
+
+
+def delete_person(session: Session, person_id: int) -> list[int]:
+    """Delete a person: their faces go back to UNASSIGNED, their links and
+    embeddings go with them. Returns the ids of the photos those faces are on; the
+    caller emits the media-modified event if it wants the files rewritten."""
+    person = session.get(Person, person_id)
+    if person is None:
+        return []
+    media_item_ids = get_media_item_ids_for_person(session, person_id)
+    face_ids = [face_id for (face_id,) in
+                session.query(PersonFace.face_id).filter(PersonFace.person_id == person_id).all()]
+    for start in range(0, len(face_ids), _LINK_CHUNK):
+        session.query(Face).filter(Face.id.in_(face_ids[start:start + _LINK_CHUNK])).update(
+            {Face.status: FACE_STATUS_UNASSIGNED}, synchronize_session=False)
+    session.query(PersonFace).filter(PersonFace.person_id == person_id).delete(synchronize_session=False)
+    session.delete(person)  # cascades the stage embeddings
+    session.commit()
+    return media_item_ids
+
+
+def merge_people(session: Session, source_person_id: int, target_person_id: int) -> list[int]:
+    """Move every face of the source person to the target, delete the source, and
+    rebuild the target's embeddings (which rescores all its faces). Returns the ids
+    of the photos whose people changed."""
+    if source_person_id == target_person_id:
+        raise ValueError("Can't merge a person into themselves")
+    if session.get(Person, source_person_id) is None or session.get(Person, target_person_id) is None:
+        raise ValueError("Both people must exist to merge them")
+    media_item_ids = get_media_item_ids_for_person(session, source_person_id)
+    session.query(PersonFace).filter(PersonFace.person_id == source_person_id).update(
+        {PersonFace.person_id: target_person_id, PersonFace.similarity: None}, synchronize_session=False)
+    session.delete(session.get(Person, source_person_id))
+    session.commit()
+    update_person_embedding(target_person_id, session)
+    return media_item_ids
 
 
 def get_media_item_ids_for_person(session: Session, person_id: int) -> list[int]:
@@ -387,6 +456,75 @@ def clear_faces(session: Session, face_ids: list[int]) -> ClearedFaces:
         media_item_ids=sorted({media for _face, media, _person in rows if media is not None}),
         person_ids=person_ids,
     )
+
+
+@dataclass(frozen=True)
+class FaceStatusProblems:
+    """Faces in states no current code path produces (the health check's face
+    consistency): linked to a person but not ASSIGNED, stuck PROCESSING, or
+    IGNORED but still linked."""
+    linked_not_assigned: int
+    processing_linked: int
+    processing_unlinked: int
+    ignored_linked: int
+
+    @property
+    def total(self) -> int:
+        return self.linked_not_assigned + self.processing_linked + self.processing_unlinked + self.ignored_linked
+
+
+def _linked_face_ids():
+    return select(PersonFace.face_id)
+
+
+def face_status_problems(session: Session) -> FaceStatusProblems:
+    linked = _linked_face_ids()
+
+    def count(*criteria) -> int:
+        return session.query(Face.id).filter(*criteria).count()
+
+    return FaceStatusProblems(
+        linked_not_assigned=count(Face.status == FACE_STATUS_UNASSIGNED, Face.id.in_(linked)),
+        processing_linked=count(Face.status == FACE_STATUS_PROCESSING, Face.id.in_(linked)),
+        processing_unlinked=count(Face.status == FACE_STATUS_PROCESSING, Face.id.notin_(linked)),
+        ignored_linked=count(Face.status == FACE_STATUS_IGNORED, Face.id.in_(linked)),
+    )
+
+
+def repair_face_statuses(session: Session, *, include_processing: bool) -> tuple[FaceStatusProblems, list[int]]:
+    """Migrations 009 and 010 as a function: linked faces become ASSIGNED; a
+    PROCESSING face becomes ASSIGNED if linked, else UNASSIGNED; an IGNORED face
+    loses its person link (the ignore is the later, deliberate choice).
+
+    PROCESSING is only repaired with `include_processing`: at runtime a queued
+    assign task may legitimately hold faces PROCESSING, so the caller passes False
+    while such tasks are queued or running. Returns what was repaired and the photos
+    whose people changed (the unlinked IGNORED faces'); the people who lost those
+    faces get their embeddings rebuilt."""
+    problems = face_status_problems(session)
+    if not include_processing:
+        problems = FaceStatusProblems(problems.linked_not_assigned, 0, 0, problems.ignored_linked)
+    linked = _linked_face_ids()
+    session.query(Face).filter(Face.status == FACE_STATUS_UNASSIGNED, Face.id.in_(linked)).update(
+        {Face.status: FACE_STATUS_ASSIGNED}, synchronize_session=False)
+    if include_processing:
+        session.query(Face).filter(Face.status == FACE_STATUS_PROCESSING, Face.id.in_(linked)).update(
+            {Face.status: FACE_STATUS_ASSIGNED}, synchronize_session=False)
+        session.query(Face).filter(Face.status == FACE_STATUS_PROCESSING).update(
+            {Face.status: FACE_STATUS_UNASSIGNED}, synchronize_session=False)
+    ignored = (
+        session.query(PersonFace.face_id, PersonFace.person_id, Face.media_item_id)
+        .join(Face, Face.id == PersonFace.face_id)
+        .filter(Face.status == FACE_STATUS_IGNORED)
+        .all()
+    )
+    if ignored:
+        session.query(PersonFace).filter(PersonFace.face_id.in_([face_id for face_id, _, _ in ignored])).delete(
+            synchronize_session=False)
+    session.commit()
+    for person_id in sorted({person_id for _, person_id, _ in ignored}):
+        update_person_embedding(person_id, session)
+    return problems, sorted({media_item_id for _, _, media_item_id in ignored if media_item_id is not None})
 
 
 def update_person_embedding(person_id: int, session):

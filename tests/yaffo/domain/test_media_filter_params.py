@@ -134,3 +134,14 @@ def test_js_fixture_matches_the_table():
 def test_on_off_filters_accept_common_spellings_in_the_url(raw, expected):
     values = fp.parse_filter_params(MultiDict([("favorite", raw), ("unnamed", raw)]))
     assert values["favorite"] == expected and values["unnamed"] == expected
+
+
+def test_exact_item_ids_are_url_only():
+    """No panel control, no in-browser filtering, never sent to a sharing peer."""
+    values = fp.parse_filter_params(MultiDict([("item", "3"), ("item", "x"), ("item", "5")]))
+    assert values["media_item_ids"] == [3, 5]
+    assert fp.filter_query_params(values)["item"] == [3, 5]
+    assert fp.media_filter_selections(values, "km")["media_item_ids"] == [3, 5]
+    assert "media_item_ids" not in fp.wire_filters(values, "km")
+    assert "item" not in {p["param"] for p in fp.client_filter_config()["params"]}
+    assert "media_item_ids" in fp.filters_json_schema()["properties"]

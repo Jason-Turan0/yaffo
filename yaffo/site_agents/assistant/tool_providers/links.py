@@ -3,7 +3,9 @@
 - link_to_photos: the gallery with filters applied (people, year, location, …),
   built from the same filter table the filter panel uses
   (domain/media_filter_params.py), so every filter the panel has, the assistant
-  has, with the same names and validation.
+  has, with the same names and validation. It can also name exact items
+  (media_item_ids, a URL-only filter), e.g. the ones a script found. The same
+  filters open on the locations map with page="map" (it applies them on load).
 - link_to_page: any page in the app (a person's faces, an album, one photo,
   Settings, an automation, …), from the page table built off the Flask routes
   (app_pages.py).
@@ -50,7 +52,12 @@ LINK_TO_PHOTOS = "link_to_photos"
 LINK_TO_PAGE = "link_to_page"
 LINK_TO_FILE = "link_to_file"
 MAX_TITLE_CHARS = 80
+# Exact items one link may name; each is a querystring value, so this keeps the URL short.
+MAX_LINK_ITEMS = 500
 GALLERY_ENDPOINT = "index"
+MAP_ENDPOINT = "locations_list"
+PAGE_GALLERY = "gallery"
+PAGE_MAP = "map"
 
 # Page parameters that name a record, checked to exist before linking.
 _RECORD_FOR_ARGUMENT = {
@@ -71,6 +78,11 @@ _PHOTOS_SCHEMA = {
         "title": _TITLE,
         "filters": filters_json_schema(),
         "view": {"type": "string", "enum": list(LIBRARY_VIEWS), "description": "Gallery layout; omit to keep the user's."},
+        "page": {
+            "type": "string", "enum": [PAGE_GALLERY, PAGE_MAP],
+            "description": "'gallery' (default), or 'map' for the locations map, which shows only the "
+                           "matching items that have GPS coordinates.",
+        },
     },
     "required": ["title", "filters"],
     "additionalProperties": False,
@@ -123,21 +135,38 @@ def _page_catalog() -> str:
     return "\n".join(lines)
 
 
-def gallery_url(values: dict[str, Any], view: Optional[str] = None) -> str:
-    """The gallery with these filter values (by key). Empty values and defaults
-    are left out, since the gallery fills them in."""
+def _set_params(values: dict[str, Any]) -> dict[str, Any]:
+    """Filter values (by key) as querystring parameters, leaving out empty values
+    and defaults, since the page fills them in."""
     defaults = {param.param: param.default for param in MEDIA_FILTER_PARAMS}
-    params = {
+    return {
         name: value for name, value in filter_query_params(values).items()
         if value not in (None, [], "") and value != defaults[name]
     }
+
+
+def gallery_url(values: dict[str, Any], view: Optional[str] = None) -> str:
+    """The gallery with these filter values (by key)."""
+    params = _set_params(values)
     if view in LIBRARY_VIEWS:
         params["view"] = view
     return page_url(GALLERY_ENDPOINT, params)
 
 
+def map_url(values: dict[str, Any]) -> str:
+    """The locations map with these filter values (by key)."""
+    return page_url(MAP_ENDPOINT, _set_params(values))
+
+
 def _title(args: dict) -> str:
     return " ".join(str(args.get("title") or "").split())[:MAX_TITLE_CHARS]
+
+
+def _skipped(missing_items: list[int]) -> str:
+    if not missing_items:
+        return ""
+    more = "…" if len(missing_items) > 20 else ""
+    return f" {len(missing_items)} of the media_item_ids don't exist and were ignored: {missing_items[:20]}{more}."
 
 
 def _missing_ids(session: Session, model: Any, ids: list[int]) -> list[int]:
@@ -157,7 +186,9 @@ class LinkToolProvider(ToolProvider):
                 LINK_TO_PHOTOS,
                 "Give the user a link to the photo gallery filtered to what they asked about (people, "
                 "dates, places, labels, tags, favorites, …). Returns how many items match. Use ids from "
-                "run_script or data_query results; the link appears under your answer.",
+                "run_script or data_query results; the link appears under your answer. To show exactly the "
+                f"items a script found, pass their ids as media_item_ids (at most {MAX_LINK_ITEMS}); other "
+                "filters then narrow within them. With page='map' the same filters open on the locations map.",
                 _PHOTOS_SCHEMA,
             ),
             RawToolDefinition(
@@ -190,16 +221,32 @@ class LinkToolProvider(ToolProvider):
         raw_filters = args.get("filters")
         filters: dict[str, Any] = raw_filters if isinstance(raw_filters, dict) else {}
         values, errors = filter_values_from_json(filters)
+        item_ids = list(dict.fromkeys(values.get("media_item_ids") or []))
+        values["media_item_ids"] = item_ids
+        if len(item_ids) > MAX_LINK_ITEMS:
+            errors.append(f"media_item_ids can list at most {MAX_LINK_ITEMS} items (got {len(item_ids)}); "
+                          "narrow with other filters, or make several links")
+        missing_items = _missing_ids(self.session, MediaItem, item_ids) if not errors else []
+        if item_ids and len(missing_items) == len(item_ids):
+            errors.append("none of the media_item_ids exist")
+        # Unknown ids are dropped from the link; dropping them all would link the whole
+        # library, hence the error above.
+        values["media_item_ids"] = [i for i in item_ids if i not in missing_items]
         missing_people = _missing_ids(self.session, Person, values.get("person_ids", []))
         missing_labels = _missing_ids(self.session, ClassificationLabel, values.get("label_ids", []))
         if missing_people:
             errors.append(f"no people with ids {missing_people}")
         if missing_labels:
             errors.append(f"no labels with ids {missing_labels}")
+        on_map = args.get("page") == PAGE_MAP
+        if on_map and args.get("view"):
+            errors.append("the map has no view; leave it out")
         if errors:
             return self._result(LINK_TO_PHOTOS, title, None, "Couldn't build the link: " + "; ".join(errors) + ".")
 
         selections = media_filter_selections(values, get_saved_distance_unit(self.session))
+        if on_map:
+            return self._map_link(title, values, selections, missing_items)
         count = apply_media_filters(self.session, self.session.query(MediaItem), selections).count()
         if count == 0:
             return self._result(
@@ -210,8 +257,28 @@ class LinkToolProvider(ToolProvider):
         return self._result(
             LINK_TO_PHOTOS, title, url,
             f"Link ready ({count} item(s) match). It's shown under your answer as “{title}”; "
-            "don't repeat the URL.",
+            f"don't repeat the URL.{_skipped(missing_items)}",
             count=count)
+
+    def _map_link(self, title: str, values: dict[str, Any], selections: dict[str, Any],
+                  missing_items: list[int]) -> ToolResult:
+        """The map only shows items with coordinates, so the count is of those."""
+        matching = apply_media_filters(self.session, self.session.query(MediaItem), selections)
+        total = matching.count()
+        placed = matching.filter(MediaItem.latitude.isnot(None), MediaItem.longitude.isnot(None)).count()
+        if placed == 0:
+            reason = "None of the matching items have GPS coordinates" if total else "No items match these filters"
+            return self._result(
+                LINK_TO_PHOTOS, title, None,
+                f"{reason}, so nothing would show on the map and no link was made."
+                + (" Offer a gallery link instead." if total else ""), count=0)
+        unplaced = total - placed
+        note = f" {unplaced} matching item(s) have no GPS coordinates and won't appear on the map." if unplaced else ""
+        return self._result(
+            LINK_TO_PHOTOS, title, map_url(values),
+            f"Map link ready ({placed} item(s) on the map). It's shown under your answer as “{title}”; "
+            f"don't repeat the URL.{note}{_skipped(missing_items)}",
+            count=placed)
 
     def _page(self, args: dict) -> ToolResult:
         endpoint = str(args.get("page") or "")

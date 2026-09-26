@@ -11,6 +11,8 @@
         <p class="assistant-conversation-empty" id="assistant-conversation-empty" hidden>
             {{ _("No conversations yet.") }}
         </p>
+        <button type="button" class="btn-danger btn-sm assistant-delete-all" id="assistant-delete-all"
+                data-icon="delete" disabled>{{ _("Delete all conversations") }}</button>
     </nav>
     {{ assistant_panel(page=true) }}
 </div>

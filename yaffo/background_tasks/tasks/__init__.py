@@ -21,6 +21,7 @@ from yaffo.background_tasks.tasks.run_automation import run_automation_code_task
 from yaffo.background_tasks.tasks.generate_automation import generate_automation_task
 from yaffo.background_tasks.tasks.assign_faces_to_person import assign_faces_to_person
 from yaffo.background_tasks.tasks.assistant_run import assistant_run_task
+from yaffo.background_tasks.tasks.library_scan import library_scan_task
 
 # Re-export utilities for backward compatibility
 from yaffo.background_tasks.utils import (
@@ -55,6 +56,7 @@ __all__ = [
     'generate_automation_task',
     'assign_faces_to_person',
     'assistant_run_task',
+    'library_scan_task',
     # Utilities (for backward compatibility)
     'get_job_status',
     'get_version_status',

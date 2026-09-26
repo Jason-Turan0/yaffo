@@ -80,7 +80,6 @@ shared chat dialog (`templates/components/chat_dialog.html`).
   ("tag these 212 photos 'Yellowstone'"), renders as a card showing:
   - what will happen, in plain language (from `summarize`)
   - how many items it affects, and what kind (photos, faces, people, albums)
-  - whether it goes online (rare; see *Network access*)
   - whether it can be undone
   - **Approve** and **Decline** buttons. Higher-risk changes need more than a
     click; see *Mutating host functions*.
@@ -215,13 +214,6 @@ server's `summarize`, never from the model.
 │ Type 38 to confirm: [____]                           │
 │                           [ Decline ] [ Move to trash]│
 └──────────────────────────────────────────────────────┘
-
- GOES ONLINE (uses_network)
-┌──────────────────────────────────────────────────────┐
-│ Look up place names for 17 photos                    │
-│ 🌐 Sends their GPS coordinates to OpenStreetMap      │
-│                            [ Decline ] [ Approve ]   │
-└──────────────────────────────────────────────────────┘
 ```
 
 **5. Contextual entry: help with an error.** The context shows up as a removable
@@ -353,9 +345,6 @@ routes/assistant.py ──► assistant_run (taskq task) ──► Agent loop
 - **One capability list.** New host functions (e.g. `set_favorite`) benefit
   automations and the assistant at once. The system prompt is generated from
   `render_host_api()`, so the docs the model sees can't drift from the code.
-- **Promote to automation.** A plan the user liked can be saved as a custom
-  automation ("do this for every new import"), because it's already a sandbox
-  script.
 
 **Trade-offs, accepted:**
 
@@ -399,7 +388,7 @@ Implemented in `background_tasks/automation_sandbox/`:
    are shared; `report_progress` stays automation-only. The knowledge-only
    assistant still receives no script tool.
 4. **Change-plan metadata.** `HostFunction` carries `risk`, `undo`, `precondition`,
-   `uses_network`, and `setting_key`. Assistant mutations require a setting key.
+   and `setting_key`. Assistant mutations require a setting key.
    File rename/move/trash are high risk; album deletion is medium risk. The replay
    and approval layer that enforces those settings is phase 4, not built here.
 5. **Undo building blocks.** Capture callbacks return `HostCall` inverses before a
@@ -924,6 +913,8 @@ if a host function in that profile matches this list:
 - editing automation, widget or theme code (hand off to the builders)
 - permanent deletion that bypasses the OS trash
 - any function taking a free-form filesystem path, raw SQL, or code
+- anything that goes online (e.g. looking up place names with OpenStreetMap; see
+  *Network access*)
 
 ## Filesystem access (`AssistantFS`)
 
@@ -971,18 +962,12 @@ Everything else is off-limits:
 - **No P2P.** Nothing in the assistant can reach the sharing hub or a paired device.
   Explaining sharing is fine; performing it is on the never-offered list.
 
-**Indirect network use through approved actions.** A few existing app features go
-online in normal use. Today, among library edits, that's only reverse geocoding
-(`utils/reverse_geocode.py` → OpenStreetMap Nominatim), used when looking up place
-names. The other network code (asset downloads, P2P signaling) isn't reachable
-from any assistant host function. A host function whose code path goes online:
-
-- is marked `uses_network=True` on its `HostFunction`
-- has its card say so ("looks up place names online via OpenStreetMap")
-- has its own switch in Settings
-
-`set_location_name` takes a name the user or model supplies, so it does **not** use
-the network. A future "look up place names for these photos" action would.
+**No action goes online.** Approved changes run entirely on this computer. The
+app features that go online in normal use (reverse geocoding with OpenStreetMap
+Nominatim, asset downloads, P2P signaling) aren't reachable from any assistant host
+function, and none will be added: a host function whose code path reaches the
+network doesn't belong in the `assistant` profile. `set_location_names` takes names
+the user or model supplies, so it stays offline.
 
 **Enforcement.** This is built in, not added later as a firewall:
 
@@ -990,10 +975,10 @@ the network. A future "look up place names for these photos" action would.
   HTTP or socket library (`requests`, `httpx`, `urllib.request`, `socket`, `aiohttp`).
   The only allowed network code is the existing model clients.
 - A test runs the docs tools, every diagnostic tool, every read host function in
-  the `assistant` profile while `socket.socket.connect` is patched to raise.
-  Replay tests for future mutations with `uses_network=False` belong to phase 4.
-- A `HOST_API` test asserts `uses_network` is set for any host function whose impl
-  reaches `reverse_geocode`.
+  the `assistant` profile, and approving and undoing plans with its mutating host
+  functions, while `socket.socket.connect` is patched to raise.
+- A `HOST_API` test fails if any host function in the `assistant` profile reaches
+  `reverse_geocode`.
 - Starlark itself is hermetic (no I/O, no imports), so a script can reach nothing
   except the host functions bound into it.
 
@@ -1139,7 +1124,6 @@ Planned endpoints, not implemented:
 | `GET /api/assistant/conversations/<id>/events?after=<seq>` | Incremental NDJSON event delivery |
 | `POST /api/assistant/plans/<id>/approve` / `decline` | Approve replay of recorded steps or decline a plan |
 | `POST /api/assistant/plans/<id>/undo` | Replay captured inverse steps in reverse order |
-| `POST /api/assistant/plans/<id>/save-as-automation` | Seed an automation draft with the plan's script |
 
 All state-changing routes use the existing CSRF protection. Every user-facing string
 goes through gettext/i18next, per *Internationalization Standards*.
@@ -1157,7 +1141,6 @@ provider, model and key):
   - Low-risk library edits and maintenance actions are on by default.
   - High-risk ones (deleting to the trash, moving or renaming files, merging or
     deleting people) are off until the user turns them on.
-  - Actions marked `uses_network` have their own switch.
   - The count above which Approve also asks the user to confirm the count
     (default 500) is configurable.
 - **Delete all conversations** (with confirmation). There's no automatic
@@ -1233,7 +1216,7 @@ The approval, mutation, replay, and undo cases below are requirements for phase 
    - Host API profiles.
    - Reference tokens for mutating returns in preview.
    - The change-plan fields on `HostFunction` (`risk`, `precondition`,
-     `undo`, `uses_network`, `setting_key`), and the undo inverses
+     `undo`, `setting_key`), and the undo inverses
      (`untag_media_items`, `unassign_faces`, the value-restoring batch setters).
 3. **Scripts and diagnostics — implemented** (see *Scripts and diagnostics
    (phase 3)* for behavior and limits).
@@ -1256,7 +1239,6 @@ The approval, mutation, replay, and undo cases below are requirements for phase 
      dates, people), then `retry_job`, `start_library_scan` and `reindex_media`.
    - Then the medium-risk functions, and finally the high-risk ones behind their
      off-by-default switches and typed confirmation.
-   - Save a plan's script as an automation draft.
 5. **Polish.**
    - The diagnostics bundle export, troubleshooting runbooks in the guide, and
      cost display from the call log. The conversation list already exists.
@@ -1286,8 +1268,5 @@ Settled during review (2026-09-25):
 
 - **Sending an image** to the model ("why wasn't this face detected?"). It would
   need per-message explicit consent and a vision-capable model.
-- **Recurring edits from the assistant.** "Save as automation" hands a plan's
-  script to the automation builder as a draft. Triggers, schedules and publishing
-  stay in the builder rather than being duplicated here.
 - **Remote issue filing.** For now the diagnostics bundle is saved locally and the
   user decides where it goes.

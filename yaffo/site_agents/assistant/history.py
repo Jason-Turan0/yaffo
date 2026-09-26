@@ -5,7 +5,7 @@ import json
 from collections.abc import Callable
 from xml.sax.saxutils import escape
 
-from yaffo.db.models import ASSISTANT_EVENT_ASSISTANT, ASSISTANT_EVENT_USER, AssistantEvent
+from yaffo.db.models import ASSISTANT_EVENT_ASSISTANT, ASSISTANT_EVENT_PLAN, ASSISTANT_EVENT_USER, AssistantEvent
 from yaffo.site_agents.assistant.prompt_generator.prompt import CONTEXT_FIELDS
 from yaffo.site_agents.assistant.tool_providers.diagnostics.diagnostics import tool_names
 from yaffo.site_agents.assistant.settings import DIAG_LIBRARY
@@ -56,12 +56,22 @@ def _historical_context(event: AssistantEvent, redact: Callable[[str], str]) -> 
     return f"<historical_context>{escape('; '.join(fields))}</historical_context>"
 
 
+def _plan_update(event: AssistantEvent, redact: Callable[[str], str]) -> str:
+    """What the user did with a change plan and what ran, recorded by the app. Never
+    trimmed by the evidence budget: the model must not believe a declined plan ran."""
+    plan_id = _payload(event).get("plan_id")
+    status = _payload(event).get("status")
+    return (f'<plan_update plan="{escape(str(plan_id))}" status="{escape(str(status))}">'
+            f"{escape(redact(event.content))}</plan_update>")
+
+
 def transcript_turns(events: list[AssistantEvent], groups: frozenset[str],
                      redact: Callable[[str], str]) -> list[tuple[str, str]]:
     """Replay bounded historical evidence as quoted data, never as new tool calls.
 
     Recheck enabled groups and redaction so disabling a diagnostic group stops
-    its old raw results from being resent on follow-up turns. Earlier messages keep
+    its old raw results from being resent on follow-up turns. Plan decisions
+    (approved, declined, undone, expired) are replayed as <plan_update> data. Earlier messages keep
     the context attached to them; the latest message's context is sent with that
     turn instead (build_assistant_user_message), so it isn't repeated here.
     """
@@ -99,6 +109,8 @@ def transcript_turns(events: list[AssistantEvent], groups: frozenset[str],
             turns.append((event.kind, f"{event.content}\n\n{context}" if context else event.content))
         elif event.kind in _ROLE_FOR_KIND:
             turns.append((event.kind, event.content))
+        elif event.kind == ASSISTANT_EVENT_PLAN:
+            turns.append((ROLE_ASSISTANT, _plan_update(event, redact)))
         elif event.seq in evidence:
             turns.append((ROLE_ASSISTANT, evidence[event.seq]))
     return normalize_turns(turns)

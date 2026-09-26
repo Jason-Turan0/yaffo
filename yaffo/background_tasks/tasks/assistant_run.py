@@ -2,7 +2,8 @@
 
 The messages route records the user's message, marks the conversation RUNNING,
 and enqueues this task. It replays the earlier turns, runs the assistant agent
-(docs tools, plus the diagnostics the user enabled in Settings), and appends each assistant reply, tool call, and error to the
+(docs tools, plus the diagnostics and library changes the user enabled in
+Settings; changes are only recorded as plans to approve), and appends each assistant reply, tool call, and error to the
 transcript as it happens, then settles the conversation to IDLE (or FAILED). The
 browser follows the run by polling the conversation, so it survives a closed
 dialog or a page change.
@@ -112,6 +113,8 @@ def run_assistant_turn(
             diagnostics=diagnostics,
             redactor=redactor,
             model_label=f"{assistant_settings.provider_label(session)} · {assistant_settings.model_label(session)}",
+            conversation_id=conversation_id,
+            actions=assistant_settings.enabled_actions(session),
         )
         for event in agent.run_events(user_message, should_cancel=should_cancel):
             if event.type == "cancelled" or should_cancel():

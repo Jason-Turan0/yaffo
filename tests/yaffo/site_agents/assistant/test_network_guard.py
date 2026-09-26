@@ -3,6 +3,9 @@
 1. No module in site_agents/assistant imports an HTTP or socket library.
 2. The docs tools, every diagnostic tool, and run_script (with every read host
    function of the assistant profile) work with socket connections blocked.
+3. Approving and undoing change plans with every library change opens no
+   connection either, and no host function the assistant gets can reach reverse
+   geocoding (the one network path among library features).
 """
 import ast
 import inspect
@@ -14,10 +17,16 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from yaffo.background_tasks.automation_sandbox import automation_actions, maintenance_actions
 from yaffo.background_tasks.automation_sandbox.automation_host import host_api
 from yaffo.db import db
-from yaffo.db.models import ApplicationSettings, MediaItem, Person
+from yaffo.db.models import (
+    FACE_STATUS_PROCESSING, FACE_STATUS_UNASSIGNED, PLAN_STATUS_UNDONE, ApplicationSettings, Automation, Face,
+    MediaItem, Person,
+)
+from yaffo.db.repositories import assistant_repository
 from yaffo.site_agents import assistant
+from yaffo.site_agents.assistant import plans
 from yaffo.site_agents.assistant.tool_providers.diagnostics import diagnostics as diag
 from yaffo.site_agents.assistant.tool_providers.diagnostics.diagnostics import TOOLS, DiagnosticsToolProvider
 from yaffo.site_agents.assistant.tool_providers.diagnostics.fs import AssistantFS
@@ -126,9 +135,78 @@ def test_every_tool_runs_offline(session, offline, monkeypatch):
         assert result.host_data["error"] is False, result.model_text
 
 
-def test_host_functions_calling_reverse_geocode_declare_uses_network():
-    """Reverse geocoding (OpenStreetMap) is the only network path among library
-    edits; a host function that calls it must say so."""
+def test_no_assistant_host_function_can_reach_reverse_geocode():
+    """Reverse geocoding (OpenStreetMap) is the network path among library
+    features; nothing the assistant can call may reach it. Checked at the module
+    level, so a helper next to an impl counts too."""
     for fn in host_api("assistant"):
-        if "reverse_geocode" in inspect.getsource(fn.impl):
-            assert fn.uses_network, fn.name
+        module = inspect.getmodule(fn.impl)
+        assert "reverse_geocode" not in inspect.getsource(module), (fn.name, module.__name__)
+
+
+# One call to every offline, non-file library change in the assistant profile.
+OFFLINE_CHANGES = """
+album = create_album("Trip")
+add_to_album(album, [1])
+update_album(album, "Trip 2")
+remove_from_album(album, [1])
+tag_media_items([{"media_item_id": 1, "name": "beach"}])
+untag_media_items([{"media_item_id": 1, "name": "beach"}])
+assign_faces([{"face_id": 1, "person_id": 1}])
+unassign_faces([{"face_id": 1}])
+set_favorites([{"id": 1, "favorite": True}])
+set_media_dates([{"id": 1, "date": "2020-01-02T03:04:05"}])
+set_location_names([{"id": 1, "location_name": "Coast"}])
+person = create_person("Bea")
+rename_person(person, "Bea Smith")
+set_automation_enabled("offline-test", True)
+"""
+
+
+def test_approving_and_undoing_a_plan_runs_offline(session, offline, monkeypatch):
+    session, _ = session
+    monkeypatch.setattr(automation_actions, "emit_event", lambda *args: None)
+    monkeypatch.setattr(maintenance_actions, "face_tasks_active", lambda: False)
+    session.add_all([Face(id=1, media_item_id=1, status=FACE_STATUS_UNASSIGNED),
+                     Face(id=2, media_item_id=1, status=FACE_STATUS_PROCESSING),
+                     Automation(slug="offline-test", name="Offline test", enabled=False)])
+    session.commit()
+    # Background work (retry, reindex, scan, sync) only queues a task here; the
+    # tasks do local file work when they run.
+    offline_changes = {fn.name for fn in host_api("assistant")
+                       if fn.mutating and fn.risk != "high" and not fn.starts_job}
+    reversible = {fn.name for fn in host_api("assistant") if fn.name in offline_changes and fn.undo}
+    conversation = assistant_repository.create_conversation(session, "Offline")
+    scripts = ScriptToolProvider(session, conversation_id=conversation.id, actions=frozenset(offline_changes))
+
+    result = scripts.call_tool(RUN_SCRIPT, {"code": OFFLINE_CHANGES, "purpose": "Every change"})
+    plan = assistant_repository.get_plan(session, result.host_data["plan_id"])
+    assert {step.name for step in plans.load_steps(plan)} == reversible
+
+    plans.approve(session, plan.id, conversation.id)
+    assert [step.state for step in plans.load_steps(plan)] == ["done"] * len(plans.load_steps(plan))
+    plans.undo(session, plan.id, conversation.id)
+    assert plan.status == PLAN_STATUS_UNDONE and plan.error is None
+
+    # The offline changes without an undo, approved on their own.
+    code = 'delete_album(create_album("Gone"))\nrepair_face_statuses()'
+    assert {"delete_album", "repair_face_statuses"} | reversible == offline_changes
+    result = scripts.call_tool(RUN_SCRIPT, {"code": code, "purpose": "Delete"})
+    plans.approve(session, result.host_data["plan_id"], conversation.id)
+
+
+def test_merging_and_deleting_people_runs_offline(session, offline, monkeypatch):
+    session, _ = session
+    monkeypatch.setattr(automation_actions, "emit_event", lambda *args: None)
+    session.add_all([Person(id=2, name="Al"), Person(id=3, name="Gone"),
+                     ApplicationSettings(name="assistant_action_merge_people", type="string", value="true"),
+                     ApplicationSettings(name="assistant_action_delete_person", type="string", value="true")])
+    session.commit()
+    conversation = assistant_repository.create_conversation(session, "People")
+    scripts = ScriptToolProvider(session, conversation_id=conversation.id,
+                                 actions=frozenset({"merge_people", "delete_person"}))
+
+    result = scripts.call_tool(RUN_SCRIPT, {"code": "merge_people(2, 1)\ndelete_person(3)", "purpose": "People"})
+    plans.approve(session, result.host_data["plan_id"], conversation.id, confirm_count=1)
+
+    assert {p.id for p in session.query(Person)} == {1}

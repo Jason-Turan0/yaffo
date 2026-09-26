@@ -1,13 +1,16 @@
 """Routes for the in-app assistant (docs/development/ai-assistant.md).
 
 A turn is started here and answered by assistant_run_task in the background; the
-chat UI polls the conversation until the run settles. Everything 404s when the
-assistant is turned off in Settings, and in demo mode.
+chat UI polls the conversation until the run settles. Change plans a run recorded
+are approved, declined and undone here: approval replays the frozen calls in this
+request (plans.py). Everything 404s when the assistant is turned off in Settings,
+and in demo mode.
 """
 from __future__ import annotations
 
 import json
 import subprocess
+from dataclasses import dataclass
 
 from flask import Flask, abort, jsonify, make_response, render_template, request
 from flask_babel import gettext
@@ -18,6 +21,7 @@ from yaffo.db import db
 from yaffo.db.models import ASSISTANT_EVENT_USER, ASSISTANT_STATUS_IDLE, ASSISTANT_STATUS_RUNNING
 from yaffo.db.repositories import assistant_repository as repo
 from yaffo.runtime_mode import demo_mode_enabled
+from yaffo.site_agents.assistant import plans
 from yaffo.site_agents.assistant import settings as assistant_settings
 from yaffo.site_agents.assistant.file_targets import SHOW_FOLDER, FileTarget, TargetError, resolve_target
 from yaffo.site_agents.assistant.run_queue import run_queue_status
@@ -28,7 +32,9 @@ from yaffo.site_agents.assistant.schemas import (
     ConversationSummary,
     ConversationsDeleted,
     AssistantNotice,
+    PlanDecided,
     conversation_status,
+    plan_view,
 )
 from yaffo.utils.context import context
 from yaffo.utils.open_in_os import open_in_os
@@ -109,14 +115,161 @@ def _get_conversation_or_404(conversation_id: int):
     return conversation
 
 
+@dataclass(frozen=True)
+class SettingSwitch:
+    """One checkbox in Settings → Assistant: a short label, with any explanation
+    in `help` (an info tip beside it). `irreversible` marks a change that can't be
+    undone (no undo, and it changes something)."""
+    name: str
+    label: str
+    on: bool
+    irreversible: bool = False
+    help: str | None = None
+
+
+@dataclass(frozen=True)
+class ActionGroup:
+    """The changes the assistant may propose that touch one kind of thing."""
+    key: str
+    title: str
+    switches: list[SettingSwitch]
+
+    @property
+    def on_count(self) -> int:
+        return sum(1 for switch in self.switches if switch.on)
+
+
+def switch_help() -> dict[str, str]:
+    """Info tips for the switches whose short label needs explaining."""
+    return {
+        assistant_settings.DIAG_METADATA: gettext(
+            "Reads a photo's capture date from its file when checking a date problem, never the image itself."),
+        "delete_album": gettext("The photos in the album stay in your library."),
+        "delete_person": gettext("Their faces become unassigned; the photos stay in your library."),
+        "reindex_media": gettext("Their faces are detected again, so people assigned to them are removed."),
+        "unassign_faces": gettext(
+            "Takes a face off the person it's assigned to, e.g. a wrong match. The face goes back to "
+            "Unassigned Faces; the photo and the person stay."),
+        "merge_people": gettext(
+            "Combines two people who are really the same person: every face of one moves to the other, "
+            "and the emptied one is deleted."),
+        "repair_face_statuses": gettext(
+            "Fixes faces whose status doesn't match their person link: assigned to someone but still listed "
+            "as unassigned, stuck mid-assignment, or ignored but still linked (the link is removed). "
+            "Nothing is re-detected."),
+        "run_sync": gettext(
+            "Compares the media folders with the library: indexes new files and removes items whose file "
+            "is gone. Refused if it would remove a large share of the library, which usually means a "
+            "drive isn't connected."),
+    }
+
+
+def diagnostic_labels() -> dict[str, str]:
+    return {
+        assistant_settings.DIAG_LOGS: gettext("Logs"),
+        assistant_settings.DIAG_LIBRARY: gettext("Library contents"),
+        assistant_settings.DIAG_FILES: gettext("Media folders"),
+        assistant_settings.DIAG_JOBS: gettext("Background jobs"),
+        assistant_settings.DIAG_METADATA: gettext("Capture-date metadata"),
+    }
+
+
+def action_groups_layout() -> list[tuple[str, str, dict[str, str]]]:
+    """(key, title, {action: label}) for each group of changes, in the order
+    Settings shows them. Every assistant action belongs to exactly one group
+    (tests/yaffo/routes/test_assistant_routes.py)."""
+    return [
+        ("tags", gettext("Tags and favorites"), {
+            "tag_media_items": gettext("Add tags"),
+            "untag_media_items": gettext("Remove tags"),
+            "set_favorites": gettext("Mark favorites"),
+        }),
+        ("albums", gettext("Albums"), {
+            "create_album": gettext("Create albums"),
+            "update_album": gettext("Rename albums"),
+            "add_to_album": gettext("Add photos to albums"),
+            "remove_from_album": gettext("Remove photos from albums"),
+            "delete_album": gettext("Delete albums"),
+        }),
+        ("people", gettext("People and faces"), {
+            "assign_faces": gettext("Assign faces to people"),
+            "unassign_faces": gettext("Unassign faces"),
+            "create_person": gettext("Create people"),
+            "rename_person": gettext("Rename people"),
+            "merge_people": gettext("Merge people"),
+            "delete_person": gettext("Delete people"),
+            "repair_face_statuses": gettext("Repair faces"),
+        }),
+        ("dates", gettext("Dates and places"), {
+            "set_media_dates": gettext("Change capture dates"),
+            "set_location_names": gettext("Change location names"),
+        }),
+        ("files", gettext("Files on disk"), {
+            "rename_files": gettext("Rename files"),
+            "move_media_items": gettext("Move files to other folders"),
+            "delete_media_items": gettext("Move photos to the system trash"),
+        }),
+        ("upkeep", gettext("Library upkeep"), {
+            "run_sync": gettext("Sync the library"),
+            "start_library_scan": gettext("Scan for new and missing files"),
+            "retry_job": gettext("Retry failed import and index jobs"),
+            "reindex_media": gettext("Re-index items"),
+            "set_automation_enabled": gettext("Turn automations on or off"),
+        }),
+    ]
+
+
+# Changes without an undo that still change nothing: no "can't be undone" tag.
+_READ_ONLY_ACTIONS = frozenset({"start_library_scan"})
+
+
+def action_groups() -> list[ActionGroup]:
+    enabled = assistant_settings.enabled_actions()
+    functions = {fn.name: fn for fn in assistant_settings.action_functions()}
+    help_text = switch_help()
+    return [
+        ActionGroup(key=key, title=title, switches=[
+            SettingSwitch(
+                name=name, label=label, on=name in enabled,
+                irreversible=functions[name].undo is None and name not in _READ_ONLY_ACTIONS,
+                help=help_text.get(name),
+            )
+            for name, label in labels.items() if name in functions
+        ])
+        for key, title, labels in action_groups_layout()
+    ]
+
+
 def assistant_settings_context() -> dict:
     """The Settings → Assistant section's data."""
     enabled = assistant_settings.enabled_diagnostics()
     return {
         "enabled": assistant_settings.is_enabled(),
-        "conversation_count": repo.count_conversations(db.session),
-        "diagnostics": {group: group in enabled for group in assistant_settings.DIAGNOSTIC_GROUPS},
+        "diagnostics": [
+            SettingSwitch(name=group, label=label, on=group in enabled, help=switch_help().get(group))
+            for group, label in diagnostic_labels().items()
+        ],
+        "action_groups": action_groups(),
+        "confirm_threshold": assistant_settings.confirm_threshold(),
     }
+
+
+# PlanError codes → HTTP status. The browser words the message from the code.
+PLAN_ERROR_STATUS = {
+    "not_found": 404,
+    "not_pending": 409,
+    "expired": 409,
+    "precondition": 409,
+    "action_disabled": 409,
+    "confirmation_required": 400,
+    "not_undoable": 409,
+    "not_reversible": 409,
+}
+
+
+def _plan_views(conversation_id: int) -> list:
+    threshold = assistant_settings.confirm_threshold()
+    return [plan_view(plan, threshold) for plan in repo.list_plans(db.session, conversation_id)]
 
 
 def assistant_notice() -> AssistantNotice:
@@ -159,7 +312,9 @@ def init_assistant_routes(app: Flask):
     @app.route("/api/assistant/conversations", methods=["GET"])
     def assistant_conversations():
         _require_available()
-        summaries = [ConversationSummary.from_model(c) for c in repo.list_conversations(db.session)]
+        pending = repo.pending_plan_counts(db.session)
+        summaries = [ConversationSummary.from_model(c, pending.get(c.id, 0))
+                     for c in repo.list_conversations(db.session)]
         return jsonify(ConversationList(conversations=summaries).to_dict())
 
     @app.route("/api/assistant/conversations", methods=["POST"])
@@ -186,7 +341,7 @@ def init_assistant_routes(app: Flask):
         events = repo.list_events(db.session, conversation_id)
         queue = (run_queue_status(_queue_store(), conversation_id)
                  if conversation.status == ASSISTANT_STATUS_RUNNING else None)
-        return jsonify(conversation_status(conversation, events, queue).to_dict())
+        return jsonify(conversation_status(conversation, events, queue, _plan_views(conversation_id)).to_dict())
 
     @app.route("/api/assistant/conversations/<int:conversation_id>/messages", methods=["POST"])
     def assistant_message(conversation_id: int):
@@ -204,6 +359,44 @@ def init_assistant_routes(app: Flask):
         assistant_run_task(conversation_id)
         conversation = repo.get_conversation(db.session, conversation_id)
         return jsonify(ConversationStarted(ConversationSummary.from_model(conversation)).to_dict()), 202
+
+    def _decide_plan(conversation_id: int, plan_id: int, decide):
+        """Run one plan decision. Refused while a reply is still being written: the
+        run is still adding to the transcript, and the model should see the outcome
+        on the next message rather than mid-answer."""
+        _require_available()
+        conversation = _get_conversation_or_404(conversation_id)
+        if conversation.status == ASSISTANT_STATUS_RUNNING:
+            return _error(gettext("Wait for the assistant to finish answering."), "run_in_progress", 409)
+        try:
+            plan = decide()
+        except plans.PlanError as exc:
+            db.session.rollback()
+            return _error(str(exc), exc.code, PLAN_ERROR_STATUS.get(exc.code, 409))
+        return jsonify(PlanDecided(plan_view(plan, assistant_settings.confirm_threshold())).to_dict())
+
+    @app.route("/api/assistant/conversations/<int:conversation_id>/plans/<int:plan_id>/approve",
+               methods=["POST"])
+    def assistant_plan_approve(conversation_id: int, plan_id: int):
+        """Approve a change plan: re-validate it, then replay its recorded calls.
+        `confirm_count` is the item count the user typed or ticked, when the card
+        asks for it."""
+        raw = (request.get_json(silent=True) or {}).get("confirm_count")
+        confirm_count = raw if isinstance(raw, int) and not isinstance(raw, bool) else None
+        return _decide_plan(conversation_id, plan_id,
+                            lambda: plans.approve(db.session, plan_id, conversation_id, confirm_count))
+
+    @app.route("/api/assistant/conversations/<int:conversation_id>/plans/<int:plan_id>/decline",
+               methods=["POST"])
+    def assistant_plan_decline(conversation_id: int, plan_id: int):
+        return _decide_plan(conversation_id, plan_id,
+                            lambda: plans.decline(db.session, plan_id, conversation_id))
+
+    @app.route("/api/assistant/conversations/<int:conversation_id>/plans/<int:plan_id>/undo",
+               methods=["POST"])
+    def assistant_plan_undo(conversation_id: int, plan_id: int):
+        return _decide_plan(conversation_id, plan_id,
+                            lambda: plans.undo(db.session, plan_id, conversation_id))
 
     @app.route("/api/assistant/open", methods=["POST"])
     def assistant_open():
@@ -268,10 +461,29 @@ def init_assistant_routes(app: Flask):
         assistant_settings.set_diagnostics_enabled(group, request.form.get("enabled") == "on")
         return _toast(make_response("", 200), gettext("Assistant settings saved."))
 
+    @app.route("/settings/assistant/actions/<name>", methods=["POST"])
+    def settings_assistant_action(name: str):
+        if demo_mode_enabled() or name not in {fn.name for fn in assistant_settings.action_functions()}:
+            abort(404)
+        assistant_settings.set_action_enabled(name, request.form.get("enabled") == "on")
+        return _toast(make_response("", 200), gettext("Assistant settings saved."))
+
+    @app.route("/settings/assistant/confirm-threshold", methods=["POST"])
+    def settings_assistant_confirm_threshold():
+        if demo_mode_enabled():
+            abort(404)
+        try:
+            count = int(request.form.get("confirm_threshold", ""))
+        except ValueError:
+            return _error(gettext("Enter a whole number."), "invalid_threshold", 400)
+        if count < 1:
+            return _error(gettext("Enter a whole number."), "invalid_threshold", 400)
+        assistant_settings.set_confirm_threshold(count)
+        return _toast(make_response("", 200), gettext("Assistant settings saved."))
+
     @app.route("/api/assistant/conversations/delete-all", methods=["POST"])
     def assistant_delete_all():
-        """Settings → Assistant → Delete all conversations. Works while the
-        assistant is turned off, so history can still be cleared."""
+        """"Delete all conversations" under the list on the Ask Yaffo page."""
         if demo_mode_enabled():
             abort(404)
         deleted = repo.delete_all_conversations(db.session)

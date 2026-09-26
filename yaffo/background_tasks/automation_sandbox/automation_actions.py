@@ -364,3 +364,73 @@ def summarize_set_media_dates(args: list[Any], session: Session) -> str:
 
 def summarize_set_location_names(args: list[Any], session: Session) -> str:
     return f"Set location names for {len(args[0])} photo(s)"
+
+
+# ---- people -------------------------------------------------------------------
+# Reading people needs no host function (the `people` data_query source). Like
+# create_album, create_person is IDEMPOTENT ON THE NAME, so a repeating automation
+# can "make sure X exists" every run. Renaming, merging and deleting change the
+# names written into photo files, so each announces the photos it touched.
+
+def _person_name(session: Session, person_id: Any) -> str | None:
+    person = person_repository.get_person_by_id(session, person_id) if isinstance(person_id, int) else None
+    return person.name if person else None
+
+
+def create_person(session: Session, name: str) -> Annotated[int, "The person's id — new, or the existing person with that name."]:
+    """Create a person with no faces, or return the existing one with that name."""
+    name = (name or "").strip()
+    if not name:
+        raise ValueError("A person's name can't be empty")
+    existing = person_repository.get_person_by_name(session, name)
+    if existing is not None:
+        return existing.id
+    return person_repository.create_person(session, name).id
+
+
+def summarize_create_person(args: list[Any], session: Session) -> str:
+    return f"Create person '{args[0] if args else ''}'"
+
+
+def rename_person(session: Session, person_id: int, name: str, expected: Optional[str] = None) -> None:
+    """Rename a person; the new name must not belong to someone else. `expected`
+    skips the rename when the current name is no longer that (undo after a later
+    edit)."""
+    if expected is not None and _person_name(session, person_id) != expected:
+        return
+    person_repository.rename_person(session, person_id, name)
+    _emit_media_modified(person_repository.get_media_item_ids_for_person(session, person_id))
+
+
+def summarize_rename_person(args: list[Any], session: Session) -> str:
+    old = _person_name(session, args[0]) if args else None
+    new = args[1] if len(args) > 1 else ""
+    return f"Rename person '{old}' to '{new}'" if old else f"Rename a person to '{new}'"
+
+
+def merge_people(session: Session, source_person_id: int, target_person_id: int) -> None:
+    """Move every face of the source person to the target and delete the source."""
+    _emit_media_modified(person_repository.merge_people(session, source_person_id, target_person_id))
+
+
+def summarize_merge_people(args: list[Any], session: Session) -> str:
+    source = _person_name(session, args[0]) if args else None
+    target = _person_name(session, args[1]) if len(args) > 1 else None
+    return f"Merge '{source}' into '{target}'" if source and target else "Merge two people"
+
+
+def delete_person(session: Session, person_id: int, expected: Optional[dict] = None) -> None:
+    """Delete a person; their faces become unassigned. `expected` ({name, empty})
+    skips the delete when the person was renamed or given faces since (undo of a
+    create_person)."""
+    if expected is not None:
+        if _person_name(session, person_id) != expected.get("name"):
+            return
+        if expected.get("empty") and person_repository.count_person_faces(session, person_id):
+            return
+    _emit_media_modified(person_repository.delete_person(session, person_id))
+
+
+def summarize_delete_person(args: list[Any], session: Session) -> str:
+    name = _person_name(session, args[0]) if args else None
+    return f"Delete person '{name}'" if name else "Delete a person"

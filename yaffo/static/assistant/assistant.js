@@ -20,6 +20,10 @@
  * The floating panel stays open across page loads in the same tab (sessionStorage),
  * except on phone-width screens, where it would cover the page just navigated to.
  *
+ * A script that proposed changes carries a change plan; its card (plan_card.js) sits
+ * under the run's answer, and Approve / Decline / Undo post here, then re-poll so
+ * the card shows what happened. Plan buttons wait while a reply is being written.
+ *
  * An empty conversation starts with a one-line notice (from the panel template):
  * which model answers, whether it may check this computer, and a link to change
  * that in Settings. Also here: context attached by contextual "Ask Yaffo" buttons, a
@@ -158,6 +162,8 @@ assistant.init = (i18n, config) => {
     const closeButton = document.getElementById('assistant-close');
     const newButton = document.getElementById('assistant-new');
     const deleteButton = document.getElementById('assistant-delete');
+    // Page mode only: under the conversation list.
+    const deleteAllButton = document.getElementById('assistant-delete-all');
     const switcher = document.getElementById('assistant-conversation');
     const list = document.getElementById('assistant-conversation-list');
     const listEmpty = document.getElementById('assistant-conversation-empty');
@@ -176,6 +182,10 @@ assistant.init = (i18n, config) => {
     let conversations = [];
     /** @type {AssistantContext | null} */
     let pendingContext = null;
+    // The polled conversation status; plan buttons wait while a reply is written.
+    let conversationStatus = 'IDLE';
+    // A plan action in flight: its card's buttons stay off until the next render.
+    let planBusy = false;
 
     // ---- transcript rendering -------------------------------------------------
 
@@ -197,9 +207,8 @@ assistant.init = (i18n, config) => {
                 : i18n.t('assistant:activity.read', { title: payload.title || '' });
         }
         if (payload.tool === 'run_script') {
-            return i18n.t(payload.error ? 'assistant:activity.scriptFailed' : 'assistant:activity.script', {
-                purpose: payload.purpose || '',
-            });
+            const key = payload.error ? 'scriptFailed' : payload.plan_id ? 'scriptPlan' : 'script';
+            return i18n.t(`assistant:activity.${key}`, { purpose: payload.purpose || '' });
         }
         if (payload.tool === 'describe_data_source') {
             return i18n.t('assistant:activity.describedSource', { source: payload.title || '' });
@@ -379,6 +388,69 @@ assistant.init = (i18n, config) => {
         return wrapper;
     };
 
+    // ---- change plans ------------------------------------------------------------
+
+    /**
+     * Approve, decline or undo a plan, then re-poll so its card shows the result.
+     * @param {AssistantPlan} plan
+     * @param {'approve' | 'decline' | 'undo'} action
+     * @param {Record<string, unknown>} [body]
+     */
+    const planAction = async (plan, action, body = {}) => {
+        if (currentId === null) return;
+        planBusy = true;
+        try {
+            const response = await fetch(config.buildUrl(`assistant_plan_${action}`, {
+                conversation_id: currentId, plan_id: plan.id,
+            }), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            if (!response.ok) {
+                let code = '';
+                try {
+                    code = String((await response.json())?.code || '');
+                } catch {
+                    // No JSON body: the generic message below.
+                }
+                const fallback = i18n.t('assistant:plan.errors.failed');
+                window.notification.error(code
+                    ? i18n.t(`assistant:plan.errors.${code}`, { defaultValue: fallback })
+                    : fallback);
+            }
+        } catch {
+            window.notification.error(i18n.t('assistant:plan.errors.failed'));
+        } finally {
+            planBusy = false;
+            chat?.load();
+            refreshList();
+        }
+    };
+
+    /**
+     * @param {AssistantPlan} plan
+     * @param {string} script
+     * @returns {HTMLElement | null}
+     */
+    const renderPlan = (plan, script) => assistant.renderPlanCard?.(plan, {
+        i18n,
+        script,
+        busy: planBusy || conversationStatus === RUNNING,
+        onApprove: (approved, confirmCount) => planAction(
+            approved, 'approve', confirmCount === null ? {} : { confirm_count: confirmCount }),
+        onDecline: (declined) => planAction(declined, 'decline'),
+        onUndo: async (undone) => {
+            const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
+                title: i18n.t('assistant:plan.undoConfirm.title'),
+                message: i18n.t('assistant:plan.undoConfirm.message'),
+                confirmText: i18n.t('assistant:plan.undoConfirm.confirm'),
+            });
+            if (confirmed) planAction(undone, 'undo');
+            else chat?.load();
+        },
+    }) ?? null;
+
     /**
      * One run = a user message and everything after it until the next one.
      * @param {ChatMessage[]} messages
@@ -400,10 +472,18 @@ assistant.init = (i18n, config) => {
         };
         const closeRun = () => {
             flushTools();
+            const cards = runTools
+                .filter((tool) => tool.payload?.plan)
+                .map((tool) => renderPlan(
+                    /** @type {AssistantPlan} */ (tool.payload?.plan), String(tool.payload?.script || '')))
+                .filter((card) => card !== null);
             if (lastAnswer) {
-                // Links the answer offers first, then the docs it drew on.
-                const extras = [renderLinks(runTools), renderSources(runTools)].filter((node) => node !== null);
+                // Proposed changes first, then the links the answer offers, then the docs it drew on.
+                const extras = [...cards, renderLinks(runTools), renderSources(runTools)]
+                    .filter((node) => node !== null);
                 nodes.splice(nodes.indexOf(lastAnswer) + 1, 0, ...extras);
+            } else {
+                nodes.push(...cards);  // a run that stopped before answering still shows its plan
             }
             runTools = [];
             lastAnswer = null;
@@ -464,7 +544,9 @@ assistant.init = (i18n, config) => {
         for (const conversation of conversations) {
             const label = conversation.status === RUNNING
                 ? i18n.t('assistant:runningTitle', { title: conversation.title })
-                : conversation.title;
+                : conversation.pending_plans
+                    ? i18n.t('assistant:pendingTitle', { title: conversation.title, count: conversation.pending_plans })
+                    : conversation.title;
             const isCurrent = conversation.id === currentId;
             options.push(new Option(label, String(conversation.id), isCurrent, isCurrent));
         }
@@ -477,12 +559,17 @@ assistant.init = (i18n, config) => {
             const item = el('li');
             const button = /** @type {HTMLButtonElement} */ (el('button', 'assistant-conversation-item', conversation.title));
             button.type = 'button';
+            if (conversation.pending_plans) {
+                button.appendChild(el('span', 'assistant-conversation-pending',
+                    i18n.t('assistant:pendingBadge', { count: conversation.pending_plans })));
+            }
             if (conversation.id === currentId) button.setAttribute('aria-current', 'true');
             button.addEventListener('click', () => switchTo(conversation.id));
             item.appendChild(button);
             return item;
         }));
         if (listEmpty) listEmpty.hidden = conversations.length > 0;
+        if (deleteAllButton instanceof HTMLButtonElement) deleteAllButton.disabled = conversations.length === 0;
     };
 
     const renderConversations = () => {
@@ -522,7 +609,10 @@ assistant.init = (i18n, config) => {
         runningStatus: RUNNING,
         statusUrl: () => config.buildUrl('assistant_conversation', { conversation_id: currentId ?? 0 }),
         renderMessages,
-        onStatus: (body) => showQueue(/** @type {AssistantRunQueue | null | undefined} */ (body.queue)),
+        onStatus: (body) => {
+            conversationStatus = body.status;
+            showQueue(/** @type {AssistantRunQueue | null | undefined} */ (body.queue));
+        },
         onSend: async (message) => {
             showQueue(null);
             const url = currentId === null
@@ -580,6 +670,27 @@ assistant.init = (i18n, config) => {
         });
         if (!response.ok && response.status !== 404) {
             window.notification.error(i18n.t('assistant:delete.failed'));
+            return;
+        }
+        switchTo(null);
+        await refreshList();
+    };
+
+    const deleteAll = async () => {
+        const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
+            title: i18n.t('assistant:deleteAll.title'),
+            message: i18n.t('assistant:deleteAll.message'),
+            confirmText: i18n.t('assistant:deleteAll.confirm'),
+            confirmClass: 'btn-danger',
+        });
+        if (!confirmed) return;
+        try {
+            const response = await fetch(config.urls.assistant_delete_all, { method: 'POST' });
+            if (!response.ok) throw new Error(String(response.status));
+            const body = await response.json();
+            window.notification.success(i18n.t('assistant:deleteAll.done', { count: Number(body.deleted) || 0 }));
+        } catch {
+            window.notification.error(i18n.t('assistant:deleteAll.failed'));
             return;
         }
         switchTo(null);
@@ -748,6 +859,7 @@ assistant.init = (i18n, config) => {
     closeButton?.addEventListener('click', close);
     newButton?.addEventListener('click', () => switchTo(null));
     deleteButton?.addEventListener('click', deleteCurrent);
+    deleteAllButton?.addEventListener('click', deleteAll);
     switcher?.addEventListener('change', () => {
         if (!(switcher instanceof HTMLSelectElement)) return;
         switchTo(switcher.value ? Number(switcher.value) : null);

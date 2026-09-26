@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-26 02:29-0500\n"
+"POT-Creation-Date: 2026-09-26 09:24-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -326,17 +326,17 @@ msgid ""
 " the Remove Duplicates tool."
 msgstr ""
 
-#: yaffo/routes/assistant.py:85 yaffo/routes/pages.py:250
+#: yaffo/routes/assistant.py:93 yaffo/routes/pages.py:250
 #: yaffo/routes/themes_page.py:239 yaffo/routes/utilities/automations.py:539
 msgid "Message is required."
 msgstr ""
 
-#: yaffo/routes/assistant.py:88
+#: yaffo/routes/assistant.py:96
 #, python-format
 msgid "Messages can be at most %(count)s characters."
 msgstr ""
 
-#: yaffo/routes/assistant.py:94 yaffo/routes/pages.py:254
+#: yaffo/routes/assistant.py:102 yaffo/routes/pages.py:254
 #: yaffo/routes/themes_page.py:243 yaffo/routes/utilities/automations.py:543
 #, python-format
 msgid ""
@@ -344,34 +344,43 @@ msgid ""
 "Generation."
 msgstr ""
 
-#: yaffo/routes/assistant.py:188 yaffo/routes/assistant.py:193
+#: yaffo/routes/assistant.py:225 yaffo/routes/assistant.py:230
 msgid "The assistant is still answering."
 msgstr ""
 
-#: yaffo/routes/assistant.py:210
+#: yaffo/routes/assistant.py:244
+msgid "Wait for the assistant to finish answering."
+msgstr ""
+
+#: yaffo/routes/assistant.py:285
 msgid ""
 "That file or folder isn't available. It may have moved, or its drive "
 "isn't connected."
 msgstr ""
 
-#: yaffo/routes/assistant.py:215
+#: yaffo/routes/assistant.py:290
 msgid "Couldn't open it on this computer."
 msgstr ""
 
-#: yaffo/routes/assistant.py:231
+#: yaffo/routes/assistant.py:306
 msgid "Title is required."
 msgstr ""
 
-#: yaffo/routes/assistant.py:250
+#: yaffo/routes/assistant.py:325
 msgid "Assistant turned on."
 msgstr ""
 
-#: yaffo/routes/assistant.py:250
+#: yaffo/routes/assistant.py:325
 msgid "Assistant turned off."
 msgstr ""
 
-#: yaffo/routes/assistant.py:261
+#: yaffo/routes/assistant.py:336 yaffo/routes/assistant.py:343
+#: yaffo/routes/assistant.py:356
 msgid "Assistant settings saved."
+msgstr ""
+
+#: yaffo/routes/assistant.py:352 yaffo/routes/assistant.py:354
+msgid "Enter a whole number."
 msgstr ""
 
 #: yaffo/routes/base.py:144
@@ -422,9 +431,9 @@ msgid "Items must be a list"
 msgstr ""
 
 #: yaffo/routes/faces.py:402 yaffo/routes/faces.py:509
-#: yaffo/routes/faces.py:520 yaffo/routes/people.py:124
-#: yaffo/routes/people.py:183 yaffo/routes/people.py:225
-#: yaffo/routes/people.py:303
+#: yaffo/routes/faces.py:520 yaffo/routes/people.py:125
+#: yaffo/routes/people.py:184 yaffo/routes/people.py:207
+#: yaffo/routes/people.py:285
 msgid "Person not found"
 msgstr ""
 
@@ -571,50 +580,50 @@ msgstr ""
 msgid "Version is not ready to publish."
 msgstr ""
 
-#: yaffo/routes/people.py:30
+#: yaffo/routes/people.py:31
 msgid "Gender must be male, female, or not specified"
 msgstr ""
 
-#: yaffo/routes/people.py:67 yaffo/routes/people.py:98
-#: yaffo/routes/people.py:129
+#: yaffo/routes/people.py:68 yaffo/routes/people.py:99
+#: yaffo/routes/people.py:130
 msgid "Name is required"
 msgstr ""
 
-#: yaffo/routes/people.py:73 yaffo/routes/people.py:105
-#: yaffo/routes/people.py:138
+#: yaffo/routes/people.py:74 yaffo/routes/people.py:106
+#: yaffo/routes/people.py:139
 #, python-format
 msgid "Person '%(name)s' already exists"
 msgstr ""
 
-#: yaffo/routes/people.py:86
+#: yaffo/routes/people.py:87
 #, python-format
 msgid "Added %(name)s"
 msgstr ""
 
-#: yaffo/routes/people.py:158
+#: yaffo/routes/people.py:159
 msgid "Birthdate must be YYYY-MM-DD"
 msgstr ""
 
-#: yaffo/routes/people.py:171
+#: yaffo/routes/people.py:172
 #, python-format
 msgid "Updated '%(name)s'"
 msgstr ""
 
-#: yaffo/routes/people.py:173
+#: yaffo/routes/people.py:174
 #, python-format
 msgid "Renamed '%(old_name)s' to '%(name)s'"
 msgstr ""
 
-#: yaffo/routes/people.py:209
+#: yaffo/routes/people.py:191
 #, python-format
 msgid "Deleted %(name)s"
 msgstr ""
 
-#: yaffo/routes/people.py:307
+#: yaffo/routes/people.py:289
 msgid "No faces selected"
 msgstr ""
 
-#: yaffo/routes/people.py:313
+#: yaffo/routes/people.py:295
 msgid "Person updated"
 msgstr ""
 
@@ -1131,7 +1140,7 @@ msgid "%(completed)s of %(total)s processed"
 msgstr ""
 
 #: yaffo/routes/utilities/run_history.py:85
-#: yaffo/templates/fragments/job_status_fragment.html:57
+#: yaffo/templates/fragments/job_status_fragment.html:62
 #, python-format
 msgid "%(count)s error"
 msgid_plural "%(count)s errors"
@@ -1168,7 +1177,7 @@ msgstr ""
 msgid "Failed"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:127
+#: yaffo/routes/utilities/run_history.py:131
 #: yaffo/templates/sharing/_transfers_panel.html:30
 msgid "Completed with errors"
 msgstr ""
@@ -1253,7 +1262,7 @@ msgstr ""
 #: yaffo/templates/assistant/_panel.html:46 yaffo/templates/base.html:157
 #: yaffo/templates/base.html:206 yaffo/templates/base.html:226
 #: yaffo/templates/components/run_history.html:18
-#: yaffo/templates/fragments/job_status_fragment.html:30
+#: yaffo/templates/fragments/job_status_fragment.html:35
 msgid "Ask Yaffo"
 msgstr ""
 
@@ -1393,7 +1402,7 @@ msgstr ""
 #: yaffo/templates/base.html:253 yaffo/templates/base.html:269
 #: yaffo/templates/components/chat_dialog.html:39
 #: yaffo/templates/components/modal.html:17
-#: yaffo/templates/fragments/job_status_fragment.html:40
+#: yaffo/templates/fragments/job_status_fragment.html:45
 #: yaffo/templates/sharing/_transfers_panel.html:41
 #: yaffo/templates/utilities/automations_triggers.html:65
 #: yaffo/templates/utilities/automations_triggers.html:85
@@ -2405,15 +2414,15 @@ msgstr ""
 msgid "All Years"
 msgstr ""
 
-#: yaffo/templates/fragments/job_status_fragment.html:16
+#: yaffo/templates/fragments/job_status_fragment.html:21
 msgid "Started:"
 msgstr ""
 
-#: yaffo/templates/fragments/job_status_fragment.html:22
+#: yaffo/templates/fragments/job_status_fragment.html:27
 msgid "Show Results"
 msgstr ""
 
-#: yaffo/templates/fragments/job_status_fragment.html:40
+#: yaffo/templates/fragments/job_status_fragment.html:45
 #: yaffo/templates/sharing/_transfers_panel.html:47
 msgid "Dismiss"
 msgstr ""
@@ -2781,7 +2790,8 @@ msgstr ""
 #: yaffo/templates/settings/_assistant.html:4
 msgid ""
 "Ask Yaffo answers questions and helps troubleshoot, using your AI "
-"Generation key. It can't change your library."
+"Generation key. It can propose changes to your library, and nothing "
+"changes until you approve them."
 msgstr ""
 
 #: yaffo/templates/settings/_assistant.html:11
@@ -2818,14 +2828,118 @@ msgstr ""
 msgid "Capture-date metadata (reads file metadata)"
 msgstr ""
 
-#: yaffo/templates/settings/_assistant.html:40
+#: yaffo/templates/settings/_assistant.html:39
+msgid "Changes it can propose"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:41
+msgid ""
+"Proposed changes need Library contents checks. Each one waits for your "
+"Approve, shows how many items it affects, and can be undone where noted."
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:44
+msgid "Add tags"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:45
+msgid "Remove tags"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:46
+msgid "Assign faces to people"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:47
+msgid "Remove people from faces"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:48
+msgid "Create albums"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:49
+msgid "Rename albums"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:50
+msgid "Add photos to albums"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:51
+msgid "Remove photos from albums"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:52
+msgid "Mark favorites"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:53
+msgid "Change capture dates"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:54
+msgid "Change location names"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:55
+msgid "Delete albums (photos stay)"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:56
+msgid "Rename files on disk"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:57
+msgid "Move files on disk"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:58
+msgid "Move photos to the system trash"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:59
+msgid "Create people"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:60
+msgid "Rename people"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:61
+msgid "Merge people"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:62
+msgid "Delete people (their faces become unassigned)"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:65
+msgid "Can be undone"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:66
+msgid "Broader changes"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:67
+msgid ""
+"Files on disk and people (off until you turn them on; you type the count "
+"to approve)"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:84
+msgid "Ask me to confirm the count when a change affects more items than"
+msgstr ""
+
+#: yaffo/templates/settings/_assistant.html:95
 #, python-format
 msgid "%(formatted)s saved conversation"
 msgid_plural "%(formatted)s saved conversations"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/templates/settings/_assistant.html:44
+#: yaffo/templates/settings/_assistant.html:99
 msgid "Delete all"
 msgstr ""
 

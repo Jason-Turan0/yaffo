@@ -1,14 +1,17 @@
 """Routes for Ask Yaffo. The background run is replaced by a recorder, so these
 cover the HTTP contract: starting turns, polling, cancel, rename/delete, the
-settings switches, and availability (setting and demo mode)."""
+settings switches, change-plan approve/decline/undo, and availability (setting and
+demo mode)."""
 import json
 
 import pytest
 
 from yaffo.db import db
-from yaffo.db.models import ASSISTANT_STATUS_FAILED, ASSISTANT_STATUS_IDLE, ASSISTANT_STATUS_RUNNING, Job, MediaItem
+from yaffo.db.models import ASSISTANT_STATUS_FAILED, ASSISTANT_STATUS_IDLE, ASSISTANT_STATUS_RUNNING, Job, MediaItem, Tag
 from yaffo.db.repositories import assistant_repository as repo
+from yaffo.routes.assistant import action_groups_layout, diagnostic_labels, switch_help
 from yaffo.site_agents.assistant import settings as assistant_settings
+from yaffo.site_agents.assistant.tool_providers.script_tool import RUN_SCRIPT, ScriptToolProvider
 
 pytestmark = pytest.mark.unit
 
@@ -366,3 +369,161 @@ def test_open_button_reports_when_the_os_cannot_open(client, media_root, monkeyp
     monkeypatch.setattr("yaffo.routes.assistant.open_in_os", fail)
     response = client.post("/api/assistant/open", json={"media_dir_id": "m1", "path": "", "show": "file"})
     assert response.status_code == 500 and response.get_json()["code"] == "open_failed"
+
+
+# ---- change plans ---------------------------------------------------------------------
+
+@pytest.fixture
+def no_events(monkeypatch):
+    monkeypatch.setattr("yaffo.background_tasks.automation_sandbox.automation_actions.emit_event",
+                        lambda *args: None)
+
+
+def _plan(conversation_id, code='tag_media_items([{"media_item_id": 1, "name": "beach"}])'):
+    """Record a plan the way a run does: a run_script tool call, then its tool event."""
+    provider = ScriptToolProvider(db.session, conversation_id=conversation_id,
+                                  actions=assistant_settings.enabled_actions())
+    result = provider.call_tool(RUN_SCRIPT, {"code": code, "purpose": "Tag it"})
+    repo.add_event(db.session, conversation_id, "tool", "", result.host_data)
+    repo.set_status(db.session, conversation_id, ASSISTANT_STATUS_IDLE)
+    return result.host_data["plan_id"]
+
+
+def _plans_url(conversation_id, plan_id, action):
+    return f"/api/assistant/conversations/{conversation_id}/plans/{plan_id}/{action}"
+
+
+def _tag_count():
+    return db.session.query(Tag).count()
+
+
+def test_poll_carries_the_plan_card_and_the_list_flags_it(client, runs, with_key, no_events):
+    db.session.add(MediaItem(id=1, full_file_path="/lib/1.jpg"))
+    db.session.commit()
+    conversation_id = _start(client).get_json()["conversation"]["id"]
+    plan_id = _plan(conversation_id)
+
+    body = client.get(f"/api/assistant/conversations/{conversation_id}").get_json()
+    payload = body["messages"][-1]["payload"]
+    assert payload["plan_id"] == plan_id
+    assert payload["plan"]["status"] == "PENDING"
+    assert payload["plan"]["steps"][0]["name"] == "tag_media_items"
+    assert payload["plan"]["steps"][0]["facts"]["names"] == ["beach"]
+    assert body["conversation"]["pending_plans"] == 1
+    listed = client.get("/api/assistant/conversations").get_json()["conversations"]
+    assert listed[0]["pending_plans"] == 1
+
+
+def test_approve_then_undo(client, runs, with_key, no_events):
+    db.session.add(MediaItem(id=1, full_file_path="/lib/1.jpg"))
+    db.session.commit()
+    conversation_id = _start(client).get_json()["conversation"]["id"]
+    plan_id = _plan(conversation_id)
+    assert _tag_count() == 0
+
+    approved = client.post(_plans_url(conversation_id, plan_id, "approve"), json={})
+    assert approved.status_code == 200
+    assert approved.get_json()["plan"]["status"] == "EXECUTED"
+    assert _tag_count() == 1
+    again = client.post(_plans_url(conversation_id, plan_id, "approve"), json={})
+    assert again.status_code == 409 and again.get_json()["code"] == "not_pending"
+
+    undone = client.post(_plans_url(conversation_id, plan_id, "undo"), json={})
+    assert undone.get_json()["plan"]["status"] == "UNDONE"
+    assert _tag_count() == 0
+    kinds = [m["type"] for m in client.get(f"/api/assistant/conversations/{conversation_id}").get_json()["messages"]]
+    assert kinds[-2:] == ["plan", "plan"]
+
+
+def test_decline_and_refusals(client, runs, with_key, no_events):
+    db.session.add(MediaItem(id=1, full_file_path="/lib/1.jpg"))
+    db.session.commit()
+    conversation_id = _start(client).get_json()["conversation"]["id"]
+    plan_id = _plan(conversation_id)
+
+    repo.set_status(db.session, conversation_id, ASSISTANT_STATUS_RUNNING)
+    busy = client.post(_plans_url(conversation_id, plan_id, "approve"), json={})
+    assert busy.status_code == 409 and busy.get_json()["code"] == "run_in_progress"
+    repo.set_status(db.session, conversation_id, ASSISTANT_STATUS_IDLE)
+
+    assert client.post(_plans_url(conversation_id, 999, "approve"), json={}).status_code == 404
+    declined = client.post(_plans_url(conversation_id, plan_id, "decline"))
+    assert declined.get_json()["plan"]["status"] == "DECLINED"
+    assert client.post(_plans_url(conversation_id, plan_id, "approve"), json={}).status_code == 409
+    assert _tag_count() == 0
+
+
+def test_count_confirmation_is_enforced_by_the_server(client, runs, with_key, no_events):
+    db.session.add_all([MediaItem(id=i, full_file_path=f"/lib/{i}.jpg") for i in (1, 2, 3)])
+    db.session.commit()
+    client.post("/settings/assistant/confirm-threshold", data={"confirm_threshold": "2"})
+    conversation_id = _start(client).get_json()["conversation"]["id"]
+    plan_id = _plan(conversation_id, 'tag_media_items([{"media_item_id": i, "name": "x"} for i in [1, 2, 3]])')
+
+    refused = client.post(_plans_url(conversation_id, plan_id, "approve"), json={"confirm_count": True})
+    assert refused.status_code == 400 and refused.get_json()["code"] == "confirmation_required"
+    accepted = client.post(_plans_url(conversation_id, plan_id, "approve"), json={"confirm_count": 3})
+    assert accepted.get_json()["plan"]["status"] == "EXECUTED" and _tag_count() == 3
+
+
+def test_action_switches_and_threshold(client):
+    page = client.get("/settings").get_data(as_text=True)
+    assert 'id="assistant-action-tag_media_items"' in page
+    assert 'id="assistant-action-delete_media_items"' in page
+    assert 'id="assistant-confirm-threshold"' in page and 'value="500"' in page
+    assert "delete_media_items" not in assistant_settings.enabled_actions()
+
+    assert client.post("/settings/assistant/actions/delete_media_items", data={"enabled": "on"}).status_code == 200
+    assert client.post("/settings/assistant/actions/tag_media_items", data={}).status_code == 200
+    enabled = assistant_settings.enabled_actions()
+    assert "delete_media_items" in enabled and "tag_media_items" not in enabled
+    assert client.post("/settings/assistant/actions/set_media_dirs", data={"enabled": "on"}).status_code == 404
+
+    assert client.post("/settings/assistant/confirm-threshold", data={"confirm_threshold": "25"}).status_code == 200
+    assert assistant_settings.confirm_threshold() == 25
+    assert client.post("/settings/assistant/confirm-threshold", data={"confirm_threshold": "0"}).status_code == 400
+    assert client.post("/settings/assistant/confirm-threshold", data={"confirm_threshold": "x"}).status_code == 400
+    assert assistant_settings.confirm_threshold() == 25
+
+
+def _settings_section(client) -> str:
+    """Settings → Assistant's markup: from its id to the end of its template (the
+    confirm-count threshold closes it)."""
+    page = client.get("/settings").get_data(as_text=True)
+    section = page[page.index('id="assistant-section"'):]
+    return section[:section.index("</fieldset>", section.index('id="assistant-confirm-threshold"'))]
+
+
+def test_delete_all_is_on_the_assistant_page_not_in_settings(client, with_key):
+    assert 'id="assistant-delete-all"' not in _settings_section(client)
+    assert 'id="assistant-delete-all"' in client.get("/assistant").get_data(as_text=True)
+
+
+def test_every_change_is_in_exactly_one_settings_group(app):
+    with app.test_request_context():
+        grouped = [name for _, _, labels in action_groups_layout() for name in labels]
+    assert sorted(grouped) == sorted(fn.name for fn in assistant_settings.action_functions())
+
+
+def test_settings_groups_the_changes_with_counts_and_undo_tags(client):
+    section = _settings_section(client)
+
+    assert section.count("data-assistant-action-group") == 6
+    assert "Files on disk" in section and "0 of 3 on" in section  # file changes start off
+    assert "3 of 3 on" in section  # tags and favorites start on
+    assert section.count("t be undone</span>") == section.count("chip-warning") == 10
+    files = section[section.index("Files on disk"):section.index("Library upkeep")]
+    assert files.count("chip-warning") == 3
+    assert 'id="assistant-diag-metadata"' in section
+
+
+def test_settings_labels_are_short_with_explanations_in_info_tips(app, client):
+    with app.test_request_context():
+        labels = [label for _, _, group in action_groups_layout() for label in group.values()]
+        labels += list(diagnostic_labels().values())
+        tips = switch_help()
+    assert not [label for label in labels if "(" in label]
+
+    section = _settings_section(client)
+    assert section.count('class="help-tip"') == len(tips) + 1 == 9  # + the confirm-count threshold
+    assert "Delete albums\n" in section and "The photos in the album stay in your library." in section

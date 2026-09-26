@@ -52,7 +52,8 @@ def apply_media_filters(session: Session, query, selections: dict):
     person_match_type ('any'|'all'), gender (int), label_ids (list[int]) +
     labels_match_type, tag_name/tag_value (str), location_names (list[str]) +
     location_match_type, unnamed (truthy), proximity_lat/proximity_lon/
-    proximity_km (floats — distance already normalized to kilometers).
+    proximity_km (floats — distance already normalized to kilometers),
+    media_item_ids (list[int], only these items).
     """
     path = selections.get("path")
     year = selections.get("year")
@@ -75,6 +76,9 @@ def apply_media_filters(session: Session, query, selections: dict):
     proximity_lon = selections.get("proximity_lon")
     proximity_km = selections.get("proximity_km")
 
+    media_item_ids = selections.get("media_item_ids")
+    if media_item_ids:
+        query = query.filter(MediaItem.id.in_(list(media_item_ids)))
     if path:
         # Partial, case-insensitive match on any part of the stored path
         # (folders or file name); autoescape so %/_ in the term stay literal.

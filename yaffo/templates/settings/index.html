@@ -225,7 +225,7 @@ document.addEventListener('yaffo:app-init-complete', (event) => {
         window.APP_CONFIG
     );
     app.settings.initLabelFilter();
-    app.assistant?.initSettings?.(app.i18n, window.APP_CONFIG);
+    app.assistant?.initSettings?.(app.i18n);
 });
 </script>
 {% endblock %}

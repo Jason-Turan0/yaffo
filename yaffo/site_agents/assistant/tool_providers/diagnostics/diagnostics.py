@@ -456,9 +456,10 @@ class DiagnosticsToolProvider(ToolProvider):
         thumbnail_dir = get_thumbnail_dir(self.session)
         lines.append(f"Thumbnail folder: {thumbnail_dir or '(not set)'}")
         lines.append(f"Language: {get_saved_locale(self.session) or '(default)'}")
-        automations = self.session.query(Automation).filter(Automation.enabled.is_(True)).order_by(Automation.name).all()
-        lines.append("Enabled automations: " + (
-            ", ".join(f"{a.display_name} (slug {a.slug})" for a in automations) or "(none)"))
+        automations = self.session.query(Automation).order_by(Automation.name).all()
+        lines.append("Automations: " + (
+            ", ".join(f"{a.display_name} (slug {a.slug}, {'on' if a.enabled else 'off'})" for a in automations)
+            or "(none)"))
         lines.append("config.toml:")
         for section, values in sorted(app_config.as_dict().items()):
             for key, value in sorted(values.items()):

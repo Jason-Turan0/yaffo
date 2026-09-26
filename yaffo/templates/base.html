@@ -295,6 +295,7 @@
 <script src="{{ url_for('static', filename='utils.js') }}"></script>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
 {% if assistant_available | default(false) %}
+<script src="{{ url_for('static', filename='assistant/plan_card.js') }}"></script>
 <script src="{{ url_for('static', filename='assistant/assistant.js') }}"></script>
 <script>
 document.addEventListener('yaffo:app-init-complete', (event) => {

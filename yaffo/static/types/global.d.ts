@@ -418,6 +418,21 @@ type ClientFilterParam = {
     kind: 'str' | 'int' | 'float' | 'flag' | 'int_list' | 'str_list';
     choices: Array<string | number> | null;
     default: string | number | null;
+    /** Only qualifies another filter (a match type); never counted as applied. */
+    modifier: boolean;
+};
+
+type ClientFilterInitOptions = {
+    form: HTMLFormElement | null;
+    config: ClientFilterConfig;
+    distanceUnit?: string;
+    onApply: (predicate: (item: ClientFilterItem) => boolean) => void;
+    /** Exact media ids from the URL (no form control); dropped by the first Apply or Clear. */
+    itemIds?: number[];
+    /** Control key -> its parameter keys, for the Filters count. */
+    controls?: Record<string, string[]> | null;
+    /** The Filters toggle's count badge, kept in step with every apply. */
+    countEl?: HTMLElement | null;
 };
 
 type ClientFilterConfig = {
@@ -483,18 +498,21 @@ type FiltersNamespace = {
     initLocationAutocomplete?: (i18n: I18nService, config: AppConfig) => LocationAutocompleteApi | undefined;
     initTags?: (i18n: I18nService, config: AppConfig) => TagsFilterApi;
     tags?: TagsFilterApi;
-    initClientFilter?: (opts: {
-        form: HTMLFormElement | null;
-        distanceUnit?: string;
-        onApply: (predicate: (item: ClientFilterItem) => boolean) => void;
-    }) => ClientFilterApi | undefined;
+    initClientFilter?: (opts: ClientFilterInitOptions) => ClientFilterApi | undefined;
     clientFilter?: ClientFilterApi;
     clientFilterCore?: {
-        readCriteria(form: HTMLFormElement): ClientFilterCriteria;
+        readCriteria(form: HTMLFormElement, config: ClientFilterConfig): ClientFilterCriteria;
         buildPredicate(
             criteria: ClientFilterCriteria,
-            options?: { distanceUnit?: string },
+            config: ClientFilterConfig,
+            options?: { distanceUnit?: string, itemIds?: Set<number> | null },
         ): (item: ClientFilterItem) => boolean;
+        countApplied(
+            criteria: ClientFilterCriteria,
+            config: ClientFilterConfig,
+            controls: Record<string, string[]>,
+            hasItemIds: boolean,
+        ): number;
     };
 };
 
@@ -682,6 +700,66 @@ type AssistantConversationSummary = {
     title: string;
     status: string;
     updated_at: string | null;
+    /** Change plans still waiting for Approve or Decline. */
+    pending_plans?: number;
+};
+
+/** One step of a change plan (PlanStepView). The card words it from name, count
+ *  and facts; `summary` is the server's English fallback. */
+type AssistantPlanStep = {
+    seq: number;
+    name: string;
+    summary: string;
+    count: number;
+    facts: {
+        names?: string[];
+        more?: number;
+        album?: string | null;
+        name?: string;
+        new_album?: boolean;
+        value?: unknown;
+        person?: string | null;
+        target?: string | null;
+        faces?: number;
+        automation?: string | null;
+        read_only?: boolean;
+    };
+    risk: 'low' | 'medium' | 'high';
+    reversible: boolean;
+    state: 'pending' | 'done' | 'failed' | 'not_run' | 'undone';
+    error: string | null;
+    /** Background work: its Job id once the step ran, and the app page where it shows. */
+    starts_job: boolean;
+    job_id: string | null;
+    job_page: string | null;
+};
+
+/** A change plan's card (PlanView), carried on the run_script tool event. */
+type AssistantPlan = {
+    id: number;
+    status: 'PENDING' | 'APPROVED' | 'EXECUTED' | 'PARTIAL' | 'FAILED' | 'DECLINED' | 'EXPIRED' | 'UNDONE';
+    risk: 'low' | 'medium' | 'high';
+    count: number;
+    reversible: boolean;
+    /** Nothing in the plan changes the library (a scan). */
+    read_only: boolean;
+    confirm: 'type' | 'check' | null;
+    steps: AssistantPlanStep[];
+    error: string | null;
+    created_at: string | null;
+    expires_at: string | null;
+    finished_at: string | null;
+};
+
+type AssistantPlanCardOptions = {
+    i18n: I18nService;
+    /** The recording script, offered under a multi-step card. */
+    script?: string;
+    /** Buttons stay off (a reply is being written, or an action is in flight). */
+    busy?: boolean;
+    onApprove(plan: AssistantPlan, confirmCount: number | null): void;
+    onDecline(plan: AssistantPlan): void;
+    onUndo(plan: AssistantPlan): void;
 };
 
 /** Why a reply hasn't started (the poll's `queue`); `message` is ready to show. */
@@ -715,7 +793,8 @@ type AssistantApi = {
 type AssistantNamespace = {
     init?: (i18n: I18nService, config: AppConfig) => AssistantApi | null;
     instance?: AssistantApi | null;
-    initSettings?: (i18n: I18nService, config: AppConfig) => void;
+    initSettings?: (i18n: I18nService) => void;
+    renderPlanCard?: (plan: AssistantPlan, options: AssistantPlanCardOptions) => HTMLElement;
 };
 
 type SearchableSelectConstructor = {

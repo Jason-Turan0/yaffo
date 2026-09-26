@@ -164,3 +164,69 @@ def test_file_link_refuses_an_item_outside_the_media_folders(links, media_folder
     result = links.call_tool(LINK_TO_FILE, {"title": "x", "show": "file", "media_item_id": media_folder["outside"]})
     assert result.host_data["error"] is True
     assert "isn't inside a configured media folder" in result.model_text
+
+
+def test_gallery_link_to_exact_items(links, library):
+    photo = library["photo"]
+    result = links.call_tool(LINK_TO_PHOTOS, {
+        "title": "What I found", "filters": {"media_item_ids": [photo, photo + 1, 99999, photo]}})
+
+    [link] = result.host_data["links"]
+    assert parse_qs(urlsplit(link["url"]).query) == {"item": [str(photo), str(photo + 1)]}
+    assert result.host_data["count"] == 2
+    assert "1 of the media_item_ids don't exist and were ignored: [99999]" in result.model_text
+
+
+def test_exact_items_narrow_with_other_filters(links, library):
+    photo = library["photo"]
+    result = links.call_tool(LINK_TO_PHOTOS, {
+        "title": "2020 ones", "filters": {"media_item_ids": [photo, photo + 2], "year": 2020}})
+    assert result.host_data["count"] == 1
+
+
+@pytest.mark.parametrize("ids, message", [
+    ([99998, 99999], "none of the media_item_ids exist"),
+    (list(range(1, 502)), "at most 500 items"),
+])
+def test_exact_item_links_are_refused_rather_than_widened(links, library, ids, message):
+    result = links.call_tool(LINK_TO_PHOTOS, {"title": "x", "filters": {"media_item_ids": ids}})
+    assert result.host_data["links"] == [] and message in result.model_text
+
+
+def test_map_link_to_exact_items_counts_only_those_with_coordinates(links, library):
+    photo = library["photo"]
+    placed = db.session.get(MediaItem, photo)
+    placed.latitude, placed.longitude = 44.4, -110.6
+    db.session.commit()
+
+    result = links.call_tool(LINK_TO_PHOTOS, {
+        "title": "On the map", "page": "map", "filters": {"media_item_ids": [photo, photo + 1]}})
+
+    [link] = result.host_data["links"]
+    url = urlsplit(link["url"])
+    assert url.path == "/locations" and parse_qs(url.query) == {"item": [str(photo), str(photo + 1)]}
+    assert result.host_data["count"] == 1
+    assert "1 matching item(s) have no GPS coordinates" in result.model_text
+
+
+def test_map_links_carry_other_filters_but_no_view(links, library):
+    photo = db.session.get(MediaItem, library["photo"])
+    photo.latitude, photo.longitude = 44.4, -110.6
+    db.session.commit()
+
+    result = links.call_tool(LINK_TO_PHOTOS, {
+        "title": "Chase on the map", "page": "map", "filters": {"person_ids": [library["chase"]], "year": 2019}})
+    url = urlsplit(result.host_data["links"][0]["url"])
+    assert url.path == "/locations"
+    assert parse_qs(url.query) == {"person": [str(library["chase"])], "year": ["2019"]}
+    assert result.host_data["count"] == 1
+
+    refused = links.call_tool(LINK_TO_PHOTOS, {"title": "x", "page": "map", "filters": {}, "view": "grid"})
+    assert refused.host_data["links"] == [] and "the map has no view" in refused.model_text
+
+
+def test_no_map_link_when_nothing_has_coordinates(links, library):
+    result = links.call_tool(LINK_TO_PHOTOS, {
+        "title": "x", "page": "map", "filters": {"media_item_ids": [library["photo"]]}})
+    assert result.host_data["links"] == []
+    assert "None of the matching items have GPS coordinates" in result.model_text

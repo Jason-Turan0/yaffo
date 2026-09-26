@@ -8,7 +8,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_sandbox.host_types import HostCall
-from yaffo.db.repositories import album_repository
+from yaffo.db.repositories import album_repository, person_repository
 from yaffo.db.repositories import sandbox_edit_repository as edits
 
 
@@ -94,3 +94,28 @@ def resolve_undo_result(calls: list[HostCall], result: Any) -> list[HostCall]:
             return {key: replace(item) for key, item in value.items()}
         return value
     return [HostCall(call.name, replace(call.args)) for call in calls]
+
+
+def person_exists(args: list[Any], session: Session) -> str | None:
+    return None if person_repository.get_person_by_id(session, args[0]) else "Person no longer exists"
+
+
+def people_exist(args: list[Any], session: Session) -> str | None:
+    if args[0] == args[1]:
+        return "Can't merge a person into themselves"
+    missing = [pid for pid in args[:2] if person_repository.get_person_by_id(session, pid) is None]
+    return "Person no longer exists" if missing else None
+
+
+def create_person(args: list[Any], session: Session) -> list[HostCall]:
+    name = (args[0] or "").strip()
+    if person_repository.get_person_by_name(session, name) is not None:
+        return []
+    return [HostCall("delete_person", ["$result", {"name": name, "empty": True}])]
+
+
+def rename_person(args: list[Any], session: Session) -> list[HostCall]:
+    person = person_repository.get_person_by_id(session, args[0])
+    if person is None or person.name == (args[1] or "").strip():
+        return []
+    return [HostCall("rename_person", [args[0], person.name, (args[1] or "").strip()])]

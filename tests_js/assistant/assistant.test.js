@@ -59,6 +59,7 @@ const start = async () => {
   };
   window.PHOTO_ORGANIZER.confirmDialog = vi.fn(() => Promise.resolve(true));
   await loadModule('components/chat_dialog.js');
+  await loadModule('assistant/plan_card.js');
   const org = await loadModule('assistant/assistant.js');
   const api = org.assistant.init(window.testI18n, window.APP_CONFIG);
   await settle();
@@ -269,22 +270,57 @@ describe('floating panel', () => {
 });
 
 describe('assistant settings', () => {
-  it('deletes all conversations after confirming and updates the count', async () => {
+  it('keeps each group of changes counted as its switches change', async () => {
     document.body.innerHTML = `
-      <p id="assistant-conversation-count" data-count="3">3 saved conversations</p>
-      <button id="assistant-delete-all">Delete all</button>`;
-    window.APP_CONFIG.urls = { assistant_delete_all: '/api/delete-all' };
-    window.PHOTO_ORGANIZER.confirmDialog = vi.fn(() => Promise.resolve(true));
-    server({ 'POST /api/delete-all': { deleted: 3 } });
+      <details data-assistant-action-group>
+        <summary><span data-assistant-group-count data-total="2">1 of 2 on</span></summary>
+        <input type="checkbox" checked><input type="checkbox" id="second">
+      </details>`;
+    window.testI18n.t = (key, options = {}) => `${key} ${options.on}/${options.total}`;
     const org = await loadModule('assistant/settings.js');
-    org.assistant.initSettings(window.testI18n, window.APP_CONFIG);
+    org.assistant.initSettings(window.testI18n);
 
-    document.getElementById('assistant-delete-all').click();
-    await settle();
+    const second = document.getElementById('second');
+    second.checked = true;
+    second.dispatchEvent(new Event('change', { bubbles: true }));
 
-    expect(window.notification.success).toHaveBeenCalledWith('assistant:settings.deleted');
-    expect(document.getElementById('assistant-conversation-count').dataset.count).toBe('0');
-    expect(document.getElementById('assistant-delete-all').disabled).toBe(true);
+    expect(document.querySelector('[data-assistant-group-count]').textContent)
+      .toBe('assistant:settings.groupCount 2/2');
+  });
+});
+
+describe('delete all conversations (page mode)', () => {
+  it('confirms, deletes, starts a fresh conversation and disables itself', async () => {
+    const panel = document.getElementById('assistant-panel');
+    panel.dataset.assistantMode = 'page';
+    panel.hidden = false;
+    panel.insertAdjacentHTML('beforebegin', `
+      <ul id="assistant-conversation-list"></ul>
+      <button id="assistant-delete-all" disabled>Delete all</button>`);
+    window.localStorage.setItem('yaffo.assistant.conversation', '5');
+    let deleted = false;
+    const fetchMock = server({
+      'GET /api/conversations': () => json({ conversations: deleted ? [] : [conversation(5), conversation(6)] }),
+      'GET /assistant_conversation/conversation_id/5': statusBody([]),
+      'POST /api/delete-all': () => {
+        deleted = true;
+        return json({ deleted: 2 });
+      },
+    });
+    await start();
+    window.APP_CONFIG.urls.assistant_delete_all = '/api/delete-all';
+    const button = document.getElementById('assistant-delete-all');
+    expect(button.disabled).toBe(false);
+
+    button.click();
+    await vi.waitFor(() => expect(button.disabled).toBe(true));
+
+    expect(window.PHOTO_ORGANIZER.confirmDialog).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'assistant:deleteAll.title', confirmClass: 'btn-danger' }));
+    expect(fetchMock).toHaveBeenCalledWith('/api/delete-all', { method: 'POST' });
+    expect(window.notification.success).toHaveBeenCalledWith('assistant:deleteAll.done');
+    expect(window.localStorage.getItem('yaffo.assistant.conversation')).toBeNull();
+    expect(document.querySelectorAll('#assistant-conversation-list li')).toHaveLength(0);
   });
 });
 
@@ -655,5 +691,84 @@ describe('automation run help', () => {
     expect(JSON.parse(create[1].body).context).toEqual({
       job_id: 'run-1', automation: 'assign_location_name', page: '/utilities/automations/assign_location_name', error: '2 errors',
     });
+  });
+});
+
+describe('assistant change plans', () => {
+  const planPayload = (status = 'PENDING') => ({
+    tool: 'run_script', purpose: 'Tag the trip', script: 'tag_media_items([...])', plan_id: 12,
+    plan: {
+      id: 12, status, risk: 'low', count: 3, reversible: true, confirm: null,
+      error: null, created_at: null, expires_at: null, finished_at: null,
+      steps: [{ seq: 0, name: 'tag_media_items', summary: 'Tag 3 photo(s)', count: 3,
+        facts: { names: ['Trip'], more: 0 }, risk: 'low', reversible: true,
+        state: status === 'PENDING' ? 'pending' : 'done', error: null }],
+    },
+  });
+  const transcript = (status = 'PENDING') => [
+    { type: 'user', content: 'Tag the trip' },
+    { type: 'tool', content: '', payload: planPayload(status) },
+    { type: 'assistant', content: 'Approve the card to tag 3 photos.' },
+  ];
+
+  it('shows the plan card under the answer and approves it', async () => {
+    window.localStorage.setItem('yaffo.assistant.conversation', '7');
+    let approved = false;
+    const fetchMock = server({
+      'GET /api/conversations': { conversations: [{ ...conversation(7), pending_plans: approved ? 0 : 1 }] },
+      'GET /assistant_conversation/conversation_id/7': () =>
+        json(statusBody(transcript(approved ? 'EXECUTED' : 'PENDING'))),
+      'POST /assistant_plan_approve/conversation_id/7/plan_id/12': () => {
+        approved = true;
+        return json({ plan: planPayload('EXECUTED').plan });
+      },
+    });
+
+    await start();
+
+    const feed = document.getElementById('assistant-chat-messages');
+    const answer = feed.querySelector('.chat-message-assistant');
+    const card = answer.nextElementSibling;
+    expect(card.classList.contains('assistant-plan')).toBe(true);
+    expect(feed.querySelector('.assistant-activity li summary').textContent).toBe('assistant:activity.scriptPlan');
+    expect(document.getElementById('assistant-conversation').options[1].textContent)
+      .toBe('assistant:pendingTitle');
+
+    [...card.querySelectorAll('button')].find((b) => b.textContent === 'assistant:plan.approve').click();
+    await vi.waitFor(() => expect(feed.querySelector('.assistant-plan-executed')).not.toBeNull());
+    const approve = fetchMock.mock.calls.find(([url]) => url.includes('assistant_plan_approve'));
+    expect(approve[1]).toMatchObject({ method: 'POST', body: '{}' });
+    expect([...feed.querySelectorAll('.assistant-plan button')].map((b) => b.textContent))
+      .toEqual(['assistant:plan.undo']);
+  });
+
+  it('keeps plan buttons off while a reply is being written', async () => {
+    window.localStorage.setItem('yaffo.assistant.conversation', '7');
+    server({
+      'GET /api/conversations': { conversations: [conversation(7, 'Trip', 'RUNNING')] },
+      'GET /assistant_conversation/conversation_id/7': statusBody(transcript(), 'RUNNING'),
+    });
+
+    await start();
+
+    const buttons = [...document.querySelectorAll('.assistant-plan button')];
+    expect(buttons).toHaveLength(2);
+    expect(buttons.every((b) => b.disabled)).toBe(true);
+  });
+
+  it('says why an approval was refused, in the user\'s language', async () => {
+    window.localStorage.setItem('yaffo.assistant.conversation', '7');
+    server({
+      'GET /api/conversations': { conversations: [conversation(7)] },
+      'GET /assistant_conversation/conversation_id/7': statusBody(transcript()),
+      'POST /assistant_plan_decline/conversation_id/7/plan_id/12': () =>
+        json({ error: 'The plan expired.', code: 'expired' }, 409),
+    });
+    await start();
+
+    [...document.querySelectorAll('.assistant-plan button')]
+      .find((b) => b.textContent === 'assistant:plan.decline').click();
+
+    await vi.waitFor(() => expect(window.notification.error).toHaveBeenCalledWith('assistant:plan.errors.expired'));
   });
 });

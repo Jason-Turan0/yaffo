@@ -16,7 +16,7 @@ from yaffo.db.models import (
 )
 from yaffo.background_tasks.events import emit_event
 from yaffo.routes import filter_config
-from yaffo.domain.media_filter_params import client_filter_config
+from yaffo.domain.media_filter_params import client_filter_config, parse_filter_params
 from yaffo.routes.filter_panel import build_filters_context
 from yaffo.utils.reverse_geocode import ReverseGeocodeRateLimited, reverse_geocode
 
@@ -86,7 +86,10 @@ def _assign_location_nearby_radius_km() -> float:
 def init_locations_routes(app: Flask):
     @app.route("/locations", methods=["GET"])
     def locations_list():
-        """List all locations"""
+        """The map of every geotagged item, filtered in the browser. The URL's
+        filters fill in the sidebar and apply on load. The URL-only `item` list
+        (exact media ids, from the assistant's links) has no control, so it's handed
+        to the browser separately; the first Apply or Clear drops it."""
         media_items = (
             db.session.query(MediaItem)
             .options(
@@ -108,6 +111,8 @@ def init_locations_routes(app: Flask):
             filters=build_filters_context(db.session, request.args),
             # The filter table the browser reads the form with (client_filter.js).
             client_filter_config=client_filter_config(),
+            filter_controls=filter_config.control_params(),
+            item_ids=parse_filter_params(request.args)["media_item_ids"],
             filter_layout=filter_config.load_layout(db.session),
             filter_default_keys=filter_config.default_keys(),
         )

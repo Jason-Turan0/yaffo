@@ -198,12 +198,66 @@ describe('initClientFilter', () => {
       onApply: (p) => received.push(p),
     });
 
+    expect(received).toHaveLength(1);  // the URL's filters (the form as loaded) apply straight away
     setControl('year', '2021');
     form.dispatchEvent(new window.Event('submit', { cancelable: true }));
 
+    expect(received).toHaveLength(2);
+    expect(received[1]({ ...baseItem(), year: 2021 })).toBe(true);
+    expect(received[1]({ ...baseItem(), year: 1999 })).toBe(false);
+  });
+});
+
+describe('exact media ids (the URL-only item filter)', () => {
+  const CONTROLS = { year: ['year'], people: ['person_ids', 'person_match_type'] };
+
+  const start = async (itemIds) => {
+    window.history.replaceState(null, '', '/locations?item=1&item=3&year=2021');
+    const app = await loadModule('filters/client_filter.js');
+    const countEl = document.createElement('span');
+    const received = [];
+    const api = app.filters.initClientFilter({
+      form, config, distanceUnit: 'km', itemIds, controls: CONTROLS, countEl,
+      onApply: (p) => received.push(p),
+    });
+    return { api, countEl, received };
+  };
+
+  it('apply on load, counted as one filter', async () => {
+    setControl('year', '2021');
+    const { countEl, received } = await start([1, 3]);
+
     expect(received).toHaveLength(1);
-    expect(received[0]({ ...baseItem(), year: 2021 })).toBe(true);
-    expect(received[0]({ ...baseItem(), year: 1999 })).toBe(false);
+    expect(received[0]({ ...baseItem(), id: 1 })).toBe(true);
+    expect(received[0]({ ...baseItem(), id: 2 })).toBe(false);
+    expect(received[0]({ ...baseItem(), id: 3, year: 1999 })).toBe(false);  // the URL's year applies too
+    expect(countEl.textContent).toBe('2');
+    expect(countEl.hidden).toBe(false);
+  });
+
+  it('are dropped, from the URL too, by the first Apply', async () => {
+    const { countEl, received } = await start([1, 3]);
+    check('person', '1');
+    check('person-match-type', 'all');
+    form.dispatchEvent(new window.Event('submit', { cancelable: true }));
+
+    expect(received[1]({ ...baseItem(), id: 2 })).toBe(true);
+    expect(window.location.search).toBe('?year=2021');
+    expect(countEl.textContent).toBe('1');  // people, once, however many of its parameters
+  });
+
+  it('are dropped by Clear, which hides the count', async () => {
+    const { api, countEl, received } = await start([1, 3]);
+    api.clear();
+
+    expect(received[1]({ ...baseItem(), id: 2 })).toBe(true);
+    expect(countEl.textContent).toBe('0');
+    expect(countEl.hidden).toBe(true);
+  });
+
+  it('leave a page without them unrestricted', async () => {
+    const { received } = await start([]);
+    expect(received[0]({ ...baseItem(), id: 99 })).toBe(true);
   });
 });
 

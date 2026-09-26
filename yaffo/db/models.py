@@ -777,6 +777,9 @@ ASSISTANT_EVENT_USER = "user"
 ASSISTANT_EVENT_ASSISTANT = "assistant"
 ASSISTANT_EVENT_TOOL = "tool"
 ASSISTANT_EVENT_ERROR = "error"
+# A change plan was decided or finished (approved, declined, undone, expired): the
+# chat's card follows the plan row, and the model sees the outcome on its next run.
+ASSISTANT_EVENT_PLAN = "plan"
 ASSISTANT_MODEL_EVENTS = (ASSISTANT_EVENT_USER, ASSISTANT_EVENT_ASSISTANT)
 
 
@@ -818,4 +821,44 @@ class AssistantEvent(db.Model):
 
     __table_args__ = (
         db.UniqueConstraint("conversation_id", "seq", name="uq_assistant_events_conversation_seq"),
+    )
+
+
+# A change plan's life: PENDING until the user decides; APPROVED while its steps
+# replay; then EXECUTED, PARTIAL (a step failed after earlier ones ran) or FAILED
+# (nothing ran). DECLINED and EXPIRED never ran; UNDONE ran and was reversed.
+PLAN_STATUS_PENDING = "PENDING"
+PLAN_STATUS_APPROVED = "APPROVED"
+PLAN_STATUS_EXECUTED = "EXECUTED"
+PLAN_STATUS_PARTIAL = "PARTIAL"
+PLAN_STATUS_FAILED = "FAILED"
+PLAN_STATUS_DECLINED = "DECLINED"
+PLAN_STATUS_EXPIRED = "EXPIRED"
+PLAN_STATUS_UNDONE = "UNDONE"
+
+
+class AssistantChangePlan(db.Model):
+    """The mutating host calls one assistant script recorded in preview, frozen
+    for the user to approve. Approving replays exactly these calls; it never
+    re-runs the script (docs/development/ai-assistant.md → Change plans)."""
+    __tablename__ = "assistant_change_plans"
+
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(
+        db.Integer, db.ForeignKey("assistant_conversations.id", ondelete="CASCADE"), nullable=False)
+    # The recording script, shown on the card ("Show script").
+    script = db.Column(db.Text, nullable=False, default="")
+    # JSON list of steps: {seq, name, args, summary, count, risk, reversible}, plus
+    # {state, result, undo, error} once replayed.
+    steps_json = db.Column(db.Text, nullable=False)
+    risk = db.Column(db.String, nullable=False)
+    status = db.Column(db.String, nullable=False, default=PLAN_STATUS_PENDING)
+    error = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=utcnow)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    decided_at = db.Column(db.DateTime, nullable=True)
+    finished_at = db.Column(db.DateTime, nullable=True)
+
+    __table_args__ = (
+        db.Index("idx_assistant_change_plans_conversation", "conversation_id"),
     )

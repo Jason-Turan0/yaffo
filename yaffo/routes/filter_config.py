@@ -70,11 +70,19 @@ class FilterLayoutItem:
 
 
 def applied_count(args: MultiDict) -> int:
-    """How many filter controls the URL narrows by: the "N filters applied"
-    badge on the gallery-panel pages. A control counts once however many of its
-    parameters or values are set (two people, a place plus radius)."""
+    """How many filters the URL narrows by: the count on the narrow-screen
+    Filters button of the gallery-panel pages. A control counts once however many
+    of its parameters or values are set (two people, a place plus radius); a
+    URL-only parameter with no control (exact media ids) counts as one more."""
     applied = applied_keys(parse_filter_params(args))
-    return sum(1 for control in FILTERS if applied.intersection(control.params))
+    owned = {key for control in FILTERS for key in control.params}
+    return sum(1 for control in FILTERS if applied.intersection(control.params)) + len(applied - owned)
+
+
+def control_params() -> dict[str, list[str]]:
+    """Each control's parameter keys, so a page that filters in the browser can
+    keep the Filters count the way applied_count computes it."""
+    return {control.key: list(control.params) for control in FILTERS}
 
 
 def default_keys() -> list[str]:

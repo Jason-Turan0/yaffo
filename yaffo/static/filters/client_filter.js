@@ -9,6 +9,12 @@
 // yaffo/domain/media_filter_params.py), and criteria use its keys. The matching
 // rules below are the browser's copy of media_filter_repository.apply_media_filters
 // and must stay in step with it.
+//
+// Exact media ids (the URL-only `item` filter, from the assistant's links) have no
+// form control: the page passes them in, they apply on load with the URL's other
+// filters, and the first Apply or Clear from the panel drops them (from the URL
+// too, so a reload doesn't bring them back). The page's Filters count is kept the
+// way the server's applied_count computes it.
 
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.filters = window.PHOTO_ORGANIZER.filters || {};
@@ -91,10 +97,11 @@ window.PHOTO_ORGANIZER.filters = window.PHOTO_ORGANIZER.filters || {};
     /**
      * @param {ClientFilterCriteria} criteria
      * @param {ClientFilterConfig} config
-     * @param {{ distanceUnit?: string }} [options]
+     * @param {{ distanceUnit?: string, itemIds?: Set<number> | null }} [options]
      * @returns {(item: ClientFilterItem) => boolean}
      */
     const buildPredicate = (criteria, config, options = {}) => {
+        const itemIds = options.itemIds ?? null;
         const pathNeedle = criteria.path ? criteria.path.toLowerCase() : null;
         const { proximity_lat: lat, proximity_lon: lon, proximity_distance: distance } = criteria;
         const kilometersPerUnit = config.kilometers_per_unit[options.distanceUnit ?? 'km'] ?? 1;
@@ -103,6 +110,7 @@ window.PHOTO_ORGANIZER.filters = window.PHOTO_ORGANIZER.filters || {};
             : null;
 
         return (item) => {
+            if (itemIds && !itemIds.has(item.id)) return false;
             if (pathNeedle && !String(item.photo_path ?? '').toLowerCase().includes(pathNeedle)) return false;
             if (criteria.year !== null && item.year !== criteria.year) return false;
             if (criteria.month !== null && item.month !== criteria.month) return false;
@@ -202,15 +210,73 @@ window.PHOTO_ORGANIZER.filters = window.PHOTO_ORGANIZER.filters || {};
     };
 
     /**
+     * Whether a criterion narrows anything: set, and not its default.
+     * @param {ClientFilterParam} param
+     * @param {unknown} value
+     */
+    const isApplied = (param, value) => {
+        if (param.modifier) return false;
+        if (Array.isArray(value)) return value.length > 0;
+        return value !== null && value !== undefined && value !== '' && value !== false && value !== param.default;
+    };
+
+    /**
+     * How many filters apply, as the server's applied_count counts them: each
+     * control once however many of its parameters are set, and exact media ids
+     * (no control) as one more.
+     * @param {ClientFilterCriteria} criteria
+     * @param {ClientFilterConfig} config
+     * @param {Record<string, string[]>} controls control key -> its parameter keys
+     * @param {boolean} hasItemIds
+     * @returns {number}
+     */
+    const countApplied = (criteria, config, controls, hasItemIds) => {
+        const values = /** @type {Record<string, unknown>} */ (criteria);
+        const applied = new Set(config.params.filter((param) => isApplied(param, values[param.key])).map((p) => p.key));
+        const count = Object.values(controls).filter((keys) => keys.some((key) => applied.has(key))).length;
+        return count + (hasItemIds ? 1 : 0);
+    };
+
+    /** Take the URL-only `item` ids out of the address bar, keeping everything else. */
+    const dropItemIdsFromUrl = () => {
+        const url = new URL(window.location.href);
+        if (!url.searchParams.has('item')) return;
+        url.searchParams.delete('item');
+        window.history.replaceState(window.history.state, '', url);
+    };
+
+    /**
      * Turn the sidebar into a client-side filter: intercept the form's GET
      * submit and hand a fresh predicate to `onApply` instead. Clear is also
-     * handled here so pages using client-side filters do not reload.
-     * @param {{ form: HTMLFormElement | null, config: ClientFilterConfig, distanceUnit?: string, onApply: (predicate: (item: ClientFilterItem) => boolean) => void }} opts
+     * handled here so pages using client-side filters do not reload. The URL's
+     * filters (already in the form) and `itemIds` apply once straight away.
+     * @param {ClientFilterInitOptions} opts
      * @returns {ClientFilterApi | undefined}
      */
-    window.PHOTO_ORGANIZER.filters.initClientFilter = ({ form, config, distanceUnit, onApply }) => {
+    window.PHOTO_ORGANIZER.filters.initClientFilter = ({
+        form, config, distanceUnit, onApply, itemIds = [], controls = null, countEl = null,
+    }) => {
         if (!form) return undefined;
-        const apply = () => onApply(buildPredicate(readCriteria(form, config), config, { distanceUnit }));
+        /** @type {Set<number> | null} */
+        let exactIds = itemIds.length ? new Set(itemIds) : null;
+        const run = () => {
+            const criteria = readCriteria(form, config);
+            onApply(buildPredicate(criteria, config, { distanceUnit, itemIds: exactIds }));
+            if (countEl && controls) {
+                const count = countApplied(criteria, config, controls, exactIds !== null);
+                countEl.textContent = String(count);
+                countEl.hidden = count === 0;
+            }
+        };
+        // Any filtering from the panel replaces the exact ids: they have no control
+        // to show or edit them.
+        const apply = () => {
+            if (exactIds) {
+                exactIds = null;
+                dropItemIdsFromUrl();
+            }
+            run();
+        };
         form.addEventListener('submit', (event) => {
             event.preventDefault();
             apply();
@@ -226,9 +292,10 @@ window.PHOTO_ORGANIZER.filters = window.PHOTO_ORGANIZER.filters || {};
         }, { capture: true });
         const api = { apply, clear, readCriteria: () => readCriteria(form, config) };
         window.PHOTO_ORGANIZER.filters.clientFilter = api;
+        run();
         return api;
     };
 
     // Pure pieces exposed for reuse and unit tests.
-    window.PHOTO_ORGANIZER.filters.clientFilterCore = { readCriteria, buildPredicate };
+    window.PHOTO_ORGANIZER.filters.clientFilterCore = { readCriteria, buildPredicate, countApplied };
 })();

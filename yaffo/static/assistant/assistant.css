@@ -438,3 +438,126 @@ li.assistant-tool-error {
     padding: 0 12px;
 }
 
+
+/* A change plan's card (plan_card.js): what a script proposes, from the server's
+   plan, with Approve / Decline, then what ran and Undo. */
+.assistant-plan {
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0 12px;
+    padding: 12px;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: var(--font-size-sm);
+}
+
+.assistant-plan-pending {
+    border-color: var(--color-accent);
+}
+
+.assistant-plan-pending.assistant-plan-high {
+    border-color: var(--color-danger-soft-border);
+    background: var(--color-danger-soft);
+}
+
+.assistant-plan-declined,
+.assistant-plan-expired,
+.assistant-plan-undone {
+    color: var(--color-text-muted);
+}
+
+.assistant-plan-title {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+}
+
+.assistant-plan-steps {
+    margin: 0;
+    padding-left: 20px;
+}
+
+ul.assistant-plan-steps {
+    list-style: none;
+    padding-left: 0;
+}
+
+.assistant-plan-step-failed {
+    color: var(--color-danger);
+}
+
+.assistant-plan-step-not_run,
+.assistant-plan-step-undone {
+    color: var(--color-text-muted);
+    text-decoration: line-through;
+}
+
+.assistant-plan-facts,
+.assistant-plan-outcome {
+    margin: 0;
+    color: var(--color-text-muted);
+}
+
+.assistant-plan-high .assistant-plan-facts {
+    color: var(--color-danger-soft-text);
+}
+
+.assistant-plan-failed .assistant-plan-outcome,
+.assistant-plan-partial .assistant-plan-outcome {
+    color: var(--color-danger);
+}
+
+.assistant-plan-confirm {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.assistant-plan-confirm input[type="text"] {
+    width: 8em;
+}
+
+.assistant-plan-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+}
+
+.assistant-plan-actions .hint-text {
+    flex-basis: 100%;
+    text-align: end;
+}
+
+/* Narrow screens: full-width buttons at the touch size (sketch 8). */
+@media (max-width: 640px) {
+    .assistant-plan-actions {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .assistant-plan-actions button {
+        min-height: 44px;
+    }
+}
+
+/* A conversation with a plan waiting for Approve or Decline. */
+.assistant-conversation-pending {
+    margin-inline-start: 6px;
+    padding: 0 6px;
+    border-radius: var(--radius-sm);
+    background: var(--color-accent-soft);
+    color: var(--color-accent-soft-text);
+    font-size: var(--font-size-sm);
+}
+
+/* Page mode: "Delete all conversations" closes the sidebar's list. */
+.assistant-delete-all {
+    margin-top: 12px;
+}
