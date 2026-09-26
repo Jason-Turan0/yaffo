@@ -31,13 +31,6 @@ MANIFEST_FILE = "manifest.json"
 # asks for a rebuild even though no doc changed.
 FORMAT_VERSION = 2
 
-# Docs left out of the bundle. A proposal describes features that don't exist
-# yet, and the assistant would present them as fact; include it once it becomes the
-# design reference for shipped behavior.
-EXCLUDED = frozenset({
-    "development/ai-assistant.md",
-})
-
 SCOPE_GUIDE = "guide"
 SCOPE_DEVELOPMENT = "development"
 
@@ -70,10 +63,7 @@ def source_files(docs_dir: Path = DOCS_DIR) -> list[Path]:
     files = [docs_dir / "index.md"]
     for sub in ("guide", "development"):
         files.extend(sorted((docs_dir / sub).rglob("*.md")))
-    return [
-        f for f in files
-        if f.is_file() and f.relative_to(docs_dir).as_posix() not in EXCLUDED
-    ]
+    return [f for f in files if f.is_file()]
 
 
 def source_hash(docs_dir: Path = DOCS_DIR) -> str:

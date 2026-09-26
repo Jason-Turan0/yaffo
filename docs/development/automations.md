@@ -813,7 +813,7 @@ and fail rather than silently choosing from truncated match candidates.
 accept `profile="automation"` (the default) or `"assistant"`. Only explicitly
 registered functions enter the assistant profile; `report_progress` is excluded.
 The registry also carries risk, settings, network, precondition, and undo metadata
-for future reviewed assistant plans. Those metadata do not add approval gates to
+for reviewed assistant plans. Those metadata do not add approval gates to
 existing automation runs.
 
 Preview mutations with return values now return opaque `$ref:N` tokens instead
@@ -821,7 +821,7 @@ of `None`. Indices count mutations only. For example, creating an album then
 calling `add_to_album` records the reference and the selected media ids without
 writing anything. Pass the token unchanged to later mutations; it cannot be used
 in live reads. Preview summaries name the referenced album. The inverse helpers
-and reference-resolution contracts are described in [AI Assistant](ai-assistant.md#sandbox-groundwork-phase-2).
+and reference-resolution contract are described in [AI Assistant](ai-assistant.md#change-plans).
 
 Shared batch edit helpers now include `untag_media_items`, `unassign_faces`,
 `set_favorites`, `set_media_dates`, and `set_location_names`. Value setters accept

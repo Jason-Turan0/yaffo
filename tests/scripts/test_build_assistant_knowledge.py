@@ -82,10 +82,9 @@ def test_build_sections_scopes_anchors_and_duplicate_headings(tmp_path):
     assert by_id["index.md#"].scope == "guide"
 
 
-def test_excluded_docs_are_left_out(tmp_path, monkeypatch):
+def test_source_files_include_development_docs(tmp_path):
     (tmp_path / "development").mkdir()
     (tmp_path / "index.md").write_text("# Home\nx\n")
-    (tmp_path / "development" / "plan.md").write_text("# Plan\nFuture.\n")
-    monkeypatch.setattr(build, "EXCLUDED", frozenset({"development/plan.md"}))
+    (tmp_path / "development" / "ai-assistant.md").write_text("# Assistant\nCurrent behavior.\n")
 
-    assert [p.name for p in build.source_files(tmp_path)] == ["index.md"]
+    assert [p.name for p in build.source_files(tmp_path)] == ["index.md", "ai-assistant.md"]
