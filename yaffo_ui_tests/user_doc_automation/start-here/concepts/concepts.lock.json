@@ -1,6 +1,6 @@
 {
     "page": "start-here/concepts",
-    "lastVerifiedSha": "801d5a6245736fb18a4e81c98e4bbcd1c2648e8e",
+    "lastVerifiedSha": "bc0172c92afa2af8a30462a3f7171cc17d25e790",
     "observed": {
         "page": "start-here/concepts",
         "urls": [
@@ -15,8 +15,8 @@
             "/media/:id/poster",
             "/media/view/:id",
             "/pages/:id",
-            "/pages/:id/widgets/6f3e9539f4c24d54b3480f41445fbfc2/frame",
-            "/pages/:id/widgets/e999f14c05a0479fa8e90541253dca45/frame",
+            "/pages/:id/widgets/2698d1876ef346e59b4201bd61381555/frame",
+            "/pages/:id/widgets/8ccc71abd5564708b975de1907673634/frame",
             "/people",
             "/placeholder",
             "/settings",
@@ -191,7 +191,6 @@
             "yaffo/templates/filters/_tags.html",
             "yaffo/templates/filters/_year.html",
             "yaffo/templates/fragments/job_section_fragment.html",
-            "yaffo/templates/fragments/job_status_fragment.html",
             "yaffo/templates/index.html",
             "yaffo/templates/locations/list.html",
             "yaffo/templates/macros/local_datetime.html",
@@ -253,7 +252,7 @@
         "yaffo/routes/pages.py": "648323b798b367ad107135521fad36bd44d7e5bbc2ded0e11e15020e17c00013",
         "yaffo/routes/people.py": "bb0ff19f88fe0aa1d8a6f14e97369abf7149a6b9c4bdef460b3f7c024d30f8cf",
         "yaffo/routes/settings.py": "46335f384ac77ba7103fb0b6535ce7e99b45264a9b72b58ede7325ae0f580832",
-        "yaffo/routes/sharing.py": "5d4631769c4a956a31fc578570d44be724ee512fe24b913258dca4197e7228d9",
+        "yaffo/routes/sharing.py": "5df02332617cbb2ae8ccc8b86343780c16f79059e2b569e0609f099bf665cc4c",
         "yaffo/routes/themes_page.py": "78d49ad1761784cd85f71e78d02a93eef80483cea86311ed1dbc7e5005b366da",
         "yaffo/routes/utilities/automations.py": "737e61f1cc0409d8655aba693a398942e56556e219c54114ff30da3db758deb3",
         "yaffo/routes/utilities/index_photos.py": "5470ff631e478dd2a13a272bd6399e30202150564d5e88fcbaf6b5f919294e87",
@@ -412,7 +411,6 @@
         "yaffo/templates/filters/_tags.html": "6889bfad2106a270ce4a03da776fe086fc9992f53ac76110554884b973747daa",
         "yaffo/templates/filters/_year.html": "deba51a196a4f1aaa5f800c91344a9725fb4be9dc0150941461d5947b07ef8ba",
         "yaffo/templates/fragments/job_section_fragment.html": "c1d5ff3616f1a44313de39bf7a59644af41798527d0939f9a9118da8c95bb9ca",
-        "yaffo/templates/fragments/job_status_fragment.html": "192d9d881f8f69e8408c0736ce809668fffe45a4099661ebef202afb35363f63",
         "yaffo/templates/index.html": "970668a94768a4ec79b7595f3e3acf5a7856471df560caa45d3641a9ffb8bed5",
         "yaffo/templates/locations/list.html": "cfa11c1d7cc98e4b3358a6069cd4614b67305dd1b340d5676456bb72cb433f4e",
         "yaffo/templates/macros/local_datetime.html": "910f251fec2825edf4c9d25e46a49484dcc50b23ab7a1d16403f652143c3739e",

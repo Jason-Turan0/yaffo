@@ -22,6 +22,17 @@
 - Prose unaffected: the section text lists preview / file info / capture date+device /
   location / people / faces / labels, all still visible; nothing describes the tags
   section.
+- 2026 run: 2453 px differ (0.0418% of the 1392x1122 frame), all inside one 365x27 box
+  at (120, 435) = the FOLDER value in the sidebar. Baseline showed /tmp/yaffo-docs/...
+  and the new capture /private/tmp/yaffo-docs/... — the macOS/Linux /tmp
+  canonicalization, same cause as settings-overview.webp, not a product change. This
+  shot had no ignoreRegions at all, so the path reached the diff.
+- Fixed in the walkthrough instead of chasing a baseline: media-detail.webp now carries
+  the same
+  `ignoreRegions: [".detail-section:first-child .detail-item:nth-of-type(2) .detail-value"]`
+  as library-basics/photo-details `media-detail.webp` (same view, already ignores it).
+- Prose unaffected here too: the section names preview / file info / capture date+device
+  / location / people (3) / faces (3) / labels (2), all present and identical.
 
 
 ## gallery-home.webp
@@ -37,3 +48,25 @@
 - 0.2836% is ~3x the 0.1% "tiny variation" promote gate and the whole control repainted, so do not
   adopt: quarantine. If the toggle keeps jittering run after run, pin the header metrics (fixed-size
   view-toggle / explicit crop) instead of chasing a baseline.
+
+
+## settings-overview.webp
+- 2026 run: 3197 px differ (0.0607% of the 1392x946 frame), all inside one 426x154 box
+  over the Thumbnail Directory block. Two environment causes, no product change:
+  (1) the current thumbnail dir `<code id="current-thumbnail-dir">` re-rendered as
+  /tmp/yaffo-docs/thumbnails instead of /private/tmp/yaffo-docs/thumbnails — the same
+  macOS/Linux /tmp canonicalization the walkthrough already calls benign, but
+  `ignoreRegions` only lists `.media-dir-path`, so the second path field leaks it into the
+  diff; (2) the streamed `#thumbnail-size` total drifted 466.02 -> 465.97 KB with
+  "Files: 96" unchanged (generated-thumbnail bytes).
+- Sections (Media Directories / Thumbnail Directory / Language), headings, buttons
+  (Remove, Browse..., Add Directory, Change Directory, Save) and placeholders are
+  pixel-identical, and nothing in the lock file that renders /settings changed (en.json +2
+  = unrelated audit-log strings) -> environment_instability; 0.0607% <= 0.1%, not reframed,
+  counts unchanged, no prose affected -> promote.
+- If the path noise recurs run after run, extend `ignoreRegions` to `#current-thumbnail-dir`
+  (or normalize the fixture path) rather than chasing a baseline. Do not ignore
+  `#thumbnail-stats`: that size text is real fixture content.
+- Prose: the settings figure's caption named "Units", a section the walkthrough slices off
+  (`sections.slice(3)` drops Units and everything after), so the caption was corrected to
+  the sections actually shown.

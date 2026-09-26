@@ -71,6 +71,12 @@ export default defineWalkthrough({
             goto: ({mediaIdByFilename}) =>
                 mediaIdByFilename(DETAIL_IMAGE).then((id) => `/media/view/${id}`),
             clip: ".photo-viewer",
+            // The docs fixture is /private/tmp on macOS and /tmp on Linux. Keep the
+            // useful folder visible while excluding only its host spelling — the
+            // same view on the photo-details page does the same.
+            ignoreRegions: [
+                ".detail-section:first-child .detail-item:nth-of-type(2) .detail-value",
+            ],
         },
     },
 });
