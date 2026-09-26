@@ -1,12 +1,16 @@
+import json
 import time as monotonic_time
+import uuid
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from sqlalchemy.orm import Session
 
 from yaffo.common import MEDIA_EXTENSIONS
-from yaffo.db.models import MEDIA_STATUS_INDEXED, MediaItem
+from yaffo.db.models import (
+    JOB_STATUS_COMPLETED, JOB_STATUS_FAILED, JOB_STATUS_RUNNING, MEDIA_STATUS_INDEXED, Job, MediaItem,
+)
 from yaffo.db.repositories.media_dir_repository import get_media_dirs
 from yaffo.logging_config import get_logger
 from yaffo.utils.index_jobs import enqueue_index_jobs
@@ -19,6 +23,7 @@ from yaffo.utils.index_photos import (
 from yaffo.utils.settings import get_thumbnail_dir
 from yaffo.utils.safe_paths import PathOutsideAllowedRoots, resolve_path_in_roots
 from yaffo.utils.thumbnail_marker import ensure_thumbnail_dir, in_marked_thumbnail_dir
+from yaffo.utils.time import utcnow
 
 logger = get_logger(__name__, 'background_tasks')
 
@@ -27,6 +32,22 @@ logger = get_logger(__name__, 'background_tasks')
 # table copy so the user can tell a deleted file from a de-configured directory.
 ORPHAN_MISSING = "missing"          # file gone from disk (its media dir still configured)
 ORPHAN_UNCONFIGURED = "unconfigured"  # path no longer under any configured media dir
+
+
+# Every file-sync run's own Job (see run_file_sync), so the run history shows each
+# run and how it ended. `job_data["outcome"]` is one of FILE_SYNC_OUTCOMES; the run
+# history words it (routes/utilities/run_history.py).
+FILE_SYNC_JOB = "file_sync"
+SYNC_NO_MEDIA_DIRS = "no_media_dirs"
+SYNC_NO_THUMBNAIL_DIR = "no_thumbnail_dir"
+SYNC_NO_FOLDER_CONNECTED = "no_folder_connected"
+SYNC_IN_SYNC = "in_sync"
+SYNC_STARTED = "started"
+SYNC_FAILED = "failed"
+FILE_SYNC_OUTCOMES = (SYNC_NO_MEDIA_DIRS, SYNC_NO_THUMBNAIL_DIR, SYNC_NO_FOLDER_CONNECTED,
+                      SYNC_IN_SYNC, SYNC_STARTED, SYNC_FAILED)
+# Outcomes where the sync didn't run at all.
+SYNC_SKIPPED = (SYNC_NO_MEDIA_DIRS, SYNC_NO_THUMBNAIL_DIR, SYNC_NO_FOLDER_CONNECTED)
 
 
 class MediaScanLimitExceeded(RuntimeError):
@@ -42,6 +63,10 @@ class MediaScan:
     total_imported: int
     total_indexed: int
     total_filesystem: int
+    # Configured media folders that exist but hold no media files at all: usually a
+    # drive that didn't mount properly (an empty mount point), not a deliberate
+    # deletion. Unattended syncs leave the items under them alone.
+    empty_roots: list[str] = field(default_factory=list)
 
     @property
     def files_to_index(self) -> list[str]:
@@ -52,7 +77,7 @@ class MediaScan:
         return [o['id'] for o in self.orphaned]
 
 
-def _orphan_reason(path: Path, media_dirs: list[Path]) -> str | None:
+def orphan_reason(path: Path, media_dirs: list[Path]) -> str | None:
     """Why an indexed photo at `path` is orphaned, or None if it's still valid.
 
     A row is orphaned when (a) its path is no longer under any configured media dir
@@ -123,12 +148,14 @@ def iter_media_scan(
 
     filesystem_paths: set[str] = set()
     unindexed: list[dict] = []
+    empty_roots: list[str] = []
     walked = 0
     marked_dirs: dict[Path, bool] = {}
     started_at = monotonic_time.monotonic()
     for media_dir in media_dirs:
         if not media_dir.exists():
             continue
+        found_before = len(filesystem_paths)
         for photo_file in media_dir.rglob("*"):
             walked += 1
             if max_walked is not None and walked > max_walked:
@@ -159,10 +186,12 @@ def iter_media_scan(
             filesystem_paths.add(full_path)
             if full_path not in indexed_paths:
                 unindexed.append({'filename': photo_file.name, 'full_path': full_path})
+        if len(filesystem_paths) == found_before:
+            empty_roots.append(str(media_dir))
 
     orphaned = []
     for media_item_id, path, _status in db_photos:
-        reason = _orphan_reason(Path(path), media_dirs)
+        reason = orphan_reason(Path(path), media_dirs)
         if reason is not None:
             orphaned.append({'id': media_item_id, 'full_path': path, 'reason': reason})
 
@@ -175,7 +204,26 @@ def iter_media_scan(
         total_imported=len(db_photos),
         total_indexed=len(indexed_paths),
         total_filesystem=len(filesystem_paths),
+        empty_roots=empty_roots,
     )
+
+
+def under_empty_root(path: str, empty_roots: list[str]) -> bool:
+    """Whether `path` lies under one of the scan's empty media folders."""
+    expanded = Path(path).expanduser()
+    return any(expanded.is_relative_to(Path(root).expanduser()) for root in empty_roots)
+
+
+def root_has_media(root: Path) -> bool:
+    """Whether a media folder holds at least one media file. Stops at the first
+    one, so it's cheap on a healthy folder; an empty mount point returns False."""
+    try:
+        return any(
+            path.suffix.lower() in MEDIA_EXTENSIONS and not is_system_file(path.name) and path.is_file()
+            for path in root.rglob("*")
+        )
+    except OSError:
+        return False
 
 
 def scan_media_dirs(
@@ -209,34 +257,92 @@ def perform_sync(
     return enqueue_index_jobs(session, files_to_index, automation_id=automation_id)
 
 
+def _open_run(session: Session, automation_id: int | None) -> Job:
+    now = utcnow()
+    job = Job(id=str(uuid.uuid4()), name=FILE_SYNC_JOB, status=JOB_STATUS_RUNNING, automation_id=automation_id,
+              task_count=1, completed_count=0, error_count=0, cancelled_count=0, created_at=now, started_at=now)
+    session.add(job)
+    session.commit()
+    return job
+
+
+def _close_run(session: Session, job: Job, outcome: str, data: dict | None = None, error: str | None = None) -> None:
+    """Finish the run's Job. A skipped or failed run is FAILED; a run that finished
+    but needs attention (items left alone) is COMPLETED with an error."""
+    failed = outcome in SYNC_SKIPPED or outcome == SYNC_FAILED
+    job.status = JOB_STATUS_FAILED if failed else JOB_STATUS_COMPLETED
+    job.completed_count = 0 if failed else 1
+    job.error_count = 1 if error else 0
+    job.error = error
+    job.job_data = json.dumps({"outcome": outcome, **(data or {})})
+    job.completed_at = utcnow()
+    session.commit()
+
+
 def run_file_sync(session: Session, automation_id: int | None = None) -> IndexJobs | None:
-    """Unattended full reconcile for the scheduled task: scan the configured
-    media dirs and run the same sync the user would trigger by hand. Returns the
-    created Jobs, or None when nothing is configured or already in sync.
-    `automation_id` tags the created Jobs as that automation's run."""
+    """Full reconcile for the file-sync automation (scheduled, or Run now): scan
+    the configured media dirs and run the same sync the user would trigger by
+    hand. Each run records its own FILE_SYNC_JOB with how it ended, so the run
+    history shows it even when there was nothing to do. Returns the created
+    import/index Jobs, or None when it skipped or was already in sync.
+    `automation_id` tags the Jobs as that automation's run."""
+    run = _open_run(session, automation_id)
+    try:
+        return _file_sync(session, run)
+    except Exception as exc:
+        logger.error(f"file_sync: run {run.id} failed: {exc}", exc_info=True)
+        session.rollback()
+        _close_run(session, run, SYNC_FAILED, error=f"The sync failed: {exc}")
+        raise
+
+
+def _file_sync(session: Session, run: Job) -> IndexJobs | None:
     media_dirs = get_media_dirs(session)
     thumbnail_dir = get_thumbnail_dir(session)
     if not media_dirs:
         logger.info("file_sync: no media directories configured; skipping")
+        _close_run(session, run, SYNC_NO_MEDIA_DIRS, error="No media folders are configured.")
         return None
     if thumbnail_dir is None:
         logger.info("file_sync: no thumbnail directory configured; skipping")
+        _close_run(session, run, SYNC_NO_THUMBNAIL_DIR, error="No thumbnail folder is configured.")
         return None
     if not any(d.exists() for d in media_dirs):
         logger.warning("file_sync: no configured media directory exists; skipping")
+        _close_run(session, run, SYNC_NO_FOLDER_CONNECTED,
+                   error=f"None of the media folders is connected: {', '.join(str(d) for d in media_dirs)}.")
         return None
 
     ensure_thumbnail_dir(thumbnail_dir)
     scan = scan_media_dirs(session, media_dirs, thumbnail_dir)
-    if not scan.files_to_index and not scan.orphaned:
+    # Nobody reviews an unattended sync: a media folder that came back empty is far
+    # likelier a failed mount than a deletion, so its items stay.
+    orphaned_ids = [o['id'] for o in scan.orphaned if not under_empty_root(o['full_path'], scan.empty_roots)]
+    held_back = len(scan.orphaned) - len(orphaned_ids)
+    error = None
+    if held_back:
+        logger.warning(
+            f"file_sync: media folder(s) {', '.join(scan.empty_roots)} hold no media files; leaving "
+            f"{held_back} indexed item(s) under them alone"
+        )
+        error = (f"These media folders hold no media files, which usually means a drive isn't connected: "
+                 f"{', '.join(scan.empty_roots)}. The {held_back} indexed item(s) under them were left in the "
+                 "library. Check the drive, or remove the folder in Settings if it's empty on purpose.")
+    data = {"indexed": len(scan.files_to_index), "removed": len(orphaned_ids), "held_back": held_back,
+            "empty_roots": scan.empty_roots}
+    if not scan.files_to_index and not orphaned_ids:
         logger.info("file_sync: index already in sync; nothing to do")
+        _close_run(session, run, SYNC_IN_SYNC, data, error)
         return None
 
     logger.info(
         f"file_sync: {len(scan.files_to_index)} to (re)index, "
-        f"{len(scan.orphaned)} orphan rows to remove"
+        f"{len(orphaned_ids)} orphan rows to remove"
     )
-    return perform_sync(
-        session, scan.files_to_index, scan.orphaned_media_item_ids, thumbnail_dir,
-        automation_id=automation_id,
+    jobs = perform_sync(
+        session, scan.files_to_index, orphaned_ids, thumbnail_dir,
+        automation_id=run.automation_id,
     )
+    _close_run(session, run, SYNC_STARTED,
+               {**data, "import_job_id": jobs.import_job_id, "index_job_id": jobs.index_job_id}, error)
+    return jobs

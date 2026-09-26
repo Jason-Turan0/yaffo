@@ -20,7 +20,7 @@
  * @property {string} full_path
  *
  * @typedef {{ type: 'progress', scanned: number }} ProgressRecord
- * @typedef {{ type: 'done', total_filesystem: number, total_imported: number, total_indexed: number, unindexed: UnindexedPhoto[], orphaned: OrphanedPhoto[] }} DoneRecord
+ * @typedef {{ type: 'done', total_filesystem: number, total_imported: number, total_indexed: number, unindexed: UnindexedPhoto[], orphaned: OrphanedPhoto[], empty_roots: string[] }} DoneRecord
  * @typedef {{ type: 'error', message: string }} ErrorRecord
  * @typedef {ProgressRecord | DoneRecord | ErrorRecord} ScanRecord
  *
@@ -188,6 +188,24 @@ const initIndexPhotos = (opts, i18n, config) => {
         return section;
     };
 
+    /**
+     * Warn about media folders that exist but hold no media files: usually a drive
+     * that didn't mount (an empty mount point). Their items are listed as missing,
+     * and Sync would remove them.
+     * @param {string[]} folders
+     */
+    const showEmptyFolders = (folders) => {
+        const container = document.getElementById('scan-warnings');
+        if (!container) return;
+        container.replaceChildren();
+        container.hidden = folders.length === 0;
+        if (!folders.length) return;
+        container.append(el('div', 'alert alert-warning', i18n.t('utilities:indexPhotos.emptyFolders', {
+            count: folders.length,
+            folders: i18n.list(folders),
+        })));
+    };
+
     const renderResults = () => {
         const container = document.getElementById('scan-results');
         if (!container) return;
@@ -312,6 +330,7 @@ const initIndexPhotos = (opts, i18n, config) => {
             setStat('stat-unindexed', record.unindexed.length);
             setStat('stat-orphaned', record.orphaned.length);
             setStatus('');
+            showEmptyFolders(record.empty_roots || []);
             renderResults();
             revealSyncIfWork();
         } else if (record.type === 'error') {

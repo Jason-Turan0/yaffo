@@ -1,6 +1,7 @@
 """Run history rows: the compact list of past Jobs shown on an automation's detail
 page and under the Index Photos job cards. Built from a Job so the template stays
 dumb and the per-run-kind display logic lives in one tested place."""
+import json
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -13,6 +14,15 @@ from yaffo.db.models import (
     JOB_STATUS_FAILED,
     JOB_STATUS_PENDING,
     JOB_STATUS_RUNNING,
+)
+from yaffo.utils.file_sync import (
+    FILE_SYNC_JOB,
+    SYNC_FAILED,
+    SYNC_IN_SYNC,
+    SYNC_NO_FOLDER_CONNECTED,
+    SYNC_NO_MEDIA_DIRS,
+    SYNC_NO_THUMBNAIL_DIR,
+    SYNC_STARTED,
 )
 
 RUN_FINISHED_STATUSES = (JOB_STATUS_COMPLETED, JOB_STATUS_FAILED, JOB_STATUS_CANCELLED)
@@ -56,6 +66,7 @@ def _run_label(job: Job) -> str:
         "import_photos": gettext("Import photos"),
         "index_photos": gettext("Index photos"),
         "find_duplicates": gettext("Find duplicates"),
+        "file_sync": gettext("File sync"),
     }.get(label, label)
 
 
@@ -65,12 +76,46 @@ def _kind_label(job: Job) -> str:
         "import_photos": gettext("Import photos"),
         "index_photos": gettext("Index photos"),
         "find_duplicates": gettext("Find duplicates"),
+        "file_sync": gettext("File sync"),
     }.get(job.name, _run_label(job))
+
+
+def _file_sync_summary(job: Job) -> str:
+    """How a file-sync run ended, from the outcome it recorded (utils/file_sync.py)."""
+    try:
+        data = json.loads(job.job_data or "{}")
+    except ValueError:
+        data = {}
+    outcome = data.get("outcome")
+    if outcome == SYNC_IN_SYNC:
+        return gettext("Already in sync")
+    if outcome == SYNC_STARTED:
+        indexed, removed = int(data.get("indexed") or 0), int(data.get("removed") or 0)
+        parts = []
+        if indexed:
+            parts.append(ngettext("Indexing %(count)s new file", "Indexing %(count)s new files", indexed,
+                                  count=indexed))
+        if removed:
+            parts.append(ngettext("removed %(count)s missing item", "removed %(count)s missing items", removed,
+                                  count=removed))
+        return ", ".join(parts)
+    if outcome == SYNC_NO_MEDIA_DIRS:
+        return gettext("Skipped: no media folders are configured")
+    if outcome == SYNC_NO_THUMBNAIL_DIR:
+        return gettext("Skipped: no thumbnail folder is configured")
+    if outcome == SYNC_NO_FOLDER_CONNECTED:
+        return gettext("Skipped: no media folder is connected")
+    if outcome == SYNC_FAILED:
+        return gettext("The sync failed")
+    return gettext("Running") if job.status in (JOB_STATUS_PENDING, JOB_STATUS_RUNNING) else _run_label(job)
 
 
 def _run_summary(job: Job) -> str:
     """One-line result for a run: progress counts for batch jobs (find_duplicates /
-    index), else the job's message (custom runs carry the automation name)."""
+    index), how a file-sync run ended, else the job's message (custom runs carry
+    the automation name)."""
+    if job.name == FILE_SYNC_JOB:
+        return _file_sync_summary(job)
     completed = job.completed_count or 0
     errors = job.error_count or 0
     cancelled = job.cancelled_count or 0

@@ -49,7 +49,6 @@ from yaffo.db.models import (
     PLAN_STATUS_UNDONE,
     Album,
     AssistantChangePlan,
-    Job,
     Person,
     PersonFace,
 )
@@ -241,15 +240,15 @@ def step_facts(call: HostCall, session: Session, mutations: list[HostCall]) -> t
         facts["automation"] = automation.display_name if automation else None
         facts["value"] = bool(args[1]) if len(args) > 1 else None
         return 1, facts
-    if name == "retry_job":
-        job = session.get(Job, args[0]) if args and isinstance(args[0], str) else None
-        return len(maintenance.retry_files(session, job)) if job is not None else 0, facts
+    if name == "index_files":
+        return len(maintenance.files_to_index(session, args[0])) if args else 0, facts
+    if name == "remove_missing_items":
+        subset = args[1] if len(args) > 1 and isinstance(args[1], list) else None
+        return len(maintenance.scan_missing_ids(session, args[0], subset)) if args else 0, facts
     if name == "reindex_media":
         return len(set(_list_arg(args, 0))), facts
     if name == "start_library_scan":
         facts["read_only"] = True
-        return 1, facts
-    if name == "run_sync":
         return 1, facts
     if name == "repair_face_statuses":
         problems = maintenance.face_repair_counts(session)

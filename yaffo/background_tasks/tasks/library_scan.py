@@ -1,19 +1,20 @@
-"""Background task: scan the media folders against the index, and optionally sync.
+"""Background task: scan the media folders against the index.
 
-Started by the assistant's maintenance actions (start_library_scan, run_sync in
-automation_sandbox/maintenance_actions.py), after the user approved them. A scan
-walks every media folder, which can take minutes on a large library or a failing
-drive, so it never runs in the web request that approved it.
+Started by the assistant's start_library_scan (automation_sandbox/
+maintenance_actions.py) after the user approved it. A scan walks every media
+folder, which can take minutes on a large library or a failing drive, so it never
+runs in the web request that approved it.
 
-The caller creates the Job; this task runs it: RUNNING, the scan, then COMPLETED
-with what it found in `message` (read back by the assistant's job_detail) and
-`job_data`, or FAILED with the reason. A sync then applies the scan through
-perform_sync, the same code as the Index Photos Sync button, so its import/index
-Jobs appear there like any other sync.
+The scan changes nothing. It is the first half of a sync: the caller creates the
+Job; this task runs the scan and records what it found on the Job. `message` is the
+summary (read back by the assistant's job_detail); `job_data` holds the exact
+lists, the files not yet indexed and the items whose file is gone, which a later
+plan acts on (index_files, remove_missing_items). So the user approves removing
+those exact items, knowing whether they deleted a folder, instead of a sync
+guessing from counts.
 
-A sync refuses to run when it would remove too much of the library at once: an
-unmounted or half-mounted drive makes whole folders look deleted (see the
-mass-removal guard in docs/development/ai-assistant.md).
+Items under a media folder that came back empty (an empty mount point, usually)
+are left out of the missing list and named in the summary instead.
 """
 from __future__ import annotations
 
@@ -26,36 +27,31 @@ from yaffo.background_tasks.utils import SessionFactory
 from yaffo.db.models import JOB_STATUS_COMPLETED, JOB_STATUS_FAILED, JOB_STATUS_RUNNING, Job
 from yaffo.db.repositories.media_dir_repository import get_media_dirs
 from yaffo.logging_config import get_logger
-from yaffo.utils.file_sync import MediaScan, perform_sync, scan_media_dirs
+from yaffo.utils.file_sync import MediaScan, scan_media_dirs, under_empty_root
 from yaffo.utils.settings import get_thumbnail_dir
-from yaffo.utils.thumbnail_marker import ensure_thumbnail_dir
 from yaffo.utils.time import utcnow
 
 logger = get_logger(__name__, 'background_tasks')
 
-# A sync may always remove this many items, and beyond that at most this share of
-# the library. More than that is far likelier a disconnected drive than deletions.
-SYNC_REMOVE_FLOOR = 25
-SYNC_MAX_REMOVE_SHARE = 0.10
 # Example paths listed in a scan's message.
 SAMPLE_PATHS = 10
 
 
-def removal_limit(total_items: int) -> int:
-    return max(SYNC_REMOVE_FLOOR, int(total_items * SYNC_MAX_REMOVE_SHARE))
-
-
-def _summary(scan: MediaScan) -> str:
+def _summary(scan: MediaScan, missing: list[dict], held_back: int) -> str:
     lines = [
         f"{len(scan.unindexed)} file(s) in the media folders aren't indexed yet; "
-        f"{len(scan.orphaned)} indexed item(s) no longer have a file under a configured media folder "
+        f"{len(missing)} indexed item(s) no longer have their file "
         f"(library: {scan.total_imported} item(s), {scan.total_filesystem} media file(s) on disk)."
     ]
+    if held_back:
+        lines.append(
+            f"These media folders hold no media files at all, which usually means a drive didn't mount: "
+            f"{', '.join(scan.empty_roots)}. Their {held_back} indexed item(s) aren't counted as missing.")
     if scan.unindexed:
         lines.append("Not indexed, e.g.: " + "; ".join(u["full_path"] for u in scan.unindexed[:SAMPLE_PATHS]))
-    if scan.orphaned:
+    if missing:
         lines.append("File missing, e.g.: " + "; ".join(
-            f"{o['full_path']} ({o['reason']})" for o in scan.orphaned[:SAMPLE_PATHS]))
+            f"{o['full_path']} ({o['reason']})" for o in missing[:SAMPLE_PATHS]))
     return "\n".join(lines)
 
 
@@ -70,8 +66,8 @@ def _finish(session: Session, job: Job, status: str, message: str, data: dict, e
     session.commit()
 
 
-def run_library_scan(session: Session, job_id: str, apply: bool) -> None:
-    """Run the Job `job_id`: scan, and with `apply` sync what the scan found."""
+def run_library_scan(session: Session, job_id: str) -> None:
+    """Run the scan Job `job_id` and record its findings on it."""
     job = session.get(Job, job_id)
     if job is None:
         logger.warning(f"library_scan: job {job_id} not found")
@@ -81,12 +77,9 @@ def run_library_scan(session: Session, job_id: str, apply: bool) -> None:
 
     media_dirs = get_media_dirs(session)
     thumbnail_dir = get_thumbnail_dir(session)
-    missing = [str(d) for d in media_dirs if not d.exists()]
-    if not media_dirs or thumbnail_dir is None or (apply and missing):
-        reason = ("No media folders are configured." if not media_dirs
-                  else "No thumbnail folder is configured." if thumbnail_dir is None
-                  else f"These media folders aren't connected: {', '.join(missing)}. Nothing was synced.")
-        _finish(session, job, JOB_STATUS_FAILED, reason, {}, error=reason)
+    if not media_dirs:
+        _finish(session, job, JOB_STATUS_FAILED, "No media folders are configured.", {},
+                error="No media folders are configured.")
         return
 
     try:
@@ -96,39 +89,21 @@ def run_library_scan(session: Session, job_id: str, apply: bool) -> None:
         _finish(session, job, JOB_STATUS_FAILED, "The scan failed.", {}, error=f"The scan failed: {exc}")
         return
 
-    data = {"unindexed": len(scan.unindexed), "orphaned": len(scan.orphaned),
-            "total_items": scan.total_imported, "total_files": scan.total_filesystem}
-    summary = _summary(scan)
-    if not apply:
-        _finish(session, job, JOB_STATUS_COMPLETED, summary, data)
-        return
-
-    limit = removal_limit(scan.total_imported)
-    if len(scan.orphaned) > limit:
-        reason = (f"Refused: the sync would remove {len(scan.orphaned)} of {scan.total_imported} item(s) from "
-                  f"the library, more than the {limit} allowed at once. A disconnected or partly mounted "
-                  "drive usually causes this. Check every media folder is connected, then sync from "
-                  "Utilities → Index Photos, where the list can be reviewed first.")
-        _finish(session, job, JOB_STATUS_FAILED, summary + "\n" + reason, {**data, "removal_limit": limit},
-                error=reason)
-        return
-    if not scan.unindexed and not scan.orphaned:
-        _finish(session, job, JOB_STATUS_COMPLETED, "Already in sync; nothing to do.", data)
-        return
-
-    ensure_thumbnail_dir(thumbnail_dir)
-    jobs = perform_sync(session, scan.files_to_index, scan.orphaned_media_item_ids, thumbnail_dir)
-    _finish(session, job, JOB_STATUS_COMPLETED,
-            f"Removed {len(scan.orphaned)} item(s) whose files are gone, and started indexing "
-            f"{len(scan.unindexed)} new file(s) (import job {jobs.import_job_id}, index job {jobs.index_job_id}).",
-            {**data, "import_job_id": jobs.import_job_id, "index_job_id": jobs.index_job_id})
+    missing = [o for o in scan.orphaned if not under_empty_root(o["full_path"], scan.empty_roots)]
+    _finish(session, job, JOB_STATUS_COMPLETED, _summary(scan, missing, len(scan.orphaned) - len(missing)), {
+        "unindexed_paths": scan.files_to_index,
+        "missing": [{"id": o["id"], "reason": o["reason"]} for o in missing],
+        "empty_roots": scan.empty_roots,
+        "total_items": scan.total_imported,
+        "total_files": scan.total_filesystem,
+    })
 
 
 @task_queue.task()
-def library_scan_task(job_id: str, apply: bool = False) -> None:
+def library_scan_task(job_id: str) -> None:
     session = SessionFactory()
     try:
-        run_library_scan(session, job_id, apply)
+        run_library_scan(session, job_id)
     finally:
         session.close()
         SessionFactory.remove()

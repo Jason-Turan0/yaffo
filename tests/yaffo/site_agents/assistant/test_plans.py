@@ -535,7 +535,7 @@ def test_background_work_is_reported_as_still_running(session, conversation, mon
         ApplicationSettings(name="assistant_action_start_library_scan", type="string", value="true"),
     ])
     session.commit()
-    monkeypatch.setattr(library_scan, "library_scan_task", lambda job_id, apply: None)
+    monkeypatch.setattr(library_scan, "library_scan_task", lambda job_id: None)
     _, plan = _record(session, conversation, "start_library_scan()",
                       actions_on=assistant_settings.enabled_actions(session))
     view = plan_view(plan, 500)

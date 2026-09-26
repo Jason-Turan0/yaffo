@@ -385,6 +385,9 @@ class DiagnosticsToolProvider(ToolProvider):
                 probe = None
                 if facts.get("exists"):
                     probe = self.fs.probe(entry.id).__dict__
+                    if probe.get("responded") and not probe.get("error"):
+                        facts["holds_media"] = self.fs.holds_media(entry.id)
+                        facts["indexed_items"] = self._indexed_items_under(entry.path)
                 findings += health.check_media_dir(str(entry.path), facts, probe)
             findings += health.check_thumbnail_dir(**self._thumbnail_facts(count_files=False))
         if DIAG_LIBRARY in self.groups:
@@ -734,6 +737,17 @@ class DiagnosticsToolProvider(ToolProvider):
         return Output(header + "\n" + "\n".join(tail.lines), count=errors)
 
     # ---- files ----------------------------------------------------------
+
+    def _indexed_items_under(self, root: Path) -> int:
+        """Indexed items under a media folder, as configured or resolved (stored
+        paths are resolved; the setting may go through a symlink or ~)."""
+        prefixes = {str(root.expanduser()).rstrip("/\\") + os.sep}
+        try:
+            prefixes.add(str(root.expanduser().resolve()).rstrip("/\\") + os.sep)
+        except OSError:
+            pass
+        return self.session.query(MediaItem.id).filter(
+            or_(*(MediaItem.full_file_path.startswith(prefix) for prefix in prefixes))).count()
 
     def _media_dir_facts(self, media_dir_id: str) -> dict:
         try:

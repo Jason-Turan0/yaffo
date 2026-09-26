@@ -115,6 +115,34 @@ def test_scan_stream_emits_progress_then_done(app, client, monkeypatch):
     assert records[1]["total_filesystem"] == 2
     assert records[1]["unindexed"] == [{"filename": "b.jpg", "full_path": "/m/b.jpg"}]
     assert records[1]["orphaned"] == []
+    assert records[1]["empty_roots"] == []
+
+
+def test_scan_stream_names_empty_media_folders(app, client, monkeypatch, tmp_path):
+    fake = MediaScan(unindexed=[], orphaned=[], total_imported=2, total_indexed=2, total_filesystem=0,
+                     empty_roots=["/Volumes/Photos"])
+    monkeypatch.setattr("yaffo.routes.utilities.index_photos.iter_media_scan", lambda *a, **k: iter([fake]))
+
+    records = [json.loads(line) for line in client.get("/utilities/index-photos/scan").get_data(as_text=True).splitlines()]
+
+    assert records[-1]["empty_roots"] == ["/Volumes/Photos"]
+    monkeypatch.setattr("yaffo.routes.utilities.index_photos.get_media_dirs", lambda *a: [tmp_path])
+    assert 'id="scan-warnings"' in client.get("/utilities/index-photos").get_data(as_text=True)
+
+
+def test_only_file_sync_runs_that_need_attention_are_in_the_run_history(app, client):
+    _add_job(app, "held-back", "file_sync", "COMPLETED", 5, task_count=1, completed_count=1, error_count=1,
+             message=None, error="These media folders hold no media files: /Volumes/Photos.",
+             job_data='{"outcome": "in_sync"}')
+    _add_job(app, "quiet", "file_sync", "COMPLETED", 4, task_count=1, completed_count=1,
+             message=None, job_data='{"outcome": "in_sync"}')
+
+    body = client.get("/utilities/index-photos").get_data(as_text=True)
+    history = body.split('class="section index-run-history"')[1]
+
+    assert "Completed with errors" in history
+    assert "These media folders hold no media files: /Volumes/Photos." in history
+    assert history.count('class="run-history-row') == 1  # the hourly "Already in sync" runs stay off this page
 
 
 def test_scan_stream_reports_error_as_record(app, client, monkeypatch):

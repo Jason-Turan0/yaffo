@@ -17,6 +17,16 @@ def test_unmounted_media_dir_is_a_problem():
     assert "not mounted" in findings[0].message and findings[0].doc
 
 
+def test_an_empty_media_folder_with_indexed_items_is_a_problem():
+    facts = {"exists": True, "readable": True}
+    findings = health.check_media_dir("/Volumes/Photos", facts | {"holds_media": False, "indexed_items": 1240})
+    assert _levels(findings) == [PROBLEM]
+    assert "holds no media files, but 1240 indexed item(s)" in findings[0].message
+    # A new, genuinely empty folder, or a drive that didn't answer in time, isn't flagged.
+    assert _levels(health.check_media_dir("/m", facts | {"holds_media": False, "indexed_items": 0})) == [OK]
+    assert _levels(health.check_media_dir("/m", facts | {"holds_media": None, "indexed_items": 5})) == [OK]
+
+
 def test_media_dir_probe_and_space():
     facts = {"exists": True, "readable": True, "total_bytes": 1000 * 1024 ** 3, "free_bytes": 1024 ** 3}
     assert _levels(health.check_media_dir("/m", facts, {"responded": False})) == [PROBLEM, WARNING]

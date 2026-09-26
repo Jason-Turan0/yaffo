@@ -4,6 +4,8 @@ Use the shared throwaway-DB app fixture. The chat happy path (which enqueues a r
 generation) isn't exercised here; the request-side gating and the publish/status/
 discard endpoints are.
 """
+import json
+
 import pytest
 
 from yaffo.db import db
@@ -263,6 +265,39 @@ def test_run_now_fires_automation(app, client, monkeypatch):
     resp = client.post("/utilities/automations/a1/run")
     assert resp.status_code == 202
     assert calls == [("a1", None)]  # fired with no event context, like a schedule tick
+
+
+def test_run_now_refuses_a_file_sync_while_one_is_queued(app, client, monkeypatch, queue_store):
+    _add(app, slug="sync", name="File sync", is_system=True, handler="file_sync")
+    calls = []
+    monkeypatch.setattr("yaffo.routes.utilities.automations.invoke_automation",
+                        lambda automation, context: calls.append(automation.slug) or True)
+    queue_store.insert_task("file_sync_task", [1], {})
+
+    resp = client.post("/utilities/automations/sync/run")
+
+    assert resp.status_code == 409 and resp.get_json()["code"] == "file_sync_running"
+    assert calls == []
+    _add(app, slug="other", name="Other")
+    assert client.post("/utilities/automations/other/run").status_code == 202  # other automations aren't held up
+
+
+def test_file_sync_runs_read_how_they_ended(app, client):
+    _add(app, slug="sync", name="File sync", is_system=True, handler="file_sync")
+    _add_job(app, slug="sync", id="r1", name="file_sync", task_count=1,
+             job_data=json.dumps({"outcome": "in_sync"}))
+    _add_job(app, slug="sync", id="r2", name="file_sync", task_count=1,
+             job_data=json.dumps({"outcome": "started", "indexed": 3, "removed": 1}))
+    _add_job(app, slug="sync", id="r3", name="file_sync", task_count=1, status="FAILED",
+             error="None of the media folders is connected: /Volumes/Photos.",
+             job_data=json.dumps({"outcome": "no_folder_connected"}))
+
+    body = client.get("/utilities/automations/sync").get_data(as_text=True)
+
+    assert "Already in sync" in body
+    assert "Indexing 3 new files, removed 1 missing item" in body
+    assert "Skipped: no media folder is connected" in body
+    assert "None of the media folders is connected: /Volumes/Photos." in body
 
 
 def test_run_now_nothing_to_run_400(app, client, monkeypatch):

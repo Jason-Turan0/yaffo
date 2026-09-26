@@ -525,5 +525,5 @@ def test_settings_labels_are_short_with_explanations_in_info_tips(app, client):
     assert not [label for label in labels if "(" in label]
 
     section = _settings_section(client)
-    assert section.count('class="help-tip"') == len(tips) + 1 == 9  # + the confirm-count threshold
+    assert section.count('class="help-tip"') == len(tips) + 1 == 11  # + the confirm-count threshold
     assert "Delete albums\n" in section and "The photos in the album stay in your library." in section

@@ -16,12 +16,15 @@ from flask_babel import gettext
 
 from yaffo.background_tasks.automation_config import config_fields_for, config_value
 from yaffo.background_tasks.automation_dispatch import invoke_automation
+from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.automation_sandbox.preview import preview_automation
 from yaffo.background_tasks.events import EventContext, MANUAL_RUN_EVENT_TYPE
 from yaffo.background_tasks.schedule import is_valid_cron
 from yaffo.background_tasks.tasks.generate_automation import generate_automation_task
 from yaffo.db import db
+from yaffo.taskq.store import STATUS_READY, STATUS_RUNNING
 from yaffo.db.models import (
+    AUTOMATION_HANDLER_FILE_SYNC,
     Automation,
     AutomationTrigger,
     AUTOMATION_STATUS_ACCEPTED,
@@ -45,6 +48,20 @@ from yaffo.routes.utilities.common import automations_sidebar_context
 from yaffo.routes.utilities.run_history import RunView, run_view
 
 _MAX_BASE_SLUG_LENGTH = 30
+
+# The queue task a file-sync run executes (tasks/file_sync.py).
+FILE_SYNC_TASK = "file_sync_task"
+
+
+def _queue_store():
+    """The task queue's store (a function so tests can swap in a throwaway one)."""
+    return task_queue.store
+
+
+def file_sync_queued() -> bool:
+    """Whether a file sync is waiting in the queue or running now."""
+    counts = _queue_store().status_counts([FILE_SYNC_TASK])
+    return bool(counts.get(STATUS_READY, 0) + counts.get(STATUS_RUNNING, 0))
 
 
 
@@ -443,6 +460,14 @@ def init_automations_routes(app: Flask):
         automation = repo.get_by_slug(db.session, slug)
         if automation is None:
             abort(404)
+        # The queue skips a file sync while another holds its lock, leaving no trace
+        # of the click; say so instead.
+        if automation.handler == AUTOMATION_HANDLER_FILE_SYNC and file_sync_queued():
+            return _error(
+                gettext("A file sync is already running. Wait for it to finish, then run it again."),
+                "file_sync_running",
+                409,
+            )
 
         path = ((request.get_json(silent=True) or {}).get("path") or "").strip()
         context = None

@@ -57,7 +57,8 @@ def _ok(check: str, message: str) -> Finding:
 
 def check_media_dir(label: str, facts: dict, probe: Optional[dict] = None) -> list[Finding]:
     """`facts` from AssistantFS.media_dir_facts (or {"error": ...} when that timed
-    out); `probe` from AssistantFS.probe."""
+    out), plus `holds_media` and `indexed_items` when the folder answered; `probe`
+    from AssistantFS.probe."""
     check = f"media_dir:{label}"
     if facts.get("error"):
         return [Finding(check, PROBLEM, f"Media folder {label} did not respond: {facts['error']}.", DOC_PHOTOS_MISSING)]
@@ -69,6 +70,14 @@ def check_media_dir(label: str, facts: dict, probe: Optional[dict] = None) -> li
             DOC_PHOTOS_MISSING,
         )]
     findings: list[Finding] = []
+    if facts.get("holds_media") is False and facts.get("indexed_items"):
+        findings.append(Finding(
+            check, PROBLEM,
+            f"Media folder {label} holds no media files, but {facts['indexed_items']} indexed item(s) are "
+            "under it. Its drive is probably not connected properly (an empty mount point). Unattended "
+            "syncs leave those items alone; a manual Sync would remove them.",
+            DOC_PHOTOS_MISSING,
+        ))
     if facts.get("readable") is False:
         findings.append(Finding(check, PROBLEM, f"Media folder {label} can't be read (permissions).", DOC_MEDIA_DIRS))
     if probe is not None:

@@ -32,6 +32,7 @@ from typing import Any, Callable, Optional, TypeVar
 from yaffo.common import ROOT_DIR, MEDIA_EXTENSIONS
 from yaffo.process_status import read_status
 from yaffo.site_agents.assistant.tool_providers.diagnostics.file_details import filesystem_type, capture_date_source
+from yaffo.utils.file_sync import root_has_media
 from yaffo.utils.safe_paths import PathOutsideAllowedRoots, resolve_path_in_roots
 
 T = TypeVar("T")
@@ -265,6 +266,16 @@ class AssistantFS:
         except OSError as exc:
             return Probe(responded=True, seconds=time.monotonic() - started, error=exc.strerror or str(exc))
         return Probe(responded=True, seconds=time.monotonic() - started, entries=entries)
+
+    def holds_media(self, media_dir_id: str) -> Optional[bool]:
+        """Whether a media folder holds at least one media file (stops at the first),
+        or None when the drive didn't answer in time. An existing folder with none,
+        while the library has items under it, is usually an empty mount point."""
+        root = self.media_root(media_dir_id)
+        try:
+            return run_with_timeout(lambda: root_has_media(root), self.timeout)
+        except FsTimeout:
+            return None
 
     def media_dir_facts(self, media_dir_id: str) -> dict:
         """Exists / mounted / readable / writable / free space for one media dir."""

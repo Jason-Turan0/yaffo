@@ -448,25 +448,10 @@ HOST_API: tuple[HostFunction, ...] = (
     ),
     HostFunction(
         description=(
-            "Queue the files of a failed or cancelled import/index job again (job ids from "
-            "recent_jobs). Files already indexed are skipped. Starts a background job."
-        ),
-        example="retry_job(job_id)",
-        impl=maintenance.retry_job,
-        profiles=frozenset({"assistant"}),
-        risk="low",
-        setting_key="assistant_action_retry_job",
-        precondition=maintenance.job_retryable,
-        summarize=maintenance.summarize_retry_job,
-        mutating=True,
-        starts_job=True,
-        job_page="utilities_index_photos",
-    ),
-    HostFunction(
-        description=(
             "Scan the media folders against the index in the background: files not indexed yet, "
             "and indexed items whose file is gone. Changes nothing. Read the result from the "
-            "job's message (job_detail) once it has finished."
+            "job's message (job_detail) once it has finished, then act on it with index_files "
+            "and remove_missing_items (a sync is those two)."
         ),
         example="start_library_scan()",
         impl=maintenance.start_library_scan,
@@ -477,6 +462,39 @@ HOST_API: tuple[HostFunction, ...] = (
         summarize=maintenance.summarize_start_library_scan,
         mutating=True,
         starts_job=True,
+    ),
+    HostFunction(
+        description=(
+            "Index the files a finished scan (start_library_scan, less than a day old) found not yet "
+            "indexed: new files, or ones whose earlier import or index failed. Starts a background job."
+        ),
+        example="index_files(scan_job_id)",
+        impl=maintenance.index_files,
+        profiles=frozenset({"assistant"}),
+        risk="low",
+        setting_key="assistant_action_index_files",
+        precondition=maintenance.scan_has_files,
+        summarize=maintenance.summarize_index_files,
+        mutating=True,
+        starts_job=True,
+        job_page="utilities_index_photos",
+    ),
+    HostFunction(
+        description=(
+            "Remove from the library the items a finished scan found whose file is gone: all of them, "
+            "or only `media_item_ids` among them. Their faces, people links, tags and album entries go "
+            "too; the files aren't touched. Items whose file is back by then are kept, and so are items "
+            "under a media folder that looks disconnected. Can't be undone: tell the user how many and "
+            "where from before proposing it."
+        ),
+        example="remove_missing_items(scan_job_id)",
+        impl=maintenance.remove_missing_items,
+        profiles=frozenset({"assistant"}),
+        risk="high",
+        setting_key="assistant_action_remove_missing_items",
+        precondition=maintenance.scan_has_missing,
+        summarize=maintenance.summarize_remove_missing_items,
+        mutating=True,
     ),
     HostFunction(
         description=(
@@ -507,24 +525,6 @@ HOST_API: tuple[HostFunction, ...] = (
         precondition=maintenance.faces_need_repair,
         summarize=maintenance.summarize_repair_face_statuses,
         mutating=True,
-    ),
-    HostFunction(
-        description=(
-            "Sync the library with the media folders in the background, like Index Photos → Sync: "
-            "index new files and remove items whose files are gone. Refused when it would remove "
-            "more than a small share of the library (usually a disconnected drive). Starts a "
-            "background job; the job's message says what it did."
-        ),
-        example="run_sync()",
-        impl=maintenance.run_sync,
-        profiles=frozenset({"assistant"}),
-        risk="medium",
-        setting_key="assistant_action_run_sync",
-        precondition=maintenance.library_syncable,
-        summarize=maintenance.summarize_run_sync,
-        mutating=True,
-        starts_job=True,
-        job_page="utilities_index_photos",
     ),
     HostFunction(
         impl=actions.set_location_names,

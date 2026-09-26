@@ -26,6 +26,7 @@ const fixture = () => {
     <p id="scan-status" hidden></p>
     ${STAT_IDS.map((id) => `<span id="${id}"></span>`).join('')}
     <button id="sync-button" hidden></button>
+    <div id="scan-warnings" hidden></div>
     <div id="scan-results"></div>`;
 };
 
@@ -96,6 +97,23 @@ describe('initIndexPhotos runScan — record dispatch', () => {
 
     // Both an unindexed and an orphaned section rendered into the results container.
     expect(document.querySelectorAll('#scan-results table').length).toBe(2);
+  });
+
+  it('warns about media folders that hold no media files', async () => {
+    stubFetch(streamResponse([JSON.stringify({ ...DONE_RECORD, empty_roots: ['/Volumes/Photos'] }) + '\n']));
+    const api = await init();
+    await api.runScan();
+
+    const warnings = document.getElementById('scan-warnings');
+    expect(warnings.hidden).toBe(false);
+    expect(warnings.querySelector('.alert-warning').textContent).toBe('utilities:indexPhotos.emptyFolders');
+  });
+
+  it('shows no warning when every folder holds media', async () => {
+    stubFetch(streamResponse([JSON.stringify({ ...DONE_RECORD, empty_roots: [] }) + '\n']));
+    const api = await init();
+    await api.runScan();
+    expect(document.getElementById('scan-warnings').hidden).toBe(true);
   });
 
   it('keeps Sync hidden and shows the in-sync state when there is no work', async () => {

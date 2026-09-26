@@ -157,10 +157,16 @@ def switch_help() -> dict[str, str]:
             "Fixes faces whose status doesn't match their person link: assigned to someone but still listed "
             "as unassigned, stuck mid-assignment, or ignored but still linked (the link is removed). "
             "Nothing is re-detected."),
-        "run_sync": gettext(
-            "Compares the media folders with the library: indexes new files and removes items whose file "
-            "is gone. Refused if it would remove a large share of the library, which usually means a "
-            "drive isn't connected."),
+        "start_library_scan": gettext(
+            "Compares the media folders with the library and reports new files and items whose file is "
+            "gone. Changes nothing; a sync is this scan followed by the two changes below."),
+        "index_files": gettext(
+            "Indexes the files a scan found that aren't in the library yet, including ones that failed "
+            "to import or index before."),
+        "remove_missing_items": gettext(
+            "Removes items whose file a scan couldn't find, with their faces, people, tags and album "
+            "entries. The files aren't touched. You confirm the exact count, and items under a folder "
+            "that looks disconnected are kept."),
     }
 
 
@@ -210,9 +216,9 @@ def action_groups_layout() -> list[tuple[str, str, dict[str, str]]]:
             "delete_media_items": gettext("Move photos to the system trash"),
         }),
         ("upkeep", gettext("Library upkeep"), {
-            "run_sync": gettext("Sync the library"),
             "start_library_scan": gettext("Scan for new and missing files"),
-            "retry_job": gettext("Retry failed import and index jobs"),
+            "index_files": gettext("Index new files"),
+            "remove_missing_items": gettext("Remove missing items"),
             "reindex_media": gettext("Re-index items"),
             "set_automation_enabled": gettext("Turn automations on or off"),
         }),

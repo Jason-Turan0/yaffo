@@ -2,6 +2,8 @@
 and the scan/sync task they start (tasks/library_scan.py). Queue calls are patched:
 these tests never touch the real task queue."""
 import json
+from datetime import timedelta
+from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine
@@ -10,6 +12,7 @@ from sqlalchemy.orm import Session
 from yaffo.background_tasks.automation_sandbox import automation_actions
 from yaffo.background_tasks.automation_sandbox import maintenance_actions as maintenance
 from yaffo.background_tasks.tasks import library_scan
+from yaffo.utils import file_sync
 from yaffo.db import db
 from yaffo.db.models import (
     FACE_STATUS_ASSIGNED,
@@ -87,39 +90,6 @@ def test_set_automation_enabled_and_its_undo(session):
     assert maintenance.undo_set_automation_enabled(["file-sync", False], session) == []  # already off
 
 
-# ---- retry_job -------------------------------------------------------------------------
-
-def _job(session, job_id="j1", name="index_photos", status=JOB_STATUS_FAILED, files=()):
-    key = "files_to_index" if name == "index_photos" else "files_to_import"
-    session.add(Job(id=job_id, name=name, status=status, job_data=json.dumps({key: list(files)})))
-    session.commit()
-
-
-def test_retry_job_queues_only_the_files_still_not_indexed(session, library, monkeypatch):
-    paths = [str((library / n).resolve()) for n in ("a.jpg", "b.jpg", "c.jpg")]
-    _job(session, files=paths)
-    queued = []
-    monkeypatch.setattr(maintenance, "enqueue_index_jobs",
-                        lambda s, files: queued.append(files) or IndexJobs("imp", "idx"))
-
-    assert maintenance.job_retryable(["j1"], session) is None
-    assert maintenance.retry_job(session, "j1") == "idx"
-    assert queued == [paths[1:]]
-
-
-@pytest.mark.parametrize("job, message", [
-    (None, "No job with that id"),
-    ({"name": "find_duplicates"}, "Only import and index jobs"),
-    ({"status": JOB_STATUS_PENDING}, "still running"),
-    ({"files": ["__indexed__"]}, "already indexed"),
-])
-def test_retry_job_refuses_what_it_cannot_retry(session, library, job, message):
-    if job is not None:
-        files = [str((library / "a.jpg").resolve())] if job.pop("files", None) else ["/x.jpg"]
-        _job(session, files=files, **job)
-    assert message in maintenance.job_retryable(["j1"], session)
-
-
 # ---- reindex_media --------------------------------------------------------------------
 
 def test_reindex_media_skips_items_whose_file_is_gone(session, library, monkeypatch):
@@ -135,77 +105,187 @@ def test_reindex_media_skips_items_whose_file_is_gone(session, library, monkeypa
         maintenance.reindex_media(session, [2])
 
 
-# ---- scans and syncs -------------------------------------------------------------------
+# ---- scan, then index_files / remove_missing_items ------------------------------------------
 
-def test_scan_and_sync_create_a_job_and_queue_the_task(session, library, monkeypatch):
-    queued = []
-    monkeypatch.setattr(library_scan, "library_scan_task", lambda job_id, apply: queued.append((job_id, apply)))
-
-    scan_id = maintenance.start_library_scan(session)
-    sync_id = maintenance.run_sync(session)
-
-    assert queued == [(scan_id, False), (sync_id, True)]
-    assert {j.name: j.status for j in session.query(Job)} == {
-        maintenance.JOB_NAME_SCAN: JOB_STATUS_PENDING, maintenance.JOB_NAME_SYNC: JOB_STATUS_PENDING}
-
-
-def test_sync_is_refused_while_a_media_folder_is_disconnected(session, library):
-    assert maintenance.library_syncable([], session) is None
-    for path in library.iterdir():
-        path.unlink()
-    library.rmdir()
-    assert "aren't connected" in maintenance.library_syncable([], session)
-    assert maintenance.library_scannable([], session) is None  # a scan is still fine
-
-
-def _run(session, apply):
-    session.add(Job(id="scan", name="library_scan", status=JOB_STATUS_PENDING))
+def _scan(session, job_id="scan"):
+    session.add(Job(id=job_id, name=maintenance.JOB_NAME_SCAN, status=JOB_STATUS_PENDING))
     session.commit()
-    library_scan.run_library_scan(session, "scan", apply)
-    job = session.get(Job, "scan")
+    library_scan.run_library_scan(session, job_id)
+    job = session.get(Job, job_id)
     session.refresh(job)
     return job
 
 
-def test_a_scan_reports_what_it_found_and_changes_nothing(session, library):
+def test_start_library_scan_creates_a_job_and_queues_the_task(session, library, monkeypatch):
+    queued = []
+    monkeypatch.setattr(library_scan, "library_scan_task", queued.append)
+
+    job_id = maintenance.start_library_scan(session)
+
+    assert queued == [job_id]
+    assert session.get(Job, job_id).status == JOB_STATUS_PENDING
+
+
+def test_a_scan_records_exactly_what_it_found_and_changes_nothing(session, library):
     session.add(MediaItem(id=2, full_file_path=str(library / "gone.jpg"), status=MEDIA_STATUS_INDEXED))
     session.commit()
 
-    job = _run(session, apply=False)
+    job = _scan(session)
 
     assert job.status == JOB_STATUS_COMPLETED and job.completed_at is not None
     assert job.message.startswith("2 file(s) in the media folders aren't indexed yet; 1 indexed item(s)")
     assert "gone.jpg (missing)" in job.message
-    assert json.loads(job.job_data)["unindexed"] == 2
+    data = json.loads(job.job_data)
+    assert sorted(Path(p).name for p in data["unindexed_paths"]) == ["b.jpg", "c.jpg"]
+    assert data["missing"] == [{"id": 2, "reason": "missing"}]
     assert session.query(MediaItem).count() == 2
 
 
-def test_a_sync_applies_the_scan(session, library, monkeypatch):
-    synced = []
-    monkeypatch.setattr(library_scan, "perform_sync",
-                        lambda s, index, orphans, thumbs: synced.append((len(index), orphans)) or IndexJobs("imp", "idx"))
-
-    job = _run(session, apply=True)
-
-    assert synced == [(2, [])]
-    assert job.status == JOB_STATUS_COMPLETED and "index job idx" in job.message
-
-
-def test_a_sync_that_would_remove_too_much_is_refused(session, library, monkeypatch):
-    session.add_all([MediaItem(id=i, full_file_path=str(library / f"gone{i}.jpg"), status=MEDIA_STATUS_INDEXED)
-                     for i in range(10, 10 + library_scan.SYNC_REMOVE_FLOOR + 1)])
+def test_an_empty_media_folder_is_reported_not_counted_as_missing(session, library, tmp_path):
+    """A mount point that came back empty: every item under it looks deleted."""
+    empty = tmp_path / "drive"
+    empty.mkdir()
+    setting = session.query(ApplicationSettings).filter_by(name="media_dirs").one()
+    setting.value = json.dumps(json.loads(setting.value) + [{"id": "m2", "path": str(empty)}])
+    session.add_all([MediaItem(id=i, full_file_path=str(empty / f"{i}.jpg"), status=MEDIA_STATUS_INDEXED)
+                     for i in (10, 11)])
     session.commit()
-    monkeypatch.setattr(library_scan, "perform_sync", lambda *args: pytest.fail("must not sync"))
 
-    job = _run(session, apply=True)
+    job = _scan(session)
 
-    assert job.status == JOB_STATUS_FAILED and job.error.startswith("Refused: the sync would remove 26 of 27")
-    assert session.query(MediaItem).count() == 27
+    data = json.loads(job.job_data)
+    assert data["missing"] == [] and data["empty_roots"] == [str(empty)]
+    assert "hold no media files at all" in job.message and "2 indexed item(s) aren't counted" in job.message
 
 
-def test_removal_limit_is_a_share_of_the_library_with_a_floor():
-    assert library_scan.removal_limit(10) == library_scan.SYNC_REMOVE_FLOOR
-    assert library_scan.removal_limit(10_000) == 1000
+def test_index_files_indexes_what_the_scan_found(session, library, monkeypatch):
+    job = _scan(session)
+    queued = []
+    monkeypatch.setattr(maintenance, "enqueue_index_jobs",
+                        lambda s, files: queued.append(sorted(Path(f).name for f in files)) or IndexJobs("i", "x"))
+
+    assert maintenance.scan_has_files([job.id], session) is None
+    assert maintenance.index_files(session, job.id) == "x"
+    assert queued == [["b.jpg", "c.jpg"]]
+
+
+@pytest.mark.parametrize("state, message", [
+    ("unknown", "No scan job with that id"),
+    ("running", "hasn't finished"),
+    ("old", "more than a day old"),
+])
+def test_acting_on_a_scan_needs_a_recent_finished_one(session, library, state, message):
+    job_id = "nope"
+    if state != "unknown":
+        job = _scan(session)
+        job_id = job.id
+        if state == "running":
+            job.status = JOB_STATUS_PENDING
+        else:
+            job.completed_at = job.completed_at - maintenance.SCAN_MAX_AGE - timedelta(minutes=1)
+        session.commit()
+    assert message in maintenance.scan_has_files([job_id], session)
+    assert message in maintenance.scan_has_missing([job_id], session)
+
+
+def test_remove_missing_items_removes_only_what_is_still_missing(session, library, tmp_path):
+    for i in (2, 3, 4):
+        session.add(MediaItem(id=i, full_file_path=str((library / f"gone{i}.jpg").resolve()),
+                              status=MEDIA_STATUS_INDEXED))
+    session.commit()
+    job = _scan(session)
+    assert sorted(maintenance.scan_missing_ids(session, job.id)) == [2, 3, 4]
+    assert maintenance.scan_missing_ids(session, job.id, [3, 99]) == [3]
+    (library / "gone4.jpg").write_bytes(b"x")  # back since the scan
+
+    assert maintenance.remove_missing_items(session, job.id) == 2
+
+    assert sorted(i.id for i in session.query(MediaItem)) == [1, 4]
+
+
+def test_remove_missing_items_keeps_items_when_their_folder_disconnects(session, library):
+    session.add(MediaItem(id=2, full_file_path=str((library / "gone.jpg").resolve()), status=MEDIA_STATUS_INDEXED))
+    session.commit()
+    job = _scan(session)
+    for path in library.iterdir():  # the drive comes back empty before approval
+        path.unlink()
+
+    assert maintenance.remove_missing_items(session, job.id) == 0
+    assert session.query(MediaItem).count() == 2
+
+
+def test_the_unattended_sync_leaves_items_under_an_empty_folder_alone(session, library, tmp_path, monkeypatch):
+    empty = tmp_path / "drive"
+    empty.mkdir()
+    setting = session.query(ApplicationSettings).filter_by(name="media_dirs").one()
+    setting.value = json.dumps(json.loads(setting.value) + [{"id": "m2", "path": str(empty)}])
+    session.add_all([
+        MediaItem(id=10, full_file_path=str(empty / "10.jpg"), status=MEDIA_STATUS_INDEXED),
+        MediaItem(id=11, full_file_path=str((library / "gone.jpg").resolve()), status=MEDIA_STATUS_INDEXED),
+    ])
+    session.commit()
+    synced = []
+    monkeypatch.setattr(file_sync, "perform_sync",
+                        lambda s, index, orphans, thumbs, automation_id=None:
+                        synced.append(orphans) or IndexJobs("i", "x"))
+
+    session.add(Automation(id=5, slug="file-sync", name="File sync", enabled=True))
+    session.commit()
+
+    file_sync.run_file_sync(session, automation_id=5)
+
+    assert synced == [[11]]  # the item under the empty drive stays
+    run = session.query(Job).filter_by(name=file_sync.FILE_SYNC_JOB).one()
+    assert run.automation_id == 5 and run.status == JOB_STATUS_COMPLETED and run.error_count == 1
+    assert str(empty) in run.error and "The 1 indexed item(s) under them were left" in run.error
+    assert json.loads(run.job_data) == {
+        "outcome": "started", "indexed": 2, "removed": 1, "held_back": 1, "empty_roots": [str(empty)],
+        "import_job_id": "i", "index_job_id": "x"}
+
+
+def test_the_unattended_sync_records_a_run_even_with_nothing_else_to_do(session, tmp_path, monkeypatch):
+    empty = tmp_path / "drive"
+    empty.mkdir()
+    session.add_all([
+        ApplicationSettings(name="media_dirs", type="json", value=json.dumps([{"id": "m1", "path": str(empty)}])),
+        ApplicationSettings(name="thumbnail_dir", type="string", value=str(tmp_path / "thumbs")),
+        MediaItem(id=1, full_file_path=str(empty / "1.jpg"), status=MEDIA_STATUS_INDEXED),
+    ])
+    session.commit()
+    monkeypatch.setattr(file_sync, "perform_sync", lambda *a, **k: pytest.fail("nothing to sync"))
+
+    assert file_sync.run_file_sync(session) is None
+    run = session.query(Job).filter_by(name=file_sync.FILE_SYNC_JOB).one()
+    assert json.loads(run.job_data)["outcome"] == "in_sync" and run.error_count == 1
+    assert session.query(MediaItem).count() == 1
+
+
+def test_every_file_sync_run_is_recorded_with_how_it_ended(session, library, monkeypatch):
+    for path in library.iterdir():
+        (library / path.name).unlink()
+    session.query(MediaItem).delete()
+    session.commit()
+
+    file_sync.run_file_sync(session)  # nothing on disk, nothing indexed: in sync
+    library.rmdir()
+    file_sync.run_file_sync(session)  # the only media folder is gone: skipped
+
+    runs = session.query(Job).filter_by(name=file_sync.FILE_SYNC_JOB).order_by(Job.created_at).all()
+    assert [(json.loads(r.job_data)["outcome"], r.status) for r in runs] == [
+        ("in_sync", JOB_STATUS_COMPLETED), ("no_folder_connected", JOB_STATUS_FAILED)]
+    assert runs[0].error is None and "None of the media folders is connected" in runs[1].error
+
+
+def test_a_file_sync_that_raises_is_recorded_as_failed(session, library, monkeypatch):
+    def broken(*args, **kwargs):
+        raise OSError("drive error")
+    monkeypatch.setattr(file_sync, "scan_media_dirs", broken)
+
+    with pytest.raises(OSError):
+        file_sync.run_file_sync(session)
+
+    run = session.query(Job).filter_by(name=file_sync.FILE_SYNC_JOB).one()
+    assert run.status == JOB_STATUS_FAILED and "drive error" in run.error
 
 
 # ---- repair_face_statuses ------------------------------------------------------------------

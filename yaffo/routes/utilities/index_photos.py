@@ -2,6 +2,7 @@ import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from sqlalchemy import and_, or_
 from flask import Flask, Response, current_app, jsonify, render_template, request, stream_with_context
 from flask_babel import gettext
 
@@ -9,7 +10,7 @@ from yaffo.db import db
 from yaffo.db.models import Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, MediaItem
 from yaffo.routes.utilities.common import get_media_dirs, get_thumbnail_dir, automations_sidebar_context
 from yaffo.routes.utilities.run_history import run_view
-from yaffo.utils.file_sync import MediaScan, iter_media_scan, perform_sync
+from yaffo.utils.file_sync import FILE_SYNC_JOB, MediaScan, iter_media_scan, perform_sync
 from yaffo.utils.index_jobs import reindex_media_items
 from yaffo.utils.thumbnail_marker import ensure_thumbnail_dir
 
@@ -29,6 +30,8 @@ class ScanComplete:
     total_indexed: int
     unindexed: list[dict]
     orphaned: list[dict]
+    # Media folders that exist but hold no media files (a drive that didn't mount).
+    empty_roots: list[str]
     type: str = "done"
 
     @classmethod
@@ -39,6 +42,7 @@ class ScanComplete:
             total_indexed=scan.total_indexed,
             unindexed=scan.unindexed,
             orphaned=scan.orphaned,
+            empty_roots=scan.empty_roots,
         )
 
 
@@ -62,6 +66,8 @@ class ReindexStarted:
 
 # The page's job kinds, in pipeline order: import (new files) runs before index.
 INDEX_JOB_NAMES = ("import_photos", "index_photos")
+# The run history also lists file-sync runs that need attention (skipped, failed, or
+# left items alone); its "Already in sync" runs stay on the automation's own page.
 # Runs listed in the run history.
 RUN_HISTORY_LIMIT = 10
 _IN_PROGRESS = (JOB_STATUS_PENDING, JOB_STATUS_RUNNING)
@@ -78,7 +84,10 @@ def _in_progress_and_history() -> tuple[list[Job], list[Job]]:
             in_progress.append(job)
     history = (
         db.session.query(Job)
-        .filter(Job.name.in_(INDEX_JOB_NAMES), Job.id.notin_([job.id for job in in_progress]))
+        .filter(
+            or_(Job.name.in_(INDEX_JOB_NAMES), and_(Job.name == FILE_SYNC_JOB, Job.error.isnot(None))),
+            Job.id.notin_([job.id for job in in_progress]),
+        )
         .order_by(Job.created_at.desc())
         .limit(RUN_HISTORY_LIMIT)
         .all()
