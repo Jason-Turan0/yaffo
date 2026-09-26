@@ -894,7 +894,7 @@ because the drift check above keeps a late undo safe.
 |---|---|---|
 | `reindex_media(ids)` | `index_jobs.reindex_media_items` | medium (the card warns that faces and person links on those photos are rebuilt) |
 | `retry_job(job_id)` | Re-enqueue the job's files / task | low (only failed jobs of retryable kinds) |
-| `run_automation(slug)` | Queues the existing automation with a whole-library context; its own worker records the run Job | high (the automation may change the library or files; the card links to its Run history) |
+| `run_automation(slug, scope=None)` | Queues the existing automation for all media by default, or selected media-directory IDs, indexed file IDs, or folder paths validated inside configured media directories; its worker records the run Job. File sync cannot use individual files as its scope. | high (the automation may change the library or files; the card shows the scope and links to its Run history) |
 | `run_sync()` | `perform_sync` | medium. Refused when the scan would remove more than a safe share of the library (the mass-removal guard discussed for unmounted drives) |
 | `set_automation_enabled(slug, enabled)` | Automation repository | low (toggles only; never edits automation code) |
 | `repair_face_statuses()` | The same SQL as migrations 009/010, as a function | medium (the card shows the counts it will change) |
@@ -911,7 +911,7 @@ if a host function in that profile matches this list:
 - changing the media dirs, thumbnail dir, or data dir
 - editing automation, widget or theme code (hand off to the builders)
 - permanent deletion that bypasses the OS trash
-- any function taking a free-form filesystem path, raw SQL, or code
+- arbitrary filesystem paths outside configured media directories, raw SQL, or code
 - anything that goes online (e.g. looking up place names with OpenStreetMap; see
   *Network access*)
 

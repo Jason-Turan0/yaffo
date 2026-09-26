@@ -117,6 +117,55 @@ def test_run_automation_rejects_missing_or_unpublished_automation(session):
         maintenance.run_automation(session, "draft")
 
 
+def test_run_automation_resolves_directory_folder_and_file_scopes(session, library, monkeypatch):
+    session.add_all([
+        Automation(slug="export_photo_tag", name="Export photo tag", handler="export_photo_tag"),
+        MediaItem(id=2, full_file_path=str(library / "b.jpg"), status=MEDIA_STATUS_INDEXED),
+    ])
+    session.commit()
+    calls = []
+    monkeypatch.setattr(maintenance, "invoke_automation", lambda target, context: calls.append(context) or True)
+
+    maintenance.run_automation(session, "export_photo_tag", {"type": "media_dirs", "media_dir_ids": ["m1"]})
+    assert calls[-1].media_item_ids == [1, 2]
+    assert calls[-1].scope_paths == [str(library.resolve())]
+
+    folder = library / "trip"
+    folder.mkdir()
+    (folder / "c.jpg").write_bytes(b"x")
+    session.add(MediaItem(id=3, full_file_path=str(folder / "c.jpg"), status=MEDIA_STATUS_INDEXED))
+    session.commit()
+    maintenance.run_automation(session, "export_photo_tag", {"type": "folders", "folder_paths": [str(folder)]})
+    assert calls[-1].media_item_ids == [3]
+    assert calls[-1].scope_paths == [str(folder.resolve())]
+
+    maintenance.run_automation(session, "export_photo_tag", {"type": "files", "media_item_ids": [2, 1]})
+    assert calls[-1].media_item_ids == [1, 2]
+    assert calls[-1].scope_paths == []
+
+
+def test_run_automation_scope_rejects_unsafe_or_stale_selection(session, library, tmp_path):
+    session.add_all([
+        Automation(slug="export_photo_tag", name="Export photo tag", handler="export_photo_tag"),
+        Automation(slug="file-sync", name="File sync", handler="file_sync"),
+        MediaItem(id=2, full_file_path=str(tmp_path / "outside.jpg"), status=MEDIA_STATUS_INDEXED),
+    ])
+    session.commit()
+    bad_scopes = [
+        ("export_photo_tag", {"type": "media_dirs", "media_dir_ids": ["gone"]}),
+        ("export_photo_tag", {"type": "folders", "folder_paths": [str(tmp_path / "outside")]}),
+        ("export_photo_tag", {"type": "folders", "folder_paths": [str(library / "a.jpg")]}),
+        ("export_photo_tag", {"type": "files", "media_item_ids": [404]}),
+        ("export_photo_tag", {"type": "files", "media_item_ids": [2]}),
+        ("export_photo_tag", {"type": "files", "media_item_ids": []}),
+        ("file-sync", {"type": "files", "media_item_ids": [1]}),
+    ]
+    for slug, scope in bad_scopes:
+        assert maintenance.automation_runnable([slug, scope], session)
+        with pytest.raises(ValueError):
+            maintenance.run_automation(session, slug, scope)
+
+
 # ---- reindex_media --------------------------------------------------------------------
 
 def test_reindex_media_skips_items_whose_file_is_gone(session, library, monkeypatch):

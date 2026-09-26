@@ -448,50 +448,20 @@ HOST_API: tuple[HostFunction, ...] = (
     ),
     HostFunction(
         description=(
-            "Run any existing automation now over all configured media directories, even if "
-            "it is disabled or has no triggers. It starts background work; review the automation's "
-            "Run history for progress and outcome. It does not change the automation's settings."
+            "Run any existing automation now, even if it is disabled or has no triggers. "
+            "The optional scope is {type: 'everything'} (default), {type: 'media_dirs', "
+            "media_dir_ids: [...]}, {type: 'files', media_item_ids: [...]}, or {type: 'folders', "
+            "folder_paths: [...]}. File IDs come from data_query; folders must be inside configured "
+            "media directories. File sync accepts directories and folders, not individual files. "
+            "Review the automation's Run history for progress and outcome."
         ),
-        example='run_automation("export_photo_tag")',
+        example='run_automation("export_photo_tag", {"type": "files", "media_item_ids": [1, 2]})',
         impl=maintenance.run_automation,
         profiles=frozenset({"assistant"}),
         risk="high",
         setting_key="assistant_action_run_automation",
         precondition=maintenance.automation_runnable,
         summarize=maintenance.summarize_run_automation,
-        mutating=True,
-    ),
-    HostFunction(
-        description=(
-            "Index the files a finished library scan (less than a day old) found not yet "
-            "indexed: new files, or ones whose earlier import or index failed. Starts a background job."
-        ),
-        example="index_files(scan_job_id)",
-        impl=maintenance.index_files,
-        profiles=frozenset({"assistant"}),
-        risk="low",
-        setting_key="assistant_action_index_files",
-        precondition=maintenance.scan_has_files,
-        summarize=maintenance.summarize_index_files,
-        mutating=True,
-        starts_job=True,
-        job_page="utilities_index_photos",
-    ),
-    HostFunction(
-        description=(
-            "Remove from the library the items a finished scan found whose file is gone: all of them, "
-            "or only `media_item_ids` among them. Their faces, people links, tags and album entries go "
-            "too; the files aren't touched. Items whose file is back by then are kept, and so are items "
-            "under a media folder that looks disconnected. Can't be undone: tell the user how many and "
-            "where from before proposing it."
-        ),
-        example="remove_missing_items(scan_job_id)",
-        impl=maintenance.remove_missing_items,
-        profiles=frozenset({"assistant"}),
-        risk="high",
-        setting_key="assistant_action_remove_missing_items",
-        precondition=maintenance.scan_has_missing,
-        summarize=maintenance.summarize_remove_missing_items,
         mutating=True,
     ),
     HostFunction(

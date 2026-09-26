@@ -158,15 +158,8 @@ def switch_help() -> dict[str, str]:
             "as unassigned, stuck mid-assignment, or ignored but still linked (the link is removed). "
             "Nothing is re-detected."),
         "run_automation": gettext(
-            "Starts the chosen automation once over all configured media folders. The automation may change "
-            "your library or files; review its Run history for the result."),
-        "index_files": gettext(
-            "Indexes the files a scan found that aren't in the library yet, including ones that failed "
-            "to import or index before."),
-        "remove_missing_items": gettext(
-            "Removes items whose file a scan couldn't find, with their faces, people, tags and album "
-            "entries. The files aren't touched. You confirm the exact count, and items under a folder "
-            "that looks disconnected are kept."),
+            "Starts the chosen automation once for all media, selected media directories, files, or "
+            "folders. The automation may change your library or files; review its Run history for the result."),
     }
 
 
@@ -217,8 +210,6 @@ def action_groups_layout() -> list[tuple[str, str, dict[str, str]]]:
         }),
         ("upkeep", gettext("Library upkeep"), {
             "run_automation": gettext("Run automation"),
-            "index_files": gettext("Index new files"),
-            "remove_missing_items": gettext("Remove missing items"),
             "reindex_media": gettext("Re-index items"),
             "set_automation_enabled": gettext("Turn automations on or off"),
         }),

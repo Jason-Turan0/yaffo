@@ -243,12 +243,10 @@ def step_facts(call: HostCall, session: Session, mutations: list[HostCall]) -> t
     if name == "run_automation":
         automation = automation_repository.get_by_slug(session, args[0]) if args else None
         facts["automation"] = automation.display_name if automation else None
+        _, scope = maintenance.resolve_run_scope(session, automation.handler if automation else None,
+                                                 args[1] if len(args) > 1 else None)
+        facts["scope"] = scope
         return 1, facts
-    if name == "index_files":
-        return len(maintenance.files_to_index(session, args[0])) if args else 0, facts
-    if name == "remove_missing_items":
-        subset = args[1] if len(args) > 1 and isinstance(args[1], list) else None
-        return len(maintenance.scan_missing_ids(session, args[0], subset)) if args else 0, facts
     if name == "reindex_media":
         return len(set(_list_arg(args, 0))), facts
     if name == "repair_face_statuses":

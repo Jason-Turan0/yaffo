@@ -468,6 +468,17 @@ def test_run_view_shows_empty_automation_run_summary():
     assert view.status_label == "Completed"
 
 
+def test_run_view_shows_completed_automation_output_with_one_processed_photo():
+    from yaffo.routes.utilities.run_history import run_view
+    from yaffo.db.models import Job
+    job = Job(id="one-photo", name="classify_labels", status="COMPLETED",
+              automation_id=6, task_count=1, completed_count=1,
+              job_data='{"output": "labeled 0 of 1 photo(s) at threshold 0.24 (max 4 each)"}')
+    view = run_view(job)
+    assert view.summary == "labeled 0 of 1 photo(s) at threshold 0.24 (max 4 each)"
+    assert view.status_label == "Completed"
+
+
 def test_run_view_flags_failed():
     from yaffo.routes.utilities.run_history import run_view
     from yaffo.db.models import Job
@@ -524,6 +535,15 @@ def test_detail_page_shows_run_history(app, client):
     assert "10 of 10 processed" in body
     assert 'class="run-history-time"' in body
     assert 'data-local-datetime="2026-07-11T21:07:02+00:00"' in body
+
+
+def test_detail_page_shows_classification_result_for_single_photo(app, client):
+    _add(app, slug="classify_labels", name="Classify labels", is_system=True, handler="classify_labels")
+    _add_job(app, slug="classify_labels", id="classify-one", name="classify_labels",
+             task_count=1, completed_count=1,
+             job_data='{"output": "labeled 0 of 1 photo(s) at threshold 0.24 (max 4 each)"}')
+    body = client.get("/utilities/automations/classify_labels").get_data(as_text=True)
+    assert "labeled 0 of 1 photo(s) at threshold 0.24 (max 4 each)" in body
 
 
 def test_detail_page_run_history_empty_state(app, client):

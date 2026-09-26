@@ -84,6 +84,7 @@ const stepText = (i18n, step) => {
     if (step.name === 'run_automation') {
         if (!facts.automation) return step.summary;
         values.automation = facts.automation;
+        values.scope = facts.scope || '';
     }
     if (['set_favorites', 'set_media_dates', 'set_location_names'].includes(step.name)) {
         if (!('value' in facts)) key = `${step.name}_mixed`;

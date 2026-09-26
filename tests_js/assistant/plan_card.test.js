@@ -37,7 +37,8 @@ const plan = (overrides = {}) => ({
 
 // Keys plus the values the card interpolates, so wording choices are visible.
 const interpolate = (key, options = {}) =>
-  [key, options.names, options.album, options.name, options.automation, options.formattedCount, options.error]
+  [key, options.names, options.album, options.name, options.automation, options.scope,
+    options.formattedCount, options.error]
     .filter((value) => value !== undefined && value !== '')
     .join(' ');
 
@@ -220,7 +221,7 @@ describe('plan card', () => {
     const { card } = await render(plan({
       status: 'EXECUTED', risk: 'high', reversible: false,
       steps: [step({ name: 'run_automation', count: 1,
-        facts: { automation: 'Export photo tag' }, starts_job: false,
+        facts: { automation: 'Export photo tag', scope: 'all media folders' }, starts_job: false,
         job_page: '/utilities/automations/export_photo_tag', state: 'done', job_id: null })],
     }));
     expect(card.querySelector('.assistant-plan-facts').textContent)
@@ -229,8 +230,18 @@ describe('plan card', () => {
     expect(link.getAttribute('href')).toBe('/utilities/automations/export_photo_tag');
     expect(link.textContent).toBe('assistant:plan.runHistory');
     expect(card.querySelector('.assistant-plan-step').textContent)
-      .toBe('assistant:plan.steps.run_automation Export photo tag 1');
+      .toBe('assistant:plan.steps.run_automation Export photo tag all media folders 1');
     expect(card.querySelectorAll('button')).toHaveLength(0);
+  });
+
+  it('shows the selected scope before approving an automation run', async () => {
+    const { card } = await render(plan({
+      risk: 'high', reversible: false, confirm: 'type', count: 1,
+      steps: [step({ name: 'run_automation', risk: 'high', reversible: false, count: 1,
+        facts: { automation: 'Export photo tag', scope: '/media/Trips' } })],
+    }));
+    expect(card.querySelector('.assistant-plan-step').textContent)
+      .toBe('assistant:plan.steps.run_automation Export photo tag /media/Trips 1');
   });
 
   it('words automation switches with the automation\'s name', async () => {

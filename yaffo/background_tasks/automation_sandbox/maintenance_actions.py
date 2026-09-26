@@ -3,16 +3,12 @@ the app, beyond editing metadata. Assistant profile only (automations don't get
 them), and like every mutation they only run when the user approves a plan.
 
 Some start background work rather than finishing in the approval request:
-index_files and reindex_media return a Job id (their HostFunction has
-`starts_job`). run_automation queues a run whose worker creates the Job, so its
-plan links to the automation's Run history. The assistant checks the resulting
-job afterwards.
+reindex_media returns a Job id (its HostFunction has `starts_job`). run_automation
+queues a run whose worker creates the Job, so its plan links to the automation's
+Run history. The assistant checks the resulting job afterwards.
 
-A legacy library scan records exactly which files aren't indexed and which items
-lost their file; index_files and remove_missing_items can act on that scan. The
-card for removing items names the exact count, and the user, who knows whether
-they deleted a folder, decides.
-Each missing item is checked again at approval, and one whose file is back stays.
+The legacy library scan and its index_files/remove_missing_items helpers remain
+here for old scan jobs, but are no longer exposed to the assistant.
 
 Each ships with a `summarize_*` (the card's English fallback; the card words steps
 from plans.step_facts in the user's language) and, where the step can already be
@@ -41,7 +37,7 @@ from yaffo.db.models import (
     Job,
     MediaItem,
 )
-from yaffo.db.repositories import automation_repository, person_repository
+from yaffo.db.repositories import automation_repository, media_repository, person_repository
 from yaffo.db.repositories.media_dir_repository import get_media_dirs
 from yaffo.taskq.store import STATUS_READY, STATUS_RUNNING
 from yaffo.utils.file_sync import ORPHAN_MISSING, orphan_reason, root_has_media
@@ -82,6 +78,10 @@ def automation_runnable(args: list[Any], session: Session) -> str | None:
         return "No automation with that slug"
     if not automation.handler and not automation.published_code:
         return "That automation has no runnable handler or published code"
+    try:
+        resolve_run_scope(session, automation.handler, args[1] if len(args) > 1 else None)
+    except ValueError as exc:
+        return str(exc)
     return None
 
 
@@ -275,19 +275,59 @@ def undo_set_automation_enabled(args: list[Any], session: Session) -> list[HostC
 
 # ---- run_automation -------------------------------------------------------------------
 
-def run_automation(session: Session, slug: str) -> None:
-    """Queue one run over all configured media directories, regardless of the
-    automation's enabled state or triggers. The automation's worker records its
-    own Job, so this returns no Job id."""
+def resolve_run_scope(session: Session, handler: str | None, scope: dict | None) -> tuple[EventContext, str]:
+    """Resolve a reviewed assistant scope against the current configured roots."""
+    if scope is None:
+        scope = {"type": "everything"}
+    if not isinstance(scope, dict):
+        raise ValueError("Automation scope must be an object")
+    kind = scope.get("type")
+    field = {"everything": None, "media_dirs": "media_dir_ids",
+             "files": "media_item_ids", "folders": "folder_paths"}.get(kind)
+    if kind not in {"everything", "media_dirs", "files", "folders"}:
+        raise ValueError("Choose everything, media_dirs, files, or folders as the automation scope")
+    if set(scope) != ({"type", field} if field else {"type"}):
+        raise ValueError("Automation scope has unexpected or missing fields")
+    if kind == "everything":
+        paths = selected_paths(session, {"scope_type": "everything"})
+        return EventContext(event_type=None, media_item_ids=media_item_ids(session, paths),
+                            scope_paths=[str(path) for path in paths]), "all media folders"
+    values = scope[field]
+    if not isinstance(values, list) or not values or len(values) > 500:
+        raise ValueError("Choose between 1 and 500 entries for the automation scope")
+    if len(set(str(value) for value in values)) != len(values):
+        raise ValueError("Automation scope contains duplicate entries")
+    if kind == "files":
+        if handler == "file_sync":
+            raise ValueError("File sync needs media directories or folders, not individual files")
+        if any(type(value) is not int or value <= 0 for value in values):
+            raise ValueError("File scope needs indexed media item IDs")
+        files = media_repository.get_paths_by_ids(session, values)
+        if len(files) != len(values):
+            raise ValueError("One or more selected files are no longer indexed")
+        roots = selected_paths(session, {"scope_type": "everything"})
+        if any(not any(Path(path).resolve().is_relative_to(root) for root in roots)
+               for path in files.values()):
+            raise ValueError("A selected file is outside configured media directories")
+        return EventContext(event_type=None, media_item_ids=sorted(values)), \
+            ", ".join(files[item_id] for item_id in values)
+    if any(not isinstance(value, str) or not value.strip() for value in values):
+        raise ValueError("Scope entries must be non-empty strings")
+    config = ({"scope_type": "media_dirs", "media_dir_ids": values} if kind == "media_dirs"
+              else {"scope_type": "paths", "folder_paths": values})
+    paths = selected_paths(session, config)
+    if kind == "folders" and any(path.exists() and not path.is_dir() for path in paths):
+        raise ValueError("Folder scope must contain directories, not files")
+    return EventContext(event_type=None, media_item_ids=media_item_ids(session, paths),
+                        scope_paths=[str(path) for path in paths]), ", ".join(str(path) for path in paths)
+
+
+def run_automation(session: Session, slug: str, scope: Optional[dict] = None) -> None:
+    """Queue a scoped run; its worker records the Job."""
     automation = automation_repository.get_by_slug(session, slug)
     if automation is None:
         raise ValueError(f"No automation with slug {slug!r}")
-    paths = selected_paths(session, {"scope_type": "everything"})
-    context = EventContext(
-        event_type=None,
-        media_item_ids=media_item_ids(session, paths),
-        scope_paths=[str(path) for path in paths],
-    )
+    context, _ = resolve_run_scope(session, automation.handler, scope)
     if not invoke_automation(automation, context):
         raise ValueError(f"Automation {slug!r} has no runnable handler or published code")
 
@@ -295,7 +335,9 @@ def run_automation(session: Session, slug: str) -> None:
 def summarize_run_automation(args: list[Any], session: Session) -> str:
     automation = automation_repository.get_by_slug(session, args[0]) if args else None
     name = automation.display_name if automation else (args[0] if args else "")
-    return f"Run automation '{name}' over all media folders"
+    _, scope = resolve_run_scope(session, automation.handler if automation else None,
+                                 args[1] if len(args) > 1 else None)
+    return f"Run automation '{name}' for {scope}"
 
 
 # ---- repair_face_statuses ----------------------------------------------------------------

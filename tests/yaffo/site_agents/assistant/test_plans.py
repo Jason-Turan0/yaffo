@@ -529,7 +529,7 @@ def test_delete_person_unassigns_their_faces(session, conversation):
 
 def test_run_automation_replaces_scan_action_in_assistant_profile():
     actions = {fn.name: fn for fn in host_api("assistant")}
-    assert "start_library_scan" not in actions
+    assert {"start_library_scan", "index_files", "remove_missing_items"}.isdisjoint(actions)
     assert actions["run_automation"].risk == "high"
     assert actions["run_automation"].setting_key == "assistant_action_run_automation"
 
@@ -551,7 +551,7 @@ def test_run_automation_plan_queues_whole_library_and_links_to_history(session, 
     view = plan_view(plan, 500)
     assert view.risk == "high" and view.confirm == "type"
     assert view.read_only is False and view.reversible is False
-    assert view.steps[0].facts == {"automation": "Export photo tag"}
+    assert view.steps[0].facts == {"automation": "Export photo tag", "scope": "all media folders"}
     assert view.steps[0].job_id is None
     assert view.steps[0].job_page == "/utilities/automations/export_photo_tag"
     assert dispatched == []
@@ -568,6 +568,32 @@ def test_run_automation_plan_queues_whole_library_and_links_to_history(session, 
     with pytest.raises(plans.PlanError) as error:
         plans.undo(session, plan.id, conversation.id)
     assert error.value.code == "not_reversible"
+
+
+def test_run_automation_plan_rechecks_file_scope_before_approval(session, conversation, tmp_path, monkeypatch):
+    media_dir = tmp_path / "media"
+    media_dir.mkdir()
+    photo = media_dir / "photo.jpg"
+    session.add_all([
+        Automation(slug="export_photo_tag", name="Export photo tag", handler="export_photo_tag"),
+        ApplicationSettings(name="assistant_action_run_automation", type="string", value="true"),
+        ApplicationSettings(name="media_dirs", type="json",
+                            value=f'[{{"id":"m1","path":"{media_dir}"}}]'),
+    ])
+    session.get(MediaItem, 1).full_file_path = str(photo)
+    session.commit()
+    dispatched = []
+    monkeypatch.setattr(maintenance, "invoke_automation", lambda target, context: dispatched.append(context) or True)
+
+    _, plan = _record(session, conversation,
+                      'run_automation("export_photo_tag", {"type": "files", "media_item_ids": [1]})',
+                      actions_on=assistant_settings.enabled_actions(session))
+    assert plan_view(plan, 500).steps[0].facts["scope"] == str(photo)
+    session.get(MediaItem, 1).full_file_path = str(tmp_path / "moved-outside.jpg")
+    session.commit()
+    with pytest.raises(plans.PlanError, match="outside configured media directories"):
+        plans.approve(session, plan.id, conversation.id, confirm_count=1)
+    assert dispatched == []
 
 
 def test_turning_an_automation_off_is_undone(session, conversation):

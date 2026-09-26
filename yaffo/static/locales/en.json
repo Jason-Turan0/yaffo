@@ -540,13 +540,9 @@
         "set_automation_enabled_off": "Turn off the “{{automation}}” automation",
         "reindex_media_one": "Re-index {{formattedCount}} item from its file (its faces are detected again, and people assigned to them are removed)",
         "reindex_media_other": "Re-index {{formattedCount}} items from their files (their faces are detected again, and people assigned to them are removed)",
-        "run_automation": "Run the “{{automation}}” automation over all media folders",
+        "run_automation": "Run the “{{automation}}” automation for {{scope}}",
         "repair_face_statuses_one": "Repair {{formattedCount}} face in an inconsistent state",
-        "repair_face_statuses_other": "Repair {{formattedCount}} faces in inconsistent states",
-        "index_files_one": "Index {{formattedCount}} new file found by the scan",
-        "index_files_other": "Index {{formattedCount}} new files found by the scan",
-        "remove_missing_items_one": "Remove {{formattedCount}} item whose file is gone (with its faces, people, tags and album entries; the files aren't touched)",
-        "remove_missing_items_other": "Remove {{formattedCount}} items whose files are gone (with their faces, people, tags and album entries; the files aren't touched)"
+        "repair_face_statuses_other": "Repair {{formattedCount}} faces in inconsistent states"
       },
       "errors": {
         "failed": "Couldn't do that. Try again.",

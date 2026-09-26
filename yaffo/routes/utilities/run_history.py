@@ -111,12 +111,11 @@ def _file_sync_summary(job: Job) -> str:
 
 
 def _run_summary(job: Job) -> str:
-    """One-line result for a run: progress counts for batch jobs (find_duplicates /
-    index), how a file-sync run ended, else the job's message (custom runs carry
-    the automation name)."""
+    """One-line result for a run: file-sync outcome, completed automation output,
+    batch progress counts, or the job's message."""
     if job.name == FILE_SYNC_JOB:
         return _file_sync_summary(job)
-    if job.automation_id and job.status == JOB_STATUS_COMPLETED and not job.task_count:
+    if job.automation_id and job.status == JOB_STATUS_COMPLETED:
         try:
             output = json.loads(job.job_data or "{}").get("output")
         except (ValueError, TypeError, AttributeError):
