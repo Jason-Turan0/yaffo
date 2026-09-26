@@ -408,24 +408,43 @@ type LocationMediaItem = {
 
 type ClientFilterItem = LocationMediaItem;
 
+/** One filter parameter, from the server's table (client_filter_config()). */
+type ClientFilterParam = {
+    param: string;
+    key: string;
+    kind: 'str' | 'int' | 'float' | 'flag' | 'int_list' | 'str_list';
+    choices: Array<string | number> | null;
+    default: string | number | null;
+};
+
+type ClientFilterConfig = {
+    params: ClientFilterParam[];
+    kilometers_per_unit: Record<string, number>;
+};
+
+/** The form read by the table; keys match the server's selections. */
 type ClientFilterCriteria = {
     path: string | null;
     year: number | null;
     month: number | null;
     device: string | null;
     favorite: boolean;
-    mediaType: 'photo' | 'video' | null;
+    media_type: 'photo' | 'video' | null;
     shape: 'portrait' | 'landscape' | 'square' | null;
-    personIds: number[];
-    personMatchType: string;
+    person_ids: number[];
+    person_match_type: string;
     gender: number | null;
-    labelIds: number[];
-    labelsMatchType: string;
-    tagName: string | null;
-    tagValue: string | null;
-    locationNames: string[];
+    label_ids: number[];
+    labels_match_type: string;
+    tag_name: string | null;
+    tag_value: string | null;
+    location_names: string[];
+    location_match_type: string;
     unnamed: boolean;
-    proximity: { lat: number; lon: number; distance: number } | null;
+    proximity_lat: number | null;
+    proximity_lon: number | null;
+    proximity_distance: number | null;
+    proximity_location: string | null;
 };
 
 type ClientFilterApi = {

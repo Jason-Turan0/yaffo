@@ -1,4 +1,7 @@
 import { loadModule } from '../support/load_module.js';
+// The server's filter table (yaffo/domain/media_filter_params.py), kept in step
+// by tests/yaffo/domain/test_media_filter_params.py.
+import config from '../fixtures/media_filter_config.json';
 
 // The client-side filter engine mirrors the home route's server-side filter
 // semantics (yaffo/routes/home.py); these tests pin the shared rules: empty
@@ -63,7 +66,7 @@ const check = (name, value) => {
   form.querySelector(`[name="${name}"][value="${value}"]`).checked = true;
 };
 
-const predicate = () => core.buildPredicate(core.readCriteria(form), { distanceUnit: 'km' });
+const predicate = () => core.buildPredicate(core.readCriteria(form, config), config, { distanceUnit: 'km' });
 
 beforeEach(async () => {
   document.body.innerHTML = FORM_HTML;
@@ -74,24 +77,25 @@ beforeEach(async () => {
 
 describe('readCriteria', () => {
   it('treats an untouched form as no filters', () => {
-    const criteria = core.readCriteria(form);
+    const criteria = core.readCriteria(form, config);
     expect(criteria).toMatchObject({
       path: null, year: null, month: null, device: null, favorite: false,
-      mediaType: null, shape: null, gender: null, tagName: null, tagValue: null,
-      unnamed: false, proximity: null,
+      media_type: null, shape: null, gender: null, tag_name: null, tag_value: null,
+      unnamed: false, proximity_lat: null, proximity_lon: null, proximity_distance: null,
+      person_match_type: 'any', labels_match_type: 'any',
     });
-    expect(criteria.personIds).toEqual([]);
-    expect(criteria.labelIds).toEqual([]);
-    expect(criteria.locationNames).toEqual([]);
+    expect(criteria.person_ids).toEqual([]);
+    expect(criteria.label_ids).toEqual([]);
+    expect(criteria.location_names).toEqual([]);
   });
 
   it('collects multi-select values and match types', () => {
     check('person', '1');
     check('person', '2');
     form.querySelector('[name="person-match-type"][value="all"]').checked = true;
-    const criteria = core.readCriteria(form);
-    expect(criteria.personIds).toEqual([1, 2]);
-    expect(criteria.personMatchType).toBe('all');
+    const criteria = core.readCriteria(form, config);
+    expect(criteria.person_ids).toEqual([1, 2]);
+    expect(criteria.person_match_type).toBe('all');
   });
 });
 
@@ -178,7 +182,7 @@ describe('buildPredicate', () => {
     expect(predicate()(far)).toBe(false);
 
     // the same distance in miles reaches farther
-    const miles = core.buildPredicate(core.readCriteria(form), { distanceUnit: 'mi' });
+    const miles = core.buildPredicate(core.readCriteria(form, config), config, { distanceUnit: 'mi' });
     expect(miles({ ...baseItem(), lat: 38.614, lon: -90.2 })).toBe(true);
   });
 });
@@ -189,6 +193,7 @@ describe('initClientFilter', () => {
     const received = [];
     app.filters.initClientFilter({
       form,
+      config,
       distanceUnit: 'km',
       onApply: (p) => received.push(p),
     });
@@ -223,7 +228,21 @@ describe('shape', () => {
   it('ignores an unknown shape rather than matching nothing', () => {
     setControl('shape', 'bogus');
 
-    expect(core.readCriteria(form).shape).toBe(null);
+    expect(core.readCriteria(form, config).shape).toBe(null);
     expect(predicate()({ ...baseItem(), shape: 'landscape' })).toBe(true);
+  });
+});
+
+describe('the form is read from the server table', () => {
+  it('reads a filter the JS never names, by its table entry', () => {
+    // A parameter added to the server's table is read with no change here.
+    const extended = {
+      ...config,
+      params: [...config.params, { param: 'rating', key: 'rating', kind: 'int', choices: [1, 2, 3], default: null }],
+    };
+    form.insertAdjacentHTML('beforeend', '<input name="rating" value="2">');
+    expect(core.readCriteria(form, extended).rating).toBe(2);
+    form.querySelector('[name="rating"]').value = '9';
+    expect(core.readCriteria(form, extended).rating).toBe(null);
   });
 });

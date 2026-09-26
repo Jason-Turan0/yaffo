@@ -16,6 +16,7 @@ from yaffo.db.models import (
 )
 from yaffo.background_tasks.events import emit_event
 from yaffo.routes import filter_config
+from yaffo.domain.media_filter_params import client_filter_config
 from yaffo.routes.filter_panel import build_filters_context
 from yaffo.utils.reverse_geocode import ReverseGeocodeRateLimited, reverse_geocode
 
@@ -105,6 +106,8 @@ def init_locations_routes(app: Flask):
             locations=locations_data,
             nearby_radius_km=_assign_location_nearby_radius_km(),
             filters=build_filters_context(db.session, request.args),
+            # The filter table the browser reads the form with (client_filter.js).
+            client_filter_config=client_filter_config(),
             filter_layout=filter_config.load_layout(db.session),
             filter_default_keys=filter_config.default_keys(),
         )

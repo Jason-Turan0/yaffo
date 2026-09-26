@@ -3,7 +3,9 @@ One layout shared by every page that renders the configurable panel (home
 gallery, locations map, albums add, remote gallery), persisted in
 ApplicationSettings (name=filter_layout) as a JSON list of {key, visible}.
 
-FILTERS is the source of truth for the available filters (key -> label + template).
+FILTERS is the source of truth for the available filter *controls* (key -> label +
+template + the parameters it sets, which are declared in
+domain/media_filter_params.py; every parameter belongs to exactly one control).
 The saved layout is *merged* onto it on read: known keys keep their saved order and
 visibility, unknown saved keys are dropped, and any registry filter missing from the
 saved layout is appended (visible) — so adding a filter here makes it show up without
@@ -18,34 +20,42 @@ from flask import Flask, request
 from flask_babel import gettext
 from sqlalchemy.orm import Session
 
+from werkzeug.datastructures import MultiDict
+
 from yaffo.db import db
 from yaffo.db.models import ApplicationSettings
+from yaffo.domain.media_filter_params import applied_keys, parse_filter_params
 
 SETTING_NAME = "filter_layout"
 
 
 @dataclass(frozen=True)
 class FilterDef:
-    """A configurable filter: its stable key, sidebar label, and include template."""
+    """A configurable filter control: its stable key, sidebar label, include
+    template, and the filter parameters (media_filter_params keys) it sets."""
     key: str
     label: str
     template: str
+    params: tuple[str, ...]
 
 
 # Registry + default order (matches the historical sidebar order).
 FILTERS: list[FilterDef] = [
-    FilterDef("year", "Year", "filters/_year.html"),
-    FilterDef("month", "Month", "filters/_month.html"),
-    FilterDef("path", "File", "filters/_path.html"),
-    FilterDef("people", "People", "filters/_people.html"),
-    FilterDef("gender", "Gender", "filters/_gender.html"),
-    FilterDef("labels", "Label", "filters/_labels.html"),
-    FilterDef("tags", "Tags", "filters/_tags.html"),
-    FilterDef("locations", "Locations", "filters/_locations.html"),
-    FilterDef("device", "Device", "filters/_device.html"),
-    FilterDef("favorite", "Favorites", "filters/_favorite.html"),
-    FilterDef("media_type", "Media Type", "filters/_media_type.html"),
-    FilterDef("shape", "Shape", "filters/_shape.html"),
+    FilterDef("year", "Year", "filters/_year.html", ("year",)),
+    FilterDef("month", "Month", "filters/_month.html", ("month",)),
+    FilterDef("path", "File", "filters/_path.html", ("path",)),
+    FilterDef("people", "People", "filters/_people.html", ("person_ids", "person_match_type")),
+    FilterDef("gender", "Gender", "filters/_gender.html", ("gender",)),
+    FilterDef("labels", "Label", "filters/_labels.html", ("label_ids", "labels_match_type")),
+    FilterDef("tags", "Tags", "filters/_tags.html", ("tag_name", "tag_value")),
+    FilterDef("locations", "Locations", "filters/_locations.html", (
+        "location_names", "location_match_type", "unnamed",
+        "proximity_lat", "proximity_lon", "proximity_distance", "proximity_location",
+    )),
+    FilterDef("device", "Device", "filters/_device.html", ("device",)),
+    FilterDef("favorite", "Favorites", "filters/_favorite.html", ("favorite",)),
+    FilterDef("media_type", "Media Type", "filters/_media_type.html", ("media_type",)),
+    FilterDef("shape", "Shape", "filters/_shape.html", ("shape",)),
 ]
 _BY_KEY = {f.key: f for f in FILTERS}
 
@@ -57,6 +67,14 @@ class FilterLayoutItem:
     label: str
     template: str
     visible: bool
+
+
+def applied_count(args: MultiDict) -> int:
+    """How many filter controls the URL narrows by: the "N filters applied"
+    badge on the gallery-panel pages. A control counts once however many of its
+    parameters or values are set (two people, a place plus radius)."""
+    applied = applied_keys(parse_filter_params(args))
+    return sum(1 for control in FILTERS if applied.intersection(control.params))
 
 
 def default_keys() -> list[str]:
@@ -112,6 +130,8 @@ def save_layout(session: Session, items: list[dict]) -> None:
 
 
 def init_filter_config_routes(app: Flask):
+    app.add_template_global(applied_count, "applied_gallery_filter_count")
+
     @app.route("/settings/filters", methods=["POST"])
     def save_filter_layout():
         """Persist the shared filter layout (order + visibility);

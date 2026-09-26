@@ -146,7 +146,9 @@ _NON_FILTER_QUERY_KEYS = frozenset({
 
 
 def applied_filter_count(args) -> int:
-    """How many distinct filters the current URL applies.
+    """How many distinct filters the current URL applies, for pages with their
+    own filters (Faces, a person's faces). The gallery-panel pages count by
+    filter control instead (filter_config.applied_count).
 
     Shared by every page that renders `_sidebar.html`, so the badge means the
     same thing everywhere without each route computing its own tally. A

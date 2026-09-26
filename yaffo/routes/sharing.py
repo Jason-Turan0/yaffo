@@ -43,7 +43,7 @@ from yaffo.db.repositories.media_repository import get_distinct_months
 from yaffo.demo import DEMO_ROLE_RECEIVER, demo_unsafe_allowed
 from yaffo.distance_units import distance_to_kilometers
 from yaffo.routes import filter_config
-from yaffo.routes.filter_panel import filter_selections, gender_options, to_query_params
+from yaffo.routes.filter_panel import filter_selections, gender_options, to_query_params, to_wire_filters
 from yaffo.routes.selection import selection_from_args
 from yaffo.logging_config import get_logger
 from yaffo.p2p.pairing import PairingError
@@ -234,54 +234,6 @@ def _shared_with_me_rows(context: dict) -> tuple[list[dict], str | None]:
 
     error = gettext("Some shared folders could not be loaded.") if had_error else None
     return rows, error
-
-
-def _remote_filter_payload(selections: dict) -> dict:
-    """Translate parsed querystring selections into the list_files protocol's
-    filter dict, sending only what's actually set. The proximity distance is
-    normalized to kilometers HERE, with this device's unit setting — the
-    units on the two devices need not match."""
-    payload = {}
-    if selections["selected_path"]:
-        payload["path"] = selections["selected_path"]
-    if selections["selected_media_type"]:
-        payload["media_type"] = selections["selected_media_type"]
-    if selections["selected_year"]:
-        payload["year"] = selections["selected_year"]
-    if selections["selected_month"]:
-        payload["month"] = selections["selected_month"]
-    if selections["selected_device"]:
-        payload["device"] = selections["selected_device"]
-    if selections["selected_favorite"]:
-        payload["favorite"] = True
-    if selections["selected_gender"] is not None:
-        payload["gender"] = selections["selected_gender"]
-    if selections["selected_person_ids"]:
-        payload["people"] = selections["selected_person_ids"]
-        payload["person_match_type"] = selections["selected_person_match_type"]
-    if selections["selected_label_ids"]:
-        payload["labels"] = selections["selected_label_ids"]
-        payload["labels_match_type"] = selections["selected_labels_match_type"]
-    if selections["selected_tag_name"]:
-        payload["tag_name"] = selections["selected_tag_name"]
-        if selections["selected_tag_value"]:
-            payload["tag_value"] = selections["selected_tag_value"]
-    if selections["selected_location_names"]:
-        payload["locations"] = selections["selected_location_names"]
-        payload["location_match_type"] = selections["selected_location_match_type"]
-    if selections["selected_unnamed"]:
-        payload["unnamed"] = True
-    if (
-        selections["selected_proximity_lat"] is not None
-        and selections["selected_proximity_lon"] is not None
-        and selections["selected_proximity_distance"]
-    ):
-        payload["proximity_lat"] = selections["selected_proximity_lat"]
-        payload["proximity_lon"] = selections["selected_proximity_lon"]
-        payload["proximity_km"] = distance_to_kilometers(
-            selections["selected_proximity_distance"], selections["selected_distance_unit"]
-        )
-    return payload
 
 
 def _resolve_folder_grant(folder_path: str) -> tuple[str, str | None]:
@@ -585,7 +537,7 @@ def init_sharing_routes(app: Flask):
         page_size = min(max(page_size, 1), max(REMOTE_FILES_PAGE_SIZES))
 
         selections = filter_selections(db.session, request.args)
-        filter_payload = _remote_filter_payload(selections)
+        filter_payload = to_wire_filters(selections)
 
         error = None
         result = {}
@@ -791,7 +743,7 @@ def init_sharing_routes(app: Flask):
         scope = (request.args.get("scope") or "").strip()
         label = (request.args.get("label") or "").strip()
         selections = filter_selections(db.session, request.args)
-        filter_payload = _remote_filter_payload(selections)
+        filter_payload = to_wire_filters(selections)
 
         selection = selection_from_args(request.args, total=0, cast=int)
         if selection.all:

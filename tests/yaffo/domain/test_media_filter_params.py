@@ -1,5 +1,8 @@
 """The shared filter-parameter table: one declaration drives parsing, links,
 apply_media_filters' selections, and the assistant's tool schema."""
+import json
+from pathlib import Path
+
 import pytest
 from werkzeug.datastructures import MultiDict
 
@@ -64,3 +67,61 @@ def test_schema_covers_every_parameter():
     assert schema["properties"]["person_ids"]["type"] == "array"
     assert schema["properties"]["favorite"]["type"] == "boolean"
     assert schema["properties"]["shape"]["enum"] == ["portrait", "landscape", "square"]
+
+
+def test_wire_filters_send_only_whats_set_by_wire_name():
+    values = fp.parse_filter_params(MultiDict([
+        ("person", "7"), ("person-match-type", "all"), ("labels", "3"), ("location", "Lisbon"),
+        ("favorite", "1"), ("shape", "portrait"), ("gender", "0"),
+        ("proximity-lat", "38.7"), ("proximity-lon", "-9.1"), ("proximity-distance", "10"),
+        ("proximity-location", "Lisbon"),
+    ]))
+    payload = fp.wire_filters(values, "mi")
+    assert payload == {
+        "people": [7], "person_match_type": "all", "labels": [3], "locations": ["Lisbon"],
+        "favorite": True, "shape": "portrait", "gender": 0,
+        "proximity_lat": 38.7, "proximity_lon": -9.1, "proximity_km": pytest.approx(16.09344),
+    }
+    # A default match type isn't sent; an incomplete proximity search isn't either.
+    partial = fp.wire_filters(fp.parse_filter_params(MultiDict([("proximity-lat", "38.7")])), "km")
+    assert partial == {}
+
+
+def test_every_wire_request_the_sender_builds_passes_the_receivers_validation():
+    # One value for every parameter, set in the URL as the filter panel would.
+    url_values = {
+        "path": "trip", "year": "2020", "month": "5", "device": "X", "person_ids": "1", "gender": "1",
+        "label_ids": "2", "tag_name": "t", "tag_value": "v", "location_names": "L", "unnamed": "1",
+        "favorite": "1", "media_type": "video", "shape": "square", "proximity_lat": "1",
+        "proximity_lon": "2", "proximity_distance": "3",
+    }
+    param_by_key = {p.key: p.param for p in fp.MEDIA_FILTER_PARAMS}
+    values = fp.parse_filter_params(MultiDict([(param_by_key[k], v) for k, v in url_values.items()]))
+
+    payload = fp.wire_filters(values, "km")
+
+    assert fp.validate_wire_filters(payload) is None
+    selections = fp.selections_from_wire(payload)
+    assert selections["person_ids"] == [1] and selections["shape"] == "square" and selections["proximity_km"] == 3
+    assert selections["person_match_type"] == "any"  # filled in on the receiving side
+
+
+def test_wire_validation():
+    assert fp.validate_wire_filters([]) == "filters must be an object"
+    assert fp.validate_wire_filters({"person": 1}) == "unknown filters: person"
+    assert fp.validate_wire_filters({"month": 13}) == "invalid value for filter 'month'"
+    assert fp.validate_wire_filters({"people": [True]}) == "invalid value for filter 'people'"
+    assert fp.validate_wire_filters({"proximity_km": "5"}) == "invalid value for filter 'proximity_km'"
+    assert fp.validate_wire_filters({"favorite": True, "year": 2020}) is None
+
+
+FIXTURE = Path(__file__).resolve().parents[3] / "tests_js" / "fixtures" / "media_filter_config.json"
+
+
+def test_js_fixture_matches_the_table():
+    """tests_js reads the filter table from this fixture, so the browser's form
+    reading is tested against the real table. Regenerate after changing the table:
+    python -c "import json; from yaffo.domain.media_filter_params import client_filter_config as c;
+    open('tests_js/fixtures/media_filter_config.json','w').write(json.dumps(c(), indent=2) + '\\n')"
+    """
+    assert json.loads(FIXTURE.read_text()) == json.loads(json.dumps(fp.client_filter_config()))

@@ -4,12 +4,19 @@ The saved layout (a JSON list of {key, visible}) is merged onto the registry on
 read: known keys keep their saved order/visibility, unknown keys drop, and any
 registry filter missing from the save is appended visible.
 """
+import re
+from pathlib import Path
+from urllib.parse import parse_qsl
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
+from werkzeug.datastructures import MultiDict
 
+import yaffo
 from yaffo.db import db
 from yaffo.db.models import ApplicationSettings
+from yaffo.domain.media_filter_params import MEDIA_FILTER_PARAMS
 from yaffo.routes import filter_config as fc
 
 pytestmark = pytest.mark.unit
@@ -72,3 +79,35 @@ class TestSharedLayout:
         setting = session.query(ApplicationSettings).filter_by(name=fc.SETTING_NAME).first()
         assert setting is not None
         assert next(i for i in fc.load_layout(session) if i.key == "year").visible is False
+
+
+def test_every_filter_parameter_belongs_to_exactly_one_control():
+    """The configurator's controls cover the filter table: nothing unowned (it
+    would have no control) and nothing owned twice."""
+    owners = {}
+    for control in fc.FILTERS:
+        for key in control.params:
+            owners.setdefault(key, []).append(control.key)
+    assert {p.key for p in MEDIA_FILTER_PARAMS} == set(owners)
+    assert {key: keys for key, keys in owners.items() if len(keys) > 1} == {}
+
+
+def test_each_control_template_renders_the_parameters_it_owns():
+    param_by_key = {p.key: p.param for p in MEDIA_FILTER_PARAMS}
+    templates = Path(yaffo.__file__).parent / "templates"
+    for control in fc.FILTERS:
+        source = (templates / control.template).read_text()
+        names = set(re.findall(r'name="([a-z-]+)"', source)) | set(re.findall(r'render_match_type\("([a-z-]+)"', source))
+        assert {param_by_key[key] for key in control.params} <= names, control.key
+
+
+@pytest.mark.parametrize("query, expected", [
+    ("", 0),
+    ("person=1&person=2&person-match-type=all", 1),  # one control, however many values
+    ("person-match-type=all", 0),  # a match type alone narrows nothing
+    ("tag-name=event&tag-value=x&year=2020", 2),
+    ("proximity-lat=1&proximity-lon=2&proximity-distance=5&proximity-location=X&unnamed=1", 1),
+    ("page=2&view=grid&shape=round", 0),  # page state, and an invalid value
+])
+def test_badge_counts_filter_controls(query, expected):
+    assert fc.applied_count(MultiDict(parse_qsl(query))) == expected

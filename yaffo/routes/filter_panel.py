@@ -25,6 +25,7 @@ from yaffo.domain.media_filter_params import (
     filter_query_params,
     media_filter_selections,
     parse_filter_params,
+    wire_filters,
 )
 
 
@@ -119,3 +120,9 @@ def to_query_params(filters: dict) -> dict:
     """The selections as querystring parameters — for pagination links and for
     carrying the current filters into a POST (the add screen's "all matching")."""
     return filter_query_params(_values(filters))
+
+
+def to_wire_filters(filters: dict) -> dict:
+    """The selections as a sharing peer's list_files `filters`: only what's set,
+    with the proximity radius in kilometers (this device's unit setting)."""
+    return wire_filters(_values(filters), filters["selected_distance_unit"])

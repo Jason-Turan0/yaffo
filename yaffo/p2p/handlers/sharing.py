@@ -11,8 +11,6 @@ from yaffo.db.models import (
     GRANT_SCOPE_FOLDER,
     GRANT_SCOPE_MEDIA_DIR,
     AlbumItem,
-    MEDIA_TYPE_PHOTO,
-    MEDIA_TYPE_VIDEO,
     ClassificationLabel,
     Face,
     MediaItem,
@@ -23,6 +21,7 @@ from yaffo.db.models import (
 )
 from yaffo.db.repositories import media_dir_repository, p2p_repository
 from yaffo.db.repositories.media_filter_repository import apply_media_filters
+from yaffo.domain.media_filter_params import selections_from_wire, validate_wire_filters
 from yaffo.p2p.messages import PeerRecord
 
 DEFAULT_PULL_CHUNK_BYTES = 1024 * 1024
@@ -31,46 +30,6 @@ DEFAULT_LIST_FILES_LIMIT = 50
 MAX_LIST_FILES_LIMIT = 200
 DEFAULT_PREVIEW_DIMENSION = 512
 MAX_PREVIEW_DIMENSION = 1024
-
-
-def _is_int(value) -> bool:
-    return isinstance(value, int) and not isinstance(value, bool)
-
-
-def _is_number(value) -> bool:
-    return isinstance(value, (int, float)) and not isinstance(value, bool)
-
-
-def _is_int_list(value) -> bool:
-    return isinstance(value, list) and all(_is_int(item) for item in value)
-
-
-def _is_str_list(value) -> bool:
-    return isinstance(value, list) and all(isinstance(item, str) for item in value)
-
-
-LIST_FILES_FILTER_VALIDATORS = {
-    "path": lambda v: isinstance(v, str),
-    "media_type": lambda v: v in (MEDIA_TYPE_PHOTO, MEDIA_TYPE_VIDEO),
-    "year": _is_int,
-    "month": _is_int,
-    "device": lambda v: isinstance(v, str),
-    "favorite": lambda v: isinstance(v, (bool, int)),
-    "gender": _is_int,
-    "people": _is_int_list,
-    "person_match_type": lambda v: v in ("any", "all"),
-    "labels": _is_int_list,
-    "labels_match_type": lambda v: v in ("any", "all"),
-    "tag_name": lambda v: isinstance(v, str),
-    "tag_value": lambda v: isinstance(v, str),
-    "locations": _is_str_list,
-    "location_match_type": lambda v: v in ("any", "all"),
-    "unnamed": lambda v: isinstance(v, (bool, int)),
-    "proximity_lat": _is_number,
-    "proximity_lon": _is_number,
-    "proximity_km": _is_number,
-}
-LIST_FILES_FILTER_KEYS = tuple(LIST_FILES_FILTER_VALIDATORS)
 
 
 def peer_lookup():
@@ -108,47 +67,23 @@ def resolve_scoped_request(body: dict):
 
 
 def validate_list_filters(filters: dict) -> Optional[dict]:
-    if not isinstance(filters, dict):
-        return {"status": "error", "detail": "filters must be an object"}
-    unknown = set(filters) - set(LIST_FILES_FILTER_KEYS)
-    if unknown:
-        return {"status": "error", "detail": f"unknown filters: {', '.join(sorted(unknown))}"}
-    for key, value in filters.items():
-        if not LIST_FILES_FILTER_VALIDATORS[key](value):
-            return {"status": "error", "detail": f"invalid value for filter {key!r}"}
-    return None
+    """An error response for unacceptable filters, or None. The accepted names
+    and values come from domain/media_filter_params.py."""
+    detail = validate_wire_filters(filters)
+    return {"status": "error", "detail": detail} if detail is not None else None
 
 
 def apply_list_filters(files_query, target: Path, filters: dict):
+    # The path filter matches within the requested scope (the part of the path
+    # below `target`), never the absolute path on this device.
     path_text = (filters.get("path") or "").strip()
     if path_text:
         escaped = path_text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         relative_expr = func.substr(MediaItem.full_file_path, len(str(target).rstrip("/\\")) + 2)
         files_query = files_query.filter(relative_expr.like(f"%{escaped}%", escape="\\"))
-    return apply_media_filters(
-        db.session,
-        files_query,
-        {
-            "media_type": filters.get("media_type"),
-            "year": filters.get("year"),
-            "month": filters.get("month"),
-            "device": (filters.get("device") or "").strip() or None,
-            "favorite": filters.get("favorite"),
-            "person_ids": filters.get("people"),
-            "person_match_type": filters.get("person_match_type", "any"),
-            "gender": filters.get("gender"),
-            "label_ids": filters.get("labels"),
-            "labels_match_type": filters.get("labels_match_type", "any"),
-            "tag_name": filters.get("tag_name"),
-            "tag_value": filters.get("tag_value"),
-            "location_names": filters.get("locations"),
-            "location_match_type": filters.get("location_match_type", "any"),
-            "unnamed": filters.get("unnamed"),
-            "proximity_lat": filters.get("proximity_lat"),
-            "proximity_lon": filters.get("proximity_lon"),
-            "proximity_km": filters.get("proximity_km"),
-        },
-    )
+    selections = selections_from_wire(filters)
+    selections["path"] = None
+    return apply_media_filters(db.session, files_query, selections)
 
 
 def list_files_facets(scope_query, filters: dict) -> dict:
