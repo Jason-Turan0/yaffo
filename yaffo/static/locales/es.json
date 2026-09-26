@@ -390,7 +390,9 @@
         "automation_runs": "Ejecuciones de “{{slug}}” revisadas",
         "link_to_photos": "Enlace a “{{title}}” creado",
         "link_to_media_item": "Enlace a “{{title}}” creado",
-        "link_to_page": "Enlace a “{{title}}” creado"
+        "link_to_page": "Enlace a “{{title}}” creado",
+        "ai_call_summary": "Se revisaron las llamadas recientes a la IA",
+        "capture_date_source": "Se revisaron los metadatos de la fecha de captura"
       }
     },
     "cancel": {

@@ -34,6 +34,7 @@ NETWORK_MODULES = {"requests", "httpx", "urllib.request", "urllib3", "socket", "
 
 SAMPLE_ARGS = {
     "media_item_report": {"media_item_id": 1},
+    "capture_date_source": {"media_item_id": 1},
     "read_log": {"name": "yaffo.log"},
     "probe_media_dir": {"media_dir_id": "m1"},
     "stat_path": {"media_dir_id": "m1", "relative_path": ""},
@@ -107,7 +108,7 @@ def test_every_tool_runs_offline(session, offline, monkeypatch):
     data = tmp_path / "data"
     data.mkdir()
     diagnostics = DiagnosticsToolProvider(
-        session, groups=frozenset({"logs", "library", "files", "jobs"}),
+        session, groups=frozenset({"logs", "library", "files", "jobs", "metadata"}),
         fs=AssistantFS({"m1": tmp_path / "media"}, data_dir=data),
         store=Store(str(tmp_path / "queue.db")), db_path=tmp_path / "lib.db")
     for tool in TOOLS:

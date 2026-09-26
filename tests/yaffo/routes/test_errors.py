@@ -1,6 +1,11 @@
 """Global error screens. The 404 handler renders an on-brand page that extends
 base.html, so it carries the active theme and navigation like any other page."""
 
+import pytest
+from flask import abort
+
+from yaffo.site_agents.assistant import settings as assistant_settings
+
 
 def test_unknown_url_returns_branded_404(client):
     response = client.get("/this/route/does/not/exist")
@@ -184,3 +189,45 @@ def test_unreadable_database_still_gets_a_page_not_a_traceback(tmp_path):
     body = response.data.decode()
     assert "Something went wrong" in body      # the self-contained fallback page
     assert "Traceback" not in body
+
+
+@pytest.mark.parametrize("unhandled", [False, True])
+def test_500_offers_assistant_help_with_safe_context(app, client, monkeypatch, unhandled):
+    monkeypatch.setattr("yaffo.site_agents.llm_config.get_api_key", lambda *a, **k: "test-key")
+
+    @app.route("/_assistant_error")
+    def assistant_error():
+        if unhandled:
+            raise RuntimeError("private exception details")
+        abort(500)
+
+    response = client.get("/_assistant_error?secret=not-for-the-assistant")
+    body = response.get_data(as_text=True)
+    assert response.status_code == 500
+    assert 'data-assistant-help' in body
+    assert 'data-page="/_assistant_error"' in body
+    assert 'data-error-code="internal_server_error"' in body
+    assert 'Help me with this' in body
+    assert 'private exception details' not in body
+    assert 'not-for-the-assistant' not in body
+
+
+@pytest.mark.parametrize("has_key,enabled", [(False, True), (True, False)])
+def test_500_hides_assistant_help_when_unavailable(app, client, monkeypatch, has_key, enabled):
+    monkeypatch.setattr("yaffo.site_agents.llm_config.get_api_key", lambda *a, **k: "test-key" if has_key else None)
+    assistant_settings.set_enabled(enabled)
+
+    @app.route("/_assistant_unavailable_error")
+    def assistant_unavailable_error():
+        abort(500)
+
+    response = client.get("/_assistant_unavailable_error")
+    assert response.status_code == 500
+    assert 'data-error-code="internal_server_error"' not in response.get_data(as_text=True)
+
+
+def test_404_does_not_gain_internal_error_help(client, monkeypatch):
+    monkeypatch.setattr("yaffo.site_agents.llm_config.get_api_key", lambda *a, **k: "test-key")
+    response = client.get("/_missing_assistant_page")
+    assert response.status_code == 404
+    assert 'data-error-code="internal_server_error"' not in response.get_data(as_text=True)

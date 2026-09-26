@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-25 22:01-0500\n"
+"POT-Creation-Date: 2026-09-26 00:08-0500\n"
 "PO-Revision-Date: 2026-06-24 18:49-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -32,11 +32,11 @@ msgstr ""
 "Diese Anfrage konnte nicht verifiziert werden. Aktualisieren Sie die Seite und versuchen Sie es "
 "erneut."
 
-#: yaffo/distance_units.py:26 yaffo/routes/filter_panel.py:71
+#: yaffo/distance_units.py:26 yaffo/routes/filter_panel.py:49
 msgid "Miles"
 msgstr "Meilen"
 
-#: yaffo/distance_units.py:27 yaffo/routes/filter_panel.py:71
+#: yaffo/distance_units.py:27 yaffo/routes/filter_panel.py:49
 msgid "Kilometers"
 msgstr "Kilometer"
 
@@ -348,7 +348,7 @@ msgstr ""
 "Werkzeug „Duplikate entfernen“."
 
 #: yaffo/routes/assistant.py:75 yaffo/routes/pages.py:250 yaffo/routes/themes_page.py:239
-#: yaffo/routes/utilities/automations.py:649
+#: yaffo/routes/utilities/automations.py:651
 msgid "Message is required."
 msgstr "Nachricht ist erforderlich."
 
@@ -358,7 +358,7 @@ msgid "Messages can be at most %(count)s characters."
 msgstr "Nachrichten dürfen höchstens %(count)s Zeichen lang sein."
 
 #: yaffo/routes/assistant.py:84 yaffo/routes/pages.py:254 yaffo/routes/themes_page.py:243
-#: yaffo/routes/utilities/automations.py:653
+#: yaffo/routes/utilities/automations.py:655
 #, python-format
 msgid "No API key configured. Add your %(provider)s API key in Settings → AI Generation."
 msgstr ""
@@ -428,7 +428,7 @@ msgstr "Unbekannt"
 msgid " OR "
 msgstr " ODER "
 
-#: yaffo/routes/faces.py:380 yaffo/routes/filter_config.py:123
+#: yaffo/routes/faces.py:380 yaffo/routes/filter_config.py:143
 msgid "Items must be a list"
 msgstr "Elemente müssen als Liste angegeben werden"
 
@@ -505,23 +505,23 @@ msgstr ""
 "Medienordner sind nicht verfügbar: %(directories)s. Wenn sie sich auf einem externen Laufwerk "
 "befinden, stellen Sie sicher, dass das Laufwerk angeschlossen ist."
 
-#: yaffo/routes/home.py:374 yaffo/routes/sharing.py:679
+#: yaffo/routes/home.py:374 yaffo/routes/sharing.py:631
 msgid "The tag_name parameter is required"
 msgstr "Der Parameter tag_name ist erforderlich"
 
-#: yaffo/routes/locations.py:125
+#: yaffo/routes/locations.py:128
 msgid "Media item IDs and location name are required"
 msgstr "Medienelement-IDs und Ortsname sind erforderlich"
 
-#: yaffo/routes/locations.py:149
+#: yaffo/routes/locations.py:152
 msgid "Could not update locations"
 msgstr "Orte konnten nicht aktualisiert werden"
 
-#: yaffo/routes/locations.py:162
+#: yaffo/routes/locations.py:165
 msgid "Latitude and longitude are required"
 msgstr "Breiten- und Längengrad sind erforderlich"
 
-#: yaffo/routes/locations.py:170 yaffo/routes/locations.py:176
+#: yaffo/routes/locations.py:173 yaffo/routes/locations.py:179
 msgid "Could not determine a location name"
 msgstr "Es konnte kein Ortsname ermittelt werden"
 
@@ -571,7 +571,7 @@ msgstr "Ein Tag-Name ist erforderlich"
 msgid "Untitled Page"
 msgstr "Unbenannte Seite"
 
-#: yaffo/routes/pages.py:268 yaffo/routes/themes_page.py:235 yaffo/routes/utilities/automations.py:646
+#: yaffo/routes/pages.py:268 yaffo/routes/themes_page.py:235 yaffo/routes/utilities/automations.py:648
 msgid "A generation is already running."
 msgstr "Eine Generierung läuft bereits."
 
@@ -631,7 +631,7 @@ msgstr ""
 "Medien- und Miniaturansichtsverzeichnisse können nicht geändert werden, während ein Import oder "
 "eine Indexierung läuft."
 
-#: yaffo/routes/settings.py:192 yaffo/routes/utilities/automations.py:459
+#: yaffo/routes/settings.py:192 yaffo/routes/utilities/automations.py:461
 msgid "Unsupported distance unit"
 msgstr "Nicht unterstützte Entfernungseinheit"
 
@@ -722,9 +722,9 @@ msgstr "Gelöschtes Album"
 msgid "Shared folder"
 msgstr "Freigegebener Ordner"
 
-#: yaffo/routes/sharing.py:204 yaffo/routes/sharing.py:404 yaffo/routes/sharing.py:421
-#: yaffo/routes/sharing.py:443 yaffo/routes/sharing.py:594 yaffo/routes/sharing.py:720
-#: yaffo/routes/sharing.py:841 yaffo/routes/sharing.py:854 yaffo/routes/sharing.py:868
+#: yaffo/routes/sharing.py:204 yaffo/routes/sharing.py:356 yaffo/routes/sharing.py:373
+#: yaffo/routes/sharing.py:395 yaffo/routes/sharing.py:546 yaffo/routes/sharing.py:672
+#: yaffo/routes/sharing.py:793 yaffo/routes/sharing.py:806 yaffo/routes/sharing.py:820
 msgid "Device sharing is not running."
 msgstr "Die Gerätefreigabe läuft nicht."
 
@@ -732,162 +732,162 @@ msgstr "Die Gerätefreigabe läuft nicht."
 msgid "Some shared folders could not be loaded."
 msgstr "Einige freigegebene Ordner konnten nicht geladen werden."
 
-#: yaffo/routes/sharing.py:295
+#: yaffo/routes/sharing.py:247
 msgid "Choose a folder inside a configured media directory."
 msgstr "Wählen Sie einen Ordner in einem konfigurierten Medienverzeichnis."
 
-#: yaffo/routes/sharing.py:388
+#: yaffo/routes/sharing.py:340
 msgid "Share grant is no longer active."
 msgstr "Die Aktienzuteilung ist nicht mehr aktiv."
 
-#: yaffo/routes/sharing.py:390
+#: yaffo/routes/sharing.py:342
 msgid "Share grant revoked."
 msgstr "Aktienzuteilung widerrufen."
 
-#: yaffo/routes/sharing.py:424
+#: yaffo/routes/sharing.py:376
 msgid "Paste a pairing code first."
 msgstr "Fügen Sie zuerst einen Pairing-Code ein."
 
-#: yaffo/routes/sharing.py:428
+#: yaffo/routes/sharing.py:380
 #, python-format
 msgid "Pairing failed: %(reason)s"
 msgstr "Kopplung fehlgeschlagen: %(reason)s"
 
-#: yaffo/routes/sharing.py:430
+#: yaffo/routes/sharing.py:382
 #, python-format
 msgid "Could not reach the other device: %(reason)s"
 msgstr "Das andere Gerät konnte nicht erreicht werden: %(reason)s"
 
-#: yaffo/routes/sharing.py:432
+#: yaffo/routes/sharing.py:384
 msgid "Pairing timed out — is the other device online?"
 msgstr "Zeitüberschreitung beim Koppeln – ist das andere Gerät online?"
 
-#: yaffo/routes/sharing.py:435
+#: yaffo/routes/sharing.py:387
 #, python-format
 msgid "Paired with %(device)s."
 msgstr "Gepaart mit %(device)s."
 
-#: yaffo/routes/sharing.py:452
+#: yaffo/routes/sharing.py:404
 msgid "Device revoked. The other device was notified."
 msgstr "Gerät widerrufen. Das andere Gerät wurde benachrichtigt."
 
-#: yaffo/routes/sharing.py:454
+#: yaffo/routes/sharing.py:406
 msgid "Device revoked. The other device is offline and will find out when it next tries to connect."
 msgstr ""
 "Gerät widerrufen. Das andere Gerät ist offline und erfährt, wann es das nächste Mal versucht, "
 "eine Verbindung herzustellen."
 
-#: yaffo/routes/sharing.py:477
+#: yaffo/routes/sharing.py:429
 msgid "Revoke this device before deleting it."
 msgstr "Sperren Sie dieses Gerät, bevor Sie es löschen."
 
-#: yaffo/routes/sharing.py:478
+#: yaffo/routes/sharing.py:430
 msgid "Device deleted."
 msgstr "Gerät gelöscht."
 
-#: yaffo/routes/sharing.py:487
+#: yaffo/routes/sharing.py:439
 msgid "Device name cannot be empty."
 msgstr "Der Gerätename darf nicht leer sein."
 
-#: yaffo/routes/sharing.py:489 yaffo/routes/sharing.py:511 yaffo/routes/sharing.py:723
+#: yaffo/routes/sharing.py:441 yaffo/routes/sharing.py:463 yaffo/routes/sharing.py:675
 #, python-format
 msgid "%(device)s is not a known device."
 msgstr "%(device)s ist kein bekanntes Gerät."
 
-#: yaffo/routes/sharing.py:490
+#: yaffo/routes/sharing.py:442
 msgid "Device renamed."
 msgstr "Gerät umbenannt."
 
-#: yaffo/routes/sharing.py:502
+#: yaffo/routes/sharing.py:454
 msgid "Download directory saved."
 msgstr "Download-Verzeichnis gespeichert."
 
-#: yaffo/routes/sharing.py:513
+#: yaffo/routes/sharing.py:465
 msgid "Pair this device again before sharing with it."
 msgstr "Koppeln Sie dieses Gerät erneut, bevor Sie es mit ihm teilen."
 
-#: yaffo/routes/sharing.py:520
+#: yaffo/routes/sharing.py:472
 msgid "Choose a configured media directory."
 msgstr "Wählen Sie ein konfiguriertes Medienverzeichnis."
 
-#: yaffo/routes/sharing.py:530
+#: yaffo/routes/sharing.py:482
 msgid "Choose a folder to share."
 msgstr "Wählen Sie einen Ordner zum Teilen aus."
 
-#: yaffo/routes/sharing.py:550
+#: yaffo/routes/sharing.py:502
 msgid "Choose an album to share."
 msgstr "Wählen Sie ein Album zum Teilen aus."
 
-#: yaffo/routes/sharing.py:555
+#: yaffo/routes/sharing.py:507
 msgid "Choose what to share."
 msgstr "Wählen Sie aus, was Sie teilen möchten."
 
-#: yaffo/routes/sharing.py:558
+#: yaffo/routes/sharing.py:510
 msgid "Share grant added."
 msgstr "Aktiengewährung hinzugefügt."
 
-#: yaffo/routes/sharing.py:596
+#: yaffo/routes/sharing.py:548
 msgid "This device is revoked. Pair it again before browsing shared files."
 msgstr "Dieses Gerät wurde widerrufen. Koppeln Sie es erneut, bevor Sie freigegebene Dateien durchsuchen."
 
-#: yaffo/routes/sharing.py:610
+#: yaffo/routes/sharing.py:562
 #, python-format
 msgid "Could not load shared files: %(reason)s"
 msgstr "Freigegebene Dateien konnten nicht geladen werden: %(reason)s"
 
-#: yaffo/routes/sharing.py:612
+#: yaffo/routes/sharing.py:564
 msgid "Loading shared files timed out — is the other device online?"
 msgstr "Zeitüberschreitung beim Laden freigegebener Dateien – ist das andere Gerät online?"
 
-#: yaffo/routes/sharing.py:725
+#: yaffo/routes/sharing.py:677
 msgid "Pair this device again before pulling files from it."
 msgstr "Koppeln Sie dieses Gerät erneut, bevor Sie Dateien daraus abrufen."
 
-#: yaffo/routes/sharing.py:728
+#: yaffo/routes/sharing.py:680
 msgid "Choose a download directory for shared files first."
 msgstr "Wählen Sie zunächst ein Download-Verzeichnis für freigegebene Dateien."
 
-#: yaffo/routes/sharing.py:790
+#: yaffo/routes/sharing.py:742
 msgid "Could not start the download: the shared scope is missing."
 msgstr "Der Download konnte nicht gestartet werden: Der freigegebene Bereich fehlt."
 
-#: yaffo/routes/sharing.py:802
+#: yaffo/routes/sharing.py:754
 msgid "Select the files to pull first."
 msgstr "Wählen Sie zuerst die Dateien aus, die abgerufen werden sollen."
 
-#: yaffo/routes/sharing.py:822
+#: yaffo/routes/sharing.py:774
 #, python-format
 msgid "Could not start the download: %(reason)s"
 msgstr "Der Download konnte nicht gestartet werden: %(reason)s"
 
-#: yaffo/routes/sharing.py:824
+#: yaffo/routes/sharing.py:776
 msgid "Queuing the transfer timed out — is device sharing running?"
 msgstr "Zeitüberschreitung bei der Warteschlange für die Übertragung – läuft die Gerätefreigabe?"
 
-#: yaffo/routes/sharing.py:827
+#: yaffo/routes/sharing.py:779
 msgid "Download queued — everything selected in this view will be pulled."
 msgstr "Download in Warteschlange – alles, was in dieser Ansicht ausgewählt ist, wird abgerufen."
 
-#: yaffo/routes/sharing.py:830
+#: yaffo/routes/sharing.py:782
 #, python-format
 msgid "Pull of %(count)s file queued."
 msgid_plural "Pull of %(count)s files queued."
 msgstr[0] "Abziehen %(count)s Datei in der Warteschlange."
 msgstr[1] "Abziehen %(count)s Dateien in der Warteschlange."
 
-#: yaffo/routes/sharing.py:846
+#: yaffo/routes/sharing.py:798
 msgid "Transfer cancelled."
 msgstr "Übertragung abgebrochen."
 
-#: yaffo/routes/sharing.py:846 yaffo/routes/sharing.py:860
+#: yaffo/routes/sharing.py:798 yaffo/routes/sharing.py:812
 msgid "Transfer is no longer active."
 msgstr "Die Übertragung ist nicht mehr aktiv."
 
-#: yaffo/routes/sharing.py:860
+#: yaffo/routes/sharing.py:812
 msgid "Continuing over the relay."
 msgstr "Weiter geht es über die Staffel."
 
-#: yaffo/routes/sharing.py:877
+#: yaffo/routes/sharing.py:829
 msgid "Cancel or finish this transfer before deleting it."
 msgstr "Brechen Sie diese Übertragung ab oder beenden Sie sie, bevor Sie sie löschen."
 
@@ -916,142 +916,142 @@ msgstr "Systemdesigns können nicht gelöscht werden"
 msgid "System themes cannot be generated."
 msgstr "Systemdesigns können nicht generiert werden."
 
-#: yaffo/routes/utilities/automations.py:116 yaffo/routes/utilities/automations.py:119
+#: yaffo/routes/utilities/automations.py:117 yaffo/routes/utilities/automations.py:120
 msgid "Import photos"
 msgstr "Foto-Tag exportieren"
 
-#: yaffo/routes/utilities/automations.py:117 yaffo/routes/utilities/automations.py:120
+#: yaffo/routes/utilities/automations.py:118 yaffo/routes/utilities/automations.py:121
 msgid "Index photos"
 msgstr "Fotos indizieren"
 
-#: yaffo/routes/utilities/automations.py:118 yaffo/routes/utilities/automations.py:121
+#: yaffo/routes/utilities/automations.py:119 yaffo/routes/utilities/automations.py:122
 msgid "Find duplicates"
 msgstr "Duplikate finden"
 
-#: yaffo/routes/utilities/automations.py:133
+#: yaffo/routes/utilities/automations.py:134
 #, python-format
 msgid "%(completed)s of %(total)s processed"
 msgstr "%(completed)s von %(total)s verarbeitet"
 
-#: yaffo/routes/utilities/automations.py:139
+#: yaffo/routes/utilities/automations.py:140
 #, python-format
 msgid "%(count)s error"
 msgid_plural "%(count)s errors"
 msgstr[0] "%(count)s Fehler"
 msgstr[1] "%(count)s Fehler"
 
-#: yaffo/routes/utilities/automations.py:146
+#: yaffo/routes/utilities/automations.py:147
 #, python-format
 msgid "%(count)s cancelled"
 msgid_plural "%(count)s cancelled"
 msgstr[0] "%(count)s abgebrochen"
 msgstr[1] "%(count)s abgebrochen"
 
-#: yaffo/routes/utilities/automations.py:157
+#: yaffo/routes/utilities/automations.py:158
 msgid "Pending"
 msgstr "Ausstehend"
 
-#: yaffo/routes/utilities/automations.py:158
+#: yaffo/routes/utilities/automations.py:159
 msgid "Running"
 msgstr "Läuft"
 
-#: yaffo/routes/utilities/automations.py:159 yaffo/templates/sharing/_transfers_panel.html:29
+#: yaffo/routes/utilities/automations.py:160 yaffo/templates/sharing/_transfers_panel.html:29
 msgid "Completed"
 msgstr "Abgeschlossen"
 
-#: yaffo/routes/utilities/automations.py:160 yaffo/templates/sharing/_transfers_panel.html:32
+#: yaffo/routes/utilities/automations.py:161 yaffo/templates/sharing/_transfers_panel.html:32
 msgid "Cancelled"
 msgstr "Abgebrochen"
 
-#: yaffo/routes/utilities/automations.py:161 yaffo/templates/sharing/_transfers_panel.html:31
+#: yaffo/routes/utilities/automations.py:162 yaffo/templates/sharing/_transfers_panel.html:31
 msgid "Failed"
 msgstr "Fehlgeschlagen"
 
-#: yaffo/routes/utilities/automations.py:230
+#: yaffo/routes/utilities/automations.py:232
 msgid "Media imported"
 msgstr "Medien importiert"
 
-#: yaffo/routes/utilities/automations.py:231
+#: yaffo/routes/utilities/automations.py:233
 msgid "Media indexed"
 msgstr "Medien indiziert"
 
-#: yaffo/routes/utilities/automations.py:232
+#: yaffo/routes/utilities/automations.py:234
 msgid "Duplicates found"
 msgstr "Duplikate gefunden"
 
-#: yaffo/routes/utilities/automations.py:233
+#: yaffo/routes/utilities/automations.py:235
 msgid "Media modified"
 msgstr "Medien geändert"
 
-#: yaffo/routes/utilities/automations.py:234
+#: yaffo/routes/utilities/automations.py:236
 msgid "Media labeled"
 msgstr "Medien gelabelt"
 
-#: yaffo/routes/utilities/automations.py:346 yaffo/routes/utilities/automations.py:405
+#: yaffo/routes/utilities/automations.py:348 yaffo/routes/utilities/automations.py:407
 msgid "Automation name is required"
 msgstr "Automatisierungsname ist erforderlich"
 
-#: yaffo/routes/utilities/automations.py:402 yaffo/routes/utilities/automations.py:644
+#: yaffo/routes/utilities/automations.py:404 yaffo/routes/utilities/automations.py:646
 msgid "System automations cannot be edited."
 msgstr "Systemautomatisierungen können nicht bearbeitet werden."
 
-#: yaffo/routes/utilities/automations.py:424
+#: yaffo/routes/utilities/automations.py:426
 msgid "This automation has no configurable settings."
 msgstr "Diese Automatisierung hat keine konfigurierbaren Einstellungen."
 
-#: yaffo/routes/utilities/automations.py:440 yaffo/routes/utilities/automations.py:470
+#: yaffo/routes/utilities/automations.py:442 yaffo/routes/utilities/automations.py:472
 #, python-format
 msgid "%(label)s must be a number."
 msgstr "%(label)s muss eine Zahl sein."
 
-#: yaffo/routes/utilities/automations.py:448 yaffo/routes/utilities/automations.py:478
+#: yaffo/routes/utilities/automations.py:450 yaffo/routes/utilities/automations.py:480
 #, python-format
 msgid "%(label)s must be between %(min)s and %(max)s."
 msgstr "%(label)s muss zwischen %(min)s und %(max)s liegen."
 
-#: yaffo/routes/utilities/automations.py:489
+#: yaffo/routes/utilities/automations.py:491
 #, python-format
 msgid "%(label)s is required."
 msgstr "%(label)s ist erforderlich."
 
-#: yaffo/routes/utilities/automations.py:498
+#: yaffo/routes/utilities/automations.py:500
 #, python-format
 msgid "%(label)s has an unsupported value."
 msgstr "%(label)s hat einen nicht unterstützten Wert."
 
-#: yaffo/routes/utilities/automations.py:516
+#: yaffo/routes/utilities/automations.py:518
 msgid "System automations cannot be deleted"
 msgstr "Systemautomatisierungen können nicht gelöscht werden"
 
-#: yaffo/routes/utilities/automations.py:563
+#: yaffo/routes/utilities/automations.py:565
 msgid "No indexed photos found under that path."
 msgstr "Unter diesem Pfad wurden keine indizierten Fotos gefunden."
 
-#: yaffo/routes/utilities/automations.py:571
+#: yaffo/routes/utilities/automations.py:573
 msgid "Nothing to run yet — publish the automation's code first."
 msgstr "Noch nichts auszuführen — veröffentlichen Sie zuerst den Code der Automatisierung."
 
-#: yaffo/routes/utilities/automations.py:611
+#: yaffo/routes/utilities/automations.py:613
 msgid "Enter a valid 5-field cron expression (e.g. */30 * * * *)."
 msgstr "Geben Sie einen gültigen 5-Feld-Cron-Ausdruck ein (z. B. */30 * * * *)."
 
-#: yaffo/routes/utilities/automations.py:621
+#: yaffo/routes/utilities/automations.py:623
 msgid "Choose an event type."
 msgstr "Wählen Sie einen Ereignistyp aus."
 
-#: yaffo/routes/utilities/automations.py:634
+#: yaffo/routes/utilities/automations.py:636
 msgid "Unknown trigger action."
 msgstr "Unbekannte Auslöseraktion."
 
-#: yaffo/routes/utilities/automations.py:689
+#: yaffo/routes/utilities/automations.py:691
 msgid "No code to test yet."
 msgstr "Noch kein Code zum Testen vorhanden."
 
-#: yaffo/routes/utilities/automations.py:693
+#: yaffo/routes/utilities/automations.py:695
 msgid "No path selected."
 msgstr "Kein Pfad ausgewählt."
 
-#: yaffo/routes/utilities/automations.py:704
+#: yaffo/routes/utilities/automations.py:706
 msgid "No draft to publish."
 msgstr "Kein Entwurf zum Veröffentlichen vorhanden."
 
@@ -1202,6 +1202,12 @@ msgstr ""
 "Ein Verarbeitungsfehler hat das Laden dieser Seite verhindert. Versuchen Sie es gleich noch "
 "einmal — wenn es weiterhin auftritt, liegt das Problem bei uns, nicht bei Ihnen."
 
+#: yaffo/templates/500.html:19 yaffo/templates/base.html:204
+#: yaffo/templates/fragments/job_status_fragment.html:27
+#: yaffo/templates/utilities/automations_runs.html:24
+msgid "Help me with this"
+msgstr "Hilf mir dabei"
+
 #: yaffo/templates/_sidebar.html:11 yaffo/templates/components/nav_panel.html:38
 #: yaffo/templates/people/list.html:29 yaffo/templates/people/list.html:54
 msgid "Actions"
@@ -1306,7 +1312,7 @@ msgid "Settings"
 msgstr "Einstellungen"
 
 #: yaffo/templates/assistant/_panel.html:11 yaffo/templates/assistant/_panel.html:46
-#: yaffo/templates/base.html:156 yaffo/templates/base.html:217
+#: yaffo/templates/base.html:156 yaffo/templates/base.html:223
 msgid "Ask Yaffo"
 msgstr "Yaffo fragen"
 
@@ -1322,21 +1328,21 @@ msgstr "Seite bearbeiten"
 msgid "New page"
 msgstr "Neue Seite"
 
-#: yaffo/templates/assistant/_panel.html:31 yaffo/templates/base.html:201
+#: yaffo/templates/assistant/_panel.html:31 yaffo/templates/base.html:207
 #: yaffo/templates/components/info_modal.html:6 yaffo/templates/components/info_modal.html:12
 #: yaffo/templates/components/modal.html:9
 msgid "Close"
 msgstr "Schließen"
 
-#: yaffo/templates/base.html:225
+#: yaffo/templates/base.html:231
 msgid "Select a folder"
 msgstr "Ordner auswählen"
 
-#: yaffo/templates/base.html:229
+#: yaffo/templates/base.html:235
 msgid "Up"
 msgstr "Nach oben"
 
-#: yaffo/templates/base.html:244 yaffo/templates/base.html:260
+#: yaffo/templates/base.html:250 yaffo/templates/base.html:266
 #: yaffo/templates/components/chat_dialog.html:39 yaffo/templates/components/modal.html:17
 #: yaffo/templates/fragments/job_status_fragment.html:37
 #: yaffo/templates/sharing/_transfers_panel.html:41
@@ -1345,11 +1351,11 @@ msgstr "Nach oben"
 msgid "Cancel"
 msgstr "Abbrechen"
 
-#: yaffo/templates/base.html:245
+#: yaffo/templates/base.html:251
 msgid "Select this folder"
 msgstr "Diesen Ordner auswählen"
 
-#: yaffo/templates/base.html:254 yaffo/templates/base.html:261
+#: yaffo/templates/base.html:260 yaffo/templates/base.html:267
 msgid "Confirm"
 msgstr "Bestätigen"
 
@@ -1766,7 +1772,7 @@ msgstr "Entfernungseinheit"
 msgid "Error %(code)s"
 msgstr "Fehler %(code)s"
 
-#: yaffo/templates/components/error_screen.html:16
+#: yaffo/templates/components/error_screen.html:17
 msgid "Back to your library"
 msgstr "Zurück zur Mediathek"
 
@@ -2337,10 +2343,6 @@ msgstr "Begonnen:"
 msgid "Show Results"
 msgstr "Ergebnisse anzeigen"
 
-#: yaffo/templates/fragments/job_status_fragment.html:27
-msgid "Help me with this"
-msgstr "Hilf mir dabei"
-
 #: yaffo/templates/fragments/job_status_fragment.html:37
 #: yaffo/templates/sharing/_transfers_panel.html:47
 msgid "Dismiss"
@@ -2745,18 +2747,22 @@ msgstr "Medienordner"
 msgid "Background jobs"
 msgstr "Hintergrundaufträge"
 
-#: yaffo/templates/settings/_assistant.html:39
+#: yaffo/templates/settings/_assistant.html:24
+msgid "Capture-date metadata (reads file metadata)"
+msgstr "Aufnahmedatum-Metadaten (liest Datei-Metadaten)"
+
+#: yaffo/templates/settings/_assistant.html:40
 msgid "Hide people's names"
 msgstr "Namen von Personen ausblenden"
 
-#: yaffo/templates/settings/_assistant.html:45
+#: yaffo/templates/settings/_assistant.html:46
 #, python-format
 msgid "%(formatted)s saved conversation"
 msgid_plural "%(formatted)s saved conversations"
 msgstr[0] "%(formatted)s gespeichertes Gespräch"
 msgstr[1] "%(formatted)s gespeicherte Gespräche"
 
-#: yaffo/templates/settings/_assistant.html:49
+#: yaffo/templates/settings/_assistant.html:50
 msgid "Delete all"
 msgstr "Alle löschen"
 
@@ -3744,11 +3750,11 @@ msgstr "Entwurf veröffentlichen"
 msgid "Run history"
 msgstr "Ausführungsverlauf"
 
-#: yaffo/templates/utilities/automations_runs.html:27
+#: yaffo/templates/utilities/automations_runs.html:34
 msgid "No runs yet."
 msgstr "Noch keine Ausführungen."
 
-#: yaffo/templates/utilities/automations_runs.html:29
+#: yaffo/templates/utilities/automations_runs.html:36
 msgid "No runs yet — this automation is disabled."
 msgstr "Noch keine Ausführungen — diese Automatisierung ist deaktiviert."
 

@@ -6,7 +6,7 @@ import json
 import pytest
 
 from yaffo.db import db
-from yaffo.db.models import ASSISTANT_STATUS_FAILED, ASSISTANT_STATUS_IDLE, ASSISTANT_STATUS_RUNNING
+from yaffo.db.models import ASSISTANT_STATUS_FAILED, ASSISTANT_STATUS_IDLE, ASSISTANT_STATUS_RUNNING, Job
 from yaffo.db.repositories import assistant_repository as repo
 from yaffo.site_agents.assistant import settings as assistant_settings
 
@@ -212,3 +212,57 @@ def test_diagnostics_and_redaction_switches(client):
     client.post("/settings/assistant/redact-people", data={"enabled": "on"})
     assert assistant_settings.redact_people() is True
 
+
+
+def test_flash_help_escapes_context_and_requires_ready_assistant(client, with_key, monkeypatch):
+    with client.session_transaction() as session:
+        session["_flashes"] = [("error", '<img src=x onerror=alert(1)>')]
+    html = client.get("/assistant").get_data(as_text=True)
+    assert 'data-assistant-help' in html
+    assert 'data-error="&lt;img src=x onerror=alert(1)&gt;"' in html
+    assert "metadata" not in assistant_settings.enabled_diagnostics()
+    monkeypatch.setattr("yaffo.site_agents.llm_config.get_api_key", lambda *a, **k: None)
+    with client.session_transaction() as session:
+        session["_flashes"] = [("error", "Failed")]
+    html = client.get("/settings").get_data(as_text=True)
+    assert 'data-assistant-help\n' not in html
+
+
+def test_metadata_switch_is_independent_and_opt_in(client):
+    assert "metadata" not in assistant_settings.enabled_diagnostics()
+    assert client.post("/settings/assistant/diagnostics/metadata", data={"enabled": "on"}).status_code == 200
+    assert "metadata" in assistant_settings.enabled_diagnostics()
+    client.post("/settings/assistant/diagnostics/metadata", data={})
+    assert "metadata" not in assistant_settings.enabled_diagnostics()
+
+
+def test_settings_has_no_contextual_help_even_for_errors(client, with_key):
+    with client.session_transaction() as session:
+        session["_flashes"] = [("error", "Something failed")]
+    html = client.get("/settings").get_data(as_text=True)
+    assert 'data-assistant-help-disabled' in html
+    assert 'data-assistant-help\n' not in html
+    assert 'Help me with this' not in html
+    assert 'id="assistant-diag-metadata"' in html
+
+
+@pytest.mark.parametrize("status,error,expected", [
+    ("FAILED", None, True), ("RUNNING", "Could not read media", True),
+    ("COMPLETED", None, False),
+])
+def test_job_help_is_shown_for_failed_or_error_cards(client, with_key, status, error, expected):
+    db.session.add(Job(id="help-job", name="index_photos", status=status, error=error,
+                       task_count=1, completed_count=0, error_count=0, cancelled_count=0, message="Checking"))
+    db.session.commit()
+    html = client.get("/jobs/help-job/fragment").get_data(as_text=True)
+    assert ('data-assistant-help' in html) is expected
+    if expected:
+        assert 'data-job-id="help-job"' in html
+
+
+def test_job_help_is_shown_for_partial_errors(client, with_key):
+    db.session.add(Job(id="partial-error", name="index_photos", status="COMPLETED",
+                       task_count=3, completed_count=2, error_count=1, cancelled_count=0, message="Finished"))
+    db.session.commit()
+    body = client.get("/jobs/partial-error/fragment").get_data(as_text=True)
+    assert 'data-assistant-help' in body

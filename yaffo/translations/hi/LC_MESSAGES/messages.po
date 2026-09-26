@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-25 22:01-0500\n"
+"POT-Creation-Date: 2026-09-26 00:08-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: hi\n"
@@ -30,11 +30,11 @@ msgstr "सार्वजनिक डेमो में यह क्रि�
 msgid "This request could not be verified. Refresh the page and try again."
 msgstr "इस अनुरोध को सत्यापित नहीं किया जा सका. पृष्ठ को ताज़ा करें और पुनः प्रयास करें।"
 
-#: yaffo/distance_units.py:26 yaffo/routes/filter_panel.py:71
+#: yaffo/distance_units.py:26 yaffo/routes/filter_panel.py:49
 msgid "Miles"
 msgstr "मील"
 
-#: yaffo/distance_units.py:27 yaffo/routes/filter_panel.py:71
+#: yaffo/distance_units.py:27 yaffo/routes/filter_panel.py:49
 msgid "Kilometers"
 msgstr "किलोमीटर"
 
@@ -343,7 +343,7 @@ msgstr ""
 "में दिखाई देंगे।"
 
 #: yaffo/routes/assistant.py:75 yaffo/routes/pages.py:250 yaffo/routes/themes_page.py:239
-#: yaffo/routes/utilities/automations.py:649
+#: yaffo/routes/utilities/automations.py:651
 msgid "Message is required."
 msgstr "संदेश आवश्यक है."
 
@@ -353,7 +353,7 @@ msgid "Messages can be at most %(count)s characters."
 msgstr "संदेश अधिकतम %(count)s अक्षरों के हो सकते हैं।"
 
 #: yaffo/routes/assistant.py:84 yaffo/routes/pages.py:254 yaffo/routes/themes_page.py:243
-#: yaffo/routes/utilities/automations.py:653
+#: yaffo/routes/utilities/automations.py:655
 #, python-format
 msgid "No API key configured. Add your %(provider)s API key in Settings → AI Generation."
 msgstr ""
@@ -423,7 +423,7 @@ msgstr "अज्ञात"
 msgid " OR "
 msgstr " या "
 
-#: yaffo/routes/faces.py:380 yaffo/routes/filter_config.py:123
+#: yaffo/routes/faces.py:380 yaffo/routes/filter_config.py:143
 msgid "Items must be a list"
 msgstr "आइटम एक सूची होनी चाहिए"
 
@@ -500,23 +500,23 @@ msgstr ""
 "मीडिया फ़ोल्डर उपलब्ध नहीं हैं: %(directories)s. यदि वे बाहरी ड्राइव पर हैं, तो सुनिश्चित करें कि"
 " ड्राइव कनेक्ट है।"
 
-#: yaffo/routes/home.py:374 yaffo/routes/sharing.py:679
+#: yaffo/routes/home.py:374 yaffo/routes/sharing.py:631
 msgid "The tag_name parameter is required"
 msgstr "tag_name पैरामीटर आवश्यक है"
 
-#: yaffo/routes/locations.py:125
+#: yaffo/routes/locations.py:128
 msgid "Media item IDs and location name are required"
 msgstr "मीडिया आइटम आईडी और स्थान का नाम आवश्यक है"
 
-#: yaffo/routes/locations.py:149
+#: yaffo/routes/locations.py:152
 msgid "Could not update locations"
 msgstr "स्थान अपडेट नहीं किए जा सके"
 
-#: yaffo/routes/locations.py:162
+#: yaffo/routes/locations.py:165
 msgid "Latitude and longitude are required"
 msgstr "अक्षांश और देशांतर आवश्यक हैं"
 
-#: yaffo/routes/locations.py:170 yaffo/routes/locations.py:176
+#: yaffo/routes/locations.py:173 yaffo/routes/locations.py:179
 msgid "Could not determine a location name"
 msgstr "स्थान का नाम निर्धारित नहीं किया जा सका"
 
@@ -566,7 +566,7 @@ msgstr "टैग नाम आवश्यक है"
 msgid "Untitled Page"
 msgstr "शीर्षकहीन पृष्ठ"
 
-#: yaffo/routes/pages.py:268 yaffo/routes/themes_page.py:235 yaffo/routes/utilities/automations.py:646
+#: yaffo/routes/pages.py:268 yaffo/routes/themes_page.py:235 yaffo/routes/utilities/automations.py:648
 msgid "A generation is already running."
 msgstr "एक पीढ़ी पहले से ही चल रही है."
 
@@ -624,7 +624,7 @@ msgstr "व्यक्ति अद्यतन किया गया"
 msgid "Media and thumbnail directories cannot be changed while importing or indexing is in progress."
 msgstr "आयात या अनुक्रमण जारी रहने के दौरान मीडिया और थंबनेल निर्देशिकाएं बदली नहीं जा सकतीं।"
 
-#: yaffo/routes/settings.py:192 yaffo/routes/utilities/automations.py:459
+#: yaffo/routes/settings.py:192 yaffo/routes/utilities/automations.py:461
 msgid "Unsupported distance unit"
 msgstr "असमर्थित दूरी इकाई"
 
@@ -715,9 +715,9 @@ msgstr "हटाया गया एल्बम"
 msgid "Shared folder"
 msgstr "साझा फ़ोल्डर"
 
-#: yaffo/routes/sharing.py:204 yaffo/routes/sharing.py:404 yaffo/routes/sharing.py:421
-#: yaffo/routes/sharing.py:443 yaffo/routes/sharing.py:594 yaffo/routes/sharing.py:720
-#: yaffo/routes/sharing.py:841 yaffo/routes/sharing.py:854 yaffo/routes/sharing.py:868
+#: yaffo/routes/sharing.py:204 yaffo/routes/sharing.py:356 yaffo/routes/sharing.py:373
+#: yaffo/routes/sharing.py:395 yaffo/routes/sharing.py:546 yaffo/routes/sharing.py:672
+#: yaffo/routes/sharing.py:793 yaffo/routes/sharing.py:806 yaffo/routes/sharing.py:820
 msgid "Device sharing is not running."
 msgstr "डिवाइस शेयरिंग नहीं चल रही है."
 
@@ -725,162 +725,162 @@ msgstr "डिवाइस शेयरिंग नहीं चल रही �
 msgid "Some shared folders could not be loaded."
 msgstr "कुछ साझा फ़ोल्डर लोड नहीं किये जा सके."
 
-#: yaffo/routes/sharing.py:295
+#: yaffo/routes/sharing.py:247
 msgid "Choose a folder inside a configured media directory."
 msgstr "कॉन्फ़िगर की गई मीडिया निर्देशिका के अंदर एक फ़ोल्डर चुनें।"
 
-#: yaffo/routes/sharing.py:388
+#: yaffo/routes/sharing.py:340
 msgid "Share grant is no longer active."
 msgstr "शेयर अनुदान अब सक्रिय नहीं है."
 
-#: yaffo/routes/sharing.py:390
+#: yaffo/routes/sharing.py:342
 msgid "Share grant revoked."
 msgstr "शेयर अनुदान रद्द कर दिया गया."
 
-#: yaffo/routes/sharing.py:424
+#: yaffo/routes/sharing.py:376
 msgid "Paste a pairing code first."
 msgstr "पहले एक युग्मन कोड चिपकाएँ."
 
-#: yaffo/routes/sharing.py:428
+#: yaffo/routes/sharing.py:380
 #, python-format
 msgid "Pairing failed: %(reason)s"
 msgstr "युग्मन विफल: %(reason)s"
 
-#: yaffo/routes/sharing.py:430
+#: yaffo/routes/sharing.py:382
 #, python-format
 msgid "Could not reach the other device: %(reason)s"
 msgstr "अन्य डिवाइस तक नहीं पहुंच सका: %(reason)s"
 
-#: yaffo/routes/sharing.py:432
+#: yaffo/routes/sharing.py:384
 msgid "Pairing timed out — is the other device online?"
 msgstr "युग्मन का समय समाप्त हो गया - क्या अन्य डिवाइस ऑनलाइन है?"
 
-#: yaffo/routes/sharing.py:435
+#: yaffo/routes/sharing.py:387
 #, python-format
 msgid "Paired with %(device)s."
 msgstr "के साथ जोड़ा गया %(device)s."
 
-#: yaffo/routes/sharing.py:452
+#: yaffo/routes/sharing.py:404
 msgid "Device revoked. The other device was notified."
 msgstr "डिवाइस निरस्त कर दिया गया. अन्य डिवाइस को सूचित किया गया था."
 
-#: yaffo/routes/sharing.py:454
+#: yaffo/routes/sharing.py:406
 msgid "Device revoked. The other device is offline and will find out when it next tries to connect."
 msgstr ""
 "डिवाइस निरस्त कर दिया गया. दूसरा डिवाइस ऑफ़लाइन है और जब वह अगली बार कनेक्ट करने का प्रयास करेगा "
 "तो उसे पता चल जाएगा।"
 
-#: yaffo/routes/sharing.py:477
+#: yaffo/routes/sharing.py:429
 msgid "Revoke this device before deleting it."
 msgstr "इस डिवाइस को हटाने से पहले उसे रद्द कर दें।"
 
-#: yaffo/routes/sharing.py:478
+#: yaffo/routes/sharing.py:430
 msgid "Device deleted."
 msgstr "डिवाइस हटा दिया गया."
 
-#: yaffo/routes/sharing.py:487
+#: yaffo/routes/sharing.py:439
 msgid "Device name cannot be empty."
 msgstr "डिवाइस का नाम खाली नहीं हो सकता."
 
-#: yaffo/routes/sharing.py:489 yaffo/routes/sharing.py:511 yaffo/routes/sharing.py:723
+#: yaffo/routes/sharing.py:441 yaffo/routes/sharing.py:463 yaffo/routes/sharing.py:675
 #, python-format
 msgid "%(device)s is not a known device."
 msgstr "%(device)s एक ज्ञात उपकरण नहीं है."
 
-#: yaffo/routes/sharing.py:490
+#: yaffo/routes/sharing.py:442
 msgid "Device renamed."
 msgstr "डिवाइस का नाम बदला गया."
 
-#: yaffo/routes/sharing.py:502
+#: yaffo/routes/sharing.py:454
 msgid "Download directory saved."
 msgstr "डाउनलोड निर्देशिका सहेजी गई."
 
-#: yaffo/routes/sharing.py:513
+#: yaffo/routes/sharing.py:465
 msgid "Pair this device again before sharing with it."
 msgstr "इस डिवाइस के साथ साझा करने से पहले इसे फिर से जोड़ें।"
 
-#: yaffo/routes/sharing.py:520
+#: yaffo/routes/sharing.py:472
 msgid "Choose a configured media directory."
 msgstr "एक कॉन्फ़िगर मीडिया निर्देशिका चुनें."
 
-#: yaffo/routes/sharing.py:530
+#: yaffo/routes/sharing.py:482
 msgid "Choose a folder to share."
 msgstr "साझा करने के लिए एक फ़ोल्डर चुनें."
 
-#: yaffo/routes/sharing.py:550
+#: yaffo/routes/sharing.py:502
 msgid "Choose an album to share."
 msgstr "साझा करने के लिए एक एल्बम चुनें."
 
-#: yaffo/routes/sharing.py:555
+#: yaffo/routes/sharing.py:507
 msgid "Choose what to share."
 msgstr "चुनें कि क्या साझा करना है."
 
-#: yaffo/routes/sharing.py:558
+#: yaffo/routes/sharing.py:510
 msgid "Share grant added."
 msgstr "शेयर अनुदान जोड़ा गया."
 
-#: yaffo/routes/sharing.py:596
+#: yaffo/routes/sharing.py:548
 msgid "This device is revoked. Pair it again before browsing shared files."
 msgstr "यह उपकरण निरस्त कर दिया गया है. साझा की गई फ़ाइलें ब्राउज़ करने से पहले इसे दोबारा जोड़ें।"
 
-#: yaffo/routes/sharing.py:610
+#: yaffo/routes/sharing.py:562
 #, python-format
 msgid "Could not load shared files: %(reason)s"
 msgstr "साझा फ़ाइलें लोड नहीं की जा सकीं: %(reason)s"
 
-#: yaffo/routes/sharing.py:612
+#: yaffo/routes/sharing.py:564
 msgid "Loading shared files timed out — is the other device online?"
 msgstr "साझा की गई फ़ाइलों को लोड करने का समय समाप्त हो गया - क्या अन्य डिवाइस ऑनलाइन है?"
 
-#: yaffo/routes/sharing.py:725
+#: yaffo/routes/sharing.py:677
 msgid "Pair this device again before pulling files from it."
 msgstr "इस डिवाइस से फ़ाइलें खींचने से पहले उसे फिर से जोड़ दें।"
 
-#: yaffo/routes/sharing.py:728
+#: yaffo/routes/sharing.py:680
 msgid "Choose a download directory for shared files first."
 msgstr "पहले साझा की गई फ़ाइलों के लिए एक डाउनलोड निर्देशिका चुनें।"
 
-#: yaffo/routes/sharing.py:790
+#: yaffo/routes/sharing.py:742
 msgid "Could not start the download: the shared scope is missing."
 msgstr "डाउनलोड प्रारंभ नहीं हो सका: साझा दायरा अनुपलब्ध है."
 
-#: yaffo/routes/sharing.py:802
+#: yaffo/routes/sharing.py:754
 msgid "Select the files to pull first."
 msgstr "पहले खींचने के लिए फ़ाइलें चुनें."
 
-#: yaffo/routes/sharing.py:822
+#: yaffo/routes/sharing.py:774
 #, python-format
 msgid "Could not start the download: %(reason)s"
 msgstr "डाउनलोड प्रारंभ नहीं हो सका: %(reason)s"
 
-#: yaffo/routes/sharing.py:824
+#: yaffo/routes/sharing.py:776
 msgid "Queuing the transfer timed out — is device sharing running?"
 msgstr "स्थानांतरण को पंक्तिबद्ध करने का समय समाप्त हो गया - क्या डिवाइस साझाकरण चल रहा है?"
 
-#: yaffo/routes/sharing.py:827
+#: yaffo/routes/sharing.py:779
 msgid "Download queued — everything selected in this view will be pulled."
 msgstr "डाउनलोड कतारबद्ध - इस दृश्य में चयनित सभी चीजें खींच ली जाएंगी।"
 
-#: yaffo/routes/sharing.py:830
+#: yaffo/routes/sharing.py:782
 #, python-format
 msgid "Pull of %(count)s file queued."
 msgid_plural "Pull of %(count)s files queued."
 msgstr[0] "के पुल %(count)s फ़ाइल कतारबद्ध."
 msgstr[1] "के पुल %(count)s फ़ाइलें कतारबद्ध हैं."
 
-#: yaffo/routes/sharing.py:846
+#: yaffo/routes/sharing.py:798
 msgid "Transfer cancelled."
 msgstr "स्थानांतरण रद्द कर दिया गया."
 
-#: yaffo/routes/sharing.py:846 yaffo/routes/sharing.py:860
+#: yaffo/routes/sharing.py:798 yaffo/routes/sharing.py:812
 msgid "Transfer is no longer active."
 msgstr "स्थानांतरण अब सक्रिय नहीं है."
 
-#: yaffo/routes/sharing.py:860
+#: yaffo/routes/sharing.py:812
 msgid "Continuing over the relay."
 msgstr "रिले पर जारी है."
 
-#: yaffo/routes/sharing.py:877
+#: yaffo/routes/sharing.py:829
 msgid "Cancel or finish this transfer before deleting it."
 msgstr "इस स्थानांतरण को हटाने से पहले रद्द करें या समाप्त करें।"
 
@@ -909,142 +909,142 @@ msgstr "सिस्टम थीम को हटाया नहीं जा 
 msgid "System themes cannot be generated."
 msgstr "सिस्टम थीम उत्पन्न नहीं की जा सकती."
 
-#: yaffo/routes/utilities/automations.py:116 yaffo/routes/utilities/automations.py:119
+#: yaffo/routes/utilities/automations.py:117 yaffo/routes/utilities/automations.py:120
 msgid "Import photos"
 msgstr "फ़ोटो आयात करें"
 
-#: yaffo/routes/utilities/automations.py:117 yaffo/routes/utilities/automations.py:120
+#: yaffo/routes/utilities/automations.py:118 yaffo/routes/utilities/automations.py:121
 msgid "Index photos"
 msgstr "अनुक्रमणिका तस्वीरें"
 
-#: yaffo/routes/utilities/automations.py:118 yaffo/routes/utilities/automations.py:121
+#: yaffo/routes/utilities/automations.py:119 yaffo/routes/utilities/automations.py:122
 msgid "Find duplicates"
 msgstr "डुप्लिकेट खोजें"
 
-#: yaffo/routes/utilities/automations.py:133
+#: yaffo/routes/utilities/automations.py:134
 #, python-format
 msgid "%(completed)s of %(total)s processed"
 msgstr "%(completed)s का %(total)s प्रसंस्कृत"
 
-#: yaffo/routes/utilities/automations.py:139
+#: yaffo/routes/utilities/automations.py:140
 #, python-format
 msgid "%(count)s error"
 msgid_plural "%(count)s errors"
 msgstr[0] "%(count)s गलती"
 msgstr[1] "%(count)s त्रुटियाँ"
 
-#: yaffo/routes/utilities/automations.py:146
+#: yaffo/routes/utilities/automations.py:147
 #, python-format
 msgid "%(count)s cancelled"
 msgid_plural "%(count)s cancelled"
 msgstr[0] "%(count)s रद्द कर दिया गया"
 msgstr[1] "%(count)s रद्द कर दिया गया"
 
-#: yaffo/routes/utilities/automations.py:157
+#: yaffo/routes/utilities/automations.py:158
 msgid "Pending"
 msgstr "लंबित"
 
-#: yaffo/routes/utilities/automations.py:158
+#: yaffo/routes/utilities/automations.py:159
 msgid "Running"
 msgstr "दौड़ना"
 
-#: yaffo/routes/utilities/automations.py:159 yaffo/templates/sharing/_transfers_panel.html:29
+#: yaffo/routes/utilities/automations.py:160 yaffo/templates/sharing/_transfers_panel.html:29
 msgid "Completed"
 msgstr "पुरा होना।"
 
-#: yaffo/routes/utilities/automations.py:160 yaffo/templates/sharing/_transfers_panel.html:32
+#: yaffo/routes/utilities/automations.py:161 yaffo/templates/sharing/_transfers_panel.html:32
 msgid "Cancelled"
 msgstr "रद्द कर दिया गया"
 
-#: yaffo/routes/utilities/automations.py:161 yaffo/templates/sharing/_transfers_panel.html:31
+#: yaffo/routes/utilities/automations.py:162 yaffo/templates/sharing/_transfers_panel.html:31
 msgid "Failed"
 msgstr "असफल"
 
-#: yaffo/routes/utilities/automations.py:230
+#: yaffo/routes/utilities/automations.py:232
 msgid "Media imported"
 msgstr "मीडिया आयातित"
 
-#: yaffo/routes/utilities/automations.py:231
+#: yaffo/routes/utilities/automations.py:233
 msgid "Media indexed"
 msgstr "मीडिया अनुक्रमित"
 
-#: yaffo/routes/utilities/automations.py:232
+#: yaffo/routes/utilities/automations.py:234
 msgid "Duplicates found"
 msgstr "डुप्लिकेट मिले"
 
-#: yaffo/routes/utilities/automations.py:233
+#: yaffo/routes/utilities/automations.py:235
 msgid "Media modified"
 msgstr "मीडिया संशोधित"
 
-#: yaffo/routes/utilities/automations.py:234
+#: yaffo/routes/utilities/automations.py:236
 msgid "Media labeled"
 msgstr "मीडिया लेबल"
 
-#: yaffo/routes/utilities/automations.py:346 yaffo/routes/utilities/automations.py:405
+#: yaffo/routes/utilities/automations.py:348 yaffo/routes/utilities/automations.py:407
 msgid "Automation name is required"
 msgstr "स्वचालन नाम आवश्यक है"
 
-#: yaffo/routes/utilities/automations.py:402 yaffo/routes/utilities/automations.py:644
+#: yaffo/routes/utilities/automations.py:404 yaffo/routes/utilities/automations.py:646
 msgid "System automations cannot be edited."
 msgstr "सिस्टम ऑटोमेशन संपादित नहीं किया जा सकता."
 
-#: yaffo/routes/utilities/automations.py:424
+#: yaffo/routes/utilities/automations.py:426
 msgid "This automation has no configurable settings."
 msgstr "इस स्वचालन में कोई कॉन्फ़िगर करने योग्य सेटिंग नहीं है."
 
-#: yaffo/routes/utilities/automations.py:440 yaffo/routes/utilities/automations.py:470
+#: yaffo/routes/utilities/automations.py:442 yaffo/routes/utilities/automations.py:472
 #, python-format
 msgid "%(label)s must be a number."
 msgstr "%(label)s एक संख्या होनी चाहिए."
 
-#: yaffo/routes/utilities/automations.py:448 yaffo/routes/utilities/automations.py:478
+#: yaffo/routes/utilities/automations.py:450 yaffo/routes/utilities/automations.py:480
 #, python-format
 msgid "%(label)s must be between %(min)s and %(max)s."
 msgstr "%(label)s के बीच होना चाहिए %(min)s और %(max)s."
 
-#: yaffo/routes/utilities/automations.py:489
+#: yaffo/routes/utilities/automations.py:491
 #, python-format
 msgid "%(label)s is required."
 msgstr "%(label)s आवश्यक है।"
 
-#: yaffo/routes/utilities/automations.py:498
+#: yaffo/routes/utilities/automations.py:500
 #, python-format
 msgid "%(label)s has an unsupported value."
 msgstr "%(label)s का मान असमर्थित है।"
 
-#: yaffo/routes/utilities/automations.py:516
+#: yaffo/routes/utilities/automations.py:518
 msgid "System automations cannot be deleted"
 msgstr "सिस्टम ऑटोमेशन को हटाया नहीं जा सकता"
 
-#: yaffo/routes/utilities/automations.py:563
+#: yaffo/routes/utilities/automations.py:565
 msgid "No indexed photos found under that path."
 msgstr "उस पथ के अंतर्गत कोई अनुक्रमित फ़ोटो नहीं मिलीं."
 
-#: yaffo/routes/utilities/automations.py:571
+#: yaffo/routes/utilities/automations.py:573
 msgid "Nothing to run yet — publish the automation's code first."
 msgstr "अभी चलाने के लिए कुछ भी नहीं है - पहले स्वचालन का कोड प्रकाशित करें।"
 
-#: yaffo/routes/utilities/automations.py:611
+#: yaffo/routes/utilities/automations.py:613
 msgid "Enter a valid 5-field cron expression (e.g. */30 * * * *)."
 msgstr "एक मान्य 5-फ़ील्ड क्रॉन एक्सप्रेशन दर्ज करें (जैसे */30 * * * *)।"
 
-#: yaffo/routes/utilities/automations.py:621
+#: yaffo/routes/utilities/automations.py:623
 msgid "Choose an event type."
 msgstr "ईवेंट प्रकार चुनें."
 
-#: yaffo/routes/utilities/automations.py:634
+#: yaffo/routes/utilities/automations.py:636
 msgid "Unknown trigger action."
 msgstr "अज्ञात ट्रिगर क्रिया."
 
-#: yaffo/routes/utilities/automations.py:689
+#: yaffo/routes/utilities/automations.py:691
 msgid "No code to test yet."
 msgstr "परीक्षण के लिए अभी तक कोई कोड नहीं है."
 
-#: yaffo/routes/utilities/automations.py:693
+#: yaffo/routes/utilities/automations.py:695
 msgid "No path selected."
 msgstr "कोई पथ चयनित नहीं."
 
-#: yaffo/routes/utilities/automations.py:704
+#: yaffo/routes/utilities/automations.py:706
 msgid "No draft to publish."
 msgstr "प्रकाशित करने के लिए कोई मसौदा नहीं."
 
@@ -1193,6 +1193,12 @@ msgstr ""
 "एक प्रोसेसिंग त्रुटि ने इस पृष्ठ को लोड होने से रोक दिया। इसे एक और क्षण दें - यदि ऐसा होता रहा, "
 "तो परेशानी हमारी ओर से है, आपकी ओर से नहीं।"
 
+#: yaffo/templates/500.html:19 yaffo/templates/base.html:204
+#: yaffo/templates/fragments/job_status_fragment.html:27
+#: yaffo/templates/utilities/automations_runs.html:24
+msgid "Help me with this"
+msgstr "इसमें मेरी मदद करें"
+
 #: yaffo/templates/_sidebar.html:11 yaffo/templates/components/nav_panel.html:38
 #: yaffo/templates/people/list.html:29 yaffo/templates/people/list.html:54
 msgid "Actions"
@@ -1297,7 +1303,7 @@ msgid "Settings"
 msgstr "सेटिंग्स"
 
 #: yaffo/templates/assistant/_panel.html:11 yaffo/templates/assistant/_panel.html:46
-#: yaffo/templates/base.html:156 yaffo/templates/base.html:217
+#: yaffo/templates/base.html:156 yaffo/templates/base.html:223
 msgid "Ask Yaffo"
 msgstr "Yaffo से पूछें"
 
@@ -1313,21 +1319,21 @@ msgstr "संपादित पेज"
 msgid "New page"
 msgstr "नया पेज"
 
-#: yaffo/templates/assistant/_panel.html:31 yaffo/templates/base.html:201
+#: yaffo/templates/assistant/_panel.html:31 yaffo/templates/base.html:207
 #: yaffo/templates/components/info_modal.html:6 yaffo/templates/components/info_modal.html:12
 #: yaffo/templates/components/modal.html:9
 msgid "Close"
 msgstr "बंद करना"
 
-#: yaffo/templates/base.html:225
+#: yaffo/templates/base.html:231
 msgid "Select a folder"
 msgstr "एक फ़ोल्डर चुनें"
 
-#: yaffo/templates/base.html:229
+#: yaffo/templates/base.html:235
 msgid "Up"
 msgstr "ऊपर"
 
-#: yaffo/templates/base.html:244 yaffo/templates/base.html:260
+#: yaffo/templates/base.html:250 yaffo/templates/base.html:266
 #: yaffo/templates/components/chat_dialog.html:39 yaffo/templates/components/modal.html:17
 #: yaffo/templates/fragments/job_status_fragment.html:37
 #: yaffo/templates/sharing/_transfers_panel.html:41
@@ -1336,11 +1342,11 @@ msgstr "ऊपर"
 msgid "Cancel"
 msgstr "रद्द करना"
 
-#: yaffo/templates/base.html:245
+#: yaffo/templates/base.html:251
 msgid "Select this folder"
 msgstr "इस फ़ोल्डर का चयन करें"
 
-#: yaffo/templates/base.html:254 yaffo/templates/base.html:261
+#: yaffo/templates/base.html:260 yaffo/templates/base.html:267
 msgid "Confirm"
 msgstr "पुष्टि करना"
 
@@ -1751,7 +1757,7 @@ msgstr "दूरी इकाई"
 msgid "Error %(code)s"
 msgstr "गलती %(code)s"
 
-#: yaffo/templates/components/error_screen.html:16
+#: yaffo/templates/components/error_screen.html:17
 msgid "Back to your library"
 msgstr "अपनी लाइब्रेरी में वापस जाएँ"
 
@@ -2315,10 +2321,6 @@ msgstr "शुरू कर दिया:"
 msgid "Show Results"
 msgstr "परिणाम दिखाएं"
 
-#: yaffo/templates/fragments/job_status_fragment.html:27
-msgid "Help me with this"
-msgstr "इसमें मेरी मदद करें"
-
 #: yaffo/templates/fragments/job_status_fragment.html:37
 #: yaffo/templates/sharing/_transfers_panel.html:47
 msgid "Dismiss"
@@ -2721,18 +2723,22 @@ msgstr "मीडिया फ़ोल्डर"
 msgid "Background jobs"
 msgstr "बैकग्राउंड जॉब"
 
-#: yaffo/templates/settings/_assistant.html:39
+#: yaffo/templates/settings/_assistant.html:24
+msgid "Capture-date metadata (reads file metadata)"
+msgstr "कैप्चर तिथि का मेटाडेटा (फ़ाइल का मेटाडेटा पढ़ता है)"
+
+#: yaffo/templates/settings/_assistant.html:40
 msgid "Hide people's names"
 msgstr "लोगों के नाम छिपाएँ"
 
-#: yaffo/templates/settings/_assistant.html:45
+#: yaffo/templates/settings/_assistant.html:46
 #, python-format
 msgid "%(formatted)s saved conversation"
 msgid_plural "%(formatted)s saved conversations"
 msgstr[0] "%(formatted)s सहेजी गई बातचीत"
 msgstr[1] "%(formatted)s सहेजी गई बातचीत"
 
-#: yaffo/templates/settings/_assistant.html:49
+#: yaffo/templates/settings/_assistant.html:50
 msgid "Delete all"
 msgstr "सभी हटाएँ"
 
@@ -3705,11 +3711,11 @@ msgstr "ड्राफ्ट प्रकाशित करें"
 msgid "Run history"
 msgstr "इतिहास चलाएँ"
 
-#: yaffo/templates/utilities/automations_runs.html:27
+#: yaffo/templates/utilities/automations_runs.html:34
 msgid "No runs yet."
 msgstr "अभी तक कोई रन नहीं."
 
-#: yaffo/templates/utilities/automations_runs.html:29
+#: yaffo/templates/utilities/automations_runs.html:36
 msgid "No runs yet — this automation is disabled."
 msgstr "अभी तक कोई रन नहीं - यह स्वचालन अक्षम है।"
 

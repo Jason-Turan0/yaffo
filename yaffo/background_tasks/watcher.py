@@ -10,6 +10,7 @@ from watchdog.observers.api import BaseObserver, ObservedWatch
 from yaffo.background_tasks.tasks import SessionFactory
 from yaffo.background_tasks.watcher_suppression import should_suppress, sweep_expired
 from yaffo.common import MEDIA_EXTENSIONS
+from yaffo.process_status import write_status
 from yaffo.db.repositories.media_repository import move_media_item_path
 from yaffo.logging_config import get_logger
 from yaffo.utils.index_jobs import enqueue_index_jobs
@@ -329,6 +330,8 @@ def main() -> None:
         logger.info("No media directories configured yet; waiting for configuration.")
     _reconcile_watches(observer, handler, watches, desired)
     observer.start()
+    started_at = time.time()
+    write_status("watcher", started_at)
     try:
         while True:
             time.sleep(POLL_INTERVAL)
@@ -338,6 +341,8 @@ def main() -> None:
             # signal to shut the whole app down. Sessions are per-call (closed in their
             # own finally), so the next tick recovers with a fresh session.
             try:
+                write_status("watcher", started_at, healthy=observer.is_alive() and
+                             all(emitter.is_alive() for emitter in observer.emitters))
                 sweep_expired()  # drop stale self-write suppressions (loop guard, Mechanism 2)
 
                 desired = _desired_media_dirs()
@@ -365,6 +370,7 @@ def main() -> None:
     except KeyboardInterrupt:
         logger.info("Watcher shutting down")
     finally:
+        write_status("watcher", started_at, healthy=False)
         observer.stop()
         observer.join()
 

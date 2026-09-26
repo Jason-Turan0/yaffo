@@ -8,9 +8,16 @@
 
 {% block content %}
 {% from "components/error_screen.html" import error_screen %}
-{{ error_screen(
+{% call error_screen(
     500,
     _("Something went wrong in the darkroom"),
     _("A processing error stopped this page from loading. Give it another moment — if it keeps happening, the trouble is on our end, not yours.")
-) }}
+) %}
+    {% if assistant_ready | default(false) and request.endpoint != 'settings_index' %}
+    <button type="button" class="btn btn-secondary error-action" data-assistant-help
+            data-page="{{ request.path }}" data-error-code="internal_server_error">
+        {{ _("Help me with this") }}
+    </button>
+    {% endif %}
+{% endcall %}
 {% endblock %}

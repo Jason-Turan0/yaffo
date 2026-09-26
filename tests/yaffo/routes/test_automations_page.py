@@ -990,3 +990,34 @@ def test_cancel_settles_to_accepted(app, client):
     assert client.post("/utilities/automations/a1/cancel").status_code == 204
     with app.app_context():
         assert db.session.query(Automation).filter_by(slug="a1").first().status == AUTOMATION_STATUS_ACCEPTED
+
+
+@pytest.mark.parametrize("status,error_count,error,show_help", [
+    ("FAILED", 0, None, True),
+    ("COMPLETED", 2, None, True),
+    ("RUNNING", 1, None, True),
+    ("COMPLETED", 0, 'Test <error> "details"', True),
+    ("COMPLETED", 0, None, False),
+])
+@pytest.mark.parametrize("suffix", ["", "/runs"])
+def test_run_error_help_on_page_and_polled_fragment(app, client, monkeypatch, status, error_count, error, show_help, suffix):
+    monkeypatch.setattr("yaffo.site_agents.llm_config.get_api_key", lambda *a, **k: "key")
+    _add(app)
+    _add_job(app, id="help-run", status=status, task_count=3,
+             completed_count=1, error_count=error_count, error=error)
+    response = client.get(f"/utilities/automations/a1{suffix}")
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert ('data-job-id="help-run"' in body) is show_help
+    if show_help:
+        assert 'data-automation="a1"' in body
+        assert 'Help me with this' in body
+        if error:
+            assert 'data-error="Test &lt;error&gt; &#34;details&#34;"' in body
+
+
+def test_run_error_help_hidden_without_assistant_key(app, client):
+    _add(app)
+    _add_job(app, id="help-run", status="FAILED", error="test")
+    body = client.get("/utilities/automations/a1/runs").get_data(as_text=True)
+    assert 'data-assistant-help' not in body

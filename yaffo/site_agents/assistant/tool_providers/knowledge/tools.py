@@ -114,7 +114,7 @@ class KnowledgeToolProvider(ToolProvider):
                 lines.append(f"    {hit.snippet}")
             text = "\n".join(lines)
         activity = ToolActivity(
-            tool=SEARCH_DOCS, query=query, count=len(hits),
+            tool=SEARCH_DOCS, query=query, count=len(hits), detail=text,
             sources=[_source(hit.section) for hit in hits],
         )
         return ToolResult(model_text=text, host_data=activity.to_dict())
@@ -136,7 +136,7 @@ class KnowledgeToolProvider(ToolProvider):
         for section in sections:
             parts.append(f"\n## {section.heading} (anchor: {section.anchor or '(page)'})\n{section.text}")
         activity = ToolActivity(
-            tool=READ_DOC,
+            tool=READ_DOC, detail=truncate_tool_result("\n".join(parts), _READ_MAX_CHARS),
             title=sections[0].page_title if not anchor else f"{sections[0].page_title} › {sections[0].heading}",
             sources=[_source(sections[0])],
         )

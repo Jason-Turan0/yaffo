@@ -672,6 +672,7 @@ assistant.init = (i18n, config) => {
         const context = {};
         if (target.dataset.page) context.page = target.dataset.page;
         if (target.dataset.jobId) context.job_id = target.dataset.jobId;
+        if (target.dataset.automation) context.automation = target.dataset.automation;
         if (target.dataset.errorCode) context.error_code = target.dataset.errorCode;
         if (target.dataset.error) context.error = target.dataset.error;
         openWithContext(context, i18n.t('assistant:helpPrompt'));
@@ -711,7 +712,7 @@ assistant.init = (i18n, config) => {
     });
 
     // Error toasts offer "Help me with this" once the assistant can answer.
-    if (fab || openButton) {
+    if ((fab || openButton) && !document.body.hasAttribute('data-assistant-help-disabled')) {
         window.notification.setErrorAction?.({
             label: i18n.t('assistant:helpWithThis'),
             run: (error) => openWithContext({ page: document.title, error }, i18n.t('assistant:helpPrompt')),

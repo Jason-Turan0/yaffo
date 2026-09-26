@@ -390,7 +390,9 @@
         "automation_runs": "Exécutions de « {{slug}} » consultées",
         "link_to_photos": "Lien vers « {{title}} » créé",
         "link_to_media_item": "Lien vers « {{title}} » créé",
-        "link_to_page": "Lien vers « {{title}} » créé"
+        "link_to_page": "Lien vers « {{title}} » créé",
+        "ai_call_summary": "Appels récents à l’IA vérifiés",
+        "capture_date_source": "Métadonnées de la date de prise de vue vérifiées"
       }
     },
     "cancel": {

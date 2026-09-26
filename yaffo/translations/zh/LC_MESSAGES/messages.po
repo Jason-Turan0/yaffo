@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-25 22:01-0500\n"
+"POT-Creation-Date: 2026-09-26 00:08-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: zh\n"
@@ -30,11 +30,11 @@ msgstr "此操作在公共演示中被禁用。"
 msgid "This request could not be verified. Refresh the page and try again."
 msgstr "该请求无法得到验证。刷新页面并重试。"
 
-#: yaffo/distance_units.py:26 yaffo/routes/filter_panel.py:71
+#: yaffo/distance_units.py:26 yaffo/routes/filter_panel.py:49
 msgid "Miles"
 msgstr "英里"
 
-#: yaffo/distance_units.py:27 yaffo/routes/filter_panel.py:71
+#: yaffo/distance_units.py:27 yaffo/routes/filter_panel.py:49
 msgid "Kilometers"
 msgstr "公里"
 
@@ -314,7 +314,7 @@ msgid ""
 msgstr "按计划扫描索引照片中的重复项 - 结果显示在“删除重复项”工具中。"
 
 #: yaffo/routes/assistant.py:75 yaffo/routes/pages.py:250 yaffo/routes/themes_page.py:239
-#: yaffo/routes/utilities/automations.py:649
+#: yaffo/routes/utilities/automations.py:651
 msgid "Message is required."
 msgstr "需要留言。"
 
@@ -324,7 +324,7 @@ msgid "Messages can be at most %(count)s characters."
 msgstr "消息最多 %(count)s 个字符。"
 
 #: yaffo/routes/assistant.py:84 yaffo/routes/pages.py:254 yaffo/routes/themes_page.py:243
-#: yaffo/routes/utilities/automations.py:653
+#: yaffo/routes/utilities/automations.py:655
 #, python-format
 msgid "No API key configured. Add your %(provider)s API key in Settings → AI Generation."
 msgstr "未配置 API 密钥。添加您的 %(provider)s 设置 → AI 生成中的 API 密钥。"
@@ -392,7 +392,7 @@ msgstr "未知"
 msgid " OR "
 msgstr " 或者 "
 
-#: yaffo/routes/faces.py:380 yaffo/routes/filter_config.py:123
+#: yaffo/routes/faces.py:380 yaffo/routes/filter_config.py:143
 msgid "Items must be a list"
 msgstr "项目必须是列表"
 
@@ -464,23 +464,23 @@ msgid ""
 " drive is connected."
 msgstr "媒体文件夹不可用： %(directories)s。如果它们位于外部驱动器上，请确保驱动器已连接。"
 
-#: yaffo/routes/home.py:374 yaffo/routes/sharing.py:679
+#: yaffo/routes/home.py:374 yaffo/routes/sharing.py:631
 msgid "The tag_name parameter is required"
 msgstr "tag_name 参数是必需的"
 
-#: yaffo/routes/locations.py:125
+#: yaffo/routes/locations.py:128
 msgid "Media item IDs and location name are required"
 msgstr "需要媒体项目 ID 和位置名称"
 
-#: yaffo/routes/locations.py:149
+#: yaffo/routes/locations.py:152
 msgid "Could not update locations"
 msgstr "无法更新位置"
 
-#: yaffo/routes/locations.py:162
+#: yaffo/routes/locations.py:165
 msgid "Latitude and longitude are required"
 msgstr "纬度和经度为必填项"
 
-#: yaffo/routes/locations.py:170 yaffo/routes/locations.py:176
+#: yaffo/routes/locations.py:173 yaffo/routes/locations.py:179
 msgid "Could not determine a location name"
 msgstr "无法确定位置名称"
 
@@ -530,7 +530,7 @@ msgstr "标签名称为必填项"
 msgid "Untitled Page"
 msgstr "无标题页面"
 
-#: yaffo/routes/pages.py:268 yaffo/routes/themes_page.py:235 yaffo/routes/utilities/automations.py:646
+#: yaffo/routes/pages.py:268 yaffo/routes/themes_page.py:235 yaffo/routes/utilities/automations.py:648
 msgid "A generation is already running."
 msgstr "一代人已经在奔跑。"
 
@@ -588,7 +588,7 @@ msgstr "人员已更新"
 msgid "Media and thumbnail directories cannot be changed while importing or indexing is in progress."
 msgstr "导入或索引正在进行时，无法更改媒体和缩略图目录。"
 
-#: yaffo/routes/settings.py:192 yaffo/routes/utilities/automations.py:459
+#: yaffo/routes/settings.py:192 yaffo/routes/utilities/automations.py:461
 msgid "Unsupported distance unit"
 msgstr "不支持的距离单位"
 
@@ -678,9 +678,9 @@ msgstr "已删除相册"
 msgid "Shared folder"
 msgstr "共享文件夹"
 
-#: yaffo/routes/sharing.py:204 yaffo/routes/sharing.py:404 yaffo/routes/sharing.py:421
-#: yaffo/routes/sharing.py:443 yaffo/routes/sharing.py:594 yaffo/routes/sharing.py:720
-#: yaffo/routes/sharing.py:841 yaffo/routes/sharing.py:854 yaffo/routes/sharing.py:868
+#: yaffo/routes/sharing.py:204 yaffo/routes/sharing.py:356 yaffo/routes/sharing.py:373
+#: yaffo/routes/sharing.py:395 yaffo/routes/sharing.py:546 yaffo/routes/sharing.py:672
+#: yaffo/routes/sharing.py:793 yaffo/routes/sharing.py:806 yaffo/routes/sharing.py:820
 msgid "Device sharing is not running."
 msgstr "设备共享未运行。"
 
@@ -688,159 +688,159 @@ msgstr "设备共享未运行。"
 msgid "Some shared folders could not be loaded."
 msgstr "无法加载某些共享文件夹。"
 
-#: yaffo/routes/sharing.py:295
+#: yaffo/routes/sharing.py:247
 msgid "Choose a folder inside a configured media directory."
 msgstr "在配置的媒体目录中选择一个文件夹。"
 
-#: yaffo/routes/sharing.py:388
+#: yaffo/routes/sharing.py:340
 msgid "Share grant is no longer active."
 msgstr "股份授予不再有效。"
 
-#: yaffo/routes/sharing.py:390
+#: yaffo/routes/sharing.py:342
 msgid "Share grant revoked."
 msgstr "股份授予被撤销。"
 
-#: yaffo/routes/sharing.py:424
+#: yaffo/routes/sharing.py:376
 msgid "Paste a pairing code first."
 msgstr "先粘贴配对码。"
 
-#: yaffo/routes/sharing.py:428
+#: yaffo/routes/sharing.py:380
 #, python-format
 msgid "Pairing failed: %(reason)s"
 msgstr "配对失败： %(reason)s"
 
-#: yaffo/routes/sharing.py:430
+#: yaffo/routes/sharing.py:382
 #, python-format
 msgid "Could not reach the other device: %(reason)s"
 msgstr "无法连接到其他设备： %(reason)s"
 
-#: yaffo/routes/sharing.py:432
+#: yaffo/routes/sharing.py:384
 msgid "Pairing timed out — is the other device online?"
 msgstr "配对超时 - 其他设备是否在线？"
 
-#: yaffo/routes/sharing.py:435
+#: yaffo/routes/sharing.py:387
 #, python-format
 msgid "Paired with %(device)s."
 msgstr "搭配 %(device)s."
 
-#: yaffo/routes/sharing.py:452
+#: yaffo/routes/sharing.py:404
 msgid "Device revoked. The other device was notified."
 msgstr "设备已撤销。另一台设备已收到通知。"
 
-#: yaffo/routes/sharing.py:454
+#: yaffo/routes/sharing.py:406
 msgid "Device revoked. The other device is offline and will find out when it next tries to connect."
 msgstr "设备已撤销。另一台设备处于离线状态，下次尝试连接时将会发现。"
 
-#: yaffo/routes/sharing.py:477
+#: yaffo/routes/sharing.py:429
 msgid "Revoke this device before deleting it."
 msgstr "删除此设备之前先将其撤销。"
 
-#: yaffo/routes/sharing.py:478
+#: yaffo/routes/sharing.py:430
 msgid "Device deleted."
 msgstr "设备已删除。"
 
-#: yaffo/routes/sharing.py:487
+#: yaffo/routes/sharing.py:439
 msgid "Device name cannot be empty."
 msgstr "设备名称不能为空。"
 
-#: yaffo/routes/sharing.py:489 yaffo/routes/sharing.py:511 yaffo/routes/sharing.py:723
+#: yaffo/routes/sharing.py:441 yaffo/routes/sharing.py:463 yaffo/routes/sharing.py:675
 #, python-format
 msgid "%(device)s is not a known device."
 msgstr "%(device)s 不是已知设备。"
 
-#: yaffo/routes/sharing.py:490
+#: yaffo/routes/sharing.py:442
 msgid "Device renamed."
 msgstr "设备已重命名。"
 
-#: yaffo/routes/sharing.py:502
+#: yaffo/routes/sharing.py:454
 msgid "Download directory saved."
 msgstr "下载目录已保存。"
 
-#: yaffo/routes/sharing.py:513
+#: yaffo/routes/sharing.py:465
 msgid "Pair this device again before sharing with it."
 msgstr "与此设备共享之前请重新配对。"
 
-#: yaffo/routes/sharing.py:520
+#: yaffo/routes/sharing.py:472
 msgid "Choose a configured media directory."
 msgstr "选择配置的媒体目录。"
 
-#: yaffo/routes/sharing.py:530
+#: yaffo/routes/sharing.py:482
 msgid "Choose a folder to share."
 msgstr "选择要共享的文件夹。"
 
-#: yaffo/routes/sharing.py:550
+#: yaffo/routes/sharing.py:502
 msgid "Choose an album to share."
 msgstr "选择要分享的相册。"
 
-#: yaffo/routes/sharing.py:555
+#: yaffo/routes/sharing.py:507
 msgid "Choose what to share."
 msgstr "选择要分享的内容。"
 
-#: yaffo/routes/sharing.py:558
+#: yaffo/routes/sharing.py:510
 msgid "Share grant added."
 msgstr "添加了股份授予。"
 
-#: yaffo/routes/sharing.py:596
+#: yaffo/routes/sharing.py:548
 msgid "This device is revoked. Pair it again before browsing shared files."
 msgstr "该设备已被撤销。在浏览共享文件之前再次配对。"
 
-#: yaffo/routes/sharing.py:610
+#: yaffo/routes/sharing.py:562
 #, python-format
 msgid "Could not load shared files: %(reason)s"
 msgstr "无法加载共享文件： %(reason)s"
 
-#: yaffo/routes/sharing.py:612
+#: yaffo/routes/sharing.py:564
 msgid "Loading shared files timed out — is the other device online?"
 msgstr "加载共享文件超时 - 其他设备是否在线？"
 
-#: yaffo/routes/sharing.py:725
+#: yaffo/routes/sharing.py:677
 msgid "Pair this device again before pulling files from it."
 msgstr "从设备中提取文件之前，请再次配对该设备。"
 
-#: yaffo/routes/sharing.py:728
+#: yaffo/routes/sharing.py:680
 msgid "Choose a download directory for shared files first."
 msgstr "首先选择共享文件的下载目录。"
 
-#: yaffo/routes/sharing.py:790
+#: yaffo/routes/sharing.py:742
 msgid "Could not start the download: the shared scope is missing."
 msgstr "无法开始下载：缺少共享范围。"
 
-#: yaffo/routes/sharing.py:802
+#: yaffo/routes/sharing.py:754
 msgid "Select the files to pull first."
 msgstr "选择首先要拉取的文件。"
 
-#: yaffo/routes/sharing.py:822
+#: yaffo/routes/sharing.py:774
 #, python-format
 msgid "Could not start the download: %(reason)s"
 msgstr "无法开始下载： %(reason)s"
 
-#: yaffo/routes/sharing.py:824
+#: yaffo/routes/sharing.py:776
 msgid "Queuing the transfer timed out — is device sharing running?"
 msgstr "排队传输超时 - 设备共享是否正在运行？"
 
-#: yaffo/routes/sharing.py:827
+#: yaffo/routes/sharing.py:779
 msgid "Download queued — everything selected in this view will be pulled."
 msgstr "下载已排队 - 在此视图中选择的所有内容都将被拉出。"
 
-#: yaffo/routes/sharing.py:830
+#: yaffo/routes/sharing.py:782
 #, python-format
 msgid "Pull of %(count)s file queued."
 msgid_plural "Pull of %(count)s files queued."
 msgstr[0] "拉力 %(count)s 文件已排队。"
 
-#: yaffo/routes/sharing.py:846
+#: yaffo/routes/sharing.py:798
 msgid "Transfer cancelled."
 msgstr "转移已取消。"
 
-#: yaffo/routes/sharing.py:846 yaffo/routes/sharing.py:860
+#: yaffo/routes/sharing.py:798 yaffo/routes/sharing.py:812
 msgid "Transfer is no longer active."
 msgstr "转移不再有效。"
 
-#: yaffo/routes/sharing.py:860
+#: yaffo/routes/sharing.py:812
 msgid "Continuing over the relay."
 msgstr "继续通过中继。"
 
-#: yaffo/routes/sharing.py:877
+#: yaffo/routes/sharing.py:829
 msgid "Cancel or finish this transfer before deleting it."
 msgstr "在删除之前取消或完成此传输。"
 
@@ -869,140 +869,140 @@ msgstr "系统主题无法删除"
 msgid "System themes cannot be generated."
 msgstr "无法生成系统主题。"
 
-#: yaffo/routes/utilities/automations.py:116 yaffo/routes/utilities/automations.py:119
+#: yaffo/routes/utilities/automations.py:117 yaffo/routes/utilities/automations.py:120
 msgid "Import photos"
 msgstr "导入照片"
 
-#: yaffo/routes/utilities/automations.py:117 yaffo/routes/utilities/automations.py:120
+#: yaffo/routes/utilities/automations.py:118 yaffo/routes/utilities/automations.py:121
 msgid "Index photos"
 msgstr "索引照片"
 
-#: yaffo/routes/utilities/automations.py:118 yaffo/routes/utilities/automations.py:121
+#: yaffo/routes/utilities/automations.py:119 yaffo/routes/utilities/automations.py:122
 msgid "Find duplicates"
 msgstr "查找重复项"
 
-#: yaffo/routes/utilities/automations.py:133
+#: yaffo/routes/utilities/automations.py:134
 #, python-format
 msgid "%(completed)s of %(total)s processed"
 msgstr "%(completed)s 的 %(total)s 加工过的"
 
-#: yaffo/routes/utilities/automations.py:139
+#: yaffo/routes/utilities/automations.py:140
 #, python-format
 msgid "%(count)s error"
 msgid_plural "%(count)s errors"
 msgstr[0] "%(count)s 错误"
 
-#: yaffo/routes/utilities/automations.py:146
+#: yaffo/routes/utilities/automations.py:147
 #, python-format
 msgid "%(count)s cancelled"
 msgid_plural "%(count)s cancelled"
 msgstr[0] "%(count)s 取消"
 
-#: yaffo/routes/utilities/automations.py:157
+#: yaffo/routes/utilities/automations.py:158
 msgid "Pending"
 msgstr "待办的"
 
-#: yaffo/routes/utilities/automations.py:158
+#: yaffo/routes/utilities/automations.py:159
 msgid "Running"
 msgstr "跑步"
 
-#: yaffo/routes/utilities/automations.py:159 yaffo/templates/sharing/_transfers_panel.html:29
+#: yaffo/routes/utilities/automations.py:160 yaffo/templates/sharing/_transfers_panel.html:29
 msgid "Completed"
 msgstr "完全的"
 
-#: yaffo/routes/utilities/automations.py:160 yaffo/templates/sharing/_transfers_panel.html:32
+#: yaffo/routes/utilities/automations.py:161 yaffo/templates/sharing/_transfers_panel.html:32
 msgid "Cancelled"
 msgstr "取消"
 
-#: yaffo/routes/utilities/automations.py:161 yaffo/templates/sharing/_transfers_panel.html:31
+#: yaffo/routes/utilities/automations.py:162 yaffo/templates/sharing/_transfers_panel.html:31
 msgid "Failed"
 msgstr "失败的"
 
-#: yaffo/routes/utilities/automations.py:230
+#: yaffo/routes/utilities/automations.py:232
 msgid "Media imported"
 msgstr "导入媒体"
 
-#: yaffo/routes/utilities/automations.py:231
+#: yaffo/routes/utilities/automations.py:233
 msgid "Media indexed"
 msgstr "媒体索引"
 
-#: yaffo/routes/utilities/automations.py:232
+#: yaffo/routes/utilities/automations.py:234
 msgid "Duplicates found"
 msgstr "发现重复项"
 
-#: yaffo/routes/utilities/automations.py:233
+#: yaffo/routes/utilities/automations.py:235
 msgid "Media modified"
 msgstr "媒体修改"
 
-#: yaffo/routes/utilities/automations.py:234
+#: yaffo/routes/utilities/automations.py:236
 msgid "Media labeled"
 msgstr "媒体标记"
 
-#: yaffo/routes/utilities/automations.py:346 yaffo/routes/utilities/automations.py:405
+#: yaffo/routes/utilities/automations.py:348 yaffo/routes/utilities/automations.py:407
 msgid "Automation name is required"
 msgstr "自动化名称为必填项"
 
-#: yaffo/routes/utilities/automations.py:402 yaffo/routes/utilities/automations.py:644
+#: yaffo/routes/utilities/automations.py:404 yaffo/routes/utilities/automations.py:646
 msgid "System automations cannot be edited."
 msgstr "系统自动化无法编辑。"
 
-#: yaffo/routes/utilities/automations.py:424
+#: yaffo/routes/utilities/automations.py:426
 msgid "This automation has no configurable settings."
 msgstr "此自动化没有可配置的设置。"
 
-#: yaffo/routes/utilities/automations.py:440 yaffo/routes/utilities/automations.py:470
+#: yaffo/routes/utilities/automations.py:442 yaffo/routes/utilities/automations.py:472
 #, python-format
 msgid "%(label)s must be a number."
 msgstr "%(label)s 必须是一个数字。"
 
-#: yaffo/routes/utilities/automations.py:448 yaffo/routes/utilities/automations.py:478
+#: yaffo/routes/utilities/automations.py:450 yaffo/routes/utilities/automations.py:480
 #, python-format
 msgid "%(label)s must be between %(min)s and %(max)s."
 msgstr "%(label)s 必须介于 %(min)s 和 %(max)s."
 
-#: yaffo/routes/utilities/automations.py:489
+#: yaffo/routes/utilities/automations.py:491
 #, python-format
 msgid "%(label)s is required."
 msgstr "%(label)s 是必须的。"
 
-#: yaffo/routes/utilities/automations.py:498
+#: yaffo/routes/utilities/automations.py:500
 #, python-format
 msgid "%(label)s has an unsupported value."
 msgstr "%(label)s 的值不受支持。"
 
-#: yaffo/routes/utilities/automations.py:516
+#: yaffo/routes/utilities/automations.py:518
 msgid "System automations cannot be deleted"
 msgstr "系统自动化无法删除"
 
-#: yaffo/routes/utilities/automations.py:563
+#: yaffo/routes/utilities/automations.py:565
 msgid "No indexed photos found under that path."
 msgstr "在该路径下找不到索引照片。"
 
-#: yaffo/routes/utilities/automations.py:571
+#: yaffo/routes/utilities/automations.py:573
 msgid "Nothing to run yet — publish the automation's code first."
 msgstr "还没有什么可以运行的——首先发布自动化的代码。"
 
-#: yaffo/routes/utilities/automations.py:611
+#: yaffo/routes/utilities/automations.py:613
 msgid "Enter a valid 5-field cron expression (e.g. */30 * * * *)."
 msgstr "输入有效的 5 字段 cron 表达式（例如 */30 * * * *）。"
 
-#: yaffo/routes/utilities/automations.py:621
+#: yaffo/routes/utilities/automations.py:623
 msgid "Choose an event type."
 msgstr "选择事件类型。"
 
-#: yaffo/routes/utilities/automations.py:634
+#: yaffo/routes/utilities/automations.py:636
 msgid "Unknown trigger action."
 msgstr "未知的触发动作。"
 
-#: yaffo/routes/utilities/automations.py:689
+#: yaffo/routes/utilities/automations.py:691
 msgid "No code to test yet."
 msgstr "尚无代码可供测试。"
 
-#: yaffo/routes/utilities/automations.py:693
+#: yaffo/routes/utilities/automations.py:695
 msgid "No path selected."
 msgstr "未选择路径。"
 
-#: yaffo/routes/utilities/automations.py:704
+#: yaffo/routes/utilities/automations.py:706
 msgid "No draft to publish."
 msgstr "没有草稿可供发布。"
 
@@ -1142,6 +1142,12 @@ msgid ""
 "happening, the trouble is on our end, not yours."
 msgstr "处理错误导致该页面无法加载。再等一下——如果这种情况继续发生，麻烦就在我们这边，而不是你的。"
 
+#: yaffo/templates/500.html:19 yaffo/templates/base.html:204
+#: yaffo/templates/fragments/job_status_fragment.html:27
+#: yaffo/templates/utilities/automations_runs.html:24
+msgid "Help me with this"
+msgstr "帮我处理这个"
+
 #: yaffo/templates/_sidebar.html:11 yaffo/templates/components/nav_panel.html:38
 #: yaffo/templates/people/list.html:29 yaffo/templates/people/list.html:54
 msgid "Actions"
@@ -1245,7 +1251,7 @@ msgid "Settings"
 msgstr "设置"
 
 #: yaffo/templates/assistant/_panel.html:11 yaffo/templates/assistant/_panel.html:46
-#: yaffo/templates/base.html:156 yaffo/templates/base.html:217
+#: yaffo/templates/base.html:156 yaffo/templates/base.html:223
 msgid "Ask Yaffo"
 msgstr "询问 Yaffo"
 
@@ -1261,21 +1267,21 @@ msgstr "编辑页面"
 msgid "New page"
 msgstr "新页面"
 
-#: yaffo/templates/assistant/_panel.html:31 yaffo/templates/base.html:201
+#: yaffo/templates/assistant/_panel.html:31 yaffo/templates/base.html:207
 #: yaffo/templates/components/info_modal.html:6 yaffo/templates/components/info_modal.html:12
 #: yaffo/templates/components/modal.html:9
 msgid "Close"
 msgstr "关闭"
 
-#: yaffo/templates/base.html:225
+#: yaffo/templates/base.html:231
 msgid "Select a folder"
 msgstr "选择一个文件夹"
 
-#: yaffo/templates/base.html:229
+#: yaffo/templates/base.html:235
 msgid "Up"
 msgstr "向上"
 
-#: yaffo/templates/base.html:244 yaffo/templates/base.html:260
+#: yaffo/templates/base.html:250 yaffo/templates/base.html:266
 #: yaffo/templates/components/chat_dialog.html:39 yaffo/templates/components/modal.html:17
 #: yaffo/templates/fragments/job_status_fragment.html:37
 #: yaffo/templates/sharing/_transfers_panel.html:41
@@ -1284,11 +1290,11 @@ msgstr "向上"
 msgid "Cancel"
 msgstr "取消"
 
-#: yaffo/templates/base.html:245
+#: yaffo/templates/base.html:251
 msgid "Select this folder"
 msgstr "选择该文件夹"
 
-#: yaffo/templates/base.html:254 yaffo/templates/base.html:261
+#: yaffo/templates/base.html:260 yaffo/templates/base.html:267
 msgid "Confirm"
 msgstr "确认"
 
@@ -1684,7 +1690,7 @@ msgstr "距离单位"
 msgid "Error %(code)s"
 msgstr "错误 %(code)s"
 
-#: yaffo/templates/components/error_screen.html:16
+#: yaffo/templates/components/error_screen.html:17
 msgid "Back to your library"
 msgstr "返回您的图书馆"
 
@@ -2234,10 +2240,6 @@ msgstr "开始："
 msgid "Show Results"
 msgstr "显示结果"
 
-#: yaffo/templates/fragments/job_status_fragment.html:27
-msgid "Help me with this"
-msgstr "帮我处理这个"
-
 #: yaffo/templates/fragments/job_status_fragment.html:37
 #: yaffo/templates/sharing/_transfers_panel.html:47
 msgid "Dismiss"
@@ -2631,17 +2633,21 @@ msgstr "媒体文件夹"
 msgid "Background jobs"
 msgstr "后台任务"
 
-#: yaffo/templates/settings/_assistant.html:39
+#: yaffo/templates/settings/_assistant.html:24
+msgid "Capture-date metadata (reads file metadata)"
+msgstr "拍摄日期元数据（读取文件元数据）"
+
+#: yaffo/templates/settings/_assistant.html:40
 msgid "Hide people's names"
 msgstr "隐藏人物姓名"
 
-#: yaffo/templates/settings/_assistant.html:45
+#: yaffo/templates/settings/_assistant.html:46
 #, python-format
 msgid "%(formatted)s saved conversation"
 msgid_plural "%(formatted)s saved conversations"
 msgstr[0] "%(formatted)s 个已保存的对话"
 
-#: yaffo/templates/settings/_assistant.html:49
+#: yaffo/templates/settings/_assistant.html:50
 msgid "Delete all"
 msgstr "全部删除"
 
@@ -3583,11 +3589,11 @@ msgstr "发布草稿"
 msgid "Run history"
 msgstr "运行历史"
 
-#: yaffo/templates/utilities/automations_runs.html:27
+#: yaffo/templates/utilities/automations_runs.html:34
 msgid "No runs yet."
 msgstr "还没有运行。"
 
-#: yaffo/templates/utilities/automations_runs.html:29
+#: yaffo/templates/utilities/automations_runs.html:36
 msgid "No runs yet — this automation is disabled."
 msgstr "尚未运行 - 此自动化已禁用。"
 

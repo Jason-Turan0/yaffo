@@ -9,6 +9,7 @@ and edited as a side effect of the model's tool calls (server-side), so the
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable, Iterator, Optional
 
 from sqlalchemy.orm import Session
@@ -218,6 +219,7 @@ def create_page_builder_agent(
     client = create_model_client(
         model=model,
         system_prompt=build_system_prompt(),
+        log_feature="page",
         providers=providers,
         api_key=api_key,
     )
@@ -242,6 +244,7 @@ def create_theme_builder_agent(
     client = create_model_client(
         model=model,
         system_prompt=build_template_builder_system_prompt(),
+        log_feature="theme",
         providers=providers,
         api_key=api_key,
     )
@@ -269,6 +272,7 @@ def create_automation_builder_agent(
     client = create_model_client(
         model=model,
         system_prompt=build_automation_builder_system_prompt(),
+        log_feature="automation",
         providers=providers,
         api_key=api_key,
     )
@@ -284,6 +288,7 @@ def create_assistant_agent(
     diagnostics: frozenset[str] = frozenset(),
     redactor: Optional[Redactor] = None,
     model_label: str = "",
+    log_dir: Optional[Path] = None,
     max_iterations: int = _MAX_ITERATIONS,
 ) -> Agent:
     """Wire the in-app assistant: the docs tools (search_docs / read_doc over the
@@ -307,6 +312,8 @@ def create_assistant_agent(
     client = create_model_client(
         model=model,
         system_prompt=build_assistant_system_prompt(diagnostics),
+        log_feature="assistant",
+        log_dir=log_dir, persistent_log=log_dir is not None,
         providers=providers,
         api_key=api_key,
     )

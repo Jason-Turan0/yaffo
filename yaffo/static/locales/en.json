@@ -394,7 +394,9 @@
         "automation_runs": "Looked at runs of “{{slug}}”",
         "link_to_photos": "Made a link to “{{title}}”",
         "link_to_media_item": "Made a link to “{{title}}”",
-        "link_to_page": "Made a link to “{{title}}”"
+        "link_to_page": "Made a link to “{{title}}”",
+        "ai_call_summary": "Checked recent AI calls",
+        "capture_date_source": "Checked capture-date metadata"
       }
     },
     "errors": {

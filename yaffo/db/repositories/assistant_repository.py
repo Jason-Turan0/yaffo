@@ -16,6 +16,7 @@ from yaffo.db.models import (
     AssistantEvent,
 )
 from yaffo.utils.time import utcnow
+from yaffo.site_agents.assistant.call_logs import delete_logs, delete_all_logs
 
 # Titles come from the first message; long ones are cut at a word boundary.
 TITLE_MAX_LENGTH = 60
@@ -70,6 +71,7 @@ def delete_conversation(session: Session, conversation_id: int) -> bool:
     session.query(AssistantEvent).filter_by(conversation_id=conversation_id).delete()
     deleted = session.query(AssistantConversation).filter_by(id=conversation_id).delete()
     session.commit()
+    delete_logs(conversation_id)
     return bool(deleted)
 
 
@@ -77,6 +79,7 @@ def delete_all_conversations(session: Session) -> int:
     session.query(AssistantEvent).delete()
     deleted = session.query(AssistantConversation).delete()
     session.commit()
+    delete_all_logs()
     return deleted
 
 

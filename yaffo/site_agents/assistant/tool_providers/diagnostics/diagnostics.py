@@ -52,7 +52,7 @@ from yaffo.site_agents.assistant.tool_providers.diagnostics import health
 from yaffo.site_agents.assistant.tool_providers.diagnostics.fs import LOG_NAMES, AssistantFS, FsError, run_with_timeout
 from yaffo.site_agents.assistant.redact import Redactor
 from yaffo.site_agents.assistant.schemas import ToolActivity
-from yaffo.site_agents.assistant.settings import DIAG_FILES, DIAG_JOBS, DIAG_LIBRARY, DIAG_LOGS
+from yaffo.site_agents.assistant.settings import DIAG_FILES, DIAG_JOBS, DIAG_LIBRARY, DIAG_LOGS, DIAG_METADATA
 from yaffo.site_agents.common.tool_providers.tool_provider_types import (
     CallToolReturn,
     RawToolDefinition,
@@ -135,6 +135,12 @@ TOOLS: tuple[DiagnosticTool, ...] = (
         "the non-secret config.toml values.",
     ),
     DiagnosticTool("migration_status", OVERVIEW, "Database migrations shipped with this build vs applied."),
+    DiagnosticTool(
+        "capture_date_source", DIAG_METADATA,
+        "Re-read only capture-date metadata for one indexed item. Compare the current EXIF or filename "
+        "candidate with the stored date; this does not prove its historical source. No pixels or writes.",
+        _schema({"media_item_id": {"type": "integer"}}, ["media_item_id"]),
+    ),
     # ---- library ----
     DiagnosticTool(
         "library_stats", DIAG_LIBRARY,
@@ -164,6 +170,11 @@ TOOLS: tuple[DiagnosticTool, ...] = (
         "Read-only and time-limited.",
     ),
     # ---- logs ----
+    DiagnosticTool(
+        "ai_call_summary", DIAG_LOGS,
+        "Recent AI calls: feature, model, success, duration and cost. No prompts or responses.",
+        _schema({"limit": {"type": "integer", "minimum": 1, "maximum": 50}}),
+    ),
     DiagnosticTool(
         "recent_errors", DIAG_LOGS,
         "ERROR and WARNING lines from both logs, grouped by message with counts and first/last seen. "
@@ -387,6 +398,11 @@ class DiagnosticsToolProvider(ToolProvider):
             running = self.session.query(func.count(Job.id)).filter(Job.status == JOB_STATUS_RUNNING).scalar() or 0
             age = time.time() - heartbeat.beat_at if heartbeat else None
             findings += health.check_worker(age, running)
+            watcher = self.fs.process_status("watcher")
+            if not watcher or not watcher["healthy"] or time.time() - watcher["beat_at"] > health.HEARTBEAT_STALE_SECONDS:
+                findings.append(health.Finding("watcher", health.WARNING,
+                    "The file watcher has no recent healthy heartbeat; automatic file changes may not be indexed.",
+                    health.DOC_JOBS))
             failed = self.store.failed_tasks(time.time() - 86400)
             findings += health.check_failed_tasks(dict(Counter(row["name"] for row in failed)))
             findings += health.check_automations(self._automation_outcomes())
@@ -416,6 +432,15 @@ class DiagnosticsToolProvider(ToolProvider):
                 lines.append("Note: the task host started before the code last changed, so it may be running old code.")
         else:
             lines.append("Task host: never reported in")
+        web = self.fs.process_status("web")
+        if web:
+            lines.append(f"Web server started: {_epoch(web['started_at'])}")
+            if time.time() - web['beat_at'] > health.HEARTBEAT_STALE_SECONDS:
+                lines.append("Web server: NOT RESPONDING (stale heartbeat)")
+            if changed and web['started_at'] < changed:
+                lines.append("Note: the web server started before the code last changed; restart it to load changes.")
+        else:
+            lines.append("Web server: no status available")
         lines += [
             f"Python: {platform.python_version()}",
             f"Platform: {platform.platform()}",
@@ -468,6 +493,12 @@ class DiagnosticsToolProvider(ToolProvider):
             return []
         return [name for number, name in bundled_migrations() if number not in applied]
 
+    DiagnosticTool(
+        "capture_date_source", DIAG_METADATA,
+        "Re-read only capture-date metadata for one indexed item. Compare the current EXIF or filename "
+        "candidate with the stored date; this does not prove its historical source. No pixels or writes.",
+        _schema({"media_item_id": {"type": "integer"}}, ["media_item_id"]),
+    ),
     # ---- library --------------------------------------------------------
 
     def _library_stats(self, args: dict) -> Output:
@@ -502,6 +533,17 @@ class DiagnosticsToolProvider(ToolProvider):
                 MediaItem.date_taken.isnot(None), or_(MediaItem.year < low, MediaItem.year > high)).scalar() or 0,
         }
 
+    def _capture_date_source(self, args: dict) -> Output:
+        item = self.session.get(MediaItem, int(args.get("media_item_id") or 0))
+        if item is None:
+            return Output("No such media item.", error=True)
+        location = self._relative_location(item.full_file_path)
+        if not location:
+            return Output("The item is outside the configured media folders; metadata was not read.", error=True)
+        candidate = self.fs.capture_date_source(*location)
+        return Output(f"Stored date: {item.date_taken or '(none)'}\nCurrent date candidate: "
+                      + json.dumps(candidate) + "\nThis is a re-read, not proof of the original indexing source.", count=1)
+
     def _media_item_report(self, args: dict) -> Output:
         media_item_id = int(args.get("media_item_id") or 0)
         item = self.session.get(MediaItem, media_item_id)
@@ -527,6 +569,11 @@ class DiagnosticsToolProvider(ToolProvider):
             f"Location name: {item.location_name or '-'}; has GPS: {'yes' if item.latitude is not None else 'no'}",
             f"Favorite: {bool(item.favorite)}",
         ]
+        if DIAG_METADATA in self.groups:
+            try:
+                lines.append(self._capture_date_source({"media_item_id": item.id}).text)
+            except FsError as exc:
+                lines.append(f"Capture-date metadata: {exc}")
         faces = self.session.query(Face).filter(Face.media_item_id == item.id).order_by(Face.id).all()
         lines.append(f"Faces: {len(faces)}")
         for face in faces:
@@ -712,6 +759,7 @@ class DiagnosticsToolProvider(ToolProvider):
             lines.append(
                 f"- id {entry.id}: {entry.path}: exists; "
                 f"{'separate volume' if facts.get('on_mounted_volume') else 'system volume'}; "
+                f"filesystem {facts.get('filesystem_type') or 'unknown'}; "
                 f"readable {facts.get('readable')}, writable {facts.get('writable')}; "
                 f"{health.format_size(facts.get('free_bytes') or 0)} free of {health.format_size(facts.get('total_bytes') or 0)}"
             )
@@ -811,6 +859,10 @@ class DiagnosticsToolProvider(ToolProvider):
 
     # ---- jobs -----------------------------------------------------------
 
+    def _ai_call_summary(self, args: dict) -> Output:
+        records = self.fs.ai_call_summaries(int(args.get("limit") or 20))
+        return Output(json.dumps(records, indent=2) if records else "No model calls recorded yet.", count=len(records))
+
     def _worker_status(self, args: dict) -> Output:
         heartbeat = self.store.read_heartbeat()
         counts = self.store.status_counts()
@@ -823,6 +875,13 @@ class DiagnosticsToolProvider(ToolProvider):
             lines.append(
                 f"Task host: {state}; last heartbeat {health.format_duration(age)} ago; "
                 f"started {_epoch(heartbeat.started_at)}; workers alive {heartbeat.workers}, busy {heartbeat.busy}")
+        watcher = self.fs.process_status("watcher")
+        if watcher:
+            age = time.time() - watcher["beat_at"]
+            state = "running" if watcher["healthy"] and age <= health.HEARTBEAT_STALE_SECONDS else "NOT RESPONDING"
+            lines.append(f"File watcher: {state}; last heartbeat {health.format_duration(age)} ago")
+        else:
+            lines.append("File watcher: no status available (not started or an older version)")
         lines.append("Queue: " + (_counts(counts) or "empty"))
         lines.append(f"Last queue activity: {_epoch(self.store.last_activity())}")
         return Output("\n".join(lines), count=counts.get(STATUS_READY, 0) + counts.get(STATUS_RUNNING, 0))

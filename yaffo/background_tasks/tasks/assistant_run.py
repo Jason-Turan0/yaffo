@@ -32,7 +32,8 @@ from yaffo.i18n import DEFAULT_LOCALE, get_saved_locale
 from yaffo.logging_config import get_logger
 from yaffo.site_agents.agent import create_assistant_agent
 from yaffo.site_agents.assistant import settings as assistant_settings
-from yaffo.site_agents.assistant.history import ROLE_USER, normalize_turns
+from yaffo.site_agents.assistant.call_logs import conversation_log_dir
+from yaffo.site_agents.assistant.history import ROLE_USER, transcript_turns
 from yaffo.site_agents.assistant.prompt_generator.prompt import build_assistant_user_message
 from yaffo.site_agents.assistant.redact import redactor_for
 
@@ -73,7 +74,9 @@ def run_assistant_turn(
         logger.warning(f"assistant_run: conversation {conversation_id} not found")
         return
 
-    turns = normalize_turns(repo.model_turns(session, conversation_id))
+    diagnostics = assistant_settings.enabled_diagnostics(session)
+    redactor = redactor_for(session, redact_people=assistant_settings.redact_people(session))
+    turns = transcript_turns(repo.list_events(session, conversation_id), diagnostics, redactor)
     if not turns or turns[-1][0] != ROLE_USER:
         repo.set_status(session, conversation_id, ASSISTANT_STATUS_IDLE)
         return
@@ -93,13 +96,12 @@ def run_assistant_turn(
     user_message = build_assistant_user_message(
         message, locale=get_saved_locale(session) or DEFAULT_LOCALE,
         context=repo.latest_user_context(session, conversation_id))
-    diagnostics = assistant_settings.enabled_diagnostics(session)
-
     try:
         agent = create_assistant_agent(
             model=model, api_key=api_key, history=history, session=session,
+            log_dir=conversation_log_dir(conversation_id),
             diagnostics=diagnostics,
-            redactor=redactor_for(session, redact_people=assistant_settings.redact_people(session)),
+            redactor=redactor,
             model_label=f"{assistant_settings.provider_label(session)} · {assistant_settings.model_label(session)}",
         )
         for event in agent.run_events(user_message, should_cancel=should_cancel):

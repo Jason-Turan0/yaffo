@@ -568,3 +568,43 @@ describe('app links', () => {
     expect(links.nextElementSibling.classList.contains('assistant-sources')).toBe(true);
   });
 });
+
+
+describe('contextual help availability', () => {
+  it('does not register the error-toast help action on Settings', async () => {
+    document.body.setAttribute('data-assistant-help-disabled', '');
+    const setErrorAction = vi.fn();
+    window.notification.setErrorAction = setErrorAction;
+    server({ 'GET /api/conversations': { conversations: [] } });
+    try {
+      await start();
+      expect(setErrorAction).not.toHaveBeenCalled();
+    } finally {
+      document.body.removeAttribute('data-assistant-help-disabled');
+    }
+  });
+});
+
+
+describe('automation run help', () => {
+  it('handles a polled-in run row and sends its job and automation context', async () => {
+    const fetchMock = server({
+      'GET /api/conversations': { conversations: [] },
+      'POST /api/conversations/new': () => json({ conversation: conversation(9, 'Help') }, 202),
+      'GET /assistant_conversation/conversation_id/9': statusBody([]),
+    });
+    await start();
+    document.body.insertAdjacentHTML('beforeend', `
+      <button data-assistant-help data-job-id="run-1" data-automation="assign_location_name"
+        data-page="Assign location name" data-error="2 errors">Help</button>`);
+    document.querySelector('[data-assistant-help]').click();
+    expect(document.getElementById('assistant-panel').hidden).toBe(false);
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
+    document.getElementById('assistant-chat-form').requestSubmit();
+    await vi.waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url === '/api/conversations/new')).toBe(true));
+    const create = fetchMock.mock.calls.find(([url]) => url === '/api/conversations/new');
+    expect(JSON.parse(create[1].body).context).toEqual({
+      job_id: 'run-1', automation: 'assign_location_name', page: 'Assign location name', error: '2 errors',
+    });
+  });
+});

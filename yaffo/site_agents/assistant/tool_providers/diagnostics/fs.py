@@ -15,6 +15,9 @@ drive can't hang a turn.
 from __future__ import annotations
 
 import fnmatch
+import json
+import heapq
+from itertools import islice
 import os
 import queue
 import shutil
@@ -26,7 +29,9 @@ from dataclasses import dataclass
 from pathlib import Path, PurePath
 from typing import Any, Callable, Optional, TypeVar
 
-from yaffo.common import ROOT_DIR
+from yaffo.common import ROOT_DIR, MEDIA_EXTENSIONS
+from yaffo.process_status import read_status
+from yaffo.site_agents.assistant.tool_providers.diagnostics.file_details import filesystem_type, capture_date_source
 from yaffo.utils.safe_paths import PathOutsideAllowedRoots, resolve_path_in_roots
 
 T = TypeVar("T")
@@ -270,6 +275,7 @@ class AssistantFS:
             result: dict[str, Any] = {"exists": exists}
             if not exists:
                 return result
+            result["filesystem_type"] = filesystem_type(root)
             result["on_mounted_volume"] = _on_mounted_volume(root)
             result["readable"] = os.access(root, os.R_OK)
             result["writable"] = os.access(root, os.W_OK)
@@ -279,6 +285,57 @@ class AssistantFS:
             return result
 
         return run_with_timeout(facts, self.timeout)
+
+    def capture_date_source(self, media_dir_id: str, relative_path: str) -> dict:
+        path = self._resolve(media_dir_id, relative_path)
+        if path.suffix.lower() not in MEDIA_EXTENSIONS:
+            raise FsError("capture-date metadata is only available for media files")
+        return run_with_timeout(lambda: capture_date_source(path), self.timeout)
+
+    def ai_call_summaries(self, limit: int = 20) -> list[dict]:
+        limit = max(1, min(limit, 50))
+
+        def read() -> list[dict]:
+            candidates: list[tuple[str, str, Path]] = []
+            model_root = self._data_dir / "model_logs"
+            assistant_root = self._data_dir / "assistant_model_logs"
+            roots = [("builder", model_root)]
+            if assistant_root.is_dir():
+                roots.extend(("assistant", p) for p in islice(assistant_root.iterdir(), 2000)
+                             if p.name.isdecimal() and p.is_dir() and not p.is_symlink())
+            for feature, root in roots:
+                if root.is_dir() and not root.is_symlink():
+                    for run in islice(root.iterdir(), 2000):
+                        if run.is_dir() and not run.is_symlink():
+                            candidates.append((run.name, feature, run / "summary.json"))
+            records = []
+            for _, feature, path in heapq.nlargest(limit, candidates):
+                if path.is_symlink():
+                    continue
+                try:
+                    with path.open() as handle:
+                        values = json.loads(handle.read(128000))
+                    if not isinstance(values, list):
+                        continue
+                    for value in values[-50:]:
+                        if isinstance(value, dict):
+                            cost = value.get("cost")
+                            cost = {str(k)[:40]: v for k, v in cost.items() if isinstance(v, (int, float))} if isinstance(cost, dict) else None
+                            records.append({"feature": str(value.get("feature") or feature)[:40],
+                                "provider": str(value.get("provider", "unknown"))[:40],
+                                "timestamp": str(value.get("timestamp", ""))[:40],
+                                "model": str(value.get("model", ""))[:100],
+                                "success": value.get("success") is True,
+                                "duration_ms": value.get("duration_ms") if isinstance(value.get("duration_ms"), (int, float)) else None,
+                                "cost": cost})
+                except (OSError, ValueError):
+                    continue
+            return sorted(records, key=lambda r: str(r.get("timestamp", "")), reverse=True)[:limit]
+
+        return run_with_timeout(read, self.timeout)
+
+    def process_status(self, role: str) -> Optional[dict]:
+        return run_with_timeout(lambda: read_status(role, data_dir=self._data_dir), self.timeout)
 
     # ---- data dir -------------------------------------------------------
 

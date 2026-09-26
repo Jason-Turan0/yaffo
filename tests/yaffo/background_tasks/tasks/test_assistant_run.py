@@ -17,7 +17,8 @@ pytestmark = pytest.mark.unit
 
 
 @pytest.fixture
-def session(tmp_path):
+def session(tmp_path, monkeypatch):
+    monkeypatch.setattr("yaffo.site_agents.assistant.call_logs.LOG_ROOT", tmp_path / "assistant_logs")
     engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
     db.metadata.create_all(engine)
     with Session(engine) as sess:
@@ -42,7 +43,7 @@ def agent_factory(monkeypatch):
     def install(events, api_key="key", model="claude-haiku-4-5-20251001"):
         agent = ScriptedAgent(events)
 
-        def create(*, model, api_key, history, session=None, diagnostics=frozenset(), redactor=None, model_label=""):
+        def create(*, model, api_key, history, session=None, diagnostics=frozenset(), redactor=None, model_label="", log_dir=None):
             calls.update(model=model, api_key=api_key, history=history, diagnostics=diagnostics,
                          redactor=redactor, model_label=model_label)
             return agent
@@ -184,3 +185,14 @@ def test_passes_enabled_diagnostics_and_attached_context(session, agent_factory)
     assert "<error_code>filesystem_scan_failed</error_code>" in agent.messages[0]
     assert "<page>Utilities → Index Photos</page>" in agent.messages[0]
 
+
+
+def test_follow_up_includes_prior_tool_evidence(session, agent_factory):
+    agent_factory([AgentEvent("done")])
+    conversation_id = _conversation(session, ("user", "check"))
+    repo.add_event(session, conversation_id, "tool", "", {"tool": "read_log", "detail": "disk failed"})
+    repo.add_event(session, conversation_id, "assistant", "There is a disk error.")
+    repo.add_event(session, conversation_id, "user", "Which disk?")
+    run_module.run_assistant_turn(session, conversation_id, should_cancel=lambda: False)
+    assert "disk failed" in agent_factory.calls["history"][1][1]
+    assert "historical_tool_result" in agent_factory.calls["history"][1][1]

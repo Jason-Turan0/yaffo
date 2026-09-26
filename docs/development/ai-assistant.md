@@ -5,7 +5,7 @@ docs, looks into problems with read-only diagnostic tools, and answers library
 questions with read-only scripts. It still can't change anything: change plans,
 approval/replay, action cards and undo are phase 4. The sections below describe
 the full design, including that future work; *Scripts and diagnostics (phase 3)*
-records what was built and what was deferred.
+records the shipped behavior and its limits. Phase 4 remains unimplemented.
 
 ## Goal
 
@@ -23,7 +23,7 @@ shared chat dialog (`templates/components/chat_dialog.html`).
 
 ### Non-goals
 
-- A general-purpose agent. It has no shell, no code execution, no arbitrary file
+- A general-purpose agent. It has no shell, no general-purpose code execution, no arbitrary file
   access, and no network access of its own (see *Network access*).
 - Changes the user hasn't confirmed. Editing the library by conversation is in
   scope, but every change is a proposal the user approves, with a server-written
@@ -66,10 +66,10 @@ shared chat dialog (`templates/components/chat_dialog.html`).
   - A global "Ask Yaffo" button in the navbar opens the assistant in the shared chat
     dialog, on every page.
   - Contextual buttons open it with context attached: an error notification or
-    flash ("Help me with this"), a failed job row on Utilities, the Settings
-    sections. The context is a small structured payload (page, job id, error code),
+    flash ("Help me with this") or a failed job row on Utilities. Settings
+    sections are excluded. The context is a small structured payload (page, job id, error code),
     not a screenshot.
-- **Conversation.** Streaming answers. Links point to guide pages (the docs site and
+- **Conversation.** Answers and tool activity arrive through conversation polling. Links point to guide pages (the docs site and
   the in-app route both work). Conversations persist and are listed for reopening.
   A "New conversation" button clears context.
 - **Visible tool activity.** Each tool call renders as a collapsed line under the
@@ -97,7 +97,8 @@ shared chat dialog (`templates/components/chat_dialog.html`).
 
 ### Sketches
 
-Rough wireframes to settle layout and flow, not visual design. Theming follows the
+Target-design wireframes, including phase 4 action cards; these are not a record
+of the current UI. Theming follows the
 active skin, like every other component.
 
 **1. The dialog: the usual entry, over any page.** It opens from "Ask Yaffo" in the
@@ -306,8 +307,9 @@ collapses to an icon, and cards stack their buttons full width at 44px.
 
 ## Architecture
 
-The assistant does its work by writing short **Starlark scripts** that run in the
-automation sandbox (`background_tasks/automation_sandbox/`), in its existing
+The current assistant runs read-only **Starlark scripts** in the automation
+sandbox. The phase 4 design below adds change plans using that sandbox
+(`background_tasks/automation_sandbox/`), in its existing
 **test/preview mode**:
 
 - Reads run for real, so the script sees live data.
@@ -415,25 +417,31 @@ Implemented in `background_tasks/automation_sandbox/`:
 
 Implemented in `yaffo/site_agents/assistant/`:
 
-1. **Diagnostic tools** (`diagnostics.py`, checks in `health.py`). The tools in
-   *Diagnostic tools* below, grouped by the four Settings switches: `logs`,
-   `library`, `files`, `jobs`. The overview tools (`health_report`, `install_info`,
+1. **Diagnostic tools** (`tool_providers/diagnostics/diagnostics.py`, checks in
+   `tool_providers/diagnostics/health.py`). The tools in
+   *Diagnostic tools* below, grouped by Settings switches: `logs`,
+   `library`, `files`, `jobs`, plus opt-in `metadata`. The overview tools (`health_report`, `install_info`,
    `settings_summary`, `migration_status`) are offered whenever any group is on;
    with every group off the assistant is knowledge-only. The system prompt is
    generated from the same set, so it only describes tools the model has. Every
    result is redacted, capped at 12,000 characters, and wrapped in
    `<data source="…">`; the redacted text is also the activity line's `detail`.
-2. **Task host heartbeat.** The host writes `host_heartbeat` (one row in the queue
+2. **Process status.** The host writes `host_heartbeat` (one row in the queue
    DB: pid, start time, last beat, workers alive/busy) every 5 seconds.
    `worker_status` and the health checks treat a beat older than 60 seconds as a
-   stopped host.
-3. **`AssistantFS`** (`fs.py`) and **redaction** (`redact.py`) as specified under
+   stopped host. The web server writes a small atomic `web_status.json` record in
+   the data directory every five seconds after its first request. The watcher
+   writes `watcher_status.json` from its polling loop, including observer/emitter
+   health; a blocked loop produces a stale heartbeat. `install_info` compares web
+   and task-host start times with code timestamps; `worker_status` and
+   `health_report` report missing or stale watcher status.
+3. **`AssistantFS`** (`tool_providers/diagnostics/fs.py`) and **redaction** (`redact.py`) as specified under
    *Filesystem access* and *Privacy*. Every path the model supplies goes through
    `AssistantFS`; paths the app itself configures (the thumbnail folder, face crops,
    video posters) are checked directly, with the same timeout helper. A home folder
    only matches as a whole path component. People-name redaction replaces names
    with `Person #<id>`.
-4. **`run_script`, read-only** (`script_tool.py`). Only the assistant profile's
+4. **`run_script`, read-only** (`tool_providers/script_tool.py`). Only the assistant profile's
    read host functions are bound (`build_host_functions(..., include_mutating=False)`),
    and `render_host_api("assistant", include_mutating=False)` documents only those,
    so a script that calls a mutating function fails with an unknown name; nothing is
@@ -445,14 +453,21 @@ Implemented in `yaffo/site_agents/assistant/`:
    was built first and dropped as too wordy for what it guarded: sending messages
    to the provider was already the user's choice under AI Generation, and the
    notice plus the activity lines cover what checks send.
-6. **Contextual entry.** "Help me with this" on a failed job card, and on every
-   error toast once the assistant is ready (`notification.setErrorAction`). The
+6. **Contextual entry.** "Help me with this" appears on job cards and automation
+   run-history rows with a failed status, error text, or a nonzero error count;
+   completed runs with partial errors also qualify. It also appears on error
+   toasts (`notification.setErrorAction`), the internal server error page, and
+   server-rendered error/warning flashes
+   when the assistant is ready. Settings has no contextual help buttons,
+   including on its flashes and error toasts. The internal-error button attaches
+   the request path and `internal_server_error` code, without query parameters or
+   exception details. The
    context is allowlisted and length-capped by the route (`page`, `job_id`,
    `automation`, `error_code`, `error`), stored on the user event's payload, shown
    as a chip in the composer and above the sent message, and given to the model as
    a `<context>` block in that turn.
 
-7. **Links into the app** (`links.py`). `link_to_photos` and `link_to_page`
+7. **Links into the app** (`tool_providers/links.py`). `link_to_photos` and `link_to_page`
    (library group) validate what they point at and return app-relative links,
    which the chat shows under the answer ("Open:") and opens in place. The model
    never writes URLs. The gallery filters are declared once in
@@ -466,35 +481,77 @@ Implemented in `yaffo/site_agents/assistant/`:
    model. Tests fail when the file drifts from the routes or a GET route is
    unclassified.
 
-Deferred from the phase 3 list, each with the reason:
+8. **AI-call diagnostics and retention.** `ai_call_summary` reads bounded
+   metadata-only summaries: feature, provider, model, success, duration, and cost.
+   Summaries are written even when DEBUG logging is off; prompts and responses
+   are not included in diagnostic summaries. Assistant requests/responses are
+   retained under `assistant_model_logs/<conversation_id>/`, without newest-N
+   pruning, and deleted with their conversation. Other agents retain their
+   existing DEBUG-only full dumps and capped run retention. Summaries describe
+   calls made after this instrumentation was installed.
+9. **File details.** Media-folder checks report filesystem type using a fixed
+   native probe on macOS or Windows; unsupported or failed probes say unknown.
+   exFAT adds a health warning. The separate `metadata` switch is off by default.
+   When enabled, `capture_date_source(media_item_id)` reads only capture-date
+   metadata through ExifTool, with a three-second subprocess timeout and the
+   usual named-root checks. `media_item_report` includes that result when enabled.
+   Results compare current EXIF/filename candidates with the stored date; they
+   do not claim historical provenance. Missing ExifTool or failed reads report
+   unknown. Pixels are never decoded or returned.
+10. **Follow-up evidence.** Earlier tool details are replayed as escaped,
+    explicitly labeled historical data alongside text turns. Evidence is limited
+    to 6,000 characters per result and 24,000 total, favoring recent results.
+    Current diagnostic switches and redaction are applied again. Item reports
+    are omitted from replay when metadata access is off because they may contain
+    an earlier metadata read. Native provider tool-call replay is not needed for
+    this representation: no orphaned tool-call IDs are inserted into history.
 
-- `ai_call_summary`: the call log is only written at DEBUG level, so it would
-  usually be empty. Revisit with the per-conversation call logs.
-- The date source in `media_item_report` (EXIF vs filename vs none) needs a
-  metadata re-read with its own setting; the report shows the stored date only.
-- exFAT detection: the standard library can't read a volume's filesystem type.
-  `media_dir_status` reports whether a folder is on a separate mounted volume.
-- Whether the file watcher is running: it has no heartbeat yet.
-- "Started before its code last changed" is checked for the task host only; the
-  web server's start time isn't recorded.
-- Earlier turns are replayed as text only, so the model doesn't see a previous
-  turn's tool results (as in phase 1).
-- Contextual entries on server-rendered flashes and the Settings sections.
+Phase 3 limits:
 
-New package: `yaffo/site_agents/assistant/`
+- Historical tool evidence may be stale; the prompt asks the model to recheck
+  time-sensitive facts. Text already written in earlier answers remains in the
+  conversation even if a diagnostic group is later disabled.
+- The original date source was not persisted at indexing time. A fresh metadata
+  read can explain today's candidate, not prove where a historical value came
+  from. `date_outliers` lists stored dates; use `capture_date_source` for an item.
+- Native filesystem probes return unknown on unsupported platforms or errors.
+- Heartbeats measure recent responsiveness, not a guarantee that every worker,
+  watcher, or web request is healthy.
+- AI-call summaries scan a bounded set of local run directories, so they are a
+  troubleshooting sample rather than an exhaustive accounting export.
+
+### Package organization
+
+Paths in this table are relative to `yaffo/site_agents/assistant/`, unless noted.
+Knowledge and diagnostics each own a namespace under `tool_providers/`, keeping
+providers beside their supporting services.
 
 | Module | Responsibility |
 |---|---|
-| `agent.py` (in `site_agents/`) | `create_assistant_agent(...)`, alongside the existing `create_*_agent` factories |
-| `prompt.py` | System prompt: role, scope, `render_host_api("assistant")`, the batching and reference rules, how to cite, the untrusted-data rule, response language (reuse `prompt_generator/response_language.py`) |
-| `knowledge.py` / `tools.py` | Loads the bundled docs index; `search_docs` + `read_doc` |
-| `script_tool.py` | The `run_script` `ToolProvider`. Phase 3: read host functions only. Phase 4: run in preview with the assistant profile and turn recorded mutating calls into a `ChangePlan` |
-| `plans.py` | Phase 4. `ChangePlan`: freeze, validate, check preconditions at approval, capture undo, replay with reference substitution, undo |
-| `diagnostics.py` | The diagnostic tools (a `ToolProvider`) |
-| `health.py` | The health checks behind `health_report`, as pure functions |
-| `fs.py` | `AssistantFS`: the only filesystem access, over named roots |
-| `redact.py` | One redaction pass applied to every tool result |
-| `settings.py` | The assistant's settings: on/off, diagnostics groups, name redaction |
+| `../agent.py` | Shared agent loop and `create_assistant_agent(...)`, alongside the other agent factories |
+| `prompt_generator/prompt.py` | System and user prompts, enabled diagnostic groups, read-only host API, citations, context, and response language |
+| `tool_providers/knowledge/knowledge.py` | Loads bundled documentation and performs offline keyword search |
+| `tool_providers/knowledge/tools.py` | `KnowledgeToolProvider`: `search_docs` and `read_doc` |
+| `tool_providers/diagnostics/diagnostics.py` | `DiagnosticsToolProvider`: enabled diagnostic tools and their redacted results |
+| `tool_providers/diagnostics/health.py` | Pure health checks behind `health_report` |
+| `tool_providers/diagnostics/fs.py` | `AssistantFS`: bounded filesystem diagnostics over named roots |
+| `tool_providers/diagnostics/file_details.py` | Fixed native volume-type and capture-date metadata probes |
+| `tool_providers/script_tool.py` | `ScriptToolProvider`: read-only `run_script` and `describe_data_source` |
+| `tool_providers/links.py` | `LinkToolProvider`: validated links to photos and app pages |
+| `app_pages.py` | Page classifications and the bundled Flask route catalog |
+| `redact.py` | Redaction shared by diagnostics and script results |
+| `settings.py` | Assistant availability, diagnostics groups, name redaction, and model selection |
+| `history.py` | Normalizes text turns and adds bounded, filtered historical tool evidence |
+| `call_logs.py` | Conversation-owned call-log locations and deletion |
+| `schemas.py` | Named conversation, activity, link, and response DTOs |
+
+Shared tool contracts and result helpers live in
+`yaffo/site_agents/common/tool_providers/`. Shared XML and response-language
+helpers live in `yaffo/site_agents/common/prompt_generator/`.
+
+Phase 4 proposes a `plans.py` module for freezing calls, checking approval-time
+preconditions, replaying references, and capturing and applying undo. It is not
+part of the current package.
 
 ### Runs are durable, like PageVersion
 
@@ -506,14 +563,14 @@ PageVersion*): it survives a closed tab or a timeout, and it can be cancelled.
 2. It enqueues `assistant_run(conversation_id)` and returns `202`.
 3. The task rebuilds the model-client history from the stored transcript, runs the
    agent, and appends each `AgentEvent` to the transcript as it happens.
-4. The browser streams `GET /api/assistant/conversations/<id>/events?after=<seq>`
-   (NDJSON, like the index-photos scan stream). It re-attaches after a reload by
-   passing the last sequence number it saw.
+4. The browser polls `GET /api/assistant/conversations/<id>` for status, run
+   start time, and the persisted transcript. Closing the dialog does not stop the
+   task; reopening it loads the conversation again.
 
-**One change to the model clients:** they currently keep history only in memory for
-one run. The assistant needs `load_history(messages)` on the `ModelClient`
-interface, fed from the stored provider-neutral transcript. Tool-use/tool-result
-pairs must be replayed intact, or providers reject the history.
+`ModelClient.load_history(turns)` restores alternating text turns. `history.py`
+adds prior tool details as escaped historical evidence, with current settings,
+redaction, and size limits applied. The visible transcript retains the original
+activity entries. Incremental NDJSON event delivery remains future work.
 
 ### Change plans: record, approve, replay
 
@@ -570,16 +627,16 @@ while the model gets text.
 
 | Tool | Does |
 |---|---|
-| `search_docs(query, scope?)` | Top matching doc sections: title, path, anchor, snippet. `scope`: `guide` (default) or `development`. No user data |
+| `search_docs(query, scope?)` | Top matching doc sections: title, path, anchor, snippet. `scope`: `guide` or `development`; omit to search both. No user data |
 | `read_doc(path, anchor?)` | One doc page or section from the bundle, capped |
-| `run_script(code, purpose)` | Runs a Starlark script in preview mode with the assistant host profile. Returns its value, printed output, errors, and (when it recorded changes) the change plan id. `purpose` is a one-line label for the activity line |
+| `run_script(code, purpose)` | Runs with only read host functions bound. Returns its value, printed output, and errors. Recording changes and returning a plan id belong to phase 4. `purpose` is a one-line label for the activity line |
 | `describe_data_source(source)` | The fields of a `data_query` source, so scripts query real columns. Schema only, no user data |
 | `link_to_photos(title, filters, view?)` | A gallery link with filters applied. The filters come from the same table the filter panel uses (`domain/media_filter_params.py`); returns the match count and makes no link when nothing matches |
 | `link_to_page(title, page, values?)` | A link to any page in the app (one photo, a person's faces, an album, Settings, an automation, …). The pages and their URL rules come from the Flask route table (`app_pages.py` + generated `pages.json`); ids that name records are checked to exist |
 
 Keeping the docs and diagnostic tools native means "how do I…" and "what's wrong?"
 questions never involve code, cost the fewest tokens, and show one clear activity
-line per check. Scripts are for library queries and edits.
+line per check. Scripts currently answer library queries; edits belong to phase 4.
 
 ### Diagnostic tools
 
@@ -603,7 +660,7 @@ goes through `redact.py`.
 
 | Tool | Returns |
 |---|---|
-| `worker_status()` | Is the task host running; workers alive/busy; is the watcher running; last queue activity. **Needs something new:** the task host keeps no persisted heartbeat today, so it would write one (e.g. to the queue DB's `periodic_state`) |
+| `worker_status()` | Task-host heartbeat and workers alive/busy, watcher heartbeat and observer health, queued/running task counts, and last queue activity |
 | `recent_jobs(status, limit)` | Recent `Job` rows: name, status, counts, error text, timestamps (limit ≤ 50) |
 | `job_detail(job_id)` | One job with its automation (if any) and its queue tasks: status, attempts, error and the head of the traceback, and a summary of the arguments (e.g. "3 face ids", not the ids) |
 | `failed_tasks(name, since)` | Queue tasks in `error` state, grouped by task name and error message |
@@ -621,7 +678,7 @@ goes through `redact.py`.
 
 | Tool | Returns |
 |---|---|
-| `media_dir_status()` | Per dir: exists, is a mounted volume, readable/writable, free space, filesystem type, library marker present (once that exists) |
+| `media_dir_status()` | Per dir: exists, is on a separate mounted volume, readable/writable, free space, and filesystem type when the native probe can identify it |
 | `probe_media_dir(media_dir_id)` | Times a stat and a short listing of the root, and reports the latency or "did not respond in 5s". Catches a failing drive before a scan hangs on it |
 | `thumbnail_dir_status()` | Marker present, whether it sits inside a media dir, file count and size (bounded), orphaned-thumbnail count |
 | `stat_path(media_dir_id, relative_path)` | Exists, size, mtime, is-dir, extension. Stat only, never content |
@@ -631,9 +688,10 @@ goes through `redact.py`.
 
 | Tool | Returns |
 |---|---|
-| `media_item_report(media_item_id)` | Everything needed for "why does this photo…": path relative to its media dir, whether the file exists, index status, `date_taken` **and where it came from** (EXIF, filename pattern, or none), faces with status and person links, tags, albums, and whether its poster/thumbnails exist. Working out the date source re-reads the file's **metadata** with the timeout (never pixels). That's the one read beyond stat, so it gets its own setting |
+| `media_item_report(media_item_id)` | Indexed item details, file existence, stored date, faces, tags, albums, and thumbnail/poster existence. Includes a current date candidate only when the separate metadata setting is enabled |
+| `capture_date_source(media_item_id)` | Opt-in, bounded EXIF capture-date read and filename/path candidate, compared with the stored date; never pixels or a claim of historical provenance |
 | `face_consistency()` | Counts and sample ids for each inconsistent face state (linked but not `ASSIGNED`, `PROCESSING` with no queued task, ignored but linked) |
-| `date_outliers(limit)` | Photos with implausible dates, with the file name and the date source that produced them |
+| `date_outliers(limit)` | Photos with implausible dates, with the file name and stored date; query `capture_date_source` separately when metadata checks are enabled |
 | `db_quick_check()` | SQLite `PRAGMA quick_check` and the WAL size; read-only, time-limited |
 
 **Health checks.** The first set comes from real incidents; each is a small pure
@@ -819,15 +877,17 @@ if a host function in that profile matches this list:
 
 ## Filesystem access (`AssistantFS`)
 
-The only module in the assistant that touches the filesystem. It works over
-**named roots**, never raw paths from the model:
+`tool_providers/diagnostics/fs.py` mediates model-requested filesystem
+diagnostics over **named roots**, never raw paths from the model. Its fixed probes
+live in `file_details.py`; bundled docs and call-log lifecycle code use their own
+app-owned paths:
 
 | Root | Access | Notes |
 |---|---|---|
 | `docs` | read | The bundled knowledge files (package data) |
 | `logs` | read, tail only | `ROOT_DIR/yaffo.log*`, `ROOT_DIR/background_tasks.log*` by name, not by glob from the model |
-| `data` | stat only | `ROOT_DIR`. Enough to report sizes and free space; never reads `yaffo.db`, the queue DB, `config.toml` secrets, or keychain material |
-| `media:<id>` | stat + list names | Each configured media dir. Never file contents |
+| `data` | stat and fixed diagnostic records | Free space, process-status files, and metadata-only AI-call summaries; no raw database, configuration-secret, or credential reads through this filesystem interface |
+| `media:<id>` | stat + list names; opt-in capture-date metadata | Each configured media dir. Metadata reads accept indexed media only; no pixels or arbitrary file contents |
 
 Enforcement:
 
@@ -836,7 +896,8 @@ Enforcement:
 - **Hard deny list:** `*.db`, `*.db-wal`, `config.toml`, `.ssh`, key or credential
   file patterns. These are denied even inside an allowed root.
 - **Caps:** bytes per read, lines per tail, entries per listing, and calls per turn.
-  Binary files are refused.
+  Binary logs are refused. Capture-date reads are a separate, off-by-default
+  capability restricted to supported media extensions.
 - **Slow disks:** all filesystem work runs with a timeout on a worker thread, so a
   failing external drive can't hang a turn. That drive hang was a real incident.
   When a call times out, the tool reports "did not respond in 5s".
@@ -879,8 +940,8 @@ the network. A future "look up place names for these photos" action would.
   HTTP or socket library (`requests`, `httpx`, `urllib.request`, `socket`, `aiohttp`).
   The only allowed network code is the existing model clients.
 - A test runs the docs tools, every diagnostic tool, every read host function in
-  the `assistant` profile, and the replay of every mutating one with `uses_network=False`, while
-  `socket.socket.connect` is patched to raise. They must all succeed.
+  the `assistant` profile while `socket.socket.connect` is patched to raise.
+  Replay tests for future mutations with `uses_network=False` belong to phase 4.
 - A `HOST_API` test asserts `uses_network` is set for any host function whose impl
   reaches `reverse_geocode`.
 - Starlark itself is hermetic (no I/O, no imports), so a script can reach nothing
@@ -888,15 +949,17 @@ the network. A future "look up place names for these photos" action would.
 
 ## Knowledge bundle
 
-The docs are not shipped today: `yaffo.spec` and the package data include only
-templates, static files, translations and migrations. So:
+The app ships a generated documentation bundle rather than the Markdown source
+files. `development/ai-assistant.md` is explicitly excluded while it contains
+unimplemented plans, so the assistant does not present those plans as features.
 
-- **Build step.** `scripts/build_assistant_knowledge.py` reads `docs/guide/**` and
-  `docs/development/**`, splits them by heading into sections, and writes
-  `yaffo/assistant_knowledge/sections.jsonl`, plus a small keyword index and a
-  `manifest.json` with a source hash.
-- **Packaging.** Add the directory to `pyproject.toml` package data and to `datas`
-  in `yaffo.spec`.
+- **Build step.** `scripts/build_assistant_knowledge.py` reads `docs/index.md`,
+  `docs/guide/**`, and eligible `docs/development/**`, splits pages by heading,
+  and writes `yaffo/assistant_knowledge/sections.jsonl` and `manifest.json`.
+  The keyword index is built in memory when the bundle is loaded.
+- **Packaging.** `pyproject.toml` package data and `yaffo.spec` both include
+  `yaffo/assistant_knowledge/`. `scripts/build_assistant_pages.py` separately
+  generates the `pages.json` route catalog used by app links.
 - **Freshness.** A test fails when the manifest's source hash doesn't match
   `docs/`, the same idea as the docs-automation lock files, so the bundle can't
   drift from the docs.
@@ -906,7 +969,7 @@ templates, static files, translations and migrations. So:
   searchable by default; `search_docs` returns results from both, labelled by scope.
   The prompt tells the model to prefer guide pages when they answer the question,
   and to explain internals in plain terms when it uses development notes.
-- **Runbooks.** A new `docs/guide/reference-maintenance/troubleshooting/` set of
+- **Planned runbooks.** A new `docs/guide/reference-maintenance/troubleshooting/` set of
   short, factual pages ("Photos show the wrong year", "External drive not showing",
   "Faces stuck after assigning"). These are user docs first, and the assistant's
   best grounding second. Add them to `mkdocs.yml` navigation in the same change.
@@ -919,8 +982,9 @@ templates, static files, translations and migrations. So:
   - tool results: log lines, file and folder names, people names, counts, settings
     summaries
 
-  They also state what is never sent: images, the database, keys, or file
-  contents other than the named logs.
+  They also state what is never sent: images, the database, keys, or
+  arbitrary file contents. The optional metadata check sends only the capture-date
+  candidate, not image bytes or the full metadata payload.
 - **Redaction** (`redact.py`, one pass over every tool result before it reaches the
   model):
   - the home directory becomes `~`
@@ -938,14 +1002,13 @@ templates, static files, translations and migrations. So:
   call logs are kept until the user deletes them: one conversation from its menu,
   or all of them from Settings → Assistant. Deleting a conversation deletes its
   call logs too.
-- **Demo mode:** the assistant is off, or knowledge-only with rate limits. There are
-  no diagnostics and no actions on the public demo.
+- **Demo mode:** the assistant is disabled on the public demo.
 
 ## Prompt injection
 
 The threat: text the user doesn't write, such as a file name, an EXIF field, a log
-line, or a person's name, tells the model to do something. The mitigations are
-structural, not prompt-based:
+line, or a person's name, tells the model to do something. Current scripts bind read functions only. The phase 4 design adds the following
+structural protections for writes:
 
 - Scripts run in preview, so a script can only **record** calls to allowlisted
   host functions in the `assistant` profile. Every recorded change needs a click on
@@ -967,22 +1030,20 @@ structural, not prompt-based:
 
 ## Data model
 
-Numbered migration plus an `000_INIT` update, per *Project Context → Database
-Migrations*.
+Implemented models are in `yaffo/db/models.py`; persistence is in
+`yaffo/db/repositories/assistant_repository.py`:
 
 - `assistant_conversations`: `id`, `title`, `status` (`IDLE` | `RUNNING` |
-  `FAILED`), `provider_id`, `model_id`, `created_at`, `updated_at`
+  `FAILED`), `model_id`, `run_started_at`, `created_at`, `updated_at`.
+- `assistant_events`: `id`, `conversation_id`, `seq`, `kind` (`user` |
+  `assistant` | `tool` | `error`), `content`, `payload`, `created_at`. `(conversation_id,
+  seq)` is unique. Tool payloads hold activity details, sources, links, and script
+  source where applicable. User payloads hold optional contextual-entry data.
 
-  (There's already a `conversations` table: the page and automation builders'
-  chat, owned by a page version or an automation, holding only user/assistant
-  text. The assistant needs tool events and plan entries, so this plan keeps its
-  own tables. Extending `conversations` with an owner column and more message
-  types is the alternative; decide when building phase 1.)
-- `assistant_events`: `id`, `conversation_id`, `seq`, `kind` (`user` | `assistant`
-  | `tool` | `plan_recorded` | `plan_result` | `error`), `payload_json`,
-  `created_at`. This is the transcript, and it's what `load_history` replays. A
-  `run_script` event stores the script's source, so "Show script" and "save as
-  automation" read it from here.
+The assistant uses its own tables; builder conversations remain separate.
+Phase 4 still needs a numbered migration and matching fresh-install schema update
+for the following proposed table and plan event kinds:
+
 - `assistant_change_plans`: `id`, `conversation_id`, `event_id`, `tool_use_id`,
   `steps_json`, `risk`, `status` (`PENDING` | `APPROVED` | `DECLINED` | `EXECUTED`
   | `PARTIAL` | `FAILED` | `EXPIRED` | `UNDONE`), `created_at`, `decided_at`,
@@ -994,30 +1055,45 @@ Migrations*.
 
 ## Routes (`yaffo/routes/assistant.py`)
 
+Implemented routes:
+
 | Route | Purpose |
 |---|---|
-| `GET /assistant` | Full-page view of conversations (the dialog is the usual entry) |
-| `POST /api/assistant/conversations` | New conversation (optional context payload) |
+| `GET /assistant` | Full-page assistant view |
+| `GET /api/assistant/conversations` | List conversations |
+| `POST /api/assistant/conversations` | Create a conversation with its first message and start a run → `202` |
+| `GET /api/assistant/conversations/<id>` | Poll status, run start time, and transcript |
 | `POST /api/assistant/conversations/<id>/messages` | Append a user message and start a run → `202` |
-| `GET /api/assistant/conversations/<id>/events?after=<seq>` | NDJSON event stream |
-| `POST /api/assistant/conversations/<id>/cancel` | Cooperative cancel (the `Agent` already supports `should_cancel`) |
-| `POST /api/assistant/plans/<id>/approve` / `decline` | The only way a change executes (replays the recorded steps) |
-| `POST /api/assistant/plans/<id>/undo` | Replays the captured inverse steps, in reverse order |
-| `POST /api/assistant/plans/<id>/save-as-automation` | Opens the automation builder seeded with the plan's script (a draft; nothing runs) |
+| `POST /api/assistant/conversations/<id>/cancel` | Cooperative cancellation |
+| `PATCH /api/assistant/conversations/<id>` | Rename a conversation |
 | `DELETE /api/assistant/conversations/<id>` | Delete a conversation and its events |
+| `POST /api/assistant/conversations/delete-all` | Delete all conversations |
+| `POST /settings/assistant/enabled` | Enable or disable the assistant |
+| `POST /settings/assistant/diagnostics/<group>` | Enable or disable a diagnostic group |
+| `POST /settings/assistant/redact-people` | Configure people-name redaction |
+
+Planned endpoints, not implemented:
+
+| Route | Purpose |
+|---|---|
+| `GET /api/assistant/conversations/<id>/events?after=<seq>` | Incremental NDJSON event delivery |
+| `POST /api/assistant/plans/<id>/approve` / `decline` | Approve replay of recorded steps or decline a plan |
+| `POST /api/assistant/plans/<id>/undo` | Replay captured inverse steps in reverse order |
+| `POST /api/assistant/plans/<id>/save-as-automation` | Seed an automation draft with the plan's script |
 
 All state-changing routes use the existing CSRF protection. Every user-facing string
 goes through gettext/i18next, per *Internationalization Standards*.
 
 ## Settings
 
-A new **Assistant** section on Settings, next to AI Generation (which supplies the
+The **Assistant** section on Settings sits next to AI Generation (which supplies the
 provider, model and key):
 
-- **Enable the assistant.**
+- **Enable the assistant.** On by default; availability also requires an API key.
 - **Diagnostics:** one switch each for logs, library stats, file checks, and job
-  history. All off means knowledge-only.
-- **Actions:** one switch per allowlisted action.
+  history (on by default), plus capture-date metadata (off by default). All off
+  means knowledge-only.
+- **Planned for phase 4 — actions:** one switch per allowlisted action.
   - Low-risk library edits and maintenance actions are on by default.
   - High-risk ones (deleting to the trash, moving or renaming files, merging or
     deleting people) are off until the user turns them on.
@@ -1030,11 +1106,17 @@ provider, model and key):
 - **Model:** automatically use the least expensive model from the AI Generation
   provider, with no assistant-specific override. Page building keeps its own choice.
 
-**Prerequisite:** the model registry in `providers.py` still lists the Claude 4.x
-generation. Refresh it to the current models (`claude-opus-5-5`, `claude-sonnet-5`,
-`claude-haiku-4-5-20251001`) before this ships.
+Model IDs and pricing come from the shared `model_clients/providers.py` registry;
+they are not duplicated in this plan.
 
 ## Testing
+
+Phase 3 coverage lives in `tests/yaffo/site_agents/assistant/`, the assistant
+route/task/repository tests, and `tests_js/assistant/`. Regression cases cover
+metadata opt-in and root confinement, bounded native probes, stale process
+status, historical-evidence filtering/redaction, and call-log retention/deletion.
+The approval, mutation, replay, and undo cases below are requirements for phase 4.
+
 
 - **Unit, per tool:**
   - schema validation
@@ -1095,11 +1177,14 @@ generation. Refresh it to the current models (`claude-opus-5-5`, `claude-sonnet-
      `undo`, `uses_network`, `setting_key`), and the undo inverses
      (`untag_media_items`, `unassign_faces`, the value-restoring batch setters).
 3. **Scripts and diagnostics — implemented** (see *Scripts and diagnostics
-   (phase 3)* for what was deferred).
+   (phase 3)* for behavior and limits).
    - The diagnostic tools, `AssistantFS`, redaction, `health_report`, the
      empty-conversation notice, and the diagnostics switches.
    - `run_script` with read-only results only (library queries).
-   - Contextual "Help me with this" from errors and failed jobs.
+   - Contextual "Help me with this" from errors, failed jobs, and flashes; Settings is excluded.
+   - Watcher/web status, AI-call summaries, opt-in capture-date metadata,
+     filesystem-type diagnostics, retained conversation call logs, and bounded
+     historical tool evidence.
 4. **Change plans and library edits.**
    - Recording plans, plan cards, approve/decline, replay with
      references, expiry, undo, partial-failure reporting, and the per-function
@@ -1111,8 +1196,8 @@ generation. Refresh it to the current models (`claude-opus-5-5`, `claude-sonnet-
      off-by-default switches and typed confirmation.
    - Save a plan's script as an automation draft.
 5. **Polish.**
-   - The diagnostics bundle export, the troubleshooting runbooks in the guide, a
-     conversation list, and cost display from the call log.
+   - The diagnostics bundle export, troubleshooting runbooks in the guide, and
+     cost display from the call log. The conversation list already exists.
    - Knowledgebase built on CI server and bundled with release
 
 ## Decisions
@@ -1144,16 +1229,3 @@ Settled during review (2026-09-25):
   stay in the builder rather than being duplicated here.
 - **Remote issue filing.** For now the diagnostics bundle is saved locally and the
   user decides where it goes.
-
-## Tool provider packages
-
-Under `yaffo/site_agents/assistant/tool_providers/`:
-
-- `knowledge/` groups the bundled documentation search (`knowledge.py`) and
-  its tool provider (`tools.py`).
-- `diagnostics/` groups the diagnostic tool provider (`diagnostics.py`),
-  filesystem access (`fs.py`), and health checks (`health.py`).
-- `links.py` and `script_tool.py` provide navigation and script execution.
-
-Shared assistant support, including redaction, settings, history, and response
-schemas, lives in the parent `assistant/` package.

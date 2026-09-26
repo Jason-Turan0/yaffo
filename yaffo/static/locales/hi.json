@@ -390,7 +390,9 @@
         "automation_runs": "“{{slug}}” के रन देखे",
         "link_to_photos": "“{{title}}” का लिंक बनाया",
         "link_to_media_item": "“{{title}}” का लिंक बनाया",
-        "link_to_page": "“{{title}}” का लिंक बनाया"
+        "link_to_page": "“{{title}}” का लिंक बनाया",
+        "ai_call_summary": "हाल के AI कॉल जाँचे",
+        "capture_date_source": "कैप्चर तिथि का मेटाडेटा जाँचा"
       }
     },
     "cancel": {

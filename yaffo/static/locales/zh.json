@@ -390,7 +390,9 @@
         "automation_runs": "查看了“{{slug}}”的运行记录",
         "link_to_photos": "已创建指向“{{title}}”的链接",
         "link_to_media_item": "已创建指向“{{title}}”的链接",
-        "link_to_page": "已创建指向“{{title}}”的链接"
+        "link_to_page": "已创建指向“{{title}}”的链接",
+        "ai_call_summary": "已检查最近的 AI 调用",
+        "capture_date_source": "已检查拍摄日期元数据"
       }
     },
     "cancel": {

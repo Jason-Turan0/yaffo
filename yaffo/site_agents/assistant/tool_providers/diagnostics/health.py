@@ -87,6 +87,10 @@ def check_media_dir(label: str, facts: dict, probe: Optional[dict] = None) -> li
                 f"Media folder {label} took {probe['seconds']:.1f}s to list its first entries; the drive is slow.",
                 DOC_PHOTOS_MISSING,
             ))
+    if str(facts.get("filesystem_type") or "").lower() == "exfat":
+        findings.append(Finding(check, WARNING,
+            f"Media folder {label} is on exFAT. If scans are slow or fail, check the drive and keep a backup.",
+            DOC_PHOTOS_MISSING))
     total, free = facts.get("total_bytes"), facts.get("free_bytes")
     if total and free is not None and (free < LOW_SPACE_BYTES or free / total < LOW_SPACE_FRACTION):
         findings.append(Finding(

@@ -390,7 +390,9 @@
         "automation_runs": "تم الاطلاع على عمليات تشغيل «{{slug}}»",
         "link_to_photos": "تم إنشاء رابط إلى «{{title}}»",
         "link_to_media_item": "تم إنشاء رابط إلى «{{title}}»",
-        "link_to_page": "تم إنشاء رابط إلى «{{title}}»"
+        "link_to_page": "تم إنشاء رابط إلى «{{title}}»",
+        "ai_call_summary": "تم فحص استدعاءات الذكاء الاصطناعي الأخيرة",
+        "capture_date_source": "تم فحص بيانات تاريخ الالتقاط الوصفية"
       }
     },
     "cancel": {

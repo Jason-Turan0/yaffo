@@ -59,6 +59,8 @@ class OpenAICompatibleModelClient(ModelClient):
         output_schema: Optional[dict] = None,
         max_tokens: int = _MAX_OUTPUT_TOKENS,
         log_dir: Optional[Path] = None,
+        persistent_log: bool = False,
+        log_feature: str = "unknown",
         api_key: str,
     ):
         self.model = model
@@ -70,7 +72,7 @@ class OpenAICompatibleModelClient(ModelClient):
         # System prompt is the first message; the rest of the turns append after it.
         self.messages: list[dict] = []
         self._client = openai.OpenAI(api_key=api_key, base_url=base_url)
-        self._log = CallLogger(log_dir)
+        self._log = CallLogger(log_dir, persistent=persistent_log, feature=log_feature)
 
     # ---- conversation building ------------------------------------------
 

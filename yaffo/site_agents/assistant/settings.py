@@ -2,7 +2,8 @@
 
 - `assistant_enabled`: shows or hides the assistant. On by default.
 - `assistant_diag_<group>`: what the assistant may look at (logs, library, files,
-  jobs). On by default; all off means knowledge-only.
+  jobs). On by default; all off means knowledge-only. Capture-date metadata is
+  a separate, off-by-default group.
 - `assistant_redact_people`: replace people names with `Person #<id>` in what is
   sent to the model. Off by default.
 The model is automatically the cheapest model of the AI Generation provider.
@@ -27,7 +28,8 @@ DIAG_LOGS = "logs"
 DIAG_LIBRARY = "library"
 DIAG_FILES = "files"
 DIAG_JOBS = "jobs"
-DIAGNOSTIC_GROUPS = (DIAG_LOGS, DIAG_LIBRARY, DIAG_FILES, DIAG_JOBS)
+DIAG_METADATA = "metadata"
+DIAGNOSTIC_GROUPS = (DIAG_LOGS, DIAG_LIBRARY, DIAG_FILES, DIAG_JOBS, DIAG_METADATA)
 
 
 def _diag_setting(group: str) -> str:
@@ -60,7 +62,8 @@ def set_enabled(enabled: bool) -> None:
 
 
 def diagnostics_enabled(group: str, session: Optional[Session] = None) -> bool:
-    return _get(session or db.session, _diag_setting(group)) != "false"
+    value = _get(session or db.session, _diag_setting(group))
+    return value == "true" if group == DIAG_METADATA else value != "false"
 
 
 def enabled_diagnostics(session: Optional[Session] = None) -> frozenset[str]:

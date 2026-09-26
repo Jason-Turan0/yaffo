@@ -125,7 +125,7 @@ def test_media_item_report(env):
 
 
 def test_people_names_redacted_when_asked(env):
-    provider, session = env[0], env[1]
+    provider = env[0]
     provider.redactor = Redactor(home=Path("/nowhere"), people={1: "Alice Smith"})
     text, _ = _call(provider, "media_item_report", media_item_id=1)
     assert "Alice" not in text and "Person #1" in text
@@ -203,3 +203,25 @@ def test_install_info_never_mentions_keys(env, monkeypatch):
     text, _ = _call(env[0], "install_info")
     assert "Version:" in text and "Anthropic · claude-haiku" in text
     assert "sk-ant" not in text
+
+
+def test_watcher_and_web_status_are_reported(env, monkeypatch):
+    provider = env[0]
+    monkeypatch.setattr(provider.fs, "process_status", lambda role: {
+        "pid": 1, "started_at": 1, "beat_at": 1, "healthy": False})
+    assert "File watcher: NOT RESPONDING" in provider.call_tool("worker_status", {}).model_text
+    report = provider.call_tool("install_info", {}).model_text
+    assert "Web server started" in report and "NOT RESPONDING" in report
+    assert any(f.check == "watcher" and f.level == "warning" for f in provider.health_findings())
+
+
+def test_media_report_reads_metadata_only_when_enabled(env, monkeypatch):
+    provider = env[0]
+    calls = []
+    monkeypatch.setattr(provider.fs, "capture_date_source", lambda *args: calls.append(args) or {"source": "none"})
+    provider.call_tool("media_item_report", {"media_item_id": 1})
+    assert calls == []
+    provider.groups |= {"metadata"}
+    result = provider.call_tool("media_item_report", {"media_item_id": 1})
+    assert calls == [("m1", "2019/a.jpg")]
+    assert "not proof of the original indexing source" in result.model_text

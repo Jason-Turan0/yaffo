@@ -341,14 +341,6 @@ button.nav-context-toggle[data-icon] {
         max-height: min(200px, 45dvh);
     }
 
-    .notification {
-        inset-inline: 16px;
-        inset-inline-start: calc(16px + env(safe-area-inset-left));
-        inset-inline-end: calc(16px + env(safe-area-inset-right));
-        inset-block-start: calc(16px + env(safe-area-inset-top));
-        max-width: none;
-    }
-
     .stats-grid,
     .pairing-forms,
     .share-grant-forms {
@@ -417,6 +409,15 @@ button.nav-context-toggle[data-icon] {
 }
 
 @media (max-width: 640px) {
+    .notification {
+        inset-inline: 16px;
+        inset-inline-start: calc(16px + env(safe-area-inset-left));
+        inset-inline-end: calc(16px + env(safe-area-inset-right));
+        inset-block-start: calc(16px + env(safe-area-inset-top));
+        width: auto;
+        max-width: none;
+    }
+
     .main-container {
         padding: 10px;
     }

@@ -20,7 +20,7 @@
                 </a>
             {% endif %}
 
-            {% if assistant_ready | default(false) and (job.status == 'FAILED' or job.error) %}
+            {% if assistant_ready | default(false) and (job.status == 'FAILED' or job.error or job.error_count) %}
                 <button type="button" class="btn btn-secondary btn-sm" data-assistant-help
                         data-job-id="{{ job.id }}" data-page="{{ job.name }}"
                         data-error="{{ (job.error or '')[:500] }}">

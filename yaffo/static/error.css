@@ -70,7 +70,14 @@
     color: var(--color-text-muted);
 }
 
-/* The one way off the page. The shared layer stretches every `.btn` to a 44px
+.error-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+}
+
+/* The shared layer stretches every `.btn` to a 44px
    target on a coarse pointer, but `.btn` is an inline-block, so that min-height
    would leave the label sitting at the top of the box. Make it a flex box so
    the label stays centred in the reserved target. */

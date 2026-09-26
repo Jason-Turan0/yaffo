@@ -59,6 +59,7 @@ class AutomationRunView:
     """A single row of an automation's run history, rendered on the detail page.
     Built from a Job (runs reuse the Job table) so the template stays dumb and the
     per-run-kind display logic lives in one tested place."""
+    job_id: str
     status: str
     status_label: str
     status_chip: str       # chip tone modifier for the status badge
@@ -173,11 +174,12 @@ def _run_status_chip(status: str) -> str:
 
 def _run_view(job: Job) -> AutomationRunView:
     return AutomationRunView(
+        job_id=job.id,
         status=job.status,
         status_label=_run_status_label(job.status),
         status_chip=_run_status_chip(job.status),
         is_finished=job.status in _RUN_FINISHED_STATUSES,
-        is_error=job.status == JOB_STATUS_FAILED or bool(job.error_count),
+        is_error=job.status == JOB_STATUS_FAILED or bool(job.error_count) or bool(job.error),
         progress=_run_progress(job),
         started_at=job.started_at or job.created_at,
         finished_at=job.completed_at,
