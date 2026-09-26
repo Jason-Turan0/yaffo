@@ -1,6 +1,8 @@
 """Routes for Ask Yaffo. The background run is replaced by a recorder, so these
 cover the HTTP contract: starting turns, polling, cancel, rename/delete, the
 settings switches, and availability (setting and demo mode)."""
+import json
+
 import pytest
 
 from yaffo.db import db
@@ -168,3 +170,45 @@ def test_demo_mode_hides_the_assistant(app, client, runs, with_key):
         assert 'id="assistant-open"' not in client.get("/").get_data(as_text=True)
     finally:
         app.config["DEMO_MODE"] = False
+
+
+def test_empty_conversation_notice_links_to_settings(client, with_key):
+    html = client.get("/").get_data(as_text=True)
+    assert 'id="assistant-notice-template"' in html
+    assert "it can check this computer" in html
+    assert 'href="/settings#assistant-section"' in html
+
+    for group in assistant_settings.DIAGNOSTIC_GROUPS:
+        assistant_settings.set_diagnostics_enabled(group, False)
+    html = client.get("/").get_data(as_text=True)
+    assert "documentation only. Nothing from this computer is sent." in html
+    assert "it can check this computer" not in html
+
+
+def test_attached_context_is_allowlisted_and_capped(client, runs, with_key):
+    response = client.post("/api/assistant/conversations", json={
+        "message": "Why did this fail?",
+        "context": {"page": "Utilities → Index Photos", "error": "x" * 900, "job_id": "abc",
+                    "api_key": "sk-nope", "error_code": True},
+    })
+    conversation_id = response.get_json()["conversation"]["id"]
+    user = repo.list_events(db.session, conversation_id)[0]
+    context = json.loads(user.payload)["context"]
+    assert set(context) == {"page", "error", "job_id"}
+    assert len(context["error"]) == 500
+    assert repo.latest_user_context(db.session, conversation_id) == context
+
+
+def test_diagnostics_and_redaction_switches(client):
+    html = client.get("/settings").get_data(as_text=True)
+    assert 'id="assistant-diag-logs"' in html and 'id="assistant-redact-people"' in html
+
+    client.post("/settings/assistant/diagnostics/files", data={})
+    assert "files" not in assistant_settings.enabled_diagnostics()
+    client.post("/settings/assistant/diagnostics/files", data={"enabled": "on"})
+    assert "files" in assistant_settings.enabled_diagnostics()
+    assert client.post("/settings/assistant/diagnostics/bogus", data={}).status_code == 404
+
+    client.post("/settings/assistant/redact-people", data={"enabled": "on"})
+    assert assistant_settings.redact_people() is True
+

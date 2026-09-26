@@ -85,3 +85,29 @@ describe('notification.js', () => {
     expect(sessionStorage.getItem('app-notification-flash')).toBeNull();
   });
 });
+
+describe('notification error action', () => {
+  it('adds the action to error toasts only and keeps them up long enough to click', async () => {
+    const notification = await loadNotification();
+    const run = vi.fn();
+    notification.setErrorAction({ label: 'Help me with this', run });
+
+    notification.success('Saved', 100);
+    const element = document.getElementById('app-notification');
+    expect(element.querySelector('button')).toBeNull();
+
+    notification.error('Could not scan', 100);
+    const button = element.querySelector('button.notification-action');
+    expect(button.textContent).toBe('Help me with this');
+    vi.advanceTimersByTime(3000);
+    expect(element.classList.contains('visible')).toBe(true);
+
+    button.click();
+    expect(run).toHaveBeenCalledWith('Could not scan');
+    expect(element.classList.contains('visible')).toBe(false);
+
+    notification.setErrorAction(null);
+    notification.error('Again', 100);
+    expect(element.querySelector('button')).toBeNull();
+  });
+});

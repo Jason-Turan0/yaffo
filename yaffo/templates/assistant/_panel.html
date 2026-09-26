@@ -7,7 +7,14 @@
 {% macro assistant_panel(page=false) %}
 <aside class="assistant-panel{% if page %} assistant-panel-page{% endif %}" id="assistant-panel"
        data-assistant-mode="{{ 'page' if page else 'floating' }}"
+       data-provider="{{ assistant_notice.provider }}"
        {% if not page %}hidden role="dialog" aria-label="{{ _('Ask Yaffo') }}"{% endif %}>
+    {% if not page %}
+    {# Drag (or focus and use the arrow keys) to change the panel's width. #}
+    <div class="assistant-resize-handle" id="assistant-resize" role="separator" tabindex="0"
+         aria-orientation="vertical" aria-controls="assistant-panel"
+         aria-label="{{ _('Resize panel') }}" title="{{ _('Drag to resize. Double-click to reset.') }}"></div>
+    {% endif %}
     <div class="assistant-toolbar">
         {% if not page %}
         <select id="assistant-conversation" class="searchable-select assistant-conversation-select"
@@ -24,8 +31,25 @@
         <button type="button" class="modal-close" id="assistant-close" aria-label="{{ _('Close') }}">&times;</button>
         {% endif %}
     </div>
-    {{ chat_dialog('assistant-chat', _("Ask Yaffo"),
-                   _("Answers come from Yaffo's documentation. It can't see or change your library."),
-                   _("Ask how something in Yaffo works…")) }}
+    {% set notice = assistant_notice %}
+    {# Shown at the top of every empty conversation (cloned by assistant.js). #}
+    <template id="assistant-notice-template">
+        <p class="assistant-notice">
+            {% if notice.checks_enabled %}
+            {{ _("Uses %(model)s (%(provider)s). To troubleshoot, it can check this computer, and what it reads is sent with your question.", model=notice.model_label, provider=notice.provider) }}
+            {% else %}
+            {{ _("Uses %(model)s (%(provider)s) and answers from Yaffo's documentation only. Nothing from this computer is sent.", model=notice.model_label, provider=notice.provider) }}
+            {% endif %}
+            <a href="{{ url_for('settings_index') }}#assistant-section">{{ _("Change in Settings") }}</a>
+        </p>
+    </template>
+    {{ chat_dialog('assistant-chat', _("Ask Yaffo"), "", _("Ask about Yaffo or your library…")) }}
+    <div class="assistant-context" id="assistant-context" hidden>
+        <span class="chip assistant-context-chip">
+            <span id="assistant-context-label"></span>
+            <button type="button" class="assistant-context-remove" id="assistant-context-remove"
+                    aria-label="{{ _('Remove attached context') }}" title="{{ _('Remove attached context') }}">&times;</button>
+        </span>
+    </div>
 </aside>
 {% endmacro %}

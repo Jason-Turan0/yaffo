@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-25 00:42-0500\n"
+"POT-Creation-Date: 2026-09-25 22:01-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -352,17 +352,17 @@ msgstr ""
 "Escanee sus fotos indexadas en busca de duplicados según un cronograma; los resultados aparecen "
 "en la herramienta Eliminar duplicados."
 
-#: yaffo/routes/assistant.py:52 yaffo/routes/pages.py:250 yaffo/routes/themes_page.py:239
+#: yaffo/routes/assistant.py:75 yaffo/routes/pages.py:250 yaffo/routes/themes_page.py:239
 #: yaffo/routes/utilities/automations.py:649
 msgid "Message is required."
 msgstr "Se requiere mensaje."
 
-#: yaffo/routes/assistant.py:55
+#: yaffo/routes/assistant.py:78
 #, python-format
 msgid "Messages can be at most %(count)s characters."
 msgstr "Los mensajes pueden tener como máximo %(count)s caracteres."
 
-#: yaffo/routes/assistant.py:61 yaffo/routes/pages.py:254 yaffo/routes/themes_page.py:243
+#: yaffo/routes/assistant.py:84 yaffo/routes/pages.py:254 yaffo/routes/themes_page.py:243
 #: yaffo/routes/utilities/automations.py:653
 #, python-format
 msgid "No API key configured. Add your %(provider)s API key in Settings → AI Generation."
@@ -370,25 +370,25 @@ msgstr ""
 "No hay clave API configurada. Agregue su clave API %(provider)s en Configuración → Generación de "
 "IA."
 
-#: yaffo/routes/assistant.py:143 yaffo/routes/assistant.py:148
+#: yaffo/routes/assistant.py:176 yaffo/routes/assistant.py:181
 msgid "The assistant is still answering."
 msgstr "El asistente todavía está respondiendo."
 
-#: yaffo/routes/assistant.py:167
+#: yaffo/routes/assistant.py:201
 msgid "Title is required."
 msgstr "El título es obligatorio."
 
-#: yaffo/routes/assistant.py:186
+#: yaffo/routes/assistant.py:220
 msgid "Assistant turned on."
 msgstr "Asistente activado."
 
-#: yaffo/routes/assistant.py:186
+#: yaffo/routes/assistant.py:220
 msgid "Assistant turned off."
 msgstr "Asistente desactivado."
 
-#: yaffo/routes/assistant.py:197
-msgid "Assistant model updated."
-msgstr "Modelo del asistente actualizado."
+#: yaffo/routes/assistant.py:231 yaffo/routes/assistant.py:238
+msgid "Assistant settings saved."
+msgstr "Configuración del asistente guardada."
 
 #: yaffo/routes/base.py:144
 msgid "The library database is out of date. Restart Yaffo to update it."
@@ -419,57 +419,68 @@ msgstr "Ya existe un archivo o carpeta con ese nombre"
 msgid "Could not create folder: %(reason)s"
 msgstr "No se pudo crear la carpeta: %(reason)s"
 
-#: yaffo/routes/faces.py:194
+#: yaffo/routes/faces.py:195
 #, python-format
 msgid "Cluster %(number)s"
 msgstr "Clúster %(number)s"
 
-#: yaffo/routes/faces.py:227 yaffo/templates/sharing/_device_content.html:14
+#: yaffo/routes/faces.py:228 yaffo/templates/sharing/_device_content.html:14
 #: yaffo/templates/sharing/_device_panel.html:18
 msgid "Unknown"
 msgstr "Desconocido"
 
-#: yaffo/routes/faces.py:258
+#: yaffo/routes/faces.py:259
 msgid " OR "
 msgstr " O "
 
-#: yaffo/routes/faces.py:379 yaffo/routes/filter_config.py:123
+#: yaffo/routes/faces.py:380 yaffo/routes/filter_config.py:123
 msgid "Items must be a list"
 msgstr "Los elementos deben ser una lista."
 
-#: yaffo/routes/faces.py:401 yaffo/routes/faces.py:469 yaffo/routes/faces.py:480
-#: yaffo/routes/people.py:119 yaffo/routes/people.py:178 yaffo/routes/people.py:220
-#: yaffo/routes/people.py:298
+#: yaffo/routes/faces.py:402 yaffo/routes/faces.py:509 yaffo/routes/faces.py:520
+#: yaffo/routes/people.py:124 yaffo/routes/people.py:183 yaffo/routes/people.py:225
+#: yaffo/routes/people.py:303
 msgid "Person not found"
 msgstr "Persona no encontrada"
 
-#: yaffo/routes/faces.py:419 yaffo/routes/faces.py:428
+#: yaffo/routes/faces.py:423 yaffo/routes/faces.py:459 yaffo/routes/faces.py:468
 msgid "Faces must contain numeric identifiers"
 msgstr "Las caras deben contener identificadores numéricos."
 
-#: yaffo/routes/faces.py:442
+#: yaffo/routes/faces.py:431
+msgid "This face isn't assigned to anyone"
+msgstr "Esta cara no está asignada a nadie"
+
+#: yaffo/routes/faces.py:439
+#, python-format
+msgid "Cleared %(count)s face"
+msgid_plural "Cleared %(count)s faces"
+msgstr[0] "%(count)s cara restablecida"
+msgstr[1] "%(count)s caras restablecidas"
+
+#: yaffo/routes/faces.py:482
 msgid "One or more faces are no longer available"
 msgstr "Una o más caras ya no están disponibles"
 
-#: yaffo/routes/faces.py:454
+#: yaffo/routes/faces.py:494
 #, python-format
 msgid "Successfully ignored %(count)s face"
 msgid_plural "Successfully ignored %(count)s faces"
 msgstr[0] "Cara %(count)s ignorada con éxito"
 msgstr[1] "Caras %(count)s ignoradas con éxito"
 
-#: yaffo/routes/faces.py:500
+#: yaffo/routes/faces.py:540
 #, python-format
 msgid "Successfully assigned %(count)s face to %(person)s"
 msgid_plural "Successfully assigned %(count)s faces to %(person)s"
 msgstr[0] "Se asignó exitosamente la cara %(count)s a %(person)s"
 msgstr[1] "Caras %(count)s asignadas exitosamente a %(person)s"
 
-#: yaffo/routes/faces.py:512
+#: yaffo/routes/faces.py:552
 msgid "Faces, person, and face status are required"
 msgstr "Se requieren rostros, personas y estados de rostros."
 
-#: yaffo/routes/faces.py:521
+#: yaffo/routes/faces.py:561
 msgid "Could not process faces"
 msgstr "No se pudieron procesar caras"
 
@@ -573,53 +584,53 @@ msgstr "Ya corre una generación."
 msgid "Version is not ready to publish."
 msgstr "La versión no está lista para publicarse."
 
-#: yaffo/routes/people.py:25
+#: yaffo/routes/people.py:30
 msgid "Gender must be male, female, or not specified"
 msgstr "El género debe ser masculino, femenino o no especificado."
 
-#: yaffo/routes/people.py:62 yaffo/routes/people.py:93 yaffo/routes/people.py:124
+#: yaffo/routes/people.py:67 yaffo/routes/people.py:98 yaffo/routes/people.py:129
 msgid "Name is required"
 msgstr "El nombre es obligatorio"
 
-#: yaffo/routes/people.py:68 yaffo/routes/people.py:100 yaffo/routes/people.py:133
+#: yaffo/routes/people.py:73 yaffo/routes/people.py:105 yaffo/routes/people.py:138
 #, python-format
 msgid "Person '%(name)s' already exists"
 msgstr "La persona '%(name)s' ya existe"
 
-#: yaffo/routes/people.py:81
+#: yaffo/routes/people.py:86
 #, python-format
 msgid "Added %(name)s"
 msgstr "Añadido %(name)s"
 
-#: yaffo/routes/people.py:153
+#: yaffo/routes/people.py:158
 msgid "Birthdate must be YYYY-MM-DD"
 msgstr "La fecha de nacimiento debe ser AAAA-MM-DD"
 
-#: yaffo/routes/people.py:166
+#: yaffo/routes/people.py:171
 #, python-format
 msgid "Updated '%(name)s'"
 msgstr "Actualizado '%(name)s'"
 
-#: yaffo/routes/people.py:168
+#: yaffo/routes/people.py:173
 #, python-format
 msgid "Renamed '%(old_name)s' to '%(name)s'"
 msgstr "Renombrado '%(old_name)s' a '%(name)s'"
 
-#: yaffo/routes/people.py:204
+#: yaffo/routes/people.py:209
 #, python-format
 msgid "Deleted %(name)s"
 msgstr "Eliminado %(name)s"
 
-#: yaffo/routes/people.py:302
+#: yaffo/routes/people.py:307
 msgid "No faces selected"
 msgstr "No hay caras seleccionadas"
 
-#: yaffo/routes/people.py:326
+#: yaffo/routes/people.py:313
 msgid "Person updated"
 msgstr "Persona actualizada"
 
-#: yaffo/routes/settings.py:94 yaffo/templates/settings/index.html:57
-#: yaffo/templates/settings/index.html:91
+#: yaffo/routes/settings.py:94 yaffo/templates/settings/index.html:19
+#: yaffo/templates/settings/index.html:53
 msgid "Media and thumbnail directories cannot be changed while importing or indexing is in progress."
 msgstr ""
 "Los directorios multimedia y de miniaturas no se pueden cambiar mientras hay una importación o "
@@ -1083,7 +1094,7 @@ msgstr ""
 msgid "Could not scan the filesystem"
 msgstr "No se pudo escanear el sistema de archivos"
 
-#: yaffo/routes/utilities/index_photos.py:174 yaffo/templates/settings/index.html:71
+#: yaffo/routes/utilities/index_photos.py:174 yaffo/templates/settings/index.html:33
 msgid "No media directories configured"
 msgstr "No hay directorios de medios configurados"
 
@@ -1301,51 +1312,51 @@ msgstr "Temas"
 msgid "Settings"
 msgstr "Ajustes"
 
-#: yaffo/templates/assistant/_panel.html:10 yaffo/templates/assistant/_panel.html:27
-#: yaffo/templates/base.html:155
+#: yaffo/templates/assistant/_panel.html:11 yaffo/templates/assistant/_panel.html:46
+#: yaffo/templates/base.html:156 yaffo/templates/base.html:217
 msgid "Ask Yaffo"
 msgstr "Pregunta a Yaffo"
 
-#: yaffo/templates/base.html:161
+#: yaffo/templates/base.html:162
 msgid "Pages"
 msgstr "paginas"
 
-#: yaffo/templates/base.html:179
+#: yaffo/templates/base.html:180
 msgid "Edit page"
 msgstr "Editar página"
 
-#: yaffo/templates/base.html:187
+#: yaffo/templates/base.html:188
 msgid "New page"
 msgstr "Nueva pagina"
 
-#: yaffo/templates/assistant/_panel.html:24 yaffo/templates/base.html:200
+#: yaffo/templates/assistant/_panel.html:31 yaffo/templates/base.html:201
 #: yaffo/templates/components/info_modal.html:6 yaffo/templates/components/info_modal.html:12
 #: yaffo/templates/components/modal.html:9
 msgid "Close"
 msgstr "Cerca"
 
-#: yaffo/templates/base.html:219
+#: yaffo/templates/base.html:225
 msgid "Select a folder"
 msgstr "Seleccione una carpeta"
 
-#: yaffo/templates/base.html:223
+#: yaffo/templates/base.html:229
 msgid "Up"
 msgstr "Arriba"
 
-#: yaffo/templates/base.html:238 yaffo/templates/base.html:254
+#: yaffo/templates/base.html:244 yaffo/templates/base.html:260
 #: yaffo/templates/components/chat_dialog.html:39 yaffo/templates/components/modal.html:17
-#: yaffo/templates/fragments/job_status_fragment.html:29
+#: yaffo/templates/fragments/job_status_fragment.html:37
 #: yaffo/templates/sharing/_transfers_panel.html:41
 #: yaffo/templates/utilities/automations_triggers.html:65
 #: yaffo/templates/utilities/automations_triggers.html:85
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: yaffo/templates/base.html:239
+#: yaffo/templates/base.html:245
 msgid "Select this folder"
 msgstr "Seleccione esta carpeta"
 
-#: yaffo/templates/base.html:248 yaffo/templates/base.html:255
+#: yaffo/templates/base.html:254 yaffo/templates/base.html:261
 msgid "Confirm"
 msgstr "Confirmar"
 
@@ -1602,7 +1613,7 @@ msgstr "¿Quitar del álbum?"
 msgid "Remove the selected photos from this album? The photos themselves are not deleted."
 msgstr "¿Eliminar las fotos seleccionadas de este álbum? Las fotos en sí no se eliminan."
 
-#: yaffo/templates/albums/album.html:86 yaffo/templates/settings/index.html:67
+#: yaffo/templates/albums/album.html:86 yaffo/templates/settings/index.html:29
 msgid "Remove"
 msgstr "Eliminar"
 
@@ -1636,8 +1647,8 @@ msgstr "Editar álbum"
 
 #: yaffo/templates/albums/album.html:145 yaffo/templates/components/modal.html:18
 #: yaffo/templates/filters/_config_modal.html:22 yaffo/templates/pages/design.html:38
-#: yaffo/templates/settings/_llm_api_key.html:19 yaffo/templates/settings/index.html:30
-#: yaffo/templates/settings/index.html:49 yaffo/templates/sharing/_download_directory_panel.html:18
+#: yaffo/templates/settings/_llm_api_key.html:19 yaffo/templates/settings/index.html:112
+#: yaffo/templates/settings/index.html:131 yaffo/templates/sharing/_download_directory_panel.html:18
 #: yaffo/templates/themes_page/index.html:143 yaffo/templates/utilities/automations.html:128
 #: yaffo/templates/utilities/automations.html:133
 msgid "Save"
@@ -1668,34 +1679,64 @@ msgstr "portada de %(album)s"
 msgid "An album is a collection you curate by hand — create one, then add photos to it."
 msgstr "Un álbum es una colección que seleccionas a mano: crea uno y luego agrégale fotos."
 
-#: yaffo/templates/assistant/_panel.html:14 yaffo/templates/themes_page/index.html:106
+#: yaffo/templates/assistant/_panel.html:16
+msgid "Resize panel"
+msgstr "Cambiar el tamaño del panel"
+
+#: yaffo/templates/assistant/_panel.html:16
+msgid "Drag to resize. Double-click to reset."
+msgstr "Arrastra para cambiar el tamaño. Haz doble clic para restablecerlo."
+
+#: yaffo/templates/assistant/_panel.html:21 yaffo/templates/themes_page/index.html:106
 #: yaffo/templates/utilities/automations_edit.html:23
 msgid "Conversation"
 msgstr "Conversación"
 
-#: yaffo/templates/assistant/_panel.html:15
+#: yaffo/templates/assistant/_panel.html:22
 msgid "New conversation"
 msgstr "Nueva conversación"
 
-#: yaffo/templates/assistant/_panel.html:18
+#: yaffo/templates/assistant/_panel.html:25
 msgid "New"
 msgstr "Nueva"
 
-#: yaffo/templates/assistant/_panel.html:20
+#: yaffo/templates/assistant/_panel.html:27
 msgid "Delete conversation"
 msgstr "Eliminar conversación"
 
-#: yaffo/templates/assistant/_panel.html:23
+#: yaffo/templates/assistant/_panel.html:30
 msgid "Open full page"
 msgstr "Abrir a página completa"
 
-#: yaffo/templates/assistant/_panel.html:28
-msgid "Answers come from Yaffo's documentation. It can't see or change your library."
-msgstr "Las respuestas salen de la documentación de Yaffo. No puede ver ni cambiar tu biblioteca."
+#: yaffo/templates/assistant/_panel.html:39
+#, python-format
+msgid ""
+"Uses %(model)s (%(provider)s). To troubleshoot, it can check this computer, and what it reads is "
+"sent with your question."
+msgstr ""
+"Usa %(model)s (%(provider)s). Para resolver problemas, puede revisar este ordenador, y lo que lee"
+" se envía con tu pregunta."
 
-#: yaffo/templates/assistant/_panel.html:29
-msgid "Ask how something in Yaffo works…"
-msgstr "Pregunta cómo funciona algo en Yaffo…"
+#: yaffo/templates/assistant/_panel.html:41
+#, python-format
+msgid ""
+"Uses %(model)s (%(provider)s) and answers from Yaffo's documentation only. Nothing from this "
+"computer is sent."
+msgstr ""
+"Usa %(model)s (%(provider)s) y responde solo con la documentación de Yaffo. No se envía nada de "
+"este ordenador."
+
+#: yaffo/templates/assistant/_panel.html:43
+msgid "Change in Settings"
+msgstr "Cambiar en Configuración"
+
+#: yaffo/templates/assistant/_panel.html:46
+msgid "Ask about Yaffo or your library…"
+msgstr "Pregunta sobre Yaffo o tu biblioteca…"
+
+#: yaffo/templates/assistant/_panel.html:51
+msgid "Remove attached context"
+msgstr "Quitar el contexto adjunto"
 
 #: yaffo/templates/assistant/index.html:4
 msgid "Ask Yaffo - Yaffo"
@@ -1786,7 +1827,7 @@ msgstr "Último"
 msgid "Processing in Progress"
 msgstr "Procesamiento en curso"
 
-#: yaffo/templates/components/photo_card.html:11 yaffo/templates/media/view.html:227
+#: yaffo/templates/components/photo_card.html:11 yaffo/templates/media/view.html:228
 msgid "Toggle favorite"
 msgstr "Alternar favorito"
 
@@ -2292,7 +2333,11 @@ msgstr "Comenzó:"
 msgid "Show Results"
 msgstr "Mostrar resultados"
 
-#: yaffo/templates/fragments/job_status_fragment.html:29
+#: yaffo/templates/fragments/job_status_fragment.html:27
+msgid "Help me with this"
+msgstr "Ayúdame con esto"
+
+#: yaffo/templates/fragments/job_status_fragment.html:37
 #: yaffo/templates/sharing/_transfers_panel.html:47
 msgid "Dismiss"
 msgstr "Despedir"
@@ -2387,74 +2432,74 @@ msgid_plural "Faces (%(count)s)"
 msgstr[0] "Cara (%(count)s)"
 msgstr[1] "Caras (%(count)s)"
 
-#: yaffo/templates/media/view.html:134 yaffo/templates/people/faces.html:71
+#: yaffo/templates/media/view.html:135 yaffo/templates/people/faces.html:71
 msgid "Face"
 msgstr "Rostro"
 
-#: yaffo/templates/media/view.html:146
+#: yaffo/templates/media/view.html:147
 msgid "No faces detected"
 msgstr "No se detectaron caras"
 
-#: yaffo/templates/media/view.html:151
+#: yaffo/templates/media/view.html:152
 #, python-format
 msgid "Label (%(count)s)"
 msgid_plural "Labels (%(count)s)"
 msgstr[0] "Etiqueta (%(count)s)"
 msgstr[1] "Etiquetas (%(count)s)"
 
-#: yaffo/templates/media/view.html:155
+#: yaffo/templates/media/view.html:156
 #, python-format
 msgid "Confidence: %(value)s"
 msgstr "Confianza: %(value)s"
 
-#: yaffo/templates/media/view.html:161
+#: yaffo/templates/media/view.html:162
 msgid "No labels"
 msgstr "Sin etiquetas"
 
-#: yaffo/templates/media/view.html:166
+#: yaffo/templates/media/view.html:167
 #, python-format
 msgid "Tag (%(count)s)"
 msgid_plural "Tags (%(count)s)"
 msgstr[0] "Etiqueta (%(count)s)"
 msgstr[1] "Etiquetas (%(count)s)"
 
-#: yaffo/templates/media/view.html:180
+#: yaffo/templates/media/view.html:181
 msgid "No tags"
 msgstr "Sin etiquetas"
 
-#: yaffo/templates/media/view.html:185 yaffo/templates/media/view.html:252
+#: yaffo/templates/media/view.html:186 yaffo/templates/media/view.html:253
 msgid "Edit Tags"
 msgstr "Editar etiquetas"
 
-#: yaffo/templates/media/view.html:197
+#: yaffo/templates/media/view.html:198
 msgid "This video is no longer available on disk."
 msgstr "Este vídeo ya no está disponible en el disco."
 
-#: yaffo/templates/media/view.html:208
+#: yaffo/templates/media/view.html:209
 msgid "This format can't play in the browser."
 msgstr "Este formato no se puede reproducir en el navegador."
 
-#: yaffo/templates/media/view.html:210
+#: yaffo/templates/media/view.html:211
 msgid "Open in default player"
 msgstr "Abrir en el reproductor predeterminado"
 
-#: yaffo/templates/media/view.html:241
+#: yaffo/templates/media/view.html:242
 msgid "Add New Tag"
 msgstr "Agregar nueva etiqueta"
 
-#: yaffo/templates/media/view.html:243
+#: yaffo/templates/media/view.html:244
 msgid "Tag name"
 msgstr "Nombre de etiqueta"
 
-#: yaffo/templates/media/view.html:244
+#: yaffo/templates/media/view.html:245
 msgid "Tag value (optional)"
 msgstr "Valor de etiqueta (opcional)"
 
-#: yaffo/templates/media/view.html:246
+#: yaffo/templates/media/view.html:247
 msgid "Add Tag"
 msgstr "Agregar etiqueta"
 
-#: yaffo/templates/media/view.html:252
+#: yaffo/templates/media/view.html:253
 msgid "Save Changes"
 msgstr "Guardar cambios"
 
@@ -2660,43 +2705,56 @@ msgstr "Regreso a Yaffo"
 
 #: yaffo/templates/settings/_assistant.html:4
 msgid ""
-"Ask Yaffo answers questions about how the app works, using Yaffo's documentation. It uses the API"
-" key from AI Generation and can't see or change your library."
+"Ask Yaffo answers questions and helps troubleshoot, using your AI Generation key. It can't change"
+" your library."
 msgstr ""
-"Pregunta a Yaffo responde dudas sobre cómo funciona la aplicación usando la documentación de "
-"Yaffo. Usa la clave de API de Generación de IA y no puede ver ni cambiar tu biblioteca."
+"Ask Yaffo responde preguntas y ayuda a resolver problemas con tu clave de Generación con IA. No "
+"puede cambiar tu biblioteca."
 
-#: yaffo/templates/settings/_assistant.html:12
-msgid "Show Ask Yaffo in the navigation bar"
-msgstr "Mostrar Pregunta a Yaffo en la barra de navegación"
+#: yaffo/templates/settings/_assistant.html:11
+msgid "Show Ask Yaffo"
+msgstr "Mostrar Ask Yaffo"
 
-#: yaffo/templates/settings/_assistant.html:17 yaffo/templates/settings/_llm.html:8
-msgid "Model"
-msgstr "Modelo"
+#: yaffo/templates/settings/_assistant.html:15
+msgid "Troubleshooting checks"
+msgstr "Comprobaciones para resolver problemas"
+
+#: yaffo/templates/settings/_assistant.html:17
+msgid "What it checks is sent with your question, without your home folder, email addresses or keys."
+msgstr ""
+"Lo que comprueba se envía con tu pregunta, sin tu carpeta personal, direcciones de correo ni "
+"claves."
+
+#: yaffo/templates/settings/_assistant.html:20
+msgid "Logs"
+msgstr "Registros"
 
 #: yaffo/templates/settings/_assistant.html:21
-#, python-format
-msgid "Default (%(model)s)"
-msgstr "Predeterminado (%(model)s)"
+msgid "Library contents"
+msgstr "Contenido de la biblioteca"
 
-#: yaffo/templates/settings/_assistant.html:32
-msgid ""
-"The default is the least expensive model from your AI Generation provider. A different provider "
-"needs its own API key."
-msgstr ""
-"El predeterminado es el modelo más económico de tu proveedor de Generación de IA. Otro proveedor "
-"necesita su propia clave de API."
+#: yaffo/templates/settings/_assistant.html:22
+msgid "Media folders"
+msgstr "Carpetas de medios"
 
-#: yaffo/templates/settings/_assistant.html:38
+#: yaffo/templates/settings/_assistant.html:23
+msgid "Background jobs"
+msgstr "Trabajos en segundo plano"
+
+#: yaffo/templates/settings/_assistant.html:39
+msgid "Hide people's names"
+msgstr "Ocultar nombres de personas"
+
+#: yaffo/templates/settings/_assistant.html:45
 #, python-format
 msgid "%(formatted)s saved conversation"
 msgid_plural "%(formatted)s saved conversations"
 msgstr[0] "%(formatted)s conversación guardada"
 msgstr[1] "%(formatted)s conversaciones guardadas"
 
-#: yaffo/templates/settings/_assistant.html:42
-msgid "Delete all conversations"
-msgstr "Eliminar todas las conversaciones"
+#: yaffo/templates/settings/_assistant.html:49
+msgid "Delete all"
+msgstr "Eliminar todo"
 
 #: yaffo/templates/settings/_labels.html:2
 msgid ""
@@ -2782,6 +2840,10 @@ msgstr ""
 "Potencia las funciones de personalización de IA. La clave API para el proveedor del modelo "
 "seleccionado se almacena de forma segura en el almacén de credenciales del sistema operativo."
 
+#: yaffo/templates/settings/_llm.html:8
+msgid "Model"
+msgstr "Modelo"
+
 #: yaffo/templates/settings/_llm_api_key.html:4
 #, python-format
 msgid "%(provider)s API key:"
@@ -2828,34 +2890,10 @@ msgid "Configure application settings"
 msgstr "Configurar los ajustes de la aplicación"
 
 #: yaffo/templates/settings/index.html:16
-msgid "Language"
-msgstr "Idioma"
-
-#: yaffo/templates/settings/index.html:20
-msgid "Application language"
-msgstr "Idioma de la aplicación"
-
-#: yaffo/templates/settings/index.html:28
-msgid "Controls the language used by Yaffo. The page reloads after saving."
-msgstr "Controla el idioma utilizado por Yaffo. La página se recarga después de guardar."
-
-#: yaffo/templates/settings/index.html:35
-msgid "Units"
-msgstr "Unidades"
-
-#: yaffo/templates/settings/index.html:39
-msgid "Preferred distance unit"
-msgstr "Unidad de distancia preferida"
-
-#: yaffo/templates/settings/index.html:47
-msgid "Used for distance filters and automation settings."
-msgstr "Se utiliza para filtros de distancia y configuraciones de automatización."
-
-#: yaffo/templates/settings/index.html:54
 msgid "Media Directories"
 msgstr "Directorios de medios"
 
-#: yaffo/templates/settings/index.html:55
+#: yaffo/templates/settings/index.html:17
 msgid ""
 "Add directories where your photos are stored. Yaffo scans these directories for photos and videos"
 " to index."
@@ -2863,61 +2901,85 @@ msgstr ""
 "Añade directorios donde se almacenan tus fotos. Yaffo escanea estos directorios en busca de fotos"
 " y videos para indexar."
 
-#: yaffo/templates/settings/index.html:78
+#: yaffo/templates/settings/index.html:40
 msgid "Enter directory path (for example, /Volumes/Photos or C:\\Photos)"
 msgstr "Ingrese la ruta del directorio (por ejemplo, /Volúmenes/Fotos o C:\\Fotos)"
 
-#: yaffo/templates/settings/index.html:83
+#: yaffo/templates/settings/index.html:45
 msgid "Add Directory"
 msgstr "Agregar directorio"
 
-#: yaffo/templates/settings/index.html:88
+#: yaffo/templates/settings/index.html:50
 msgid "Thumbnail Directory"
 msgstr "Directorio de miniaturas"
 
-#: yaffo/templates/settings/index.html:89
+#: yaffo/templates/settings/index.html:51
 msgid "Configure where cropped thumbnails of detected faces are stored for quick loading."
 msgstr ""
 "Configure dónde se almacenan las miniaturas recortadas de los rostros detectados para una carga "
 "rápida."
 
-#: yaffo/templates/settings/index.html:97
+#: yaffo/templates/settings/index.html:59
 msgid "Current Thumbnail Directory:"
 msgstr "Directorio de miniaturas actual:"
 
-#: yaffo/templates/settings/index.html:102
+#: yaffo/templates/settings/index.html:64
 msgid "Files:"
 msgstr "Archivos:"
 
-#: yaffo/templates/settings/index.html:103
+#: yaffo/templates/settings/index.html:65
 msgid "Total Size:"
 msgstr "Tamaño total:"
 
-#: yaffo/templates/settings/index.html:103
+#: yaffo/templates/settings/index.html:65
 msgid "Counting…"
 msgstr "Cálculo…"
 
-#: yaffo/templates/settings/index.html:110
+#: yaffo/templates/settings/index.html:72
 msgid "Enter new thumbnail directory path"
 msgstr "Ingrese la nueva ruta del directorio de miniaturas"
 
-#: yaffo/templates/settings/index.html:115
+#: yaffo/templates/settings/index.html:77
 msgid "Change Directory"
 msgstr "Cambiar directorio"
 
-#: yaffo/templates/settings/index.html:119
+#: yaffo/templates/settings/index.html:81
 msgid "No thumbnail directory configured. Set a directory to enable face thumbnail generation."
 msgstr ""
 "No hay ningún directorio de miniaturas configurado. Establezca un directorio para habilitar la "
 "generación de miniaturas de rostros."
 
-#: yaffo/templates/settings/index.html:125
+#: yaffo/templates/settings/index.html:87
 msgid "Enter thumbnail directory path"
 msgstr "Introduzca la ruta del directorio de miniaturas"
 
-#: yaffo/templates/settings/index.html:130
+#: yaffo/templates/settings/index.html:92
 msgid "Set Directory"
 msgstr "Establecer directorio"
+
+#: yaffo/templates/settings/index.html:98
+msgid "Language"
+msgstr "Idioma"
+
+#: yaffo/templates/settings/index.html:102
+msgid "Application language"
+msgstr "Idioma de la aplicación"
+
+#: yaffo/templates/settings/index.html:110
+msgid "Controls the language used by Yaffo. The page reloads after saving."
+msgstr "Controla el idioma utilizado por Yaffo. La página se recarga después de guardar."
+
+#: yaffo/templates/settings/index.html:117
+msgid "Units"
+msgstr "Unidades"
+
+#: yaffo/templates/settings/index.html:121
+msgid "Preferred distance unit"
+msgstr "Unidad de distancia preferida"
+
+#: yaffo/templates/settings/index.html:129
+msgid "Used for distance filters and automation settings."
+msgstr "Se utiliza para filtros de distancia y configuraciones de automatización."
 
 #: yaffo/templates/settings/index.html:144
 msgid "System Information"

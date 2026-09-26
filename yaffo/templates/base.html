@@ -209,7 +209,7 @@
 </div>
 
 {% if assistant_available | default(false) and request.endpoint != 'assistant_index' %}
-{% from "assistant/_panel.html" import assistant_panel %}
+{% from "assistant/_panel.html" import assistant_panel with context %}
 {{ assistant_panel() }}
 {% if assistant_ready | default(false) %}
 <button type="button" class="assistant-fab" id="assistant-fab" data-icon="assistant"

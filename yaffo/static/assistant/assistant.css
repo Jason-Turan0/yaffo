@@ -49,14 +49,18 @@ html:not([dir="rtl"]) body:has(.timeline-scrubber) .assistant-fab {
     inset-inline-end: calc(64px + env(safe-area-inset-right));
 }
 
-@media (min-width: 1201px) {
-    .nav-assistant-item {
-        display: none;
-    }
+/* Desktop uses the floating button; the narrow shell's Menu gets the item. */
+.nav-assistant-item {
+    display: none;
 }
 
 @media (max-width: 1200px) {
-    .assistant-fab {
+    .nav-assistant-item {
+        display: list-item;
+    }
+
+    /* Element + class, to outrank icons.css's button[data-icon] { display: inline-flex }. */
+    button.assistant-fab {
         display: none;
     }
 }
@@ -67,12 +71,43 @@ html:not([dir="rtl"]) body:has(.timeline-scrubber) .assistant-fab {
     inset-block-end: 0;
     inset-inline-end: 0;
     z-index: 150;
-    width: min(440px, 100vw);
+    /* --assistant-panel-width is set by the resize handle (assistant.js). */
+    width: min(var(--assistant-panel-width, 440px), 100vw);
     display: flex;
     flex-direction: column;
     background: var(--color-surface);
     border-inline-start: var(--border-width) solid var(--color-border);
     box-shadow: var(--shadow-lg);
+}
+
+/* The panel's inner edge: drag to resize. Straddles the border so it's easy to hit. */
+.assistant-resize-handle {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: -4px;
+    z-index: 1;
+    width: 8px;
+    cursor: col-resize;
+    touch-action: none;
+}
+
+.assistant-resize-handle:hover,
+.assistant-resize-handle:focus-visible,
+.assistant-resizing .assistant-resize-handle {
+    background: var(--color-accent-soft);
+    outline: none;
+}
+
+/* While dragging, keep the resize cursor and stop text selection across the page. */
+body.assistant-resizing {
+    cursor: col-resize;
+    user-select: none;
+}
+
+@media (max-width: 640px) {
+    .assistant-resize-handle {
+        display: none;
+    }
 }
 
 .assistant-panel[hidden] {
@@ -156,7 +191,40 @@ html:not([dir="rtl"]) body:has(.timeline-scrubber) .assistant-fab {
     padding-left: 18px;
 }
 
-/* The doc sections a run used, linked under its answer. */
+/* One check, expandable to exactly what the model received (after redaction). */
+.assistant-tool summary {
+    cursor: pointer;
+}
+
+.assistant-tool-error > .assistant-tool > summary,
+li.assistant-tool-error {
+    color: var(--color-danger);
+}
+
+.assistant-tool-detail {
+    max-height: 240px;
+    overflow: auto;
+    margin: 4px 0;
+    padding: 8px;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-sunken);
+    color: var(--color-text);
+    font-size: var(--font-size-xs);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.assistant-tool-note {
+    margin: 0 0 4px;
+}
+
+.assistant-tool-script {
+    margin-block-end: 4px;
+}
+
+/* The doc sections a run used, and any app links it made, under its answer. */
+.assistant-links,
 .assistant-sources {
     align-self: flex-start;
     max-width: 90%;
@@ -168,6 +236,7 @@ html:not([dir="rtl"]) body:has(.timeline-scrubber) .assistant-fab {
     color: var(--color-text-muted);
 }
 
+.assistant-links ul,
 .assistant-sources ul {
     margin: 2px 0 0;
     padding-left: 18px;
@@ -287,3 +356,56 @@ html:not([dir="rtl"]) body:has(.timeline-scrubber) .assistant-fab {
         min-height: 70dvh;
     }
 }
+
+/* The notice at the top of an empty conversation: model, whether it checks this
+   computer, and a link to Settings. */
+.assistant-notice {
+    margin: 0;
+    padding-block-end: 8px;
+    border-block-end: var(--border-width) solid var(--color-border);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+}
+
+/* Context attached by "Help me with this": a removable chip in the composer, and a
+   label above the message it went out with. */
+.assistant-context {
+    margin-block-end: 6px;
+}
+
+.assistant-context[hidden] {
+    display: none;
+}
+
+.assistant-context-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    font-size: var(--font-size-sm);
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.assistant-context-chip > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.assistant-context-remove {
+    border: none;
+    background: none;
+    color: inherit;
+    font-size: var(--font-size-lg);
+    line-height: 1;
+    cursor: pointer;
+}
+
+.assistant-context-sent {
+    align-self: flex-end;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    padding: 0 12px;
+}
+

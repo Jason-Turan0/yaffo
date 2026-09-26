@@ -117,7 +117,12 @@
       "reassignFailed": "चेहरा पुनः निर्दिष्ट करने में विफल",
       "reassignSucceeded": "चेहरा सफलतापूर्वक पुन: असाइन किया गया",
       "selectPerson": "एक व्यक्ति का चयन करें...",
-      "selectPersonRequired": "कृपया एक व्यक्ति का चयन करें"
+      "selectPersonRequired": "कृपया एक व्यक्ति का चयन करें",
+      "clear": "हटाएँ",
+      "clearHint": "इस चेहरे से व्यक्ति हटाएँ",
+      "clearing": "हटाया जा रहा है…",
+      "clearSucceeded": "चेहरे से व्यक्ति हटाया गया",
+      "clearFailed": "चेहरे से व्यक्ति नहीं हटाया जा सका"
     },
     "favorite": {
       "updateFailed": "पसंदीदा अपडेट करने में विफल"
@@ -352,7 +357,40 @@
       "searched_one": "दस्तावेज़ों में “{{query}}” खोजा ({{count}} परिणाम)",
       "searched_other": "दस्तावेज़ों में “{{query}}” खोजा ({{count}} परिणाम)",
       "summary_one": "दस्तावेज़ देखे ({{count}} चरण)",
-      "summary_other": "दस्तावेज़ देखे ({{count}} चरण)"
+      "summary_other": "दस्तावेज़ देखे ({{count}} चरण)",
+      "steps_one": "जाँच की ({{count}} चरण)",
+      "steps_other": "जाँच की ({{count}} चरण)",
+      "script": "स्क्रिप्ट चलाई: {{purpose}}",
+      "scriptFailed": "एक स्क्रिप्ट काम नहीं आई: {{purpose}}",
+      "describedSource": "{{source}} के फ़ील्ड देखे",
+      "failed": "{{line}} (काम नहीं आया)",
+      "sentNote": "संवेदनशील जानकारी हटाने के बाद {{provider}} को ठीक यही भेजा गया।",
+      "showScript": "स्क्रिप्ट दिखाएँ",
+      "tools": {
+        "health_report": "स्वास्थ्य जाँचें चलाईं",
+        "install_info": "Yaffo का संस्करण और इंस्टॉलेशन जाँचा",
+        "settings_summary": "सेटिंग्स का सारांश पढ़ा",
+        "migration_status": "डेटाबेस माइग्रेशन जाँचे",
+        "library_stats": "लाइब्रेरी की सामग्री गिनी",
+        "media_item_report": "आइटम #{{media_item_id}} देखा",
+        "face_consistency": "चेहरों की स्थिति जाँची",
+        "date_outliers": "असंभव तारीख़ें खोजीं",
+        "db_quick_check": "डेटाबेस जाँचा",
+        "recent_errors": "लॉग से हाल की त्रुटियाँ पढ़ीं",
+        "read_log": "{{name}} पढ़ा",
+        "media_dir_status": "मीडिया फ़ोल्डर जाँचे",
+        "probe_media_dir": "जाँचा कि मीडिया फ़ोल्डर कितनी जल्दी जवाब देता है",
+        "thumbnail_dir_status": "थंबनेल फ़ोल्डर जाँचा",
+        "stat_path": "“{{relative_path}}” जाँचा",
+        "list_dir": "“{{relative_path}}” की सूची बनाई",
+        "worker_status": "बैकग्राउंड टास्क सेवा जाँची",
+        "recent_jobs": "हाल के जॉब देखे",
+        "job_detail": "एक जॉब देखा",
+        "failed_tasks": "विफल बैकग्राउंड टास्क देखे",
+        "automation_runs": "“{{slug}}” के रन देखे",
+        "link_to_photos": "“{{title}}” का लिंक बनाया",
+        "link_to_media_item": "“{{title}}” का लिंक बनाया"
+      }
     },
     "cancel": {
       "confirm": "रोकें",
@@ -366,7 +404,7 @@
       "title": "बातचीत हटाएँ?"
     },
     "empty": {
-      "intro": "पूछें कि Yaffo में कोई भी चीज़ कैसे काम करती है। जवाब उपयोगकर्ता गाइड और डेवलपमेंट नोट्स से आते हैं, इस्तेमाल किए गए पेजों के लिंक के साथ।",
+      "intro": "पूछें कि Yaffo में कुछ कैसे काम करता है, या कुछ काम क्यों नहीं कर रहा है।",
       "suggestions": {
         "addFolders": "मैं अपने फ़ोटो फ़ोल्डर कैसे जोड़ूँ?",
         "assignFaces": "मैं किसी व्यक्ति को चेहरे कैसे असाइन करूँ?",
@@ -393,6 +431,9 @@
       "deleted_one": "{{count}} बातचीत हटाई गई।",
       "deleted_other": "{{count}} बातचीत हटाई गईं।"
     },
-    "sources": "स्रोत:"
+    "sources": "स्रोत:",
+    "helpWithThis": "इसमें मेरी मदद करें",
+    "helpPrompt": "यहाँ क्या गड़बड़ हुई, और मैं इसे कैसे ठीक करूँ?",
+    "openLinks": "खोलें:"
   }
 }

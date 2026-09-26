@@ -43,7 +43,13 @@ type AppConfig = {
 
 type NotificationType = 'success' | 'error' | 'warning' | 'info';
 
+type NotificationAction = {
+    label: string;
+    run(message: string): void;
+};
+
 type NotificationApi = {
+    setErrorAction?(action: NotificationAction | null): void;
     show(message: string, type?: NotificationType, duration?: number): void;
     hide(): void;
     flash(message: string, type?: NotificationType, duration?: number): void;
@@ -636,6 +642,11 @@ type AssistantDocSource = {
     scope: string;
 };
 
+type AssistantAppLink = {
+    title: string;
+    url: string;
+};
+
 type AssistantConversationSummary = {
     id: number;
     title: string;
@@ -643,12 +654,21 @@ type AssistantConversationSummary = {
     updated_at: string | null;
 };
 
+type AssistantContext = {
+    page?: string;
+    job_id?: string;
+    automation?: string;
+    error_code?: string;
+    error?: string;
+};
+
 type AssistantApi = {
-    open(): void;
+    open(options?: { focus?: boolean }): void;
     close(): void;
     isOpen(): boolean;
-    switchTo(conversationId: number | null): void;
+    switchTo(conversationId: number | null, options?: { focus?: boolean }): void;
     refreshList(): Promise<void>;
+    openWithContext(context: AssistantContext, message?: string): void;
 };
 
 type AssistantNamespace = {

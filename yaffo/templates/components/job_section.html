@@ -1,4 +1,4 @@
-{% from "components/job_status.html" import job_status_card %}
+{% from "components/job_status.html" import job_status_card with context %}
 {% macro job_section(active_jobs, show_cancel=true) %}
 {% if active_jobs|length > 0 %}
 <div class="section job-progress-section" id="job-progress-section">

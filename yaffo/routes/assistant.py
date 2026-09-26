@@ -1,4 +1,4 @@
-"""Routes for the in-app assistant (docs/development/ai-assistant.md, phase 1).
+"""Routes for the in-app assistant (docs/development/ai-assistant.md).
 
 A turn is started here and answered by assistant_run_task in the background; the
 chat UI polls the conversation until the run settles. Everything 404s when the
@@ -23,12 +23,16 @@ from yaffo.site_agents.assistant.schemas import (
     ConversationStarted,
     ConversationSummary,
     ConversationsDeleted,
+    AssistantNotice,
     conversation_status,
 )
 from yaffo.utils.context import context
 
 # Longer messages are refused rather than sent; this is a help chat, not a paste bin.
 MESSAGE_MAX_LENGTH = 4000
+# What "Help me with this" may attach, and how long each value may be. Anything
+# else in the payload is dropped.
+CONTEXT_LIMITS = {"page": 120, "job_id": 64, "automation": 120, "error_code": 64, "error": 500}
 
 
 def assistant_available() -> bool:
@@ -42,6 +46,26 @@ def _error(message: str, code: str, status: int):
 def _require_available() -> None:
     if not assistant_available():
         abort(404)
+
+
+def _context_from(body: dict) -> dict | None:
+    """The allowlisted, length-capped context a message carries, or None."""
+    raw = body.get("context")
+    if not isinstance(raw, dict):
+        return None
+    context = {}
+    for key, limit in CONTEXT_LIMITS.items():
+        value = raw.get(key)
+        if isinstance(value, (str, int)) and not isinstance(value, bool):
+            text = " ".join(str(value).split())[:limit]
+            if text:
+                context[key] = text
+    return context or None
+
+
+def _user_payload(body: dict) -> dict | None:
+    context = _context_from(body)
+    return {"context": context} if context else None
 
 
 def _message_or_error():
@@ -74,10 +98,21 @@ def _get_conversation_or_404(conversation_id: int):
 
 def assistant_settings_context() -> dict:
     """The Settings → Assistant section's data."""
+    enabled = assistant_settings.enabled_diagnostics()
     return {
         "enabled": assistant_settings.is_enabled(),
         "conversation_count": repo.count_conversations(db.session),
+        "diagnostics": {group: group in enabled for group in assistant_settings.DIAGNOSTIC_GROUPS},
+        "redact_people": assistant_settings.redact_people(),
     }
+
+
+def assistant_notice() -> AssistantNotice:
+    return AssistantNotice(
+        provider=assistant_settings.provider_label(),
+        model_label=assistant_settings.model_label(),
+        checks_enabled=bool(assistant_settings.enabled_diagnostics()),
+    )
 
 
 def _toast(response, message: str):
@@ -96,6 +131,7 @@ def init_assistant_routes(app: Flask):
             "assistant_available": available,
             # The floating button only shows once the assistant can actually answer.
             "assistant_ready": available and assistant_settings.api_key() is not None,
+            "assistant_notice": assistant_notice().to_dict() if available else None,
         }
 
     @app.route("/assistant", methods=["GET"])
@@ -117,7 +153,8 @@ def init_assistant_routes(app: Flask):
         if error is not None:
             return error
         conversation = repo.create_conversation(db.session, repo.title_from_message(message))
-        repo.add_event(db.session, conversation.id, ASSISTANT_EVENT_USER, message)
+        repo.add_event(db.session, conversation.id, ASSISTANT_EVENT_USER, message,
+                       _user_payload(request.get_json(silent=True) or {}))
         repo.start_run(db.session, conversation.id, assistant_settings.resolve_model())
         assistant_run_task(conversation.id)
         conversation = repo.get_conversation(db.session, conversation.id)
@@ -142,7 +179,8 @@ def init_assistant_routes(app: Flask):
             return error
         if not repo.start_run(db.session, conversation_id, assistant_settings.resolve_model()):
             return _error(gettext("The assistant is still answering."), "run_in_progress", 409)
-        repo.add_event(db.session, conversation_id, ASSISTANT_EVENT_USER, message)
+        repo.add_event(db.session, conversation_id, ASSISTANT_EVENT_USER, message,
+                       _user_payload(request.get_json(silent=True) or {}))
         assistant_run_task(conversation_id)
         conversation = repo.get_conversation(db.session, conversation_id)
         return jsonify(ConversationStarted(ConversationSummary.from_model(conversation)).to_dict()), 202
@@ -184,6 +222,20 @@ def init_assistant_routes(app: Flask):
         # The navbar button comes and goes with the setting; reload to apply it.
         response.headers["HX-Refresh"] = "true"
         return _toast(response, message)
+
+    @app.route("/settings/assistant/diagnostics/<group>", methods=["POST"])
+    def settings_assistant_diagnostics(group: str):
+        if demo_mode_enabled() or group not in assistant_settings.DIAGNOSTIC_GROUPS:
+            abort(404)
+        assistant_settings.set_diagnostics_enabled(group, request.form.get("enabled") == "on")
+        return _toast(make_response("", 200), gettext("Assistant settings saved."))
+
+    @app.route("/settings/assistant/redact-people", methods=["POST"])
+    def settings_assistant_redact_people():
+        if demo_mode_enabled():
+            abort(404)
+        assistant_settings.set_redact_people(request.form.get("enabled") == "on")
+        return _toast(make_response("", 200), gettext("Assistant settings saved."))
 
     @app.route("/api/assistant/conversations/delete-all", methods=["POST"])
     def assistant_delete_all():

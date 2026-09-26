@@ -117,7 +117,12 @@
       "reassignFailed": "重新分配脸部失败",
       "reassignSucceeded": "面部重新分配成功",
       "selectPerson": "选择一个人...",
-      "selectPersonRequired": "请选择一个人"
+      "selectPersonRequired": "请选择一个人",
+      "clear": "清除",
+      "clearHint": "从这张人脸上移除人物",
+      "clearing": "正在清除…",
+      "clearSucceeded": "已清除人脸",
+      "clearFailed": "无法清除人脸"
     },
     "favorite": {
       "updateFailed": "收藏夹更新失败"
@@ -352,7 +357,40 @@
       "searched_one": "在文档中搜索了“{{query}}”（{{count}} 个结果）",
       "searched_other": "在文档中搜索了“{{query}}”（{{count}} 个结果）",
       "summary_one": "已查阅文档（{{count}} 步）",
-      "summary_other": "已查阅文档（{{count}} 步）"
+      "summary_other": "已查阅文档（{{count}} 步）",
+      "steps_one": "已排查（{{count}} 步）",
+      "steps_other": "已排查（{{count}} 步）",
+      "script": "运行了脚本：{{purpose}}",
+      "scriptFailed": "脚本未能运行：{{purpose}}",
+      "describedSource": "查看了 {{source}} 的字段",
+      "failed": "{{line}}（未成功）",
+      "sentNote": "这正是脱敏后发送给 {{provider}} 的内容。",
+      "showScript": "显示脚本",
+      "tools": {
+        "health_report": "运行了健康检查",
+        "install_info": "检查了 Yaffo 版本和安装",
+        "settings_summary": "读取了设置摘要",
+        "migration_status": "检查了数据库迁移",
+        "library_stats": "统计了媒体库内容",
+        "media_item_report": "查看了项目 #{{media_item_id}}",
+        "face_consistency": "检查了人脸状态",
+        "date_outliers": "查找了不可能的日期",
+        "db_quick_check": "检查了数据库",
+        "recent_errors": "读取了日志中的最近错误",
+        "read_log": "读取了 {{name}}",
+        "media_dir_status": "检查了媒体文件夹",
+        "probe_media_dir": "测试了媒体文件夹的响应速度",
+        "thumbnail_dir_status": "检查了缩略图文件夹",
+        "stat_path": "检查了“{{relative_path}}”",
+        "list_dir": "列出了“{{relative_path}}”",
+        "worker_status": "检查了后台任务服务",
+        "recent_jobs": "查看了最近的任务",
+        "job_detail": "查看了一个任务",
+        "failed_tasks": "查看了失败的后台任务",
+        "automation_runs": "查看了“{{slug}}”的运行记录",
+        "link_to_photos": "已创建指向“{{title}}”的链接",
+        "link_to_media_item": "已创建指向“{{title}}”的链接"
+      }
     },
     "cancel": {
       "confirm": "停止",
@@ -366,7 +404,7 @@
       "title": "删除对话？"
     },
     "empty": {
-      "intro": "询问 Yaffo 中任何功能的用法。回答来自用户指南和开发说明，并附有所用页面的链接。",
+      "intro": "询问 Yaffo 中某项功能如何使用，或某处为什么出了问题。",
       "suggestions": {
         "addFolders": "如何添加我的照片文件夹？",
         "assignFaces": "如何把人脸分配给某个人？",
@@ -393,6 +431,9 @@
       "deleted_one": "已删除 {{count}} 个对话。",
       "deleted_other": "已删除 {{count}} 个对话。"
     },
-    "sources": "来源："
+    "sources": "来源：",
+    "helpWithThis": "帮我处理这个",
+    "helpPrompt": "这里出了什么问题？我该如何解决？",
+    "openLinks": "打开："
   }
 }

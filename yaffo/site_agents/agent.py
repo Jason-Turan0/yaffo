@@ -24,6 +24,11 @@ from yaffo.site_agents.prompt_generator import build_system_prompt
 from yaffo.site_agents.prompt_generator.theme_system_prompt import build_template_builder_system_prompt
 from yaffo.site_agents.prompt_generator.automation_system_prompt import build_automation_builder_system_prompt
 from yaffo.site_agents.assistant.prompt import build_assistant_system_prompt
+from yaffo.site_agents.assistant.diagnostics import DiagnosticsToolProvider
+from yaffo.site_agents.assistant.links import LinkToolProvider
+from yaffo.site_agents.assistant.redact import Redactor
+from yaffo.site_agents.assistant.script_tool import ScriptToolProvider
+from yaffo.site_agents.assistant.settings import DIAG_LIBRARY
 from yaffo.site_agents.assistant.tools import KnowledgeToolProvider
 from yaffo.site_agents.tool_providers import (
     AutomationToolProvider,
@@ -277,17 +282,33 @@ def create_assistant_agent(
     model: ModelAlias,
     api_key: str,
     history: list[tuple[str, str]],
+    session: Optional[Session] = None,
+    diagnostics: frozenset[str] = frozenset(),
+    redactor: Optional[Redactor] = None,
+    model_label: str = "",
     max_iterations: int = _MAX_ITERATIONS,
 ) -> Agent:
     """Wire the in-app assistant: the docs tools (search_docs / read_doc over the
-    bundled knowledge) and the stable assistant system prompt, with the
-    conversation's earlier turns (normalized (role, text) pairs) seeded into the
-    client. `model` and `api_key` are required — the caller resolves them from the
-    assistant settings."""
+    bundled knowledge), plus the read-only diagnostic tools for the enabled
+    `diagnostics` groups and, with the library group, run_script and the link
+    tools. The system prompt
+    matches the tools offered. The conversation's earlier turns (normalized (role,
+    text) pairs) are seeded into the client. `model` and `api_key` are required —
+    the caller resolves them from the assistant settings; `session` is required
+    when any diagnostics group is enabled."""
     providers: list[ToolProvider] = [KnowledgeToolProvider()]
+    if diagnostics:
+        if session is None:
+            raise ValueError("Diagnostics need a database session")
+        redactor = redactor or Redactor()
+        providers.append(DiagnosticsToolProvider(
+            session, groups=diagnostics, redactor=redactor, model_label=model_label))
+        if DIAG_LIBRARY in diagnostics:
+            providers.append(ScriptToolProvider(session, redactor=redactor))
+            providers.append(LinkToolProvider(session))
     client = create_model_client(
         model=model,
-        system_prompt=build_assistant_system_prompt(),
+        system_prompt=build_assistant_system_prompt(diagnostics),
         providers=providers,
         api_key=api_key,
     )

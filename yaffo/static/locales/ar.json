@@ -117,7 +117,12 @@
       "reassignFailed": "فشلت إعادة تعيين الوجه",
       "reassignSucceeded": "تمت إعادة تعيين الوجه بنجاح",
       "selectPerson": "حدد شخصًا…",
-      "selectPersonRequired": "الرجاء اختيار شخص"
+      "selectPersonRequired": "الرجاء اختيار شخص",
+      "clear": "مسح",
+      "clearHint": "إزالة الشخص من هذا الوجه",
+      "clearing": "جارٍ المسح…",
+      "clearSucceeded": "تم مسح الوجه",
+      "clearFailed": "تعذّر مسح الوجه"
     },
     "favorite": {
       "updateFailed": "فشل في تحديث المفضلة"
@@ -352,7 +357,40 @@
       "searched_one": "تم البحث في الوثائق عن «{{query}}» ({{count}} نتيجة)",
       "searched_other": "تم البحث في الوثائق عن «{{query}}» ({{count}} نتائج)",
       "summary_one": "تمت مراجعة الوثائق ({{count}} خطوة)",
-      "summary_other": "تمت مراجعة الوثائق ({{count}} خطوات)"
+      "summary_other": "تمت مراجعة الوثائق ({{count}} خطوات)",
+      "steps_one": "تم التحقق ({{count}} خطوة)",
+      "steps_other": "تم التحقق ({{count}} خطوات)",
+      "script": "تم تشغيل برنامج نصي: {{purpose}}",
+      "scriptFailed": "لم ينجح برنامج نصي: {{purpose}}",
+      "describedSource": "تم البحث عن حقول {{source}}",
+      "failed": "{{line}} (لم ينجح)",
+      "sentNote": "هذا بالضبط ما أُرسل إلى {{provider}} بعد حجب البيانات الحساسة.",
+      "showScript": "عرض البرنامج النصي",
+      "tools": {
+        "health_report": "تم تشغيل فحوص الحالة",
+        "install_info": "تم التحقق من إصدار Yaffo وتثبيته",
+        "settings_summary": "تمت قراءة ملخص الإعدادات",
+        "migration_status": "تم التحقق من ترحيلات قاعدة البيانات",
+        "library_stats": "تم عدّ محتويات المكتبة",
+        "media_item_report": "تم البحث عن العنصر رقم {{media_item_id}}",
+        "face_consistency": "تم التحقق من حالات الوجوه",
+        "date_outliers": "تم البحث عن تواريخ مستحيلة",
+        "db_quick_check": "تم التحقق من قاعدة البيانات",
+        "recent_errors": "تمت قراءة الأخطاء الأخيرة من السجلات",
+        "read_log": "تمت قراءة {{name}}",
+        "media_dir_status": "تم التحقق من مجلدات الوسائط",
+        "probe_media_dir": "تم اختبار سرعة استجابة مجلد وسائط",
+        "thumbnail_dir_status": "تم التحقق من مجلد الصور المصغرة",
+        "stat_path": "تم التحقق من «{{relative_path}}»",
+        "list_dir": "تم سرد محتويات «{{relative_path}}»",
+        "worker_status": "تم التحقق من خدمة المهام في الخلفية",
+        "recent_jobs": "تم الاطلاع على المهام الأخيرة",
+        "job_detail": "تم الاطلاع على مهمة",
+        "failed_tasks": "تم الاطلاع على مهام الخلفية الفاشلة",
+        "automation_runs": "تم الاطلاع على عمليات تشغيل «{{slug}}»",
+        "link_to_photos": "تم إنشاء رابط إلى «{{title}}»",
+        "link_to_media_item": "تم إنشاء رابط إلى «{{title}}»"
+      }
     },
     "cancel": {
       "confirm": "إيقاف",
@@ -366,7 +404,7 @@
       "title": "حذف المحادثة؟"
     },
     "empty": {
-      "intro": "اسأل عن طريقة عمل أي شيء في Yaffo. تأتي الإجابات من دليل المستخدم وملاحظات التطوير، مع روابط إلى الصفحات المستخدمة.",
+      "intro": "اسأل عن طريقة عمل شيء ما في Yaffo، أو عن سبب عدم عمله.",
       "suggestions": {
         "addFolders": "كيف أضيف مجلدات صوري؟",
         "assignFaces": "كيف أنسب الوجوه إلى شخص؟",
@@ -393,6 +431,9 @@
       "deleted_one": "تم حذف {{count}} محادثة.",
       "deleted_other": "تم حذف {{count}} محادثات."
     },
-    "sources": "المصادر:"
+    "sources": "المصادر:",
+    "helpWithThis": "ساعدني في هذا",
+    "helpPrompt": "ما الذي حدث خطأً هنا، وكيف أصلحه؟",
+    "openLinks": "فتح:"
   }
 }

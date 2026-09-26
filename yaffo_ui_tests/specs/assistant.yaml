@@ -1,0 +1,81 @@
+feature: assistant
+description: Ask Yaffo, the in-app assistant — the empty-conversation notice, the diagnostics settings, and opening it from a failed job with that job attached
+
+tags:
+  - core
+
+preconditions:
+  - Application is running
+  - An API key is configured under Settings → AI Generation, so the Ask Yaffo button shows
+  - Scenarios that send a message need a stubbed model endpoint; the ones here stop before a model is called
+
+context:
+  - tag: assistant-panel-template
+    path: templates/assistant/_panel.html
+    description: The panel — conversation switcher, empty-conversation notice, chat dialog, and context chip
+  - tag: assistant-js
+    path: static/assistant/assistant.js
+    description: Panel wiring — transcript rendering (expandable activity lines), the notice in the empty state, attached context, "Help me with this"
+  - tag: assistant-routes
+    path: routes/assistant.py
+    description: Conversation, message and settings routes
+  - tag: assistant-settings-template
+    path: templates/settings/_assistant.html
+    description: Settings → Assistant — the on/off switch, diagnostics switches, people-name redaction, delete all
+  - tag: job-card-template
+    path: templates/fragments/job_status_fragment.html
+    description: A job card; a failed job shows "Help me with this" when the assistant is ready
+
+data:
+  - All four troubleshooting checks (Logs, Library contents, Media folders, Background jobs) are on by default
+
+scenarios:
+  - name: assistant_notice_in_empty_conversation
+    goal: An empty conversation says which model answers and whether it checks this computer, with a way to change that
+    priority: high
+    steps:
+      - Click the Ask Yaffo button
+      - Click New
+      - Click "Change in Settings" in the notice
+    verify:
+      - The notice names the provider and model and says what it reads on this computer is sent with the question
+      - The message box is usable straight away; nothing has to be accepted first
+      - The link opens the settings page at the Assistant section
+
+  - name: assistant_diagnostics_switches
+    goal: The user can choose what the assistant may look at
+    priority: medium
+    steps:
+      - Navigate to the settings page
+      - In the Assistant section, untick every diagnostics switch
+      - Reload the page and open the panel on a new conversation
+    verify:
+      - Each switch saves with a success message
+      - The notice says it answers from the documentation only and nothing from this computer is sent
+    cleanup:
+      - Tick every diagnostics switch again
+
+  - name: assistant_help_with_failed_job
+    goal: From a failed job, the user opens the assistant with the job attached
+    priority: medium
+    steps:
+      - Make a job fail (for example, index a media folder whose drive is not mounted)
+      - Navigate to Utilities → Index Photos
+      - Click "Help me with this" on the failed job card
+    verify:
+      - The panel opens on a new conversation
+      - A chip in the composer names the job, and the message box holds a suggested question
+      - Clicking the chip's × removes it
+
+  - name: assistant_opens_from_the_narrow_menu
+    goal: On a narrow screen, Ask Yaffo opens from the Menu and the Menu gets out of the way
+    priority: medium
+    steps:
+      - Set the viewport to 390x844
+      - Open the navbar Menu
+      - Click "Ask Yaffo"
+      - Close the assistant panel
+    verify:
+      - There is no floating Ask Yaffo button in the lower-right corner
+      - After clicking "Ask Yaffo", the Menu is closed and the assistant panel is fully visible
+      - After closing the panel, focus is on the Menu button

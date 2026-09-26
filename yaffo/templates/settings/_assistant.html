@@ -1,25 +1,52 @@
 <div class="settings-section" id="assistant-section">
     <h2>{{ _("Assistant") }}</h2>
     <p class="section-description">
-        {{ _("Ask Yaffo answers questions about how the app works, using Yaffo's documentation. It uses the API key from AI Generation and can't see or change your library.") }}
+        {{ _("Ask Yaffo answers questions and helps troubleshoot, using your AI Generation key. It can't change your library.") }}
     </p>
 
-    <div class="form-group">
-        <label class="checkbox-label">
-            <input type="checkbox" name="enabled" id="assistant-enabled"
-                   hx-post="{{ url_for('settings_assistant_enabled') }}" hx-swap="none"
-                   {% if assistant.enabled %}checked{% endif %}>
-            {{ _("Show Ask Yaffo in the navigation bar") }}
-        </label>
-    </div>
+    <label class="checkbox-label">
+        <input type="checkbox" name="enabled" id="assistant-enabled"
+               hx-post="{{ url_for('settings_assistant_enabled') }}" hx-swap="none"
+               {% if assistant.enabled %}checked{% endif %}>
+        {{ _("Show Ask Yaffo") }}
+    </label>
 
-    <div class="form-group">
-        <p class="hint-text" id="assistant-conversation-count" data-count="{{ assistant.conversation_count }}">
-            {% trans count=assistant.conversation_count, formatted=assistant.conversation_count|format_integer %}{{ formatted }} saved conversation{% pluralize %}{{ formatted }} saved conversations{% endtrans %}
+    <fieldset class="assistant-settings-group">
+        <legend>{{ _("Troubleshooting checks") }}</legend>
+        <p class="hint-text">
+            {{ _("What it checks is sent with your question, without your home folder, email addresses or keys.") }}
         </p>
-        <button type="button" class="btn-danger" id="assistant-delete-all"
+        {% set diagnostics_labels = {
+            "logs": _("Logs"),
+            "library": _("Library contents"),
+            "files": _("Media folders"),
+            "jobs": _("Background jobs"),
+        } %}
+        <div class="assistant-check-options">
+            {% for group, label in diagnostics_labels.items() %}
+            <label class="checkbox-label">
+                <input type="checkbox" name="enabled" id="assistant-diag-{{ group }}"
+                       hx-post="{{ url_for('settings_assistant_diagnostics', group=group) }}" hx-swap="none"
+                       {% if assistant.diagnostics[group] %}checked{% endif %}>
+                {{ label }}
+            </label>
+            {% endfor %}
+        </div>
+        <label class="checkbox-label">
+            <input type="checkbox" name="enabled" id="assistant-redact-people"
+                   hx-post="{{ url_for('settings_assistant_redact_people') }}" hx-swap="none"
+                   {% if assistant.redact_people %}checked{% endif %}>
+            {{ _("Hide people's names") }}
+        </label>
+    </fieldset>
+
+    <div class="assistant-settings-group assistant-conversations">
+        <span class="hint-text" id="assistant-conversation-count" data-count="{{ assistant.conversation_count }}">
+            {% trans count=assistant.conversation_count, formatted=assistant.conversation_count|format_integer %}{{ formatted }} saved conversation{% pluralize %}{{ formatted }} saved conversations{% endtrans %}
+        </span>
+        <button type="button" class="btn-danger btn-sm" id="assistant-delete-all"
                 {% if not assistant.conversation_count %}disabled{% endif %}>
-            {{ _("Delete all conversations") }}
+            {{ _("Delete all") }}
         </button>
     </div>
 </div>

@@ -117,7 +117,12 @@
       "reassignFailed": "Failed to reassign face",
       "reassignSucceeded": "Face reassigned successfully",
       "selectPerson": "Select a person…",
-      "selectPersonRequired": "Please select a person"
+      "selectPersonRequired": "Please select a person",
+      "clear": "Clear",
+      "clearHint": "Remove the person from this face",
+      "clearing": "Clearing…",
+      "clearSucceeded": "Face cleared",
+      "clearFailed": "Couldn't clear the face"
     },
     "favorite": {
       "updateFailed": "Failed to update favorite"
@@ -356,7 +361,40 @@
       "searched_other": "Searched the docs for “{{query}}” ({{count}} results)",
       "read": "Read “{{title}}”",
       "readMissing": "Couldn't find “{{title}}”",
-      "other": "Used a tool"
+      "other": "Used a tool",
+      "steps_one": "Looked into it ({{count}} step)",
+      "steps_other": "Looked into it ({{count}} steps)",
+      "script": "Ran a script: {{purpose}}",
+      "scriptFailed": "A script didn't work: {{purpose}}",
+      "describedSource": "Looked up the fields of {{source}}",
+      "failed": "{{line}} (didn't work)",
+      "sentNote": "This is exactly what was sent to {{provider}}, after redaction.",
+      "showScript": "Show script",
+      "tools": {
+        "health_report": "Ran the health checks",
+        "install_info": "Checked the Yaffo version and install",
+        "settings_summary": "Read a summary of the settings",
+        "migration_status": "Checked the database migrations",
+        "library_stats": "Counted what's in the library",
+        "media_item_report": "Looked up item #{{media_item_id}}",
+        "face_consistency": "Checked face statuses",
+        "date_outliers": "Looked for impossible dates",
+        "db_quick_check": "Checked the database",
+        "recent_errors": "Read recent errors from the logs",
+        "read_log": "Read {{name}}",
+        "media_dir_status": "Checked the media folders",
+        "probe_media_dir": "Tested how quickly a media folder responds",
+        "thumbnail_dir_status": "Checked the thumbnail folder",
+        "stat_path": "Checked “{{relative_path}}”",
+        "list_dir": "Listed “{{relative_path}}”",
+        "worker_status": "Checked the background task host",
+        "recent_jobs": "Looked at recent jobs",
+        "job_detail": "Looked at a job",
+        "failed_tasks": "Looked at failed background tasks",
+        "automation_runs": "Looked at runs of “{{slug}}”",
+        "link_to_photos": "Made a link to “{{title}}”",
+        "link_to_media_item": "Made a link to “{{title}}”"
+      }
     },
     "errors": {
       "api_key_missing": "No API key configured. Add your {{provider}} API key in Settings → AI Generation.",
@@ -366,7 +404,7 @@
       "run_failed": "Something went wrong while answering. Try again."
     },
     "empty": {
-      "intro": "Ask how anything in Yaffo works. Answers come from the user guide and development notes, with links to the pages used.",
+      "intro": "Ask how something in Yaffo works, or why something isn't working.",
       "suggestions": {
         "addFolders": "How do I add my photo folders?",
         "assignFaces": "How do I assign faces to a person?",
@@ -393,6 +431,9 @@
       "conversationCount_one": "{{count}} saved conversation",
       "conversationCount_other": "{{count}} saved conversations",
       "deleteFailed": "Couldn't delete the conversations."
-    }
+    },
+    "helpWithThis": "Help me with this",
+    "helpPrompt": "What went wrong here, and how do I fix it?",
+    "openLinks": "Open:"
   }
 }

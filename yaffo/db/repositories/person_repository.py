@@ -1,4 +1,5 @@
 import json
+from dataclasses import dataclass
 from datetime import date
 
 import numpy as np
@@ -349,6 +350,44 @@ def recompute_person_similarities(session: Session, person_id: int, only_missing
         )
         session.commit()
     return len(updates)
+
+@dataclass(frozen=True)
+class ClearedFaces:
+    """What clear_faces changed: the faces reset, the photos they're on, and the
+    people who lost them (whose embeddings were rebuilt)."""
+    face_ids: list[int]
+    media_item_ids: list[int]
+    person_ids: list[int]
+
+
+def clear_faces(session: Session, face_ids: list[int]) -> ClearedFaces:
+    """Reset faces to UNASSIGNED: unlink them from their person and clear an
+    IGNORED status. Faces already unassigned are left alone. Rebuilds each
+    affected person's embeddings. The caller emits the media-modified event."""
+    rows = (
+        session.query(Face.id, Face.media_item_id, PersonFace.person_id)
+        .outerjoin(PersonFace, PersonFace.face_id == Face.id)
+        .filter(Face.id.in_(face_ids))
+        .filter((PersonFace.face_id.isnot(None)) | (Face.status != FACE_STATUS_UNASSIGNED))
+        .all()
+    )
+    cleared = [face_id for face_id, _media, _person in rows]
+    if not cleared:
+        return ClearedFaces([], [], [])
+    session.query(PersonFace).filter(PersonFace.face_id.in_(cleared)).delete(synchronize_session=False)
+    session.query(Face).filter(Face.id.in_(cleared)).update(
+        {Face.status: FACE_STATUS_UNASSIGNED}, synchronize_session=False
+    )
+    session.commit()
+    person_ids = sorted({person for _face, _media, person in rows if person is not None})
+    for person_id in person_ids:
+        update_person_embedding(person_id, session)
+    return ClearedFaces(
+        face_ids=cleared,
+        media_item_ids=sorted({media for _face, media, _person in rows if media is not None}),
+        person_ids=person_ids,
+    )
+
 
 def update_person_embedding(person_id: int, session):
     """Recompute a person's estimated birthdate and their per-life-stage medoid

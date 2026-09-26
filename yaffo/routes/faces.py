@@ -18,11 +18,12 @@ import pydash as _
 from sqlalchemy.orm import joinedload
 from yaffo.db.models import db, Face, Person, PersonFace, FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED, \
     FACE_STATUS_ASSIGNED, MediaItem, FACE_STATUS_PROCESSING, \
-    ApplicationSettings
+    ApplicationSettings, EVENT_MEDIA_MODIFIED
 
 from sklearn.metrics.pairwise import cosine_similarity
 
-from yaffo.db.repositories.person_repository import get_similarity_bounds
+from yaffo.background_tasks.events import emit_event
+from yaffo.db.repositories.person_repository import clear_faces, get_similarity_bounds
 from yaffo.db.repositories.media_repository import get_distinct_years, get_distinct_months
 from yaffo.domain.compare_utils import load_embedding, ui_threshold_to_similarity
 from yaffo.utils.context import context
@@ -404,6 +405,45 @@ def init_faces_routes(app: Flask):
 
         _save_shortcut_person_ids(person_ids)
         return "", 204
+
+    @app.route("/api/faces/unassign", methods=["POST"])
+    @demo_unsafe_allowed(DEMO_ROLE_SOURCE, DEMO_ROLE_RECEIVER)
+    def faces_unassign():
+        """Clear faces back to unassigned: unlink them from their person (or undo
+        an ignore). The photo detail screen's "Clear" on a face."""
+        data = request.get_json(silent=True) or {}
+        face_ids = data.get("faces", [])
+        try:
+            if not isinstance(face_ids, list) or not face_ids:
+                raise ValueError
+            face_ids = list(dict.fromkeys(int(face_id) for face_id in face_ids))
+        except (TypeError, ValueError):
+            return jsonify({
+                "success": False,
+                "message": gettext("Faces must contain numeric identifiers"),
+                "code": "invalid_face_ids",
+            }), 400
+
+        cleared = clear_faces(db.session, face_ids)
+        if not cleared.face_ids:
+            return jsonify({
+                "success": False,
+                "message": gettext("This face isn't assigned to anyone"),
+                "code": "faces_not_assigned",
+            }), 409
+        if cleared.media_item_ids:
+            emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": cleared.media_item_ids})
+        return jsonify({
+            "success": True,
+            "message": ngettext(
+                "Cleared %(count)s face",
+                "Cleared %(count)s faces",
+                len(cleared.face_ids),
+                count=len(cleared.face_ids),
+            ),
+            "code": "faces_unassigned",
+            "face_ids": cleared.face_ids,
+        })
 
     @app.route("/api/faces/assign", methods=["POST"])
     @demo_unsafe_allowed(DEMO_ROLE_SOURCE, DEMO_ROLE_RECEIVER)

@@ -12,20 +12,19 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from werkzeug.datastructures import MultiDict
 
-from yaffo.common import SHAPES
 from yaffo.db.models import (
-    MEDIA_TYPE_PHOTO,
-    MEDIA_TYPE_VIDEO,
     ClassificationLabel,
     MediaItem,
     Person,
     Tag,
 )
 from yaffo.db.repositories.media_repository import get_distinct_months, get_distinct_years
-from yaffo.distance_units import (
-    DISTANCE_UNIT_KILOMETERS,
-    distance_to_kilometers,
-    get_saved_distance_unit,
+from yaffo.distance_units import DISTANCE_UNIT_KILOMETERS, get_saved_distance_unit
+from yaffo.domain.media_filter_params import (
+    MEDIA_FILTER_PARAMS,
+    filter_query_params,
+    media_filter_selections,
+    parse_filter_params,
 )
 
 
@@ -40,44 +39,19 @@ def filter_selections(session: Session, args: MultiDict) -> dict:
     """Just the `selected_*` half of the filters context: the selections
     parsed from the querystring (empty when no args). Shared with the p2p
     remote gallery, whose *option lists* come from a peer's facets instead
-    of the local DB."""
-    path = args.get("path", type=str)
-    path = path.strip() if path else None
-    device = args.get("device", type=str)
-    device = device.strip() if device else None
-    media_type = args.get("media-type", type=str)
-    if media_type not in (MEDIA_TYPE_PHOTO, MEDIA_TYPE_VIDEO):
-        media_type = None
-    shape = args.get("shape", type=str)
-    if shape not in SHAPES:
-        shape = None
+    of the local DB. The parameters themselves are declared once, in
+    domain/media_filter_params.py."""
     distance_unit = get_saved_distance_unit(session)
-
     return {
-        'selected_path': path,
-        'selected_person_ids': args.getlist("person", type=int),
-        'selected_person_match_type': args.get("person-match-type", default='any', type=str),
-        'selected_label_ids': args.getlist("labels", type=int),
-        'selected_labels_match_type': args.get("labels-match-type", default='any', type=str),
-        'selected_tag_name': args.get("tag-name", type=str),
-        'selected_tag_value': args.get("tag-value", type=str),
-        'selected_location_names': args.getlist("location", type=str),
-        'selected_location_match_type': args.get("location-match-type", default='any', type=str),
-        'selected_unnamed': args.get("unnamed", type=int),
-        'selected_proximity_lat': args.get("proximity-lat", type=float),
-        'selected_proximity_lon': args.get("proximity-lon", type=float),
-        'selected_proximity_distance': args.get("proximity-distance", type=float),
+        **{f"selected_{key}": value for key, value in parse_filter_params(args).items()},
         'selected_distance_unit': distance_unit,
         'selected_distance_unit_label': gettext("Kilometers") if distance_unit == DISTANCE_UNIT_KILOMETERS else gettext("Miles"),
-        'selected_proximity_location': args.get("proximity-location", type=str),
-        'selected_year': args.get("year", type=int),
-        'selected_month': args.get("month", type=int),
-        'selected_device': device,
-        'selected_favorite': args.get("favorite", type=int),
-        'selected_media_type': media_type,
-        'selected_shape': shape,
-        'selected_gender': args.get("gender", type=int),
     }
+
+
+def _values(filters: dict) -> dict:
+    """The `selected_*` context back to plain selection keys."""
+    return {param.key: filters[f"selected_{param.key}"] for param in MEDIA_FILTER_PARAMS}
 
 
 def build_filters_context(session: Session, args: MultiDict) -> dict:
@@ -138,58 +112,10 @@ def to_media_filters(filters: dict) -> dict:
     same selection server-side (album_repository.add_matching): the photos added
     are exactly the photos the filters were showing.
     """
-    proximity_distance = filters["selected_proximity_distance"]
-    return {
-        "path": filters["selected_path"],
-        "year": filters["selected_year"],
-        "month": filters["selected_month"],
-        "device": filters["selected_device"],
-        "favorite": filters["selected_favorite"],
-        "media_type": filters["selected_media_type"],
-        "shape": filters["selected_shape"],
-        "person_ids": filters["selected_person_ids"],
-        "person_match_type": filters["selected_person_match_type"],
-        "gender": filters["selected_gender"],
-        "label_ids": filters["selected_label_ids"],
-        "labels_match_type": filters["selected_labels_match_type"],
-        "tag_name": filters["selected_tag_name"],
-        "tag_value": filters["selected_tag_value"],
-        "location_names": filters["selected_location_names"],
-        "location_match_type": filters["selected_location_match_type"],
-        "unnamed": filters["selected_unnamed"],
-        "proximity_lat": filters["selected_proximity_lat"],
-        "proximity_lon": filters["selected_proximity_lon"],
-        "proximity_km": (
-            distance_to_kilometers(proximity_distance, filters["selected_distance_unit"])
-            if proximity_distance
-            else None
-        ),
-    }
+    return media_filter_selections(_values(filters), filters["selected_distance_unit"])
 
 
 def to_query_params(filters: dict) -> dict:
     """The selections as querystring parameters — for pagination links and for
     carrying the current filters into a POST (the add screen's "all matching")."""
-    return {
-        "path": filters["selected_path"],
-        "year": filters["selected_year"],
-        "month": filters["selected_month"],
-        "device": filters["selected_device"],
-        "person": filters["selected_person_ids"],
-        "person-match-type": filters["selected_person_match_type"],
-        "tag-name": filters["selected_tag_name"],
-        "tag-value": filters["selected_tag_value"],
-        "location": filters["selected_location_names"],
-        "location-match-type": filters["selected_location_match_type"],
-        "unnamed": filters["selected_unnamed"],
-        "proximity-lat": filters["selected_proximity_lat"],
-        "proximity-lon": filters["selected_proximity_lon"],
-        "proximity-distance": filters["selected_proximity_distance"],
-        "proximity-location": filters["selected_proximity_location"],
-        "labels": filters["selected_label_ids"],
-        "labels-match-type": filters["selected_labels_match_type"],
-        "gender": filters["selected_gender"],
-        "favorite": filters["selected_favorite"],
-        "media-type": filters["selected_media_type"],
-        "shape": filters["selected_shape"],
-    }
+    return filter_query_params(_values(filters))

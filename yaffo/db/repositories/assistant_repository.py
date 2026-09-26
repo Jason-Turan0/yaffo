@@ -8,6 +8,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from yaffo.db.models import (
+    ASSISTANT_EVENT_USER,
     ASSISTANT_MODEL_EVENTS,
     ASSISTANT_STATUS_IDLE,
     ASSISTANT_STATUS_RUNNING,
@@ -127,6 +128,21 @@ def model_turns(session: Session, conversation_id: int) -> list[tuple[str, str]]
         .all()
     )
     return [(kind, content) for kind, content in rows]
+
+
+def latest_user_context(session: Session, conversation_id: int) -> Optional[dict[str, Any]]:
+    """The context attached to the conversation's latest user message ("Help me
+    with this"), if any."""
+    row = (
+        session.query(AssistantEvent.payload)
+        .filter(AssistantEvent.conversation_id == conversation_id, AssistantEvent.kind == ASSISTANT_EVENT_USER)
+        .order_by(AssistantEvent.seq.desc())
+        .first()
+    )
+    if row is None or not row[0]:
+        return None
+    context = json.loads(row[0]).get("context")
+    return context if isinstance(context, dict) else None
 
 
 def start_run(session: Session, conversation_id: int, model_id: str) -> bool:

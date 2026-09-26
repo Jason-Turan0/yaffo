@@ -5,6 +5,8 @@
 // A flash queued for the *next* page load (e.g. just before a reload), so a
 // confirmation survives the navigation that would otherwise wipe the toast.
 const NOTIFICATION_FLASH_KEY = 'app-notification-flash';
+// A toast with an action button stays up at least this long.
+const ACTION_MIN_DURATION_MS = 8000;
 
 class AppNotification {
     constructor() {
@@ -22,7 +24,18 @@ class AppNotification {
 
         /** @type {ReturnType<typeof setTimeout> | null} */
         this.hideTimeout = null;
+        /** @type {NotificationAction | null} */
+        this.errorAction = null;
         this.showPendingFlash();
+    }
+
+    /**
+     * Offer a button on every error toast (e.g. the assistant's "Help me with
+     * this"), called with the error's text. Pass null to remove it.
+     * @param {NotificationAction | null} action
+     */
+    setErrorAction(action) {
+        this.errorAction = action;
     }
 
     /**
@@ -40,6 +53,21 @@ class AppNotification {
         // Set message and type
         this.element.textContent = message;
         this.element.className = `notification ${type} visible`;
+
+        const action = type === 'error' ? this.errorAction : null;
+        if (action) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'notification-action';
+            button.textContent = action.label;
+            button.addEventListener('click', () => {
+                this.hide();
+                action.run(message);
+            });
+            this.element.appendChild(button);
+            // Long enough to reach the button.
+            if (duration > 0) duration = Math.max(duration, ACTION_MIN_DURATION_MS);
+        }
 
         // Auto-hide after duration
         if (duration > 0) {

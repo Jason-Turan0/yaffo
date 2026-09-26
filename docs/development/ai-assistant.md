@@ -1,9 +1,11 @@
 # AI Assistant — Implementation Plan
 
-Status: **phases 1–2 implemented** (2026-09-25). The knowledge-only assistant is
-available. The shared sandbox now supplies the groundwork for reviewed changes;
-scripts, diagnostics, approval/replay, and action cards are still planned in
-phases 3–5. The sections below describe the full design, including that future work.
+Status: **phases 1–3 implemented** (2026-09-25). The assistant answers from the
+docs, looks into problems with read-only diagnostic tools, and answers library
+questions with read-only scripts. It still can't change anything: change plans,
+approval/replay, action cards and undo are phase 4. The sections below describe
+the full design, including that future work; *Scripts and diagnostics (phase 3)*
+records what was built and what was deferred.
 
 ## Goal
 
@@ -88,9 +90,10 @@ shared chat dialog (`templates/components/chat_dialog.html`).
   on the result. A pending card expires after a while
   (default 30 minutes) or when its preconditions stop holding. It is re-validated at
   approval time, not at proposal time.
-- **First use.** A one-time disclosure explains what the assistant can see, what is
-  sent to the model provider, which provider and model are selected, and where to
-  change the diagnostics settings.
+- **What's shared.** No gate before the first message. Every empty conversation
+  starts with one line naming the provider and model, saying whether it may check
+  this computer (what it reads is sent with the question), and linking to
+  Settings → Assistant. The expandable activity lines show exactly what was sent.
 
 ### Sketches
 
@@ -124,7 +127,6 @@ navbar. The conversation switcher sits in the header.
 │ ┌───────────────────────────────────────────┐  [ Send ]   │
 │ │ Ask about Yaffo or your library…          │             │
 │ └───────────────────────────────────────────┘             │
-│ Claude Sonnet 5 · Diagnostics on · ⓘ What's shared        │
 └───────────────────────────────────────────────────────────┘
 ```
 
@@ -267,26 +269,21 @@ chip in the composer, so the user sees what's being attached.
 │   Sent to Anthropic after redaction (home folder → ~).       │
 ```
 
-**7. First use.** Shown once, before the first message is sent.
+**7. An empty conversation.** The notice sits above the suggestions; it reads
+"answers from Yaffo's documentation only. Nothing from this computer is sent"
+when every diagnostics switch is off.
 
 ```
-┌─ Before you start ────────────────────────────────────────┐
-│ Ask Yaffo uses Claude Sonnet 5 (Anthropic).                │
-│                                                            │
-│ Sent to Anthropic when you ask:                            │
-│  • your messages                                           │
-│  • what the assistant looks up: file and folder names,     │
-│    people names, counts, and log lines (redacted)          │
-│                                                            │
-│ Never sent: your photos, the database, API keys.           │
-│ Changes to your library always wait for your approval.     │
-│                                                            │
-│ What it can look at:                                       │
-│  [✓] Logs   [✓] Library stats   [✓] File checks   [✓] Jobs  │
-│  (change any time in Settings → Assistant)                 │
-│                                                            │
-│                        [ Not now ]  [ Start ]              │
-└────────────────────────────────────────────────────────────┘
+┌─ Ask Yaffo ───────────────────────────────────────────────┐
+│ [ New conversation          ▾ ]   [ + New ]   [ ⤢ ]  [ × ]│
+├───────────────────────────────────────────────────────────┤
+│ Uses Claude Haiku 4.5 (Anthropic). To troubleshoot, it    │
+│ can check this computer, and what it reads is sent with   │
+│ your question. Change in Settings ›                       │
+│ ───────────────────────────────────────────────────────── │
+│ Ask how something in Yaffo works, or why something isn't  │
+│ working.                                                  │
+│ ( How do I add my photo folders? ) ( How do I assign… )   │
 ```
 
 **8. Narrow screens.** The dialog becomes a full-height sheet. The switcher
@@ -414,18 +411,85 @@ Implemented in `background_tasks/automation_sandbox/`:
    an album that already existed produces no inverse. File operations and album
    deletion currently have no undo callback and must be shown as non-reversible.
 
+### Scripts and diagnostics (phase 3)
+
+Implemented in `yaffo/site_agents/assistant/`:
+
+1. **Diagnostic tools** (`diagnostics.py`, checks in `health.py`). The tools in
+   *Diagnostic tools* below, grouped by the four Settings switches: `logs`,
+   `library`, `files`, `jobs`. The overview tools (`health_report`, `install_info`,
+   `settings_summary`, `migration_status`) are offered whenever any group is on;
+   with every group off the assistant is knowledge-only. The system prompt is
+   generated from the same set, so it only describes tools the model has. Every
+   result is redacted, capped at 12,000 characters, and wrapped in
+   `<data source="…">`; the redacted text is also the activity line's `detail`.
+2. **Task host heartbeat.** The host writes `host_heartbeat` (one row in the queue
+   DB: pid, start time, last beat, workers alive/busy) every 5 seconds.
+   `worker_status` and the health checks treat a beat older than 60 seconds as a
+   stopped host.
+3. **`AssistantFS`** (`fs.py`) and **redaction** (`redact.py`) as specified under
+   *Filesystem access* and *Privacy*. Every path the model supplies goes through
+   `AssistantFS`; paths the app itself configures (the thumbnail folder, face crops,
+   video posters) are checked directly, with the same timeout helper. A home folder
+   only matches as a whole path component. People-name redaction replaces names
+   with `Person #<id>`.
+4. **`run_script`, read-only** (`script_tool.py`). Only the assistant profile's
+   read host functions are bound (`build_host_functions(..., include_mutating=False)`),
+   and `render_host_api("assistant", include_mutating=False)` documents only those,
+   so a script that calls a mutating function fails with an unknown name; nothing is
+   recorded. Limits: 30 seconds, 200 host calls, 20,000 characters of output. A
+   `describe_data_source` tool returns a data_query source's fields (schema only, no
+   user data), since the assistant has no `data_query` tool of its own.
+5. **What's shared.** A one-line notice at the top of every empty conversation
+   (see sketch 7) with a link to Settings → Assistant. A blocking first-use screen
+   was built first and dropped as too wordy for what it guarded: sending messages
+   to the provider was already the user's choice under AI Generation, and the
+   notice plus the activity lines cover what checks send.
+6. **Contextual entry.** "Help me with this" on a failed job card, and on every
+   error toast once the assistant is ready (`notification.setErrorAction`). The
+   context is allowlisted and length-capped by the route (`page`, `job_id`,
+   `automation`, `error_code`, `error`), stored on the user event's payload, shown
+   as a chip in the composer and above the sent message, and given to the model as
+   a `<context>` block in that turn.
+
+7. **Links into the app** (`links.py`). `link_to_photos` and `link_to_media_item`
+   (library group) validate what they point at and return app-relative links,
+   which the chat shows under the answer ("Open:") and opens in place. The model
+   never writes URLs. The gallery filters are declared once in
+   `domain/media_filter_params.py` (querystring name, selection key, type,
+   allowed values, description); the filter panel's parsing, pagination links,
+   `apply_media_filters` selections and the tool's input schema are all derived
+   from it.
+
+Deferred from the phase 3 list, each with the reason:
+
+- `ai_call_summary`: the call log is only written at DEBUG level, so it would
+  usually be empty. Revisit with the per-conversation call logs.
+- The date source in `media_item_report` (EXIF vs filename vs none) needs a
+  metadata re-read with its own setting; the report shows the stored date only.
+- exFAT detection: the standard library can't read a volume's filesystem type.
+  `media_dir_status` reports whether a folder is on a separate mounted volume.
+- Whether the file watcher is running: it has no heartbeat yet.
+- "Started before its code last changed" is checked for the task host only; the
+  web server's start time isn't recorded.
+- Earlier turns are replayed as text only, so the model doesn't see a previous
+  turn's tool results (as in phase 1).
+- Contextual entries on server-rendered flashes and the Settings sections.
+
 New package: `yaffo/site_agents/assistant/`
 
 | Module | Responsibility |
 |---|---|
-| `agent.py` | `create_assistant_agent(...)`, alongside the existing `create_*_agent` factories |
+| `agent.py` (in `site_agents/`) | `create_assistant_agent(...)`, alongside the existing `create_*_agent` factories |
 | `prompt.py` | System prompt: role, scope, `render_host_api("assistant")`, the batching and reference rules, how to cite, the untrusted-data rule, response language (reuse `prompt_generator/response_language.py`) |
-| `knowledge.py` | Loads the bundled docs index; search + read |
-| `script_tool.py` | The `run_script` `ToolProvider`: run in preview with the assistant profile, redact outputs, turn recorded mutating calls into a `ChangePlan` |
-| `plans.py` | `ChangePlan`: freeze, validate, check preconditions at approval, capture undo, replay with reference substitution, undo |
-| `diagnostics.py` | The diagnostic tools (a `ToolProvider`) and the health checks behind `health_report` |
+| `knowledge.py` / `tools.py` | Loads the bundled docs index; `search_docs` + `read_doc` |
+| `script_tool.py` | The `run_script` `ToolProvider`. Phase 3: read host functions only. Phase 4: run in preview with the assistant profile and turn recorded mutating calls into a `ChangePlan` |
+| `plans.py` | Phase 4. `ChangePlan`: freeze, validate, check preconditions at approval, capture undo, replay with reference substitution, undo |
+| `diagnostics.py` | The diagnostic tools (a `ToolProvider`) |
+| `health.py` | The health checks behind `health_report`, as pure functions |
 | `fs.py` | `AssistantFS`: the only filesystem access, over named roots |
-| `redact.py` | One redaction pass applied to every script result and print line |
+| `redact.py` | One redaction pass applied to every tool result |
+| `settings.py` | The assistant's settings: on/off, diagnostics groups, name redaction |
 
 ### Runs are durable, like PageVersion
 
@@ -504,6 +568,9 @@ while the model gets text.
 | `search_docs(query, scope?)` | Top matching doc sections: title, path, anchor, snippet. `scope`: `guide` (default) or `development`. No user data |
 | `read_doc(path, anchor?)` | One doc page or section from the bundle, capped |
 | `run_script(code, purpose)` | Runs a Starlark script in preview mode with the assistant host profile. Returns its value, printed output, errors, and (when it recorded changes) the change plan id. `purpose` is a one-line label for the activity line |
+| `describe_data_source(source)` | The fields of a `data_query` source, so scripts query real columns. Schema only, no user data |
+| `link_to_photos(title, filters, view?)` | A gallery link with filters applied. The filters come from the same table the filter panel uses (`domain/media_filter_params.py`); returns the match count and makes no link when nothing matches |
+| `link_to_media_item(title, media_item_id)` | A link to one item's detail page |
 
 Keeping the docs and diagnostic tools native means "how do I…" and "what's wrong?"
 questions never involve code, cost the fewest tokens, and show one clear activity
@@ -841,7 +908,8 @@ templates, static files, translations and migrations. So:
 
 ## Privacy, consent and redaction
 
-- **Disclosure:** the first-use screen and the Settings page list what can be sent:
+- **Disclosure:** the notice in every empty conversation says whether checks of
+  this computer are sent, and Settings → Assistant lists what can be sent:
   - the conversation
   - tool results: log lines, file and folder names, people names, counts, settings
     summaries
@@ -1021,10 +1089,11 @@ generation. Refresh it to the current models (`claude-opus-5-5`, `claude-sonnet-
    - The change-plan fields on `HostFunction` (`risk`, `precondition`,
      `undo`, `uses_network`, `setting_key`), and the undo inverses
      (`untag_media_items`, `unassign_faces`, the value-restoring batch setters).
-3. **Scripts and diagnostics.**
+3. **Scripts and diagnostics — implemented** (see *Scripts and diagnostics
+   (phase 3)* for what was deferred).
    - The diagnostic tools, `AssistantFS`, redaction, `health_report`, the
-     disclosure screen, and the diagnostics switches.
-   - `run_script` in preview with read-only results only (library queries).
+     empty-conversation notice, and the diagnostics switches.
+   - `run_script` with read-only results only (library queries).
    - Contextual "Help me with this" from errors and failed jobs.
 4. **Change plans and library edits.**
    - Recording plans, plan cards, approve/decline, replay with
@@ -1053,6 +1122,8 @@ Settled during review (2026-09-25):
 - **Attaching the current page's state** (filters, selection) to contextual prompts
   is deferred.
 - **No monthly spend cap** for the assistant.
+- **No first-use gate.** A one-line notice in each empty conversation, linking to
+  Settings → Assistant, replaces the blocking disclosure screen.
 
 ## Deferred (flagged, not planned)
 

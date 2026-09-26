@@ -20,6 +20,14 @@
                 </a>
             {% endif %}
 
+            {% if assistant_ready | default(false) and (job.status == 'FAILED' or job.error) %}
+                <button type="button" class="btn btn-secondary btn-sm" data-assistant-help
+                        data-job-id="{{ job.id }}" data-page="{{ job.name }}"
+                        data-error="{{ (job.error or '')[:500] }}">
+                    {{ _("Help me with this") }}
+                </button>
+            {% endif %}
+
             {% if show_cancel %}
                 <button class="btn {{ 'btn-secondary' if is_finished else 'btn-danger' }} btn-sm"
                         hx-post="{{ url_for('job_delete' if is_finished else 'job_cancel', job_id=job.id) }}"

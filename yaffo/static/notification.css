@@ -44,3 +44,21 @@
 .notification.info {
     background: var(--color-info);
 }
+/* An optional action on the toast (e.g. the assistant's "Help me with this"). */
+.notification-action {
+    display: block;
+    margin-block-start: 10px;
+    padding: 4px 10px;
+    border: var(--border-width) solid currentColor;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+}
+
+.notification-action:hover {
+    background: var(--color-surface-inverse);
+    color: var(--color-text-inverse);
+}

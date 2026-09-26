@@ -396,11 +396,17 @@ def _dependency(fn: HostFunction, session: Session, progress: Any) -> Any:
     return progress if fn.injects == "progress" else session
 
 
-def build_host_functions(session: Session, progress: Any = None, *, profile: str = "automation") -> dict[str, Callable[..., Any]]:
+def build_host_functions(
+    session: Session, progress: Any = None, *, profile: str = "automation", include_mutating: bool = True,
+) -> dict[str, Callable[..., Any]]:
     """The curated host callables for a run, derived from HOST_API and bound to their
     run dependency -- the `session` (so each reads within the caller's transaction),
-    or the `progress` reporter for report_progress. Pass as `functions` to run_starlark."""
-    return {fn.name: _bind(fn.impl, _dependency(fn, session, progress)) for fn in host_api(profile)}
+    or the `progress` reporter for report_progress. Pass as `functions` to run_starlark.
+    `include_mutating=False` binds only the read-only functions."""
+    return {
+        fn.name: _bind(fn.impl, _dependency(fn, session, progress))
+        for fn in host_api(profile) if include_mutating or not fn.mutating
+    }
 
 
 def host_api(profile: str = "automation") -> tuple[HostFunction, ...]:
@@ -471,22 +477,27 @@ def build_recording_host_functions(
     return {fn.name: record(fn) for fn in host_api(profile)}, calls
 
 
-def render_host_api(profile: str = "automation") -> str:
+def render_host_api(profile: str = "automation", *, include_mutating: bool = True) -> str:
     """The host API as agent-facing docs for the automation system prompt -- one
     block per callable. Single source with build_host_functions, so the advertised
-    API can't drift from what the sandbox actually provides."""
-    blocks: list[str] = [
-        "Preview: mutations are recorded, never executed. A mutation returning a value "
-        "returns an opaque $ref:N token (zero-based mutation index). Only pass this token "
-        "unchanged to later mutating calls; do not compute with it or use it in reads. "
-        "data_query returns at most 5,000 rows per call. Runs have time, call and output limits."
-    ]
+    API can't drift from what the sandbox actually provides. `include_mutating=False`
+    documents only the read-only functions (for a caller that binds only those)."""
+    blocks: list[str] = []
+    if include_mutating:
+        blocks.append(
+            "Preview: mutations are recorded, never executed. A mutation returning a value "
+            "returns an opaque $ref:N token (zero-based mutation index). Only pass this token "
+            "unchanged to later mutating calls; do not compute with it or use it in reads."
+        )
+    blocks.append("data_query returns at most 5,000 rows per call. Runs have time, call and output limits.")
     for fn in host_api(profile):
+        if fn.mutating and not include_mutating:
+            continue
         blocks.append(
             f"{fn.signature}\n"
             f"  {fn.description}\n"
             f"  Returns: {fn.returns}\n"
-            f"  Example: {fn.example}"
+            f"  Example: {fn.example}\n"
             f"  Mutating: {fn.mutating or False}"
         )
     return "\n\n".join(blocks)

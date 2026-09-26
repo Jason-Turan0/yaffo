@@ -20,11 +20,11 @@ from yaffo.db.models import (
 from yaffo.db.repositories.media_dir_repository import get_media_dirs
 from yaffo.db.repositories.media_filter_repository import apply_media_filters
 from yaffo.routes import filter_config
+from yaffo.domain.media_filter_params import LIBRARY_VIEWS
 from yaffo.routes.filter_panel import build_filters_context, to_media_filters, to_query_params
 from yaffo.utils.context import context
 from yaffo.utils.photo_dates import parse_date_taken
 
-LIBRARY_VIEWS = ("grid", "timeline")
 LIBRARY_VIEW_SETTING = "library_view"
 
 

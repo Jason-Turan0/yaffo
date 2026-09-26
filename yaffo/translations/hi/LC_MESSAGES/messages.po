@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-25 00:42-0500\n"
+"POT-Creation-Date: 2026-09-25 22:01-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: hi\n"
@@ -342,17 +342,17 @@ msgstr ""
 "एक शेड्यूल पर डुप्लिकेट के लिए अपनी अनुक्रमित फ़ोटो को स्कैन करें - परिणाम डुप्लिकेट हटाएँ टूल "
 "में दिखाई देंगे।"
 
-#: yaffo/routes/assistant.py:52 yaffo/routes/pages.py:250 yaffo/routes/themes_page.py:239
+#: yaffo/routes/assistant.py:75 yaffo/routes/pages.py:250 yaffo/routes/themes_page.py:239
 #: yaffo/routes/utilities/automations.py:649
 msgid "Message is required."
 msgstr "संदेश आवश्यक है."
 
-#: yaffo/routes/assistant.py:55
+#: yaffo/routes/assistant.py:78
 #, python-format
 msgid "Messages can be at most %(count)s characters."
 msgstr "संदेश अधिकतम %(count)s अक्षरों के हो सकते हैं।"
 
-#: yaffo/routes/assistant.py:61 yaffo/routes/pages.py:254 yaffo/routes/themes_page.py:243
+#: yaffo/routes/assistant.py:84 yaffo/routes/pages.py:254 yaffo/routes/themes_page.py:243
 #: yaffo/routes/utilities/automations.py:653
 #, python-format
 msgid "No API key configured. Add your %(provider)s API key in Settings → AI Generation."
@@ -360,25 +360,25 @@ msgstr ""
 "कोई API कुंजी कॉन्फ़िगर नहीं की गई. आपका जोड़ें %(provider)s सेटिंग्स → एआई जेनरेशन में एपीआई "
 "कुंजी।"
 
-#: yaffo/routes/assistant.py:143 yaffo/routes/assistant.py:148
+#: yaffo/routes/assistant.py:176 yaffo/routes/assistant.py:181
 msgid "The assistant is still answering."
 msgstr "सहायक अभी भी जवाब दे रहा है।"
 
-#: yaffo/routes/assistant.py:167
+#: yaffo/routes/assistant.py:201
 msgid "Title is required."
 msgstr "शीर्षक आवश्यक है।"
 
-#: yaffo/routes/assistant.py:186
+#: yaffo/routes/assistant.py:220
 msgid "Assistant turned on."
 msgstr "सहायक चालू किया गया।"
 
-#: yaffo/routes/assistant.py:186
+#: yaffo/routes/assistant.py:220
 msgid "Assistant turned off."
 msgstr "सहायक बंद किया गया।"
 
-#: yaffo/routes/assistant.py:197
-msgid "Assistant model updated."
-msgstr "सहायक का मॉडल अपडेट किया गया।"
+#: yaffo/routes/assistant.py:231 yaffo/routes/assistant.py:238
+msgid "Assistant settings saved."
+msgstr "सहायक की सेटिंग्स सहेजी गईं।"
 
 #: yaffo/routes/base.py:144
 msgid "The library database is out of date. Restart Yaffo to update it."
@@ -409,57 +409,68 @@ msgstr "उस नाम की एक फ़ाइल या फ़ोल्ड
 msgid "Could not create folder: %(reason)s"
 msgstr "फ़ोल्डर नहीं बनाया जा सका: %(reason)s"
 
-#: yaffo/routes/faces.py:194
+#: yaffo/routes/faces.py:195
 #, python-format
 msgid "Cluster %(number)s"
 msgstr "झुंड %(number)s"
 
-#: yaffo/routes/faces.py:227 yaffo/templates/sharing/_device_content.html:14
+#: yaffo/routes/faces.py:228 yaffo/templates/sharing/_device_content.html:14
 #: yaffo/templates/sharing/_device_panel.html:18
 msgid "Unknown"
 msgstr "अज्ञात"
 
-#: yaffo/routes/faces.py:258
+#: yaffo/routes/faces.py:259
 msgid " OR "
 msgstr " या "
 
-#: yaffo/routes/faces.py:379 yaffo/routes/filter_config.py:123
+#: yaffo/routes/faces.py:380 yaffo/routes/filter_config.py:123
 msgid "Items must be a list"
 msgstr "आइटम एक सूची होनी चाहिए"
 
-#: yaffo/routes/faces.py:401 yaffo/routes/faces.py:469 yaffo/routes/faces.py:480
-#: yaffo/routes/people.py:119 yaffo/routes/people.py:178 yaffo/routes/people.py:220
-#: yaffo/routes/people.py:298
+#: yaffo/routes/faces.py:402 yaffo/routes/faces.py:509 yaffo/routes/faces.py:520
+#: yaffo/routes/people.py:124 yaffo/routes/people.py:183 yaffo/routes/people.py:225
+#: yaffo/routes/people.py:303
 msgid "Person not found"
 msgstr "व्यक्ति नहीं मिला"
 
-#: yaffo/routes/faces.py:419 yaffo/routes/faces.py:428
+#: yaffo/routes/faces.py:423 yaffo/routes/faces.py:459 yaffo/routes/faces.py:468
 msgid "Faces must contain numeric identifiers"
 msgstr "चेहरों में संख्यात्मक पहचानकर्ता होने चाहिए"
 
-#: yaffo/routes/faces.py:442
+#: yaffo/routes/faces.py:431
+msgid "This face isn't assigned to anyone"
+msgstr "यह चेहरा किसी को असाइन नहीं है"
+
+#: yaffo/routes/faces.py:439
+#, python-format
+msgid "Cleared %(count)s face"
+msgid_plural "Cleared %(count)s faces"
+msgstr[0] "%(count)s चेहरे से व्यक्ति हटाया गया"
+msgstr[1] "%(count)s चेहरों से व्यक्ति हटाए गए"
+
+#: yaffo/routes/faces.py:482
 msgid "One or more faces are no longer available"
 msgstr "एक या अधिक चेहरे अब उपलब्ध नहीं हैं"
 
-#: yaffo/routes/faces.py:454
+#: yaffo/routes/faces.py:494
 #, python-format
 msgid "Successfully ignored %(count)s face"
 msgid_plural "Successfully ignored %(count)s faces"
 msgstr[0] "सफलतापूर्वक अनदेखा किया गया %(count)s चेहरा"
 msgstr[1] "सफलतापूर्वक अनदेखा किया गया %(count)s चेहरे"
 
-#: yaffo/routes/faces.py:500
+#: yaffo/routes/faces.py:540
 #, python-format
 msgid "Successfully assigned %(count)s face to %(person)s"
 msgid_plural "Successfully assigned %(count)s faces to %(person)s"
 msgstr[0] "सफलतापूर्वक असाइन किया गया %(count)s सामना करना %(person)s"
 msgstr[1] "सफलतापूर्वक असाइन किया गया %(count)s का सामना करना पड़ता है %(person)s"
 
-#: yaffo/routes/faces.py:512
+#: yaffo/routes/faces.py:552
 msgid "Faces, person, and face status are required"
 msgstr "चेहरे, व्यक्ति और चेहरे की स्थिति आवश्यक है"
 
-#: yaffo/routes/faces.py:521
+#: yaffo/routes/faces.py:561
 msgid "Could not process faces"
 msgstr "चेहरों को संसाधित नहीं किया जा सका"
 
@@ -563,53 +574,53 @@ msgstr "एक पीढ़ी पहले से ही चल रही ह�
 msgid "Version is not ready to publish."
 msgstr "संस्करण प्रकाशित करने के लिए तैयार नहीं है."
 
-#: yaffo/routes/people.py:25
+#: yaffo/routes/people.py:30
 msgid "Gender must be male, female, or not specified"
 msgstr "लिंग पुरुष, महिला या निर्दिष्ट नहीं होना चाहिए"
 
-#: yaffo/routes/people.py:62 yaffo/routes/people.py:93 yaffo/routes/people.py:124
+#: yaffo/routes/people.py:67 yaffo/routes/people.py:98 yaffo/routes/people.py:129
 msgid "Name is required"
 msgstr "नाम आवश्यक है"
 
-#: yaffo/routes/people.py:68 yaffo/routes/people.py:100 yaffo/routes/people.py:133
+#: yaffo/routes/people.py:73 yaffo/routes/people.py:105 yaffo/routes/people.py:138
 #, python-format
 msgid "Person '%(name)s' already exists"
 msgstr "व्यक्ति '%(name)s' पहले से ही मौजूद है"
 
-#: yaffo/routes/people.py:81
+#: yaffo/routes/people.py:86
 #, python-format
 msgid "Added %(name)s"
 msgstr "जोड़ा %(name)s"
 
-#: yaffo/routes/people.py:153
+#: yaffo/routes/people.py:158
 msgid "Birthdate must be YYYY-MM-DD"
 msgstr "जन्मतिथि YYYY-MM-DD होनी चाहिए"
 
-#: yaffo/routes/people.py:166
+#: yaffo/routes/people.py:171
 #, python-format
 msgid "Updated '%(name)s'"
 msgstr "अपडेट किया गया'%(name)s'"
 
-#: yaffo/routes/people.py:168
+#: yaffo/routes/people.py:173
 #, python-format
 msgid "Renamed '%(old_name)s' to '%(name)s'"
 msgstr "नाम बदला गया%(old_name)s' को '%(name)s'"
 
-#: yaffo/routes/people.py:204
+#: yaffo/routes/people.py:209
 #, python-format
 msgid "Deleted %(name)s"
 msgstr "हटाए गए %(name)s"
 
-#: yaffo/routes/people.py:302
+#: yaffo/routes/people.py:307
 msgid "No faces selected"
 msgstr "कोई चेहरा चयनित नहीं"
 
-#: yaffo/routes/people.py:326
+#: yaffo/routes/people.py:313
 msgid "Person updated"
 msgstr "व्यक्ति अद्यतन किया गया"
 
-#: yaffo/routes/settings.py:94 yaffo/templates/settings/index.html:57
-#: yaffo/templates/settings/index.html:91
+#: yaffo/routes/settings.py:94 yaffo/templates/settings/index.html:19
+#: yaffo/templates/settings/index.html:53
 msgid "Media and thumbnail directories cannot be changed while importing or indexing is in progress."
 msgstr "आयात या अनुक्रमण जारी रहने के दौरान मीडिया और थंबनेल निर्देशिकाएं बदली नहीं जा सकतीं।"
 
@@ -1067,7 +1078,7 @@ msgstr "थंबनेल निर्देशिका मौजूद नह
 msgid "Could not scan the filesystem"
 msgstr "फ़ाइल सिस्टम को स्कैन नहीं किया जा सका"
 
-#: yaffo/routes/utilities/index_photos.py:174 yaffo/templates/settings/index.html:71
+#: yaffo/routes/utilities/index_photos.py:174 yaffo/templates/settings/index.html:33
 msgid "No media directories configured"
 msgstr "कोई मीडिया निर्देशिका कॉन्फ़िगर नहीं की गई"
 
@@ -1285,51 +1296,51 @@ msgstr "विषय-वस्तु"
 msgid "Settings"
 msgstr "सेटिंग्स"
 
-#: yaffo/templates/assistant/_panel.html:10 yaffo/templates/assistant/_panel.html:27
-#: yaffo/templates/base.html:155
+#: yaffo/templates/assistant/_panel.html:11 yaffo/templates/assistant/_panel.html:46
+#: yaffo/templates/base.html:156 yaffo/templates/base.html:217
 msgid "Ask Yaffo"
 msgstr "Yaffo से पूछें"
 
-#: yaffo/templates/base.html:161
+#: yaffo/templates/base.html:162
 msgid "Pages"
 msgstr "पृष्ठों"
 
-#: yaffo/templates/base.html:179
+#: yaffo/templates/base.html:180
 msgid "Edit page"
 msgstr "संपादित पेज"
 
-#: yaffo/templates/base.html:187
+#: yaffo/templates/base.html:188
 msgid "New page"
 msgstr "नया पेज"
 
-#: yaffo/templates/assistant/_panel.html:24 yaffo/templates/base.html:200
+#: yaffo/templates/assistant/_panel.html:31 yaffo/templates/base.html:201
 #: yaffo/templates/components/info_modal.html:6 yaffo/templates/components/info_modal.html:12
 #: yaffo/templates/components/modal.html:9
 msgid "Close"
 msgstr "बंद करना"
 
-#: yaffo/templates/base.html:219
+#: yaffo/templates/base.html:225
 msgid "Select a folder"
 msgstr "एक फ़ोल्डर चुनें"
 
-#: yaffo/templates/base.html:223
+#: yaffo/templates/base.html:229
 msgid "Up"
 msgstr "ऊपर"
 
-#: yaffo/templates/base.html:238 yaffo/templates/base.html:254
+#: yaffo/templates/base.html:244 yaffo/templates/base.html:260
 #: yaffo/templates/components/chat_dialog.html:39 yaffo/templates/components/modal.html:17
-#: yaffo/templates/fragments/job_status_fragment.html:29
+#: yaffo/templates/fragments/job_status_fragment.html:37
 #: yaffo/templates/sharing/_transfers_panel.html:41
 #: yaffo/templates/utilities/automations_triggers.html:65
 #: yaffo/templates/utilities/automations_triggers.html:85
 msgid "Cancel"
 msgstr "रद्द करना"
 
-#: yaffo/templates/base.html:239
+#: yaffo/templates/base.html:245
 msgid "Select this folder"
 msgstr "इस फ़ोल्डर का चयन करें"
 
-#: yaffo/templates/base.html:248 yaffo/templates/base.html:255
+#: yaffo/templates/base.html:254 yaffo/templates/base.html:261
 msgid "Confirm"
 msgstr "पुष्टि करना"
 
@@ -1586,7 +1597,7 @@ msgstr "एल्बम से हटाएँ?"
 msgid "Remove the selected photos from this album? The photos themselves are not deleted."
 msgstr "इस एल्बम से चयनित फ़ोटो हटाएं? फ़ोटो स्वयं हटाई नहीं जातीं."
 
-#: yaffo/templates/albums/album.html:86 yaffo/templates/settings/index.html:67
+#: yaffo/templates/albums/album.html:86 yaffo/templates/settings/index.html:29
 msgid "Remove"
 msgstr "निकालना"
 
@@ -1620,8 +1631,8 @@ msgstr "एल्बम संपादित करें"
 
 #: yaffo/templates/albums/album.html:145 yaffo/templates/components/modal.html:18
 #: yaffo/templates/filters/_config_modal.html:22 yaffo/templates/pages/design.html:38
-#: yaffo/templates/settings/_llm_api_key.html:19 yaffo/templates/settings/index.html:30
-#: yaffo/templates/settings/index.html:49 yaffo/templates/sharing/_download_directory_panel.html:18
+#: yaffo/templates/settings/_llm_api_key.html:19 yaffo/templates/settings/index.html:112
+#: yaffo/templates/settings/index.html:131 yaffo/templates/sharing/_download_directory_panel.html:18
 #: yaffo/templates/themes_page/index.html:143 yaffo/templates/utilities/automations.html:128
 #: yaffo/templates/utilities/automations.html:133
 msgid "Save"
@@ -1652,34 +1663,64 @@ msgstr "का आवरण %(album)s"
 msgid "An album is a collection you curate by hand — create one, then add photos to it."
 msgstr "एल्बम एक संग्रह है जिसे आप हाथ से बनाते हैं - एक बनाएं, फिर उसमें फ़ोटो जोड़ें।"
 
-#: yaffo/templates/assistant/_panel.html:14 yaffo/templates/themes_page/index.html:106
+#: yaffo/templates/assistant/_panel.html:16
+msgid "Resize panel"
+msgstr "पैनल का आकार बदलें"
+
+#: yaffo/templates/assistant/_panel.html:16
+msgid "Drag to resize. Double-click to reset."
+msgstr "आकार बदलने के लिए खींचें। रीसेट करने के लिए डबल-क्लिक करें।"
+
+#: yaffo/templates/assistant/_panel.html:21 yaffo/templates/themes_page/index.html:106
 #: yaffo/templates/utilities/automations_edit.html:23
 msgid "Conversation"
 msgstr "बातचीत"
 
-#: yaffo/templates/assistant/_panel.html:15
+#: yaffo/templates/assistant/_panel.html:22
 msgid "New conversation"
 msgstr "नई बातचीत"
 
-#: yaffo/templates/assistant/_panel.html:18
+#: yaffo/templates/assistant/_panel.html:25
 msgid "New"
 msgstr "नई"
 
-#: yaffo/templates/assistant/_panel.html:20
+#: yaffo/templates/assistant/_panel.html:27
 msgid "Delete conversation"
 msgstr "बातचीत हटाएँ"
 
-#: yaffo/templates/assistant/_panel.html:23
+#: yaffo/templates/assistant/_panel.html:30
 msgid "Open full page"
 msgstr "पूरे पेज में खोलें"
 
-#: yaffo/templates/assistant/_panel.html:28
-msgid "Answers come from Yaffo's documentation. It can't see or change your library."
-msgstr "जवाब Yaffo के दस्तावेज़ों से आते हैं। यह आपकी लाइब्रेरी को न देख सकता है, न बदल सकता है।"
+#: yaffo/templates/assistant/_panel.html:39
+#, python-format
+msgid ""
+"Uses %(model)s (%(provider)s). To troubleshoot, it can check this computer, and what it reads is "
+"sent with your question."
+msgstr ""
+"%(model)s (%(provider)s) का उपयोग करता है। समस्या जाँचने के लिए यह इस कंप्यूटर को देख सकता है, और"
+" जो यह पढ़ता है वह आपके सवाल के साथ भेजा जाता है।"
 
-#: yaffo/templates/assistant/_panel.html:29
-msgid "Ask how something in Yaffo works…"
-msgstr "पूछें कि Yaffo में कोई चीज़ कैसे काम करती है…"
+#: yaffo/templates/assistant/_panel.html:41
+#, python-format
+msgid ""
+"Uses %(model)s (%(provider)s) and answers from Yaffo's documentation only. Nothing from this "
+"computer is sent."
+msgstr ""
+"%(model)s (%(provider)s) का उपयोग करता है और केवल Yaffo के दस्तावेज़ों से जवाब देता है। इस "
+"कंप्यूटर से कुछ नहीं भेजा जाता।"
+
+#: yaffo/templates/assistant/_panel.html:43
+msgid "Change in Settings"
+msgstr "सेटिंग्स में बदलें"
+
+#: yaffo/templates/assistant/_panel.html:46
+msgid "Ask about Yaffo or your library…"
+msgstr "Yaffo या अपनी लाइब्रेरी के बारे में पूछें…"
+
+#: yaffo/templates/assistant/_panel.html:51
+msgid "Remove attached context"
+msgstr "जोड़ा गया संदर्भ हटाएँ"
 
 #: yaffo/templates/assistant/index.html:4
 msgid "Ask Yaffo - Yaffo"
@@ -1770,7 +1811,7 @@ msgstr "अंतिम"
 msgid "Processing in Progress"
 msgstr "प्रसंस्करण प्रगति पर है"
 
-#: yaffo/templates/components/photo_card.html:11 yaffo/templates/media/view.html:227
+#: yaffo/templates/components/photo_card.html:11 yaffo/templates/media/view.html:228
 msgid "Toggle favorite"
 msgstr "पसंदीदा टॉगल करें"
 
@@ -2274,7 +2315,11 @@ msgstr "शुरू कर दिया:"
 msgid "Show Results"
 msgstr "परिणाम दिखाएं"
 
-#: yaffo/templates/fragments/job_status_fragment.html:29
+#: yaffo/templates/fragments/job_status_fragment.html:27
+msgid "Help me with this"
+msgstr "इसमें मेरी मदद करें"
+
+#: yaffo/templates/fragments/job_status_fragment.html:37
 #: yaffo/templates/sharing/_transfers_panel.html:47
 msgid "Dismiss"
 msgstr "नकार देना"
@@ -2369,74 +2414,74 @@ msgid_plural "Faces (%(count)s)"
 msgstr[0] "चेहरा (%(count)s)"
 msgstr[1] "चेहरे (%(count)s)"
 
-#: yaffo/templates/media/view.html:134 yaffo/templates/people/faces.html:71
+#: yaffo/templates/media/view.html:135 yaffo/templates/people/faces.html:71
 msgid "Face"
 msgstr "चेहरा"
 
-#: yaffo/templates/media/view.html:146
+#: yaffo/templates/media/view.html:147
 msgid "No faces detected"
 msgstr "किसी चेहरे का पता नहीं चला"
 
-#: yaffo/templates/media/view.html:151
+#: yaffo/templates/media/view.html:152
 #, python-format
 msgid "Label (%(count)s)"
 msgid_plural "Labels (%(count)s)"
 msgstr[0] "लेबल (%(count)s)"
 msgstr[1] "लेबल (%(count)s)"
 
-#: yaffo/templates/media/view.html:155
+#: yaffo/templates/media/view.html:156
 #, python-format
 msgid "Confidence: %(value)s"
 msgstr "आत्मविश्वास: %(value)s"
 
-#: yaffo/templates/media/view.html:161
+#: yaffo/templates/media/view.html:162
 msgid "No labels"
 msgstr "कोई लेबल नहीं"
 
-#: yaffo/templates/media/view.html:166
+#: yaffo/templates/media/view.html:167
 #, python-format
 msgid "Tag (%(count)s)"
 msgid_plural "Tags (%(count)s)"
 msgstr[0] "टैग (%(count)s)"
 msgstr[1] "टैग (%(count)s)"
 
-#: yaffo/templates/media/view.html:180
+#: yaffo/templates/media/view.html:181
 msgid "No tags"
 msgstr "कोई टैग नहीं"
 
-#: yaffo/templates/media/view.html:185 yaffo/templates/media/view.html:252
+#: yaffo/templates/media/view.html:186 yaffo/templates/media/view.html:253
 msgid "Edit Tags"
 msgstr "जोड़ संपादित करें"
 
-#: yaffo/templates/media/view.html:197
+#: yaffo/templates/media/view.html:198
 msgid "This video is no longer available on disk."
 msgstr "यह वीडियो अब डिस्क पर उपलब्ध नहीं है."
 
-#: yaffo/templates/media/view.html:208
+#: yaffo/templates/media/view.html:209
 msgid "This format can't play in the browser."
 msgstr "यह प्रारूप ब्राउज़र में नहीं चल सकता."
 
-#: yaffo/templates/media/view.html:210
+#: yaffo/templates/media/view.html:211
 msgid "Open in default player"
 msgstr "डिफ़ॉल्ट प्लेयर में खोलें"
 
-#: yaffo/templates/media/view.html:241
+#: yaffo/templates/media/view.html:242
 msgid "Add New Tag"
 msgstr "नया टैग जोड़ें"
 
-#: yaffo/templates/media/view.html:243
+#: yaffo/templates/media/view.html:244
 msgid "Tag name"
 msgstr "टैग नाम"
 
-#: yaffo/templates/media/view.html:244
+#: yaffo/templates/media/view.html:245
 msgid "Tag value (optional)"
 msgstr "टैग मान (वैकल्पिक)"
 
-#: yaffo/templates/media/view.html:246
+#: yaffo/templates/media/view.html:247
 msgid "Add Tag"
 msgstr "टैग जोड़ें"
 
-#: yaffo/templates/media/view.html:252
+#: yaffo/templates/media/view.html:253
 msgid "Save Changes"
 msgstr "परिवर्तनों को सुरक्षित करें"
 
@@ -2642,43 +2687,54 @@ msgstr "याफ़ो को लौटें"
 
 #: yaffo/templates/settings/_assistant.html:4
 msgid ""
-"Ask Yaffo answers questions about how the app works, using Yaffo's documentation. It uses the API"
-" key from AI Generation and can't see or change your library."
+"Ask Yaffo answers questions and helps troubleshoot, using your AI Generation key. It can't change"
+" your library."
 msgstr ""
-"Yaffo से पूछें, Yaffo के दस्तावेज़ों की मदद से ऐप के काम करने के बारे में सवालों के जवाब देता है।"
-" यह एआई पीढ़ी की API कुंजी का उपयोग करता है और आपकी लाइब्रेरी को न देख सकता है, न बदल सकता है।"
+"Ask Yaffo आपकी AI जनरेशन कुंजी से सवालों के जवाब देता है और समस्याएँ जाँचने में मदद करता है। यह "
+"आपकी लाइब्रेरी नहीं बदल सकता।"
 
-#: yaffo/templates/settings/_assistant.html:12
-msgid "Show Ask Yaffo in the navigation bar"
-msgstr "नेविगेशन बार में Yaffo से पूछें दिखाएँ"
+#: yaffo/templates/settings/_assistant.html:11
+msgid "Show Ask Yaffo"
+msgstr "Ask Yaffo दिखाएँ"
 
-#: yaffo/templates/settings/_assistant.html:17 yaffo/templates/settings/_llm.html:8
-msgid "Model"
-msgstr "नमूना"
+#: yaffo/templates/settings/_assistant.html:15
+msgid "Troubleshooting checks"
+msgstr "समस्या जाँच"
+
+#: yaffo/templates/settings/_assistant.html:17
+msgid "What it checks is sent with your question, without your home folder, email addresses or keys."
+msgstr "यह जो जाँचता है वह आपके सवाल के साथ भेजा जाता है, आपके होम फ़ोल्डर, ईमेल पतों या कुंजियों के बिना।"
+
+#: yaffo/templates/settings/_assistant.html:20
+msgid "Logs"
+msgstr "लॉग"
 
 #: yaffo/templates/settings/_assistant.html:21
-#, python-format
-msgid "Default (%(model)s)"
-msgstr "डिफ़ॉल्ट (%(model)s)"
+msgid "Library contents"
+msgstr "लाइब्रेरी की सामग्री"
 
-#: yaffo/templates/settings/_assistant.html:32
-msgid ""
-"The default is the least expensive model from your AI Generation provider. A different provider "
-"needs its own API key."
-msgstr ""
-"डिफ़ॉल्ट आपके एआई पीढ़ी प्रदाता का सबसे सस्ता मॉडल है। किसी दूसरे प्रदाता के लिए उसकी अपनी API "
-"कुंजी चाहिए।"
+#: yaffo/templates/settings/_assistant.html:22
+msgid "Media folders"
+msgstr "मीडिया फ़ोल्डर"
 
-#: yaffo/templates/settings/_assistant.html:38
+#: yaffo/templates/settings/_assistant.html:23
+msgid "Background jobs"
+msgstr "बैकग्राउंड जॉब"
+
+#: yaffo/templates/settings/_assistant.html:39
+msgid "Hide people's names"
+msgstr "लोगों के नाम छिपाएँ"
+
+#: yaffo/templates/settings/_assistant.html:45
 #, python-format
 msgid "%(formatted)s saved conversation"
 msgid_plural "%(formatted)s saved conversations"
 msgstr[0] "%(formatted)s सहेजी गई बातचीत"
 msgstr[1] "%(formatted)s सहेजी गई बातचीत"
 
-#: yaffo/templates/settings/_assistant.html:42
-msgid "Delete all conversations"
-msgstr "सभी बातचीत हटाएँ"
+#: yaffo/templates/settings/_assistant.html:49
+msgid "Delete all"
+msgstr "सभी हटाएँ"
 
 #: yaffo/templates/settings/_labels.html:2
 msgid ""
@@ -2764,6 +2820,10 @@ msgstr ""
 "एआई अनुकूलन सुविधाओं को शक्ति प्रदान करता है। चयनित मॉडल के प्रदाता के लिए एपीआई कुंजी ऑपरेटिंग "
 "सिस्टम के क्रेडेंशियल स्टोर में सुरक्षित रूप से संग्रहीत की जाती है।"
 
+#: yaffo/templates/settings/_llm.html:8
+msgid "Model"
+msgstr "नमूना"
+
 #: yaffo/templates/settings/_llm_api_key.html:4
 #, python-format
 msgid "%(provider)s API key:"
@@ -2810,34 +2870,10 @@ msgid "Configure application settings"
 msgstr "एप्लिकेशन सेटिंग्स कॉन्फ़िगर करें"
 
 #: yaffo/templates/settings/index.html:16
-msgid "Language"
-msgstr "भाषा"
-
-#: yaffo/templates/settings/index.html:20
-msgid "Application language"
-msgstr "अनुप्रयोग भाषा"
-
-#: yaffo/templates/settings/index.html:28
-msgid "Controls the language used by Yaffo. The page reloads after saving."
-msgstr "याफ़ो द्वारा प्रयुक्त भाषा को नियंत्रित करता है। सहेजने के बाद पृष्ठ पुनः लोड होता है."
-
-#: yaffo/templates/settings/index.html:35
-msgid "Units"
-msgstr "इकाइयों"
-
-#: yaffo/templates/settings/index.html:39
-msgid "Preferred distance unit"
-msgstr "पसंदीदा दूरी इकाई"
-
-#: yaffo/templates/settings/index.html:47
-msgid "Used for distance filters and automation settings."
-msgstr "दूरी फ़िल्टर और स्वचालन सेटिंग्स के लिए उपयोग किया जाता है।"
-
-#: yaffo/templates/settings/index.html:54
 msgid "Media Directories"
 msgstr "मीडिया निर्देशिकाएँ"
 
-#: yaffo/templates/settings/index.html:55
+#: yaffo/templates/settings/index.html:17
 msgid ""
 "Add directories where your photos are stored. Yaffo scans these directories for photos and videos"
 " to index."
@@ -2845,59 +2881,83 @@ msgstr ""
 "वे निर्देशिकाएँ जोड़ें जहाँ आपकी तस्वीरें संग्रहीत हैं। याफ़ो फ़ोटो और वीडियो को अनुक्रमित करने "
 "के लिए इन निर्देशिकाओं को स्कैन करता है।"
 
-#: yaffo/templates/settings/index.html:78
+#: yaffo/templates/settings/index.html:40
 msgid "Enter directory path (for example, /Volumes/Photos or C:\\Photos)"
 msgstr "निर्देशिका पथ दर्ज करें (उदाहरण के लिए, /Volumes/Photos या C:\\Photos)"
 
-#: yaffo/templates/settings/index.html:83
+#: yaffo/templates/settings/index.html:45
 msgid "Add Directory"
 msgstr "निर्देशिका जोड़ें"
 
-#: yaffo/templates/settings/index.html:88
+#: yaffo/templates/settings/index.html:50
 msgid "Thumbnail Directory"
 msgstr "थंबनेल निर्देशिका"
 
-#: yaffo/templates/settings/index.html:89
+#: yaffo/templates/settings/index.html:51
 msgid "Configure where cropped thumbnails of detected faces are stored for quick loading."
 msgstr "त्वरित लोडिंग के लिए कॉन्फ़िगर करें कि पहचाने गए चेहरों के क्रॉप किए गए थंबनेल कहाँ संग्रहीत हैं।"
 
-#: yaffo/templates/settings/index.html:97
+#: yaffo/templates/settings/index.html:59
 msgid "Current Thumbnail Directory:"
 msgstr "वर्तमान थंबनेल निर्देशिका:"
 
-#: yaffo/templates/settings/index.html:102
+#: yaffo/templates/settings/index.html:64
 msgid "Files:"
 msgstr "फ़ाइलें:"
 
-#: yaffo/templates/settings/index.html:103
+#: yaffo/templates/settings/index.html:65
 msgid "Total Size:"
 msgstr "कुल आकार:"
 
-#: yaffo/templates/settings/index.html:103
+#: yaffo/templates/settings/index.html:65
 msgid "Counting…"
 msgstr "गिनती..."
 
-#: yaffo/templates/settings/index.html:110
+#: yaffo/templates/settings/index.html:72
 msgid "Enter new thumbnail directory path"
 msgstr "नया थंबनेल निर्देशिका पथ दर्ज करें"
 
-#: yaffo/templates/settings/index.html:115
+#: yaffo/templates/settings/index.html:77
 msgid "Change Directory"
 msgstr "निर्देशिका बदलें"
 
-#: yaffo/templates/settings/index.html:119
+#: yaffo/templates/settings/index.html:81
 msgid "No thumbnail directory configured. Set a directory to enable face thumbnail generation."
 msgstr ""
 "कोई थंबनेल निर्देशिका कॉन्फ़िगर नहीं की गई. फेस थंबनेल जेनरेशन सक्षम करने के लिए एक निर्देशिका "
 "सेट करें।"
 
-#: yaffo/templates/settings/index.html:125
+#: yaffo/templates/settings/index.html:87
 msgid "Enter thumbnail directory path"
 msgstr "थंबनेल निर्देशिका पथ दर्ज करें"
 
-#: yaffo/templates/settings/index.html:130
+#: yaffo/templates/settings/index.html:92
 msgid "Set Directory"
 msgstr "निर्देशिका सेट करें"
+
+#: yaffo/templates/settings/index.html:98
+msgid "Language"
+msgstr "भाषा"
+
+#: yaffo/templates/settings/index.html:102
+msgid "Application language"
+msgstr "अनुप्रयोग भाषा"
+
+#: yaffo/templates/settings/index.html:110
+msgid "Controls the language used by Yaffo. The page reloads after saving."
+msgstr "याफ़ो द्वारा प्रयुक्त भाषा को नियंत्रित करता है। सहेजने के बाद पृष्ठ पुनः लोड होता है."
+
+#: yaffo/templates/settings/index.html:117
+msgid "Units"
+msgstr "इकाइयों"
+
+#: yaffo/templates/settings/index.html:121
+msgid "Preferred distance unit"
+msgstr "पसंदीदा दूरी इकाई"
+
+#: yaffo/templates/settings/index.html:129
+msgid "Used for distance filters and automation settings."
+msgstr "दूरी फ़िल्टर और स्वचालन सेटिंग्स के लिए उपयोग किया जाता है।"
 
 #: yaffo/templates/settings/index.html:144
 msgid "System Information"

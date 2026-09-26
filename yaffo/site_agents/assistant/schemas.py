@@ -24,16 +24,31 @@ class DocSource:
 
 
 @dataclass(frozen=True)
+class AppLink:
+    """A link into the app the assistant made (link_to_photos /
+    link_to_media_item), shown under its answer. `url` is app-relative."""
+    title: str
+    url: str
+
+
+@dataclass(frozen=True)
 class ToolActivity:
     """A tool event's payload. The browser formats the activity line from `tool`
     plus the fields that tool sets (query/count for search_docs, title for
-    read_doc), so the text is localized on the client."""
+    read_doc, args/count for a diagnostic, purpose for run_script), so the text is
+    localized on the client. `detail` is exactly the (redacted) text the model
+    received, shown when the line is expanded; `script` is run_script's source."""
     tool: str
     sources: list[DocSource] = field(default_factory=list)
     query: str = ""
     count: int = 0
     title: str = ""
     error: bool = False
+    args: dict = field(default_factory=dict)
+    detail: str = ""
+    purpose: str = ""
+    script: str = ""
+    links: list[AppLink] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -76,6 +91,19 @@ class ConversationStarted:
 @dataclass(frozen=True)
 class ConversationsDeleted:
     deleted: int
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class AssistantNotice:
+    """The one-line notice at the top of an empty conversation: the provider and
+    model, and whether the assistant may check this computer (any diagnostics
+    group on)."""
+    provider: str
+    model_label: str
+    checks_enabled: bool
 
     def to_dict(self) -> dict:
         return asdict(self)

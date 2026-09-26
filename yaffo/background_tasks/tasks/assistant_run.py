@@ -2,7 +2,7 @@
 
 The messages route records the user's message, marks the conversation RUNNING,
 and enqueues this task. It replays the earlier turns, runs the assistant agent
-(docs tools only), and appends each assistant reply, tool call, and error to the
+(docs tools, plus the diagnostics the user enabled in Settings), and appends each assistant reply, tool call, and error to the
 transcript as it happens, then settles the conversation to IDLE (or FAILED). The
 browser follows the run by polling the conversation, so it survives a closed
 dialog or a page change.
@@ -34,6 +34,7 @@ from yaffo.site_agents.agent import create_assistant_agent
 from yaffo.site_agents.assistant import settings as assistant_settings
 from yaffo.site_agents.assistant.history import ROLE_USER, normalize_turns
 from yaffo.site_agents.assistant.prompt import build_assistant_user_message
+from yaffo.site_agents.assistant.redact import redactor_for
 
 logger = get_logger(__name__, 'background_tasks')
 
@@ -90,10 +91,17 @@ def run_assistant_turn(
 
     history, (_, message) = turns[:-1], turns[-1]
     user_message = build_assistant_user_message(
-        message, locale=get_saved_locale(session) or DEFAULT_LOCALE)
+        message, locale=get_saved_locale(session) or DEFAULT_LOCALE,
+        context=repo.latest_user_context(session, conversation_id))
+    diagnostics = assistant_settings.enabled_diagnostics(session)
 
     try:
-        agent = create_assistant_agent(model=model, api_key=api_key, history=history)
+        agent = create_assistant_agent(
+            model=model, api_key=api_key, history=history, session=session,
+            diagnostics=diagnostics,
+            redactor=redactor_for(session, redact_people=assistant_settings.redact_people(session)),
+            model_label=f"{assistant_settings.provider_label(session)} · {assistant_settings.model_label(session)}",
+        )
         for event in agent.run_events(user_message, should_cancel=should_cancel):
             if event.type == "cancelled" or should_cancel():
                 logger.info(f"assistant_run: conversation {conversation_id} cancelled")

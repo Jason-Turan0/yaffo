@@ -42,8 +42,9 @@ def agent_factory(monkeypatch):
     def install(events, api_key="key", model="claude-haiku-4-5-20251001"):
         agent = ScriptedAgent(events)
 
-        def create(*, model, api_key, history):
-            calls.update(model=model, api_key=api_key, history=history)
+        def create(*, model, api_key, history, session=None, diagnostics=frozenset(), redactor=None, model_label=""):
+            calls.update(model=model, api_key=api_key, history=history, diagnostics=diagnostics,
+                         redactor=redactor, model_label=model_label)
             return agent
 
         monkeypatch.setattr(run_module, "create_assistant_agent", create)
@@ -167,3 +168,19 @@ def test_nothing_to_answer_settles_idle(session, agent_factory):
 
     assert repo.get_conversation(session, conversation_id).status == ASSISTANT_STATUS_IDLE
     assert len(_events(session, conversation_id)) == 2
+
+
+def test_passes_enabled_diagnostics_and_attached_context(session, agent_factory):
+    agent = agent_factory([AgentEvent("done", stop_reason="end_turn")])
+    conversation = repo.create_conversation(session, "Q")
+    repo.add_event(session, conversation.id, "user", "Why did this fail?",
+                   {"context": {"page": "Utilities → Index Photos", "error_code": "filesystem_scan_failed"}})
+    repo.start_run(session, conversation.id, "m")
+
+    run_module.run_assistant_turn(session, conversation.id, should_cancel=lambda: False)
+
+    assert agent_factory.calls["diagnostics"] == frozenset({"logs", "library", "files", "jobs"})
+    assert "Anthropic" in agent_factory.calls["model_label"]
+    assert "<error_code>filesystem_scan_failed</error_code>" in agent.messages[0]
+    assert "<page>Utilities → Index Photos</page>" in agent.messages[0]
+

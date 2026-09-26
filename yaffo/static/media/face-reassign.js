@@ -31,6 +31,13 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign = (allPeople, i18n, config) =
         if (!window.PHOTO_ORGANIZER.COMPONENTS.overlay) {
             throw new Error('Overlay component is not initialized');
         }
+        // Clear only means something for a face that has a person, or was ignored.
+        const status = faceThumbnail.dataset.faceStatus || '';
+        const canClear = status !== '' && status !== 'UNASSIGNED';
+        const clearButton = canClear
+            ? `<button class="btn btn-secondary btn-sm face-reassign-clear" data-action="clear"
+                    title="${i18n.t('media:faces.clearHint')}">${i18n.t('media:faces.clear')}</button>`
+            : '';
         const overlayContent = `
             <div class="face-reassign-header">${i18n.t('media:faces.reassign')}</div>
             <div class="face-reassign-controls">
@@ -41,6 +48,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign = (allPeople, i18n, config) =
         ).join('')}
                 </select>
                 <div class="face-reassign-actions">
+                    ${clearButton}
                     <button class="btn btn-secondary btn-sm" data-action="cancel">
                         ${i18n.t('common:cancel')}
                     </button>
@@ -76,7 +84,49 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign = (allPeople, i18n, config) =
             await reassignFace(faceId, selectElement.value, applyBtn);
         });
 
+        const clearBtn = overlay.querySelector('[data-action="clear"]');
+        if (clearBtn instanceof HTMLButtonElement) {
+            clearBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                await clearFace(faceId, clearBtn);
+            });
+        }
+
         return record;
+    };
+
+    /**
+     * Take the person off this face (or undo an ignore), leaving it unassigned.
+     * @param {number} faceId
+     * @param {HTMLButtonElement} clearBtn
+     */
+    const clearFace = async (faceId, clearBtn) => {
+        clearBtn.disabled = true;
+        clearBtn.textContent = i18n.t('media:faces.clearing');
+        try {
+            const response = await fetch(config.urls.faces_unassign, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ faces: [faceId] })
+            });
+            const data = await response.json();
+            if (response.ok && data.success) {
+                window.notification.success(data.message || i18n.t('media:faces.clearSucceeded'));
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+                return;
+            }
+            window.notification.error(data.message || i18n.t('media:faces.clearFailed'));
+        } catch (error) {
+            console.error('Error clearing face:', error);
+            window.notification.error(i18n.t('media:faces.clearFailed'));
+        }
+        clearBtn.disabled = false;
+        clearBtn.textContent = i18n.t('media:faces.clear');
     };
 
     /**

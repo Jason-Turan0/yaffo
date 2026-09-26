@@ -117,7 +117,12 @@
       "reassignFailed": "Gesicht konnte nicht neu zugewiesen werden",
       "reassignSucceeded": "Gesicht wurde erfolgreich neu zugewiesen",
       "selectPerson": "Person auswählen…",
-      "selectPersonRequired": "Bitte wählen Sie eine Person aus"
+      "selectPersonRequired": "Bitte wählen Sie eine Person aus",
+      "clear": "Entfernen",
+      "clearHint": "Die Person von diesem Gesicht entfernen",
+      "clearing": "Wird entfernt…",
+      "clearSucceeded": "Zuordnung entfernt",
+      "clearFailed": "Die Zuordnung konnte nicht entfernt werden"
     },
     "favorite": {
       "updateFailed": "Favorit konnte nicht aktualisiert werden"
@@ -352,7 +357,40 @@
       "searched_one": "Dokumentation nach „{{query}}“ durchsucht ({{count}} Treffer)",
       "searched_other": "Dokumentation nach „{{query}}“ durchsucht ({{count}} Treffer)",
       "summary_one": "Dokumentation geprüft ({{count}} Schritt)",
-      "summary_other": "Dokumentation geprüft ({{count}} Schritte)"
+      "summary_other": "Dokumentation geprüft ({{count}} Schritte)",
+      "steps_one": "Nachgesehen ({{count}} Schritt)",
+      "steps_other": "Nachgesehen ({{count}} Schritte)",
+      "script": "Skript ausgeführt: {{purpose}}",
+      "scriptFailed": "Ein Skript hat nicht funktioniert: {{purpose}}",
+      "describedSource": "Felder von {{source}} nachgeschlagen",
+      "failed": "{{line}} (hat nicht funktioniert)",
+      "sentNote": "Genau das wurde nach dem Schwärzen an {{provider}} gesendet.",
+      "showScript": "Skript anzeigen",
+      "tools": {
+        "health_report": "Zustandsprüfungen ausgeführt",
+        "install_info": "Yaffo-Version und Installation geprüft",
+        "settings_summary": "Übersicht der Einstellungen gelesen",
+        "migration_status": "Datenbankmigrationen geprüft",
+        "library_stats": "Inhalt der Bibliothek gezählt",
+        "media_item_report": "Element #{{media_item_id}} nachgeschlagen",
+        "face_consistency": "Gesichtsstatus geprüft",
+        "date_outliers": "Nach unmöglichen Datumsangaben gesucht",
+        "db_quick_check": "Datenbank geprüft",
+        "recent_errors": "Aktuelle Fehler aus den Protokollen gelesen",
+        "read_log": "{{name}} gelesen",
+        "media_dir_status": "Medienordner geprüft",
+        "probe_media_dir": "Getestet, wie schnell ein Medienordner antwortet",
+        "thumbnail_dir_status": "Miniaturbildordner geprüft",
+        "stat_path": "„{{relative_path}}“ geprüft",
+        "list_dir": "„{{relative_path}}“ aufgelistet",
+        "worker_status": "Hintergrund-Aufgabendienst geprüft",
+        "recent_jobs": "Letzte Aufträge angesehen",
+        "job_detail": "Einen Auftrag angesehen",
+        "failed_tasks": "Fehlgeschlagene Hintergrundaufgaben angesehen",
+        "automation_runs": "Ausführungen von „{{slug}}“ angesehen",
+        "link_to_photos": "Link zu „{{title}}“ erstellt",
+        "link_to_media_item": "Link zu „{{title}}“ erstellt"
+      }
     },
     "cancel": {
       "confirm": "Abbrechen",
@@ -366,7 +404,7 @@
       "title": "Gespräch löschen?"
     },
     "empty": {
-      "intro": "Fragen Sie, wie etwas in Yaffo funktioniert. Die Antworten stammen aus dem Benutzerhandbuch und den Entwicklungsnotizen, mit Links zu den verwendeten Seiten.",
+      "intro": "Frag, wie etwas in Yaffo funktioniert oder warum etwas nicht funktioniert.",
       "suggestions": {
         "addFolders": "Wie füge ich meine Fotoordner hinzu?",
         "assignFaces": "Wie ordne ich Gesichter einer Person zu?",
@@ -393,6 +431,9 @@
       "deleted_one": "{{count}} Gespräch gelöscht.",
       "deleted_other": "{{count}} Gespräche gelöscht."
     },
-    "sources": "Quellen:"
+    "sources": "Quellen:",
+    "helpWithThis": "Hilf mir dabei",
+    "helpPrompt": "Was ist hier schiefgelaufen, und wie behebe ich es?",
+    "openLinks": "Öffnen:"
   }
 }

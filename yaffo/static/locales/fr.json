@@ -117,7 +117,12 @@
       "reassignFailed": "Échec de la réattribution du visage",
       "reassignSucceeded": "Visage réaffecté avec succès",
       "selectPerson": "Sélectionnez une personne…",
-      "selectPersonRequired": "Veuillez sélectionner une personne"
+      "selectPersonRequired": "Veuillez sélectionner une personne",
+      "clear": "Effacer",
+      "clearHint": "Retirer la personne de ce visage",
+      "clearing": "Effacement…",
+      "clearSucceeded": "Attribution effacée",
+      "clearFailed": "Impossible d’effacer l’attribution"
     },
     "favorite": {
       "updateFailed": "Échec de la mise à jour du favori"
@@ -352,7 +357,40 @@
       "searched_one": "Recherche de « {{query}} » dans la documentation ({{count}} résultat)",
       "searched_other": "Recherche de « {{query}} » dans la documentation ({{count}} résultats)",
       "summary_one": "Documentation consultée ({{count}} étape)",
-      "summary_other": "Documentation consultée ({{count}} étapes)"
+      "summary_other": "Documentation consultée ({{count}} étapes)",
+      "steps_one": "Vérifié ({{count}} étape)",
+      "steps_other": "Vérifié ({{count}} étapes)",
+      "script": "Script exécuté : {{purpose}}",
+      "scriptFailed": "Un script n’a pas fonctionné : {{purpose}}",
+      "describedSource": "Champs de {{source}} consultés",
+      "failed": "{{line}} (n’a pas fonctionné)",
+      "sentNote": "Voici exactement ce qui a été envoyé à {{provider}}, après masquage.",
+      "showScript": "Afficher le script",
+      "tools": {
+        "health_report": "Contrôles d’état exécutés",
+        "install_info": "Version et installation de Yaffo vérifiées",
+        "settings_summary": "Résumé des paramètres lu",
+        "migration_status": "Migrations de la base de données vérifiées",
+        "library_stats": "Contenu de la bibliothèque compté",
+        "media_item_report": "Élément n° {{media_item_id}} consulté",
+        "face_consistency": "États des visages vérifiés",
+        "date_outliers": "Recherche de dates impossibles",
+        "db_quick_check": "Base de données vérifiée",
+        "recent_errors": "Erreurs récentes des journaux lues",
+        "read_log": "{{name}} lu",
+        "media_dir_status": "Dossiers de médias vérifiés",
+        "probe_media_dir": "Rapidité de réponse d’un dossier de médias testée",
+        "thumbnail_dir_status": "Dossier des miniatures vérifié",
+        "stat_path": "« {{relative_path}} » vérifié",
+        "list_dir": "Contenu de « {{relative_path}} » listé",
+        "worker_status": "Service des tâches en arrière-plan vérifié",
+        "recent_jobs": "Tâches récentes consultées",
+        "job_detail": "Une tâche consultée",
+        "failed_tasks": "Tâches en arrière-plan en échec consultées",
+        "automation_runs": "Exécutions de « {{slug}} » consultées",
+        "link_to_photos": "Lien vers « {{title}} » créé",
+        "link_to_media_item": "Lien vers « {{title}} » créé"
+      }
     },
     "cancel": {
       "confirm": "Arrêter",
@@ -366,7 +404,7 @@
       "title": "Supprimer la conversation ?"
     },
     "empty": {
-      "intro": "Demandez comment fonctionne n'importe quoi dans Yaffo. Les réponses viennent du guide de l'utilisateur et des notes de développement, avec des liens vers les pages utilisées.",
+      "intro": "Demande comment fonctionne quelque chose dans Yaffo, ou pourquoi quelque chose ne marche pas.",
       "suggestions": {
         "addFolders": "Comment ajouter mes dossiers de photos ?",
         "assignFaces": "Comment attribuer des visages à une personne ?",
@@ -393,6 +431,9 @@
       "deleted_one": "{{count}} conversation supprimée.",
       "deleted_other": "{{count}} conversations supprimées."
     },
-    "sources": "Sources :"
+    "sources": "Sources :",
+    "helpWithThis": "Aide-moi avec ceci",
+    "helpPrompt": "Qu’est-ce qui n’a pas marché ici, et comment le corriger ?",
+    "openLinks": "Ouvrir :"
   }
 }
