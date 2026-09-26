@@ -631,9 +631,9 @@ describe('app links', () => {
     server({
       'GET /api/conversations': { conversations: [conversation(6)] },
       'GET /assistant_conversation/conversation_id/6': statusBody([
-        { type: 'user', content: 'Show me Chase in 2019' },
-        { type: 'tool', content: '', payload: { tool: 'link_to_photos', args: { title: 'Chase in 2019' }, count: 12,
-          links: [{ title: 'Chase in 2019', url: '/?person=10&year=2019' }] } },
+        { type: 'user', content: 'Show me Billy in 2019' },
+        { type: 'tool', content: '', payload: { tool: 'link_to_photos', args: { title: 'Billy in 2019' }, count: 12,
+          links: [{ title: 'Billy in 2019', url: '/?person=10&year=2019' }] } },
         { type: 'tool', content: '', payload: { tool: 'read_doc', title: 'Browsing', sources: [
           { title: 'Browsing', heading: 'Filters', url: 'https://docs/browsing/#filters', scope: 'guide' },
         ] } },
@@ -647,7 +647,7 @@ describe('app links', () => {
     const links = answer.nextElementSibling;
     expect(links.classList.contains('assistant-links')).toBe(true);
     const anchor = links.querySelector('a');
-    expect(anchor.textContent).toBe('Chase in 2019');
+    expect(anchor.textContent).toBe('Billy in 2019');
     expect(anchor.getAttribute('href')).toBe('/?person=10&year=2019');
     expect(anchor.target).toBe('');
     expect(links.nextElementSibling.classList.contains('assistant-sources')).toBe(true);

@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_sandbox.starlark_runner import RunLimits
 from yaffo.db import db
-from yaffo.db.models import MediaItem, Tag
+from yaffo.db.models import FACE_STATUS_ASSIGNED, FACE_STATUS_UNASSIGNED, Face, MediaItem, Person, PersonFace, Tag
+from yaffo.site_agents.assistant.prompt_generator.prompt import ONLY_PERSON_EXAMPLE
 from yaffo.site_agents.assistant.redact import Redactor
 from yaffo.site_agents.assistant.tool_providers.script_tool import DESCRIBE_SOURCE, RUN_SCRIPT, ScriptToolProvider
 
@@ -79,3 +80,22 @@ def test_describe_data_source(provider):
     result = provider.call_tool(DESCRIBE_SOURCE, {"source": "media_items"})
     assert '"source": "media_items"' in result.model_text and result.host_data["title"] == "media_items"
     assert provider.call_tool(DESCRIBE_SOURCE, {"source": "nope"}).host_data["error"] is True
+
+
+def test_the_prompts_worked_example_runs_and_finds_photos_of_only_that_person(provider, session):
+    """The example in the system prompt's <starlark> block must stay valid Starlark
+    against the real data_query: photo 1 has only person 10, photo 2 has 10 and 11,
+    photo 3 has 10 and an unassigned face, photo 4 has only 11."""
+    session.add_all([Person(id=10, name="Billy"), Person(id=11, name="Bea")])
+    faces = [(1, 1, 10), (2, 2, 10), (3, 2, 11), (4, 3, 10), (5, 3, None), (6, 4, 11)]
+    for face_id, media_item_id, person_id in faces:
+        session.add(Face(id=face_id, media_item_id=media_item_id,
+                         status=FACE_STATUS_ASSIGNED if person_id else FACE_STATUS_UNASSIGNED))
+        if person_id:
+            session.add(PersonFace(face_id=face_id, person_id=person_id))
+    session.commit()
+
+    result = _run(provider, ONLY_PERSON_EXAMPLE + "\nonly", purpose="Only Billy")
+
+    assert result.host_data["error"] is False, result.model_text
+    assert "Value: [1, 3]" in result.model_text

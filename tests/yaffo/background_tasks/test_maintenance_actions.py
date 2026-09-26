@@ -367,7 +367,7 @@ def test_a_file_sync_that_raises_is_recorded_as_failed(session, library, monkeyp
 # ---- repair_face_statuses ------------------------------------------------------------------
 
 def test_repair_face_statuses(session, monkeypatch, emitted):
-    session.add_all([Person(id=1, name="Chase"), MediaItem(id=1, full_file_path="/lib/1.jpg")])
+    session.add_all([Person(id=1, name="Billy"), MediaItem(id=1, full_file_path="/lib/1.jpg")])
     session.add_all([
         Face(id=1, media_item_id=1, status=FACE_STATUS_UNASSIGNED),  # linked, not assigned
         Face(id=2, media_item_id=1, status=FACE_STATUS_PROCESSING),  # stuck, linked

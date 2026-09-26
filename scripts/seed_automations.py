@@ -144,7 +144,7 @@ def seed_automations() -> None:
             slug=_FILE_KIDS_SLUG,
             name="File favorite kid photos",
             description=(
-                "Take all favorite photos of Chase and Nathan and move each into a "
+                "Take all favorite photos of Billy and Babby and move each into a "
                 "\"<kid>/<year>\" folder within its media dir. Run it from Run now."
             ),
             is_system=False,

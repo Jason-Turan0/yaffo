@@ -15,15 +15,15 @@ pytestmark = pytest.mark.unit
 @pytest.fixture
 def library(app):
     photos = [MediaItem(full_file_path=f"/lib/{i}.jpg", year=2019 if i < 3 else 2020) for i in range(1, 5)]
-    chase = Person(name="Chase")
-    db.session.add_all([*photos, chase])
+    billy = Person(name="Billy")
+    db.session.add_all([*photos, billy])
     db.session.flush()
     face = Face(full_file_path="/f/1.jpg", media_item_id=photos[0].id, status=FACE_STATUS_ASSIGNED)
     db.session.add(face)
     db.session.flush()
-    db.session.add(PersonFace(person_id=chase.id, face_id=face.id))
+    db.session.add(PersonFace(person_id=billy.id, face_id=face.id))
     db.session.commit()
-    return {"photo": photos[0].id, "chase": chase.id}
+    return {"photo": photos[0].id, "billy": billy.id}
 
 
 @pytest.fixture
@@ -38,26 +38,26 @@ def test_links_match_flasks_own_urls(app, library):
         flasks = urlsplit(url_for("index", person=[3], year=2019))
         assert (ours.path, parse_qs(ours.query)) == (flasks.path, parse_qs(flasks.query))
         assert LinkToolProvider(db.session).call_tool(LINK_TO_PAGE, {
-            "title": "x", "page": "person_faces", "values": {"person_id": library["chase"]},
-        }).host_data["links"][0]["url"] == url_for("person_faces", person_id=library["chase"])
+            "title": "x", "page": "person_faces", "values": {"person_id": library["billy"]},
+        }).host_data["links"][0]["url"] == url_for("person_faces", person_id=library["billy"])
 
 
 def test_gallery_link_uses_the_filter_panels_parameters(links, library):
     result = links.call_tool(LINK_TO_PHOTOS, {
-        "title": "Chase in 2019", "filters": {"person_ids": [library["chase"]], "year": 2019}, "view": "grid"})
+        "title": "Billy in 2019", "filters": {"person_ids": [library["billy"]], "year": 2019}, "view": "grid"})
 
     [link] = result.host_data["links"]
-    assert link["title"] == "Chase in 2019"
+    assert link["title"] == "Billy in 2019"
     url = urlsplit(link["url"])
     assert url.path == "/"
-    assert parse_qs(url.query) == {"person": [str(library["chase"])], "year": ["2019"], "view": ["grid"]}
+    assert parse_qs(url.query) == {"person": [str(library["billy"])], "year": ["2019"], "view": ["grid"]}
     assert result.host_data["count"] == 1 and result.host_data["error"] is False
     assert "1 item(s) match" in result.model_text and link["url"] not in result.model_text
 
 
 def test_non_default_match_type_is_kept(links, library):
     result = links.call_tool(LINK_TO_PHOTOS, {
-        "title": "Both", "filters": {"person_ids": [library["chase"]], "person_match_type": "all"}})
+        "title": "Both", "filters": {"person_ids": [library["billy"]], "person_match_type": "all"}})
     assert "person-match-type=all" in result.host_data["links"][0]["url"]
 
 
@@ -215,10 +215,10 @@ def test_map_links_carry_other_filters_but_no_view(links, library):
     db.session.commit()
 
     result = links.call_tool(LINK_TO_PHOTOS, {
-        "title": "Chase on the map", "page": "map", "filters": {"person_ids": [library["chase"]], "year": 2019}})
+        "title": "Billy on the map", "page": "map", "filters": {"person_ids": [library["billy"]], "year": 2019}})
     url = urlsplit(result.host_data["links"][0]["url"])
     assert url.path == "/locations"
-    assert parse_qs(url.query) == {"person": [str(library["chase"])], "year": ["2019"]}
+    assert parse_qs(url.query) == {"person": [str(library["billy"])], "year": ["2019"]}
     assert result.host_data["count"] == 1
 
     refused = links.call_tool(LINK_TO_PHOTOS, {"title": "x", "page": "map", "filters": {}, "view": "grid"})

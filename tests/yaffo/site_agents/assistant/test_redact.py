@@ -48,7 +48,7 @@ def test_gps_is_rounded(redact):
 
 
 def test_people_names_are_left_alone():
-    assert Redactor(home=Path("/h"))("Chase is in 12 photos") == "Chase is in 12 photos"
+    assert Redactor(home=Path("/h"))("Billy is in 12 photos") == "Billy is in 12 photos"
 
 
 def test_configured_folders_become_labels_keeping_the_path_inside():

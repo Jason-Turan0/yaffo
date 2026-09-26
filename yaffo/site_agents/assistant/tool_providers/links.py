@@ -69,7 +69,7 @@ _RECORD_FOR_ARGUMENT = {
 
 _TITLE = {
     "type": "string",
-    "description": "The link text the user sees, in their language, e.g. 'Chase in 2019'.",
+    "description": "The link text the user sees, in their language, e.g. 'Billy in 2019'.",
 }
 
 _PHOTOS_SCHEMA = {

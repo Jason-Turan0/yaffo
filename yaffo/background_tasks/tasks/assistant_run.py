@@ -35,6 +35,7 @@ from yaffo.logging_config import get_logger
 from yaffo.site_agents.agent import create_assistant_agent
 from yaffo.site_agents.assistant import settings as assistant_settings
 from yaffo.site_agents.assistant.call_logs import conversation_log_dir
+from yaffo.site_agents.assistant.context_prefetch import prefetch_for_context
 from yaffo.site_agents.assistant.history import ROLE_USER, transcript_turns
 from yaffo.site_agents.assistant.prompt_generator.prompt import build_assistant_user_message
 from yaffo.site_agents.assistant.redact import redactor_for
@@ -103,9 +104,13 @@ def run_assistant_turn(
         return
 
     history, (_, message) = turns[:-1], turns[-1]
+    context = repo.latest_user_context(session, conversation_id)
+    prefetched = prefetch_for_context(session, context, diagnostics, redactor)
+    for result in prefetched:
+        repo.add_event(session, conversation_id, ASSISTANT_EVENT_TOOL, "", result.host_data)
     user_message = build_assistant_user_message(
         message, locale=get_saved_locale(session) or DEFAULT_LOCALE,
-        context=_redacted_context(repo.latest_user_context(session, conversation_id), redactor))
+        context=_redacted_context(context, redactor), prefetched=[r.model_text for r in prefetched])
     try:
         agent = create_assistant_agent(
             model=model, api_key=api_key, history=history, session=session,

@@ -340,7 +340,7 @@ routes/assistant.py ──► assistant_run (taskq task) ──► Agent loop
 - **Much less code.** There's one execution path, one proposal mechanism, and one
   way to render a card: `summarize_call`, which the automation test UI already uses.
 - **Compound requests work.** "Make an album of the Yellowstone photos, tag them,
-  and favorite the ones with Chase in them" is one script and one plan with three
+  and favorite the ones with Billy in them" is one script and one plan with three
   steps, not a chain of separate tool round-trips.
 - **One capability list.** New host functions (e.g. `set_favorite`) benefit
   automations and the assistant at once. The system prompt is generated from

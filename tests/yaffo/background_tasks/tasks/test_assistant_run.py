@@ -9,9 +9,14 @@ from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.tasks import assistant_run as run_module
 from yaffo.db import db
-from yaffo.db.models import ASSISTANT_STATUS_FAILED, ASSISTANT_STATUS_IDLE, ASSISTANT_STATUS_RUNNING
+from yaffo.db.models import (
+    ASSISTANT_STATUS_FAILED, ASSISTANT_STATUS_IDLE, ASSISTANT_STATUS_RUNNING, JOB_STATUS_FAILED, ApplicationSettings,
+    Automation, Job,
+)
 from yaffo.db.repositories import assistant_repository as repo
 from yaffo.site_agents.agent import AgentEvent
+from yaffo.site_agents.assistant.tool_providers.diagnostics.diagnostics import DiagnosticsToolProvider
+from yaffo.taskq.store import Store
 
 pytestmark = pytest.mark.unit
 
@@ -198,3 +203,53 @@ def test_follow_up_includes_prior_tool_evidence(session, agent_factory):
     run_module.run_assistant_turn(session, conversation_id, should_cancel=lambda: False)
     assert "disk failed" in agent_factory.calls["history"][1][1]
     assert "historical_tool_result" in agent_factory.calls["history"][1][1]
+
+
+# ---- contextual checks run before the model starts (context_prefetch.py) ----------------
+
+@pytest.fixture
+def queue_store(tmp_path, monkeypatch):
+    store = Store(str(tmp_path / "queue.db"))
+    monkeypatch.setattr(DiagnosticsToolProvider, "store", property(lambda self: store))
+    return store
+
+
+def _ask_from(session, context):
+    conversation = repo.create_conversation(session, "Q")
+    repo.add_event(session, conversation.id, "user", "Why did this fail?", {"context": context})
+    repo.start_run(session, conversation.id, "m")
+    return conversation.id
+
+
+def test_a_failed_job_is_looked_up_before_the_model_starts(session, agent_factory, queue_store):
+    agent = agent_factory([AgentEvent("assistant", text="It failed."), AgentEvent("done")])
+    session.add_all([Automation(id=1, slug="file-sync", name="File Sync", enabled=True),
+                     Job(id="j1", name="file_sync", status=JOB_STATUS_FAILED, automation_id=1, message="Drive gone")])
+    session.commit()
+    conversation_id = _ask_from(session, {"job_id": "j1", "automation": "file-sync"})
+
+    run_module.run_assistant_turn(session, conversation_id, should_cancel=lambda: False)
+
+    events = _events(session, conversation_id)
+    assert [kind for kind, _, _ in events] == ["user", "tool", "tool", "assistant"]
+    assert [payload["tool"] for kind, _, payload in events if kind == "tool"] == ["job_detail", "automation_runs"]
+    message = agent.messages[0]
+    assert "<prefetched>" in message and "Message: Drive gone" in message
+    assert '<data source="automation_runs">' in message
+
+
+def test_no_lookup_when_jobs_are_switched_off_or_the_job_is_gone(session, agent_factory, queue_store):
+    agent = agent_factory([AgentEvent("done")])
+    conversation_id = _ask_from(session, {"job_id": "missing"})
+    run_module.run_assistant_turn(session, conversation_id, should_cancel=lambda: False)
+    assert "<prefetched>" not in agent.messages[0]
+    assert [kind for kind, _, _ in _events(session, conversation_id)] == ["user"]
+
+    session.add_all([Job(id="j2", name="file_sync", status=JOB_STATUS_FAILED),
+                     ApplicationSettings(name="assistant_diag_jobs", type="string", value="false")])
+    session.commit()
+    agent = agent_factory([AgentEvent("done")])
+    conversation_id = _ask_from(session, {"job_id": "j2"})
+    run_module.run_assistant_turn(session, conversation_id, should_cancel=lambda: False)
+    assert "<prefetched>" not in agent.messages[0]
+    assert [kind for kind, _, _ in _events(session, conversation_id)] == ["user"]

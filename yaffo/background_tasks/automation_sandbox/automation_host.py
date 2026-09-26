@@ -435,7 +435,7 @@ HOST_API: tuple[HostFunction, ...] = (
             "Create a person (with no faces yet), or return the id of the existing person with "
             "that name. IDEMPOTENT on the name. Assign faces to the id with assign_faces."
         ),
-        example='person_id = create_person("Chase")',
+        example='person_id = create_person("Billy")',
         impl=actions.create_person,
         profiles=frozenset({"automation", "assistant"}),
         risk="low",
@@ -449,7 +449,7 @@ HOST_API: tuple[HostFunction, ...] = (
             "Rename a person. The name must not belong to another person (merge_people them "
             "instead). The new name is written into their photos' files by export automations."
         ),
-        example='rename_person(person_id, "Chase Smith")',
+        example='rename_person(person_id, "Billy Smith")',
         impl=actions.rename_person,
         profiles=frozenset({"automation", "assistant"}),
         risk="low",

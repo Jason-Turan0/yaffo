@@ -75,12 +75,12 @@ class TestCalculatedColumns:
         import datetime
 
         provider = _provider(monkeypatch, [
-            {"id": 1, "name": "Chase", "birthdate": datetime.date(2015, 6, 1), "estimated_birthdate": None},
+            {"id": 1, "name": "Billy", "birthdate": datetime.date(2015, 6, 1), "estimated_birthdate": None},
         ])
 
         sample = json.loads(provider.call_tool("run_data_query", {"source": "people"}))["sample"][0]
 
-        assert sample == {"id": 1, "name": "Chase", "birthdate": "2015-06-01", "estimated_birthdate": None}
+        assert sample == {"id": 1, "name": "Billy", "birthdate": "2015-06-01", "estimated_birthdate": None}
 
     def test_photos_aggregate_is_not_enriched(self, monkeypatch):
         # An aggregate resolves to a scalar/dict, not a row list, so there's

@@ -300,7 +300,7 @@ set_favorites([{"id": 2, "favorite": True}])
 
 
 def test_undo_restores_albums_faces_and_values(session, conversation):
-    session.add_all([Person(id=1, name="Chase"), Face(id=1, media_item_id=1, status=FACE_STATUS_UNASSIGNED)])
+    session.add_all([Person(id=1, name="Billy"), Face(id=1, media_item_id=1, status=FACE_STATUS_UNASSIGNED)])
     existing = album_repository.create_album(session, "Old", None)
     album_repository.add_items(session, existing.id, [4])
     session.commit()
@@ -417,17 +417,17 @@ def _faces(session, *assignments):
 def test_create_a_person_and_assign_faces_then_undo(session, conversation):
     _faces(session, (1, None), (2, None))
     _, plan = _record(session, conversation, '''
-chase = create_person("Chase")
-assign_faces([{"face_id": f, "person_id": chase} for f in [1, 2]])
+billy = create_person("Billy")
+assign_faces([{"face_id": f, "person_id": billy} for f in [1, 2]])
 ''')
     steps = plans.load_steps(plan)
-    assert steps[0].facts == {"person": "Chase"}
-    assert steps[1].facts["names"] == ["Chase"] and steps[1].count == 2
+    assert steps[0].facts == {"person": "Billy"}
+    assert steps[1].facts["names"] == ["Billy"] and steps[1].count == 2
     assert session.query(Person).count() == 0
 
     plans.approve(session, plan.id, conversation.id)
-    chase = session.query(Person).one()
-    assert {pf.person_id for pf in session.query(PersonFace)} == {chase.id}
+    billy = session.query(Person).one()
+    assert {pf.person_id for pf in session.query(PersonFace)} == {billy.id}
 
     plans.undo(session, plan.id, conversation.id)
     assert session.query(Person).count() == 0 and session.query(PersonFace).count() == 0
@@ -435,9 +435,9 @@ assign_faces([{"face_id": f, "person_id": chase} for f in [1, 2]])
 
 
 def test_create_person_is_idempotent_and_its_undo_keeps_an_existing_person(session, conversation):
-    session.add(Person(id=1, name="Chase"))
+    session.add(Person(id=1, name="Billy"))
     session.commit()
-    _, plan = _record(session, conversation, 'create_person("Chase")')
+    _, plan = _record(session, conversation, 'create_person("Billy")')
     plans.approve(session, plan.id, conversation.id)
     assert plans.load_steps(plan)[0].result == 1 and plans.load_steps(plan)[0].undo == []
     plans.undo(session, plan.id, conversation.id)
@@ -457,14 +457,14 @@ def test_undo_of_a_created_person_keeps_them_once_they_have_faces(session, conve
 
 
 def test_rename_person_and_undo_respects_a_later_rename(session, conversation):
-    session.add_all([Person(id=1, name="Chase"), Person(id=2, name="Bea")])
+    session.add_all([Person(id=1, name="Billy"), Person(id=2, name="Bea")])
     session.commit()
-    _, plan = _record(session, conversation, 'rename_person(1, "Chase Smith")')
-    assert plans.load_steps(plan)[0].facts == {"person": "Chase", "name": "Chase Smith"}
+    _, plan = _record(session, conversation, 'rename_person(1, "Billy Smith")')
+    assert plans.load_steps(plan)[0].facts == {"person": "Billy", "name": "Billy Smith"}
     plans.approve(session, plan.id, conversation.id)
-    assert session.get(Person, 1).name == "Chase Smith"
+    assert session.get(Person, 1).name == "Billy Smith"
     plans.undo(session, plan.id, conversation.id)
-    assert session.get(Person, 1).name == "Chase"
+    assert session.get(Person, 1).name == "Billy"
 
     _, later = _record(session, conversation, 'rename_person(1, "C")')
     plans.approve(session, later.id, conversation.id)
@@ -475,12 +475,12 @@ def test_rename_person_and_undo_respects_a_later_rename(session, conversation):
 
 
 def test_renaming_onto_another_persons_name_fails_the_step(session, conversation):
-    session.add_all([Person(id=1, name="Chase"), Person(id=2, name="Bea")])
+    session.add_all([Person(id=1, name="Billy"), Person(id=2, name="Bea")])
     session.commit()
     _, plan = _record(session, conversation, 'rename_person(1, "Bea")')
     plans.approve(session, plan.id, conversation.id)
     assert plan.status == "FAILED" and "already named" in plans.load_steps(plan)[0].error
-    assert session.get(Person, 1).name == "Chase"
+    assert session.get(Person, 1).name == "Billy"
 
 
 def test_people_changes_that_cant_be_undone_are_off_by_default(session):
@@ -490,14 +490,14 @@ def test_people_changes_that_cant_be_undone_are_off_by_default(session):
 
 
 def test_merge_people_moves_faces_and_needs_the_face_count_typed(session, conversation):
-    session.add_all([Person(id=1, name="Chase"), Person(id=2, name="Chase (dup)")])
+    session.add_all([Person(id=1, name="Billy"), Person(id=2, name="Billy (dup)")])
     session.commit()
     _faces(session, (1, 1), (2, 2), (3, 2))
     _enable(session, "merge_people")
     _, plan = _record(session, conversation, "merge_people(2, 1)",
                       actions_on=assistant_settings.enabled_actions(session))
     step = plans.load_steps(plan)[0]
-    assert step.facts == {"person": "Chase (dup)", "target": "Chase", "faces": 2} and step.count == 2
+    assert step.facts == {"person": "Billy (dup)", "target": "Billy", "faces": 2} and step.count == 2
     view = plan_view(plan, 500)
     assert view.confirm == plans.CONFIRM_TYPE and view.reversible is False
 
@@ -510,14 +510,14 @@ def test_merge_people_moves_faces_and_needs_the_face_count_typed(session, conver
 
 
 def test_merge_refuses_the_same_person_at_record_time(session, conversation):
-    session.add(Person(id=1, name="Chase"))
+    session.add(Person(id=1, name="Billy"))
     _enable(session, "merge_people")
     result, plan = _record(session, conversation, "merge_people(1, 1)", actions_on=frozenset({"merge_people"}))
     assert plan is None and "into themselves" in result.model_text
 
 
 def test_delete_person_unassigns_their_faces(session, conversation):
-    session.add_all([Person(id=1, name="Chase"), Person(id=2, name="Empty")])
+    session.add_all([Person(id=1, name="Billy"), Person(id=2, name="Empty")])
     session.commit()
     _faces(session, (1, 1))
     _enable(session, "delete_person")
@@ -619,7 +619,7 @@ def test_turning_an_automation_off_is_undone(session, conversation):
 # ---- phase 5: faces, album covers and order, jobs --------------------------------------
 
 def test_ignore_faces_skips_assigned_faces_and_undo_restores_only_what_it_ignored(session, conversation):
-    session.add(Person(id=1, name="Chase"))
+    session.add(Person(id=1, name="Billy"))
     session.commit()
     _faces(session, (1, None), (2, None), (3, 1))
     actions.ignore_faces(session, [2])  # ignored before the plan

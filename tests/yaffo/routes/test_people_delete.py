@@ -11,7 +11,7 @@ pytestmark = pytest.mark.unit
 def test_delete_person_unassigns_their_faces_and_drops_their_embeddings(client):
     db.session.add_all([
         MediaItem(id=1, full_file_path="/lib/1.jpg"),
-        Person(id=1, name="Chase"),
+        Person(id=1, name="Billy"),
         Person(id=2, name="Bea"),
         Face(id=1, media_item_id=1, status=FACE_STATUS_ASSIGNED),
         Face(id=2, media_item_id=1, status=FACE_STATUS_ASSIGNED),

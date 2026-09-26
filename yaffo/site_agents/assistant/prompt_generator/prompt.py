@@ -10,10 +10,16 @@ response-language contract in prompt_generator/response_language.py.
 """
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, Sequence
 
 from yaffo.background_tasks.automation_sandbox.automation_host import render_host_api
+from yaffo.db.repositories.data_query_repository import FIELDS_BY_SOURCE
 from yaffo.site_agents.assistant.settings import DIAG_FILES, DIAG_JOBS, DIAG_LIBRARY, DIAG_LOGS, DIAG_METADATA
+from yaffo.site_agents.common.prompt_generator.source_catalog import (
+    calculated_filter_lines,
+    relationship_summary,
+    virtual_source_lines,
+)
 from yaffo.site_agents.common.prompt_generator.response_language import (
     application_locale_el,
     response_language_block,
@@ -88,14 +94,14 @@ def _diagnostics(diagnostics: frozenset[str]) -> str:
 def _scripts(actions: frozenset[str]) -> str:
     return block("scripts", [
         "run_script runs a short Starlark script (a Python-like language) over the library",
-        "database, for questions like 'how many photos of Chase from 2019?' or 'which albums",
+        "database, for questions like 'how many photos of Billy from 2019?' or 'which albums",
         "have no cover?'. The script's last expression is its value; print() output is",
         "returned too. There are no imports, no files, no network, and no while loops;",
         "use for-loops over lists and comprehensions. Keep scripts short and aggregate in",
         "the script rather than returning thousands of rows. If a script fails, read the",
         "error, fix the script, and try again.",
-        "Call describe_data_source first when you aren't sure which fields a source has;",
-        "never guess column names.",
+        "The sources and their columns are in <data_sources>; use those names exactly and never",
+        "guess others. describe_data_source only adds column descriptions.",
         "To send the user somewhere in the app, call link_to_photos (the gallery with",
         "filters, e.g. a person and a year) or link_to_page (any other page: one photo, a",
         "person's faces, an album, Settings, an automation, …). The app shows the link",
@@ -114,6 +120,64 @@ def _scripts(actions: frozenset[str]) -> str:
     ])
 
 
+# A worked example for the query models most often get wrong: joining people to
+# photos through faces. Kept runnable: a test executes it in the sandbox.
+ONLY_PERSON_EXAMPLE = """\
+PERSON = 10  # from data_query({"source": "people"})
+face_ids = [r["face_id"] for r in data_query({"source": "people_face", "person_id": {"eq": PERSON}})]
+photos = {}
+if face_ids:
+    photos = {f["media_item_id"]: True for f in data_query({"source": "faces", "id": {"in": face_ids}})}
+photo_of_face = {}
+if photos:
+    photo_of_face = {f["id"]: f["media_item_id"] for f in data_query({"source": "faces", "media_item_id": {"in": list(photos)}})}
+others = {}
+if photo_of_face:
+    for r in data_query({"source": "people_face", "face_id": {"in": list(photo_of_face)}}):
+        if r["person_id"] != PERSON:
+            others[photo_of_face[r["face_id"]]] = True
+only = sorted([m for m in photos if m not in others])
+len(only)"""
+
+
+def _column_line(source: str, fields: dict) -> str:
+    return f"{source}: " + ", ".join(f"{name}:{schema['type']}" for name, schema in fields.items())
+
+
+def _data_sources() -> str:
+    """The data_query catalog, derived from the models like the builders' prompts, so
+    scripts don't spend a round describing sources. Identical for every conversation."""
+    return block("data_sources", [
+        "Table sources and their columns (name:type). A row is a dict of these columns:",
+        *(_column_line(source, fields) for source, fields in FIELDS_BY_SOURCE.items()),
+        "Also filterable, derived from the file path (never shown in full):",
+        *calculated_filter_lines(FIELDS_BY_SOURCE),
+        "Computed sources take these params instead of column filters:",
+        *virtual_source_lines(),
+        f"There are no joins. Query each source and match rows on: {relationship_summary()}.",
+        "A photo's people: people_face (person_id, face_id) -> faces (id, media_item_id). faces",
+        "has no person_id and tags has tag_name/tag_value, not name/value.",
+        'Filter as {"column": {"op": value}}; ops: eq, ne, lt, lte, gt, gte, contains (text), in;',
+        "relative_path takes prefix.",
+        "An `in` list must not be empty; check before querying.",
+        'Aggregates: {"source": s, "op": "count"}, or op count_distinct, facet or range with "field".',
+        "A query returns at most 5,000 rows. If you get exactly the limit, the result was cut",
+        "off: narrow it with filters (e.g. id in a list) instead of reading a whole table.",
+    ])
+
+
+def _starlark() -> str:
+    return block("starlark", [
+        "Starlark is not Python. These fail: set() (use a dict {k: True} and list(d) for its keys),",
+        "generator expressions like any(x for x in xs) (use a list comprehension), sum() (use",
+        "len([... if ...]) or a for-loop), `is` / `is not` (use == None / != None), while loops,",
+        "f-strings (use % or +), dict.fromkeys, and list.sort() (use sorted(xs, key=lambda x: ...)).",
+        "Returned dict keys become strings.",
+        "Example: the photos in which one person is the only person assigned to a face:",
+        *ONLY_PERSON_EXAMPLE.splitlines(),
+    ])
+
+
 def _changes() -> str:
     return block("changes", [
         "You can propose changes to the library (tags, albums, faces, favorites, dates, location",
@@ -121,6 +185,8 @@ def _changes() -> str:
         "run_script. They don't run: each call is recorded, and a script that recorded any becomes",
         "a change plan the user sees as a card under your reply, with the exact items and counts.",
         "Only the user's Approve applies it, exactly as recorded; they can also decline it or undo it.",
+        "- The mutating functions exist only inside run_script. They aren't tools; never call",
+        "  one directly.",
         "- Only propose a change the user asked for. For a question, answer it; don't change anything.",
         "- Select items with data_query in the same script and pass the whole list in one call.",
         "  Look before you change: if the selection is unclear (0 matches, or far more than",
@@ -201,7 +267,7 @@ def build_assistant_system_prompt(
     if diagnostics:
         sections.append(_diagnostics(diagnostics))
     if DIAG_LIBRARY in diagnostics:
-        sections.append(_scripts(actions))
+        sections += [_scripts(actions), _data_sources(), _starlark()]
     if actions:
         sections.append(_changes())
     sections += [_limits(diagnostics, actions), _style(), response_language_block()]
@@ -213,9 +279,12 @@ def build_assistant_system_prompt(
 CONTEXT_FIELDS = ("page", "job_id", "automation", "error_code", "error")
 
 
-def build_assistant_user_message(message: str, *, locale: str, context: Optional[dict] = None) -> str:
+def build_assistant_user_message(
+    message: str, *, locale: str, context: Optional[dict] = None, prefetched: Sequence[str] = (),
+) -> str:
     """The current user turn: the message, any attached context (the page or failed
-    job the user asked from), and the application locale."""
+    job the user asked from), the checks the app already ran for that context
+    (context_prefetch.py), and the application locale."""
     parts = [block("message", (message.strip() or "").splitlines() or [""])]
     if context:
         lines = [el(key, str(context[key])) for key in CONTEXT_FIELDS if context.get(key)]
@@ -224,5 +293,11 @@ def build_assistant_user_message(message: str, *, locale: str, context: Optional
                 "The user asked from this place in the app (attached by the app, not typed):",
                 *lines,
             ]))
+    if prefetched:
+        parts.append(block("prefetched", [
+            "The app already ran these read-only checks for that context. Use them instead of",
+            "running the same checks again:",
+            *prefetched,
+        ]))
     parts.append(application_locale_el(locale))
     return "\n".join(parts)

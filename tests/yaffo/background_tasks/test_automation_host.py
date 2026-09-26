@@ -27,7 +27,7 @@ def test_host_returns_are_coerced_to_sandbox_safe_types(monkeypatch):
 
     monkeypatch.setattr(
         "yaffo.background_tasks.automation_sandbox.automation_actions.resolve_query",
-        lambda session, query: [{"name": "Chase", "birthdate": datetime.date(2015, 6, 1), "score": Decimal("0.5")}],
+        lambda session, query: [{"name": "Billy", "birthdate": datetime.date(2015, 6, 1), "score": Decimal("0.5")}],
     )
     monkeypatch.setattr(
         "yaffo.background_tasks.automation_sandbox.automation_actions.enrich_media_rows",
@@ -40,7 +40,7 @@ def test_host_returns_are_coerced_to_sandbox_safe_types(monkeypatch):
     )
 
     assert result.success is True, result.error
-    assert result.value == [{"name": "Chase", "birthdate": "2015-06-01", "score": 0.5}]
+    assert result.value == [{"name": "Billy", "birthdate": "2015-06-01", "score": 0.5}]
 
 
 def test_data_query_callable_is_invoked_from_starlark(monkeypatch):

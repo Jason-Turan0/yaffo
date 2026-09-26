@@ -1,7 +1,11 @@
 import pytest
 
 from yaffo.site_agents.assistant.history import normalize_turns
-from yaffo.site_agents.assistant.prompt_generator.prompt import build_assistant_system_prompt, build_assistant_user_message
+from yaffo.site_agents.assistant.prompt_generator.prompt import (
+    ONLY_PERSON_EXAMPLE,
+    build_assistant_system_prompt,
+    build_assistant_user_message,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -131,3 +135,27 @@ def test_changes_block_needs_scripts_and_lists_only_enabled_changes():
     assert "<changes>" not in build_assistant_system_prompt(frozenset({"logs"}), actions)
     read_only = build_assistant_system_prompt(frozenset({"library"}), frozenset())
     assert "<changes>" not in read_only and "Scripts can only read" in read_only
+
+
+def test_scripts_come_with_the_source_catalog_and_starlark_notes():
+    prompt = build_assistant_system_prompt(frozenset({"library"}))
+    assert "<data_sources>" in prompt and "<starlark>" in prompt
+    assert "tags: id:integer, media_item_id:integer, tag_name:string" in prompt
+    assert "people_face.face_id -> faces.id" in prompt
+    assert all(line in prompt for line in ONLY_PERSON_EXAMPLE.splitlines())
+
+    without_scripts = build_assistant_system_prompt(frozenset({"logs"}))
+    assert "<data_sources>" not in without_scripts and "<starlark>" not in without_scripts
+
+
+def test_changes_say_mutations_are_not_tools():
+    prompt = build_assistant_system_prompt(frozenset({"library"}), frozenset({"tag_media_items"}))
+    assert "exist only inside run_script" in prompt
+
+
+def test_prefetched_checks_ride_in_the_user_turn():
+    message = build_assistant_user_message(
+        "Why?", locale="en", context={"job_id": "j1"}, prefetched=['<data source="job_detail">\nJob j1\n</data>'])
+    assert "<prefetched>" in message and "Job j1" in message
+    assert message.index("<context>") < message.index("<prefetched>") < message.index("<application_locale>")
+    assert "<prefetched>" not in build_assistant_user_message("Why?", locale="en")

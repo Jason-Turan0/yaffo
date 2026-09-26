@@ -207,9 +207,9 @@ describe('plan card', () => {
     const { card } = await render(plan({
       risk: 'high', reversible: false, confirm: 'type', count: 2,
       steps: [
-        step({ name: 'create_person', count: 1, facts: { person: 'Chase' } }),
+        step({ name: 'create_person', count: 1, facts: { person: 'Billy' } }),
         step({ seq: 1, name: 'merge_people', risk: 'high', reversible: false, count: 2,
-          facts: { person: 'Dup', target: 'Chase', faces: 2 } }),
+          facts: { person: 'Dup', target: 'Billy', faces: 2 } }),
         step({ seq: 2, name: 'delete_person', risk: 'high', reversible: false, count: 1,
           facts: { person: 'Empty', faces: 0 } }),
         step({ seq: 3, name: 'rename_person', summary: 'Rename a person', count: 1, facts: { person: null } }),
