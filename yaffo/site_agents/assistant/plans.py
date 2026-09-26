@@ -240,6 +240,10 @@ def step_facts(call: HostCall, session: Session, mutations: list[HostCall]) -> t
         facts["automation"] = automation.display_name if automation else None
         facts["value"] = bool(args[1]) if len(args) > 1 else None
         return 1, facts
+    if name == "run_automation":
+        automation = automation_repository.get_by_slug(session, args[0]) if args else None
+        facts["automation"] = automation.display_name if automation else None
+        return 1, facts
     if name == "index_files":
         return len(maintenance.files_to_index(session, args[0])) if args else 0, facts
     if name == "remove_missing_items":
@@ -247,9 +251,6 @@ def step_facts(call: HostCall, session: Session, mutations: list[HostCall]) -> t
         return len(maintenance.scan_missing_ids(session, args[0], subset)) if args else 0, facts
     if name == "reindex_media":
         return len(set(_list_arg(args, 0))), facts
-    if name == "start_library_scan":
-        facts["read_only"] = True
-        return 1, facts
     if name == "repair_face_statuses":
         problems = maintenance.face_repair_counts(session)
         facts.update(linked=problems.linked_not_assigned,
@@ -292,7 +293,8 @@ def record_plan(
             facts=facts, count=count, risk=fn.risk,
             reversible=fn.undo is not None,
             starts_job=fn.starts_job,
-            job_page=page_url(fn.job_page, {}) if fn.job_page else None,
+            job_page=(page_url("automations_show", {"slug": call.args[0]}) if call.name == "run_automation"
+                      else page_url(fn.job_page, {}) if fn.job_page else None),
         ))
     risk = max((s.risk for s in steps), key=RISK_ORDER.__getitem__)
     return repo.create_plan(
@@ -443,6 +445,12 @@ def _replay(session: Session, plan: AssistantChangePlan, steps: list[PlanStep]) 
     if jobs:
         text += " " + " ".join(f"Step {s.seq + 1} started background job {s.result}." for s in jobs)
         text += " That work may still be running: check it with job_detail before saying how it went."
+    runs = [s for s in steps if s.name == "run_automation" and s.state == STEP_DONE]
+    if runs:
+        text += " " + " ".join(
+            f"Step {s.seq + 1} queued automation {s.args[0]!r}." for s in runs
+        )
+        text += " Its Job appears in that automation's Run history when the worker starts; check there before saying how it went."
     repo.save_plan(session, plan, steps=[s.to_dict() for s in steps], status=status,
                    finished_at=utcnow(), error=failed.error if failed else None)
     _plan_event(session, plan, text)

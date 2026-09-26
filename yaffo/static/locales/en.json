@@ -459,6 +459,7 @@
       "waitForReply": "Available when the reply finishes.",
       "confirmType_one": "Type {{formattedCount}} to confirm this changes {{formattedCount}} item:",
       "confirmType_other": "Type {{formattedCount}} to confirm this changes {{formattedCount}} items:",
+      "confirmRun": "Type {{formattedCount}} to confirm starting this automation:",
       "confirmCheck_one": "Yes, change {{formattedCount}} item",
       "confirmCheck_other": "Yes, change all {{formattedCount}} items",
       "more_one": "{{count}} more",
@@ -539,7 +540,7 @@
         "set_automation_enabled_off": "Turn off the “{{automation}}” automation",
         "reindex_media_one": "Re-index {{formattedCount}} item from its file (its faces are detected again, and people assigned to them are removed)",
         "reindex_media_other": "Re-index {{formattedCount}} items from their files (their faces are detected again, and people assigned to them are removed)",
-        "start_library_scan": "Check the media folders for new and missing files",
+        "run_automation": "Run the “{{automation}}” automation over all media folders",
         "repair_face_statuses_one": "Repair {{formattedCount}} face in an inconsistent state",
         "repair_face_statuses_other": "Repair {{formattedCount}} faces in inconsistent states",
         "index_files_one": "Index {{formattedCount}} new file found by the scan",
@@ -561,7 +562,8 @@
       },
       "readOnly": "Changes nothing",
       "background": "Runs in the background",
-      "jobProgress": "See its progress in Index Photos"
+      "jobProgress": "See its progress in Index Photos",
+      "runHistory": "See its Run history"
     },
     "deleteAll": {
       "title": "Delete all conversations?",

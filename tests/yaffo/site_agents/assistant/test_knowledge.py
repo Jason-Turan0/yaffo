@@ -59,3 +59,13 @@ def test_bundled_knowledge_loads_and_answers():
     assert len(bundled.sections) > 100
     top = bundled.search("assign faces to a person")[0].section
     assert top.path == "guide/organize-review/assigning-faces.md"
+
+
+@pytest.mark.parametrize("question, page", [
+    ("photos show the wrong year", "photos-wrong-year.md"),
+    ("external drive not showing", "external-drive-not-showing.md"),
+    ("faces stuck after assigning", "faces-stuck-after-assigning.md"),
+])
+def test_bundled_troubleshooting_runbooks_rank_first(question, page):
+    top = knowledge_base().search(question, scope="guide")[0].section
+    assert top.path == f"guide/reference-maintenance/troubleshooting/{page}"

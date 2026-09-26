@@ -3,14 +3,15 @@ the app, beyond editing metadata. Assistant profile only (automations don't get
 them), and like every mutation they only run when the user approves a plan.
 
 Some start background work rather than finishing in the approval request:
-start_library_scan, index_files and reindex_media return a Job id (their
-HostFunction has `starts_job`), and the work goes on after the plan says "done".
-The assistant checks the job afterwards (job_detail). The rest finish immediately.
+index_files and reindex_media return a Job id (their HostFunction has
+`starts_job`). run_automation queues a run whose worker creates the Job, so its
+plan links to the automation's Run history. The assistant checks the resulting
+job afterwards.
 
-A sync is two plans, not one guess: start_library_scan records exactly which
-files aren't indexed and which items lost their file; then index_files and
-remove_missing_items act on that scan. So the card for removing items names the
-exact count, and the user, who knows whether they deleted a folder, decides.
+A legacy library scan records exactly which files aren't indexed and which items
+lost their file; index_files and remove_missing_items can act on that scan. The
+card for removing items names the exact count, and the user, who knows whether
+they deleted a folder, decides.
 Each missing item is checked again at approval, and one whose file is back stays.
 
 Each ships with a `summarize_*` (the card's English fallback; the card words steps
@@ -27,9 +28,12 @@ from typing import Annotated, Any, Optional
 
 from sqlalchemy.orm import Session
 
+from yaffo.background_tasks.automation_dispatch import invoke_automation
 from yaffo.background_tasks.automation_sandbox.automation_actions import _emit_media_modified
 from yaffo.background_tasks.automation_sandbox.host_types import HostCall
 from yaffo.background_tasks.config import task_queue
+from yaffo.background_tasks.events import EventContext
+from yaffo.background_tasks.schedule_scope import media_item_ids, selected_paths
 from yaffo.db.models import (
     JOB_STATUS_COMPLETED,
     JOB_STATUS_PENDING,
@@ -70,6 +74,15 @@ def library_scannable(args: list[Any], session: Session) -> str | None:
 
 def automation_exists(args: list[Any], session: Session) -> str | None:
     return None if automation_repository.get_by_slug(session, args[0]) else "No automation with that slug"
+
+
+def automation_runnable(args: list[Any], session: Session) -> str | None:
+    automation = automation_repository.get_by_slug(session, args[0])
+    if automation is None:
+        return "No automation with that slug"
+    if not automation.handler and not automation.published_code:
+        return "That automation has no runnable handler or published code"
+    return None
 
 
 def faces_need_repair(args: list[Any], session: Session) -> str | None:
@@ -131,7 +144,7 @@ def scan_findings(session: Session, scan_job_id: Any) -> dict | None:
 def _scan_problem(session: Session, scan_job_id: Any) -> str | None:
     job = session.get(Job, scan_job_id) if isinstance(scan_job_id, str) else None
     if job is None or job.name != JOB_NAME_SCAN:
-        return "No scan job with that id; start one with start_library_scan"
+        return "No scan job with that id"
     if job.status != JOB_STATUS_COMPLETED:
         return "That scan hasn't finished (or failed); check it with job_detail"
     if scan_findings(session, scan_job_id) is None:
@@ -258,6 +271,31 @@ def undo_set_automation_enabled(args: list[Any], session: Session) -> list[HostC
     if automation is None or bool(automation.enabled) == bool(args[1]):
         return []
     return [HostCall("set_automation_enabled", [args[0], bool(automation.enabled), bool(args[1])])]
+
+
+# ---- run_automation -------------------------------------------------------------------
+
+def run_automation(session: Session, slug: str) -> None:
+    """Queue one run over all configured media directories, regardless of the
+    automation's enabled state or triggers. The automation's worker records its
+    own Job, so this returns no Job id."""
+    automation = automation_repository.get_by_slug(session, slug)
+    if automation is None:
+        raise ValueError(f"No automation with slug {slug!r}")
+    paths = selected_paths(session, {"scope_type": "everything"})
+    context = EventContext(
+        event_type=None,
+        media_item_ids=media_item_ids(session, paths),
+        scope_paths=[str(path) for path in paths],
+    )
+    if not invoke_automation(automation, context):
+        raise ValueError(f"Automation {slug!r} has no runnable handler or published code")
+
+
+def summarize_run_automation(args: list[Any], session: Session) -> str:
+    automation = automation_repository.get_by_slug(session, args[0]) if args else None
+    name = automation.display_name if automation else (args[0] if args else "")
+    return f"Run automation '{name}' over all media folders"
 
 
 # ---- repair_face_statuses ----------------------------------------------------------------

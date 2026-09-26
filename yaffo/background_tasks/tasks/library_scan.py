@@ -1,9 +1,8 @@
 """Background task: scan the media folders against the index.
 
-Started by the assistant's start_library_scan (automation_sandbox/
-maintenance_actions.py) after the user approved it. A scan walks every media
-folder, which can take minutes on a large library or a failing drive, so it never
-runs in the web request that approved it.
+The legacy assistant scan helper in automation_sandbox/maintenance_actions.py
+created these jobs. A scan walks every media folder, which can take minutes on a
+large library or a failing drive, so it runs in the task queue.
 
 The scan changes nothing. It is the first half of a sync: the caller creates the
 Job; this task runs the scan and records what it found on the Job. `message` is the

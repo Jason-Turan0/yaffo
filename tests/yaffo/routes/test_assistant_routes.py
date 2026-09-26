@@ -511,7 +511,7 @@ def test_settings_groups_the_changes_with_counts_and_undo_tags(client):
     assert section.count("data-assistant-action-group") == 6
     assert "Files on disk" in section and "0 of 3 on" in section  # file changes start off
     assert "3 of 3 on" in section  # tags and favorites start on
-    assert section.count("t be undone</span>") == section.count("chip-warning") == 10
+    assert section.count("t be undone</span>") == section.count("chip-warning") == 11
     files = section[section.index("Files on disk"):section.index("Library upkeep")]
     assert files.count("chip-warning") == 3
     assert 'id="assistant-diag-metadata"' in section

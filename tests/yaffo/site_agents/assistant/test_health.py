@@ -15,6 +15,7 @@ def test_unmounted_media_dir_is_a_problem():
     findings = health.check_media_dir("/Volumes/Photos", {"exists": False})
     assert _levels(findings) == [PROBLEM]
     assert "not mounted" in findings[0].message and findings[0].doc
+    assert findings[0].doc == health.DOC_EXTERNAL_DRIVE
 
 
 def test_an_empty_media_folder_with_indexed_items_is_a_problem():
@@ -43,7 +44,9 @@ def test_thumbnail_dir_inside_library_without_marker():
 
 
 def test_face_states():
-    assert _levels(health.check_faces(3, 0, 0, 0)) == [PROBLEM]
+    linked = health.check_faces(3, 0, 0, 0)
+    assert _levels(linked) == [PROBLEM]
+    assert linked[0].doc == health.DOC_FACES
     # PROCESSING is only stuck when no face task is queued.
     assert _levels(health.check_faces(0, 5, 0, 0)) == [PROBLEM]
     assert _levels(health.check_faces(0, 5, 1, 0)) == [OK]
@@ -51,7 +54,9 @@ def test_face_states():
 
 
 def test_dates_year_5000_and_undated_share():
-    assert _levels(health.check_dates(1, 0, 100)) == [WARNING]
+    impossible = health.check_dates(1, 0, 100)
+    assert _levels(impossible) == [WARNING]
+    assert impossible[0].doc == health.DOC_DATES
     assert _levels(health.check_dates(0, 30, 100)) == [WARNING]
     assert _levels(health.check_dates(0, 10, 100)) == [OK]
 

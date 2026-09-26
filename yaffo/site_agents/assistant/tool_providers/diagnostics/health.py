@@ -19,10 +19,10 @@ LEVELS = (OK, WARNING, PROBLEM)
 
 DOC_MEDIA_DIRS = "guide/reference-maintenance/settings.md#media-directories"
 DOC_THUMBNAILS = "guide/reference-maintenance/settings.md#thumbnail-directory"
-DOC_PHOTOS_MISSING = "guide/reference-maintenance/troubleshooting.md#photos-do-not-appear"
+DOC_EXTERNAL_DRIVE = "guide/reference-maintenance/troubleshooting/external-drive-not-showing.md"
 DOC_JOBS = "guide/reference-maintenance/troubleshooting.md#jobs-are-stuck-or-slow"
-DOC_FACES = "guide/reference-maintenance/troubleshooting.md#faces-labels-or-duplicates-look-wrong"
-DOC_REINDEX = "guide/library-basics/indexing-library.md#re-index-after-changes"
+DOC_FACES = "guide/reference-maintenance/troubleshooting/faces-stuck-after-assigning.md"
+DOC_DATES = "guide/reference-maintenance/troubleshooting/photos-wrong-year.md"
 DOC_SYSTEM = "guide/reference-maintenance/settings.md#system-information"
 DOC_AUTOMATIONS = "guide/create-customize/automations.md"
 
@@ -61,13 +61,13 @@ def check_media_dir(label: str, facts: dict, probe: Optional[dict] = None) -> li
     from AssistantFS.probe."""
     check = f"media_dir:{label}"
     if facts.get("error"):
-        return [Finding(check, PROBLEM, f"Media folder {label} did not respond: {facts['error']}.", DOC_PHOTOS_MISSING)]
+        return [Finding(check, PROBLEM, f"Media folder {label} did not respond: {facts['error']}.", DOC_EXTERNAL_DRIVE)]
     if not facts.get("exists"):
         return [Finding(
             check, PROBLEM,
             f"Media folder {label} is missing or its drive is not mounted. Until it's back, "
             "a sync would treat its photos as deleted.",
-            DOC_PHOTOS_MISSING,
+            DOC_EXTERNAL_DRIVE,
         )]
     findings: list[Finding] = []
     if facts.get("holds_media") is False and facts.get("indexed_items"):
@@ -76,7 +76,7 @@ def check_media_dir(label: str, facts: dict, probe: Optional[dict] = None) -> li
             f"Media folder {label} holds no media files, but {facts['indexed_items']} indexed item(s) are "
             "under it. Its drive is probably not connected properly (an empty mount point). Unattended "
             "syncs leave those items alone; a manual Sync would remove them.",
-            DOC_PHOTOS_MISSING,
+            DOC_EXTERNAL_DRIVE,
         ))
     if facts.get("readable") is False:
         findings.append(Finding(check, PROBLEM, f"Media folder {label} can't be read (permissions).", DOC_MEDIA_DIRS))
@@ -86,20 +86,20 @@ def check_media_dir(label: str, facts: dict, probe: Optional[dict] = None) -> li
                 check, PROBLEM,
                 f"Media folder {label} did not respond to a quick listing. The drive may be failing "
                 "or asleep; scans will hang on it.",
-                DOC_PHOTOS_MISSING,
+                DOC_EXTERNAL_DRIVE,
             ))
         elif probe.get("error"):
-            findings.append(Finding(check, PROBLEM, f"Listing media folder {label} failed: {probe['error']}.", DOC_PHOTOS_MISSING))
+            findings.append(Finding(check, PROBLEM, f"Listing media folder {label} failed: {probe['error']}.", DOC_EXTERNAL_DRIVE))
         elif (probe.get("seconds") or 0) >= SLOW_PROBE_SECONDS:
             findings.append(Finding(
                 check, WARNING,
                 f"Media folder {label} took {probe['seconds']:.1f}s to list its first entries; the drive is slow.",
-                DOC_PHOTOS_MISSING,
+                DOC_EXTERNAL_DRIVE,
             ))
     if str(facts.get("filesystem_type") or "").lower() == "exfat":
         findings.append(Finding(check, WARNING,
             f"Media folder {label} is on exFAT. If scans are slow or fail, check the drive and keep a backup.",
-            DOC_PHOTOS_MISSING))
+            DOC_EXTERNAL_DRIVE))
     total, free = facts.get("total_bytes"), facts.get("free_bytes")
     if total and free is not None and (free < LOW_SPACE_BYTES or free / total < LOW_SPACE_FRACTION):
         findings.append(Finding(
@@ -169,13 +169,13 @@ def check_dates(implausible: int, undated: int, total: int) -> list[Finding]:
             "dates:implausible", WARNING,
             f"{implausible} item(s) have an impossible date (before 1900 or in the future); they sort "
             "to the wrong place.",
-            DOC_REINDEX,
+            DOC_DATES,
         ))
     if total and undated / total >= UNDATED_WARNING_SHARE:
         findings.append(Finding(
             "dates:undated", WARNING,
             f"{undated} of {total} item(s) have no date, so they're missing from date views.",
-            DOC_REINDEX,
+            DOC_DATES,
         ))
     return findings or [_ok("dates", "Dates look plausible.")]
 

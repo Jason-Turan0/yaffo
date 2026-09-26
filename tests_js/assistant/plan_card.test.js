@@ -37,7 +37,7 @@ const plan = (overrides = {}) => ({
 
 // Keys plus the values the card interpolates, so wording choices are visible.
 const interpolate = (key, options = {}) =>
-  [key, options.names, options.album, options.name, options.formattedCount, options.error]
+  [key, options.names, options.album, options.name, options.automation, options.formattedCount, options.error]
     .filter((value) => value !== undefined && value !== '')
     .join(' ');
 
@@ -127,6 +127,23 @@ describe('plan card', () => {
     expect(onApprove).toHaveBeenCalledWith(expect.anything(), 38);
   });
 
+  it('confirms one automation run without calling it one changed item', async () => {
+    const { card, onApprove } = await render(plan({
+      risk: 'high', reversible: false, confirm: 'type', count: 1,
+      steps: [step({ name: 'run_automation', risk: 'high', reversible: false, count: 1,
+        facts: { automation: 'Export photo tag' } })],
+    }));
+    expect(card.querySelector('.assistant-plan-confirm span').textContent)
+      .toBe('assistant:plan.confirmRun 1');
+    const approve = byText(card, 'assistant:plan.approveHigh');
+    expect(approve.disabled).toBe(true);
+    const input = card.querySelector('input[type="text"]');
+    input.value = '1';
+    input.dispatchEvent(new Event('input'));
+    approve.click();
+    expect(onApprove).toHaveBeenCalledWith(expect.anything(), 1);
+  });
+
   it('keeps the buttons off while busy', async () => {
     const { card } = await render(plan(), { busy: true });
     expect(buttons(card).every((b) => b.disabled)).toBe(true);
@@ -199,14 +216,20 @@ describe('plan card', () => {
     expect(link.textContent).toBe('assistant:plan.jobProgress');
   });
 
-  it('a scan changes nothing, so it offers no Undo', async () => {
+  it('links a queued automation to its Run history without claiming a job id', async () => {
     const { card } = await render(plan({
-      status: 'EXECUTED', read_only: true, reversible: true,
-      steps: [step({ name: 'start_library_scan', count: 1, facts: { read_only: true }, starts_job: true,
-        state: 'done', job_id: 'job-2' })],
+      status: 'EXECUTED', risk: 'high', reversible: false,
+      steps: [step({ name: 'run_automation', count: 1,
+        facts: { automation: 'Export photo tag' }, starts_job: false,
+        job_page: '/utilities/automations/export_photo_tag', state: 'done', job_id: null })],
     }));
     expect(card.querySelector('.assistant-plan-facts').textContent)
-      .toBe('assistant:plan.readOnly · assistant:plan.background');
+      .toBe('assistant:plan.irreversible · assistant:plan.background');
+    const link = card.querySelector('a.assistant-plan-job');
+    expect(link.getAttribute('href')).toBe('/utilities/automations/export_photo_tag');
+    expect(link.textContent).toBe('assistant:plan.runHistory');
+    expect(card.querySelector('.assistant-plan-step').textContent)
+      .toBe('assistant:plan.steps.run_automation Export photo tag 1');
     expect(card.querySelectorAll('button')).toHaveLength(0);
   });
 
@@ -217,7 +240,7 @@ describe('plan card', () => {
         facts: { automation: null, value: true } }),
     ] }));
     const lines = [...card.querySelectorAll('.assistant-plan-step')].map((li) => li.textContent);
-    expect(lines).toEqual(['assistant:plan.steps.set_automation_enabled_off 1', 'Turn on automation x']);
+    expect(lines).toEqual(['assistant:plan.steps.set_automation_enabled_off File Sync 1', 'Turn on automation x']);
   });
 
   it('offers the script under a multi-step plan', async () => {

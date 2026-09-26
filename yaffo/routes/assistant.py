@@ -157,9 +157,9 @@ def switch_help() -> dict[str, str]:
             "Fixes faces whose status doesn't match their person link: assigned to someone but still listed "
             "as unassigned, stuck mid-assignment, or ignored but still linked (the link is removed). "
             "Nothing is re-detected."),
-        "start_library_scan": gettext(
-            "Compares the media folders with the library and reports new files and items whose file is "
-            "gone. Changes nothing; a sync is this scan followed by the two changes below."),
+        "run_automation": gettext(
+            "Starts the chosen automation once over all configured media folders. The automation may change "
+            "your library or files; review its Run history for the result."),
         "index_files": gettext(
             "Indexes the files a scan found that aren't in the library yet, including ones that failed "
             "to import or index before."),
@@ -216,7 +216,7 @@ def action_groups_layout() -> list[tuple[str, str, dict[str, str]]]:
             "delete_media_items": gettext("Move photos to the system trash"),
         }),
         ("upkeep", gettext("Library upkeep"), {
-            "start_library_scan": gettext("Scan for new and missing files"),
+            "run_automation": gettext("Run automation"),
             "index_files": gettext("Index new files"),
             "remove_missing_items": gettext("Remove missing items"),
             "reindex_media": gettext("Re-index items"),
@@ -226,7 +226,7 @@ def action_groups_layout() -> list[tuple[str, str, dict[str, str]]]:
 
 
 # Changes without an undo that still change nothing: no "can't be undone" tag.
-_READ_ONLY_ACTIONS = frozenset({"start_library_scan"})
+_READ_ONLY_ACTIONS = frozenset()
 
 
 def action_groups() -> list[ActionGroup]:

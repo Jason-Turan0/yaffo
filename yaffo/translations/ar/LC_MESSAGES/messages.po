@@ -4511,3 +4511,11 @@ msgstr ""
 #: yaffo/routes/utilities/automations.py:554
 msgid "Choose at least one configured media directory or a folder inside one."
 msgstr ""
+
+#: yaffo/routes/assistant.py
+msgid "Run automation"
+msgstr "تشغيل الأتمتة"
+
+#: yaffo/routes/assistant.py
+msgid "Starts the chosen automation once over all configured media folders. The automation may change your library or files; review its Run history for the result."
+msgstr ""

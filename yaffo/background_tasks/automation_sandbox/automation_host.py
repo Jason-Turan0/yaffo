@@ -448,24 +448,22 @@ HOST_API: tuple[HostFunction, ...] = (
     ),
     HostFunction(
         description=(
-            "Scan the media folders against the index in the background: files not indexed yet, "
-            "and indexed items whose file is gone. Changes nothing. Read the result from the "
-            "job's message (job_detail) once it has finished, then act on it with index_files "
-            "and remove_missing_items (a sync is those two)."
+            "Run any existing automation now over all configured media directories, even if "
+            "it is disabled or has no triggers. It starts background work; review the automation's "
+            "Run history for progress and outcome. It does not change the automation's settings."
         ),
-        example="start_library_scan()",
-        impl=maintenance.start_library_scan,
+        example='run_automation("export_photo_tag")',
+        impl=maintenance.run_automation,
         profiles=frozenset({"assistant"}),
-        risk="low",
-        setting_key="assistant_action_start_library_scan",
-        precondition=maintenance.library_scannable,
-        summarize=maintenance.summarize_start_library_scan,
+        risk="high",
+        setting_key="assistant_action_run_automation",
+        precondition=maintenance.automation_runnable,
+        summarize=maintenance.summarize_run_automation,
         mutating=True,
-        starts_job=True,
     ),
     HostFunction(
         description=(
-            "Index the files a finished scan (start_library_scan, less than a day old) found not yet "
+            "Index the files a finished library scan (less than a day old) found not yet "
             "indexed: new files, or ones whose earlier import or index failed. Starts a background job."
         ),
         example="index_files(scan_job_id)",

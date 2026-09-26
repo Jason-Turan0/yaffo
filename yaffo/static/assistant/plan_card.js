@@ -81,6 +81,10 @@ const stepText = (i18n, step) => {
         values.automation = facts.automation;
         key = facts.value ? 'set_automation_enabled_on' : 'set_automation_enabled_off';
     }
+    if (step.name === 'run_automation') {
+        if (!facts.automation) return step.summary;
+        values.automation = facts.automation;
+    }
     if (['set_favorites', 'set_media_dates', 'set_location_names'].includes(step.name)) {
         if (!('value' in facts)) key = `${step.name}_mixed`;
         else if (facts.value === null) key = `${step.name}_clear`;
@@ -154,7 +158,9 @@ planCards.renderPlanCard = (plan, options) => {
     const notes = [i18n.t(plan.read_only ? 'assistant:plan.readOnly'
         : plan.reversible ? 'assistant:plan.reversible' : 'assistant:plan.irreversible')];
     if (plan.steps.some((s) => FILE_STEPS.has(s.name))) notes.push(i18n.t('assistant:plan.highRisk'));
-    if (plan.steps.some((s) => s.starts_job)) notes.push(i18n.t('assistant:plan.background'));
+    if (plan.steps.some((s) => s.starts_job || s.name === 'run_automation')) {
+        notes.push(i18n.t('assistant:plan.background'));
+    }
     facts.textContent = notes.join(' · ');
     card.appendChild(facts);
 
@@ -168,10 +174,18 @@ planCards.renderPlanCard = (plan, options) => {
     const outcome = outcomeText(i18n, plan);
     if (outcome) card.appendChild(planEl('p', 'assistant-plan-outcome', outcome));
 
-    // Background work that ran: where its progress shows (Index Photos).
+    // Background work that ran: where its progress or run history shows.
     const jobPages = new Set(plan.steps.filter((s) => s.job_id && s.job_page).map((s) => String(s.job_page)));
     for (const page of jobPages) {
         const link = /** @type {HTMLAnchorElement} */ (planEl('a', 'assistant-plan-job', i18n.t('assistant:plan.jobProgress')));
+        link.href = page;
+        card.appendChild(link);
+    }
+    const runPages = new Set(plan.steps.filter((s) => s.name === 'run_automation'
+        && s.state === 'done' && s.job_page).map((s) => String(s.job_page)));
+    for (const page of runPages) {
+        const link = /** @type {HTMLAnchorElement} */ (planEl('a', 'assistant-plan-job',
+            i18n.t('assistant:plan.runHistory')));
         link.href = page;
         card.appendChild(link);
     }
@@ -190,8 +204,10 @@ planCards.renderPlanCard = (plan, options) => {
 
         if (plan.confirm === 'type') {
             const label = planEl('label', 'assistant-plan-confirm');
+            const confirmationKey = plan.steps.length === 1 && plan.steps[0].name === 'run_automation'
+                ? 'assistant:plan.confirmRun' : 'assistant:plan.confirmType';
             label.appendChild(planEl('span', undefined,
-                i18n.t('assistant:plan.confirmType', { count: plan.count, formattedCount: i18n.number(plan.count) })));
+                i18n.t(confirmationKey, { count: plan.count, formattedCount: i18n.number(plan.count) })));
             const input = /** @type {HTMLInputElement} */ (planEl('input'));
             input.type = 'text';
             input.inputMode = 'numeric';

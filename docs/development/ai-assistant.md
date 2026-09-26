@@ -1,11 +1,12 @@
 # AI Assistant — Implementation Plan
 
-Status: **phases 1–3 implemented** (2026-09-25). The assistant answers from the
-docs, looks into problems with read-only diagnostic tools, and answers library
-questions with read-only scripts. It still can't change anything: change plans,
-approval/replay, action cards and undo are phase 4. The sections below describe
-the full design, including that future work; *Scripts and diagnostics (phase 3)*
-records the shipped behavior and its limits. Phase 4 remains unimplemented.
+Status: **phases 1–4 implemented** (2026-09-26). The assistant answers from the
+docs, diagnoses problems, and proposes library changes through reviewed plans.
+Approval replays frozen calls; executed reversible plans can be undone. Phase 5
+polish is in progress. The phase 3 section below describes that phase as shipped
+before change plans were added; the later change-plan sections describe current
+behavior. Incremental event delivery and diagnostics bundle export remain future
+work.
 
 ## Goal
 
@@ -96,8 +97,8 @@ shared chat dialog (`templates/components/chat_dialog.html`).
 
 ### Sketches
 
-Target-design wireframes, including phase 4 action cards; these are not a record
-of the current UI. Theming follows the
+Design wireframes; these are illustrative rather than exact screenshots of the
+current UI. Theming follows the
 active skin, like every other component.
 
 **1. The dialog: the usual entry, over any page.** It opens from "Ask Yaffo" in the
@@ -299,9 +300,8 @@ collapses to an icon, and cards stack their buttons full width at 44px.
 
 ## Architecture
 
-The current assistant runs read-only **Starlark scripts** in the automation
-sandbox. The phase 4 design below adds change plans using that sandbox
-(`background_tasks/automation_sandbox/`), in its existing
+The assistant runs **Starlark scripts** in the automation sandbox
+(`background_tasks/automation_sandbox/`), using its
 **test/preview mode**:
 
 - Reads run for real, so the script sees live data.
@@ -390,7 +390,7 @@ Implemented in `background_tasks/automation_sandbox/`:
 4. **Change-plan metadata.** `HostFunction` carries `risk`, `undo`, `precondition`,
    and `setting_key`. Assistant mutations require a setting key.
    File rename/move/trash are high risk; album deletion is medium risk. The replay
-   and approval layer that enforces those settings is phase 4, not built here.
+   and approval layer enforces those settings before replay.
 5. **Undo building blocks.** Capture callbacks return `HostCall` inverses before a
    mutation executes. Tag and face inverses exclude existing state; batch
    `set_favorites`, `set_media_dates`, and `set_location_names` restore per-item
@@ -557,14 +557,14 @@ providers beside their supporting services.
 | Module | Responsibility |
 |---|---|
 | `../agent.py` | Shared agent loop and `create_assistant_agent(...)`, alongside the other agent factories |
-| `prompt_generator/prompt.py` | System and user prompts, enabled diagnostic groups, read-only host API, citations, context, and response language |
+| `prompt_generator/prompt.py` | System and user prompts, enabled diagnostic groups and actions, host API, citations, context, and response language |
 | `tool_providers/knowledge/knowledge.py` | Loads bundled documentation and performs offline keyword search |
 | `tool_providers/knowledge/tools.py` | `KnowledgeToolProvider`: `search_docs` and `read_doc` |
 | `tool_providers/diagnostics/diagnostics.py` | `DiagnosticsToolProvider`: enabled diagnostic tools and their redacted results |
 | `tool_providers/diagnostics/health.py` | Pure health checks behind `health_report` |
 | `tool_providers/diagnostics/fs.py` | `AssistantFS`: bounded filesystem diagnostics over named roots |
 | `tool_providers/diagnostics/file_details.py` | Fixed native volume-type and capture-date metadata probes |
-| `tool_providers/script_tool.py` | `ScriptToolProvider`: read-only `run_script` and `describe_data_source` |
+| `tool_providers/script_tool.py` | `ScriptToolProvider`: `run_script` in read or recording mode, and `describe_data_source` |
 | `tool_providers/links.py` | `LinkToolProvider`: validated links to photos and app pages, and buttons that open files |
 | `file_targets.py` | Id-only file and folder targets, looked up inside the media folders |
 | `app_pages.py` | Page classifications and the bundled Flask route catalog |
@@ -578,9 +578,8 @@ Shared tool contracts and result helpers live in
 `yaffo/site_agents/common/tool_providers/`. Shared XML and response-language
 helpers live in `yaffo/site_agents/common/prompt_generator/`.
 
-Phase 4 proposes a `plans.py` module for freezing calls, checking approval-time
-preconditions, replaying references, and capturing and applying undo. It is not
-part of the current package.
+`plans.py` freezes calls, checks approval-time preconditions, replays references,
+and captures and applies undo.
 
 ### Runs are durable, like PageVersion
 
@@ -668,14 +667,14 @@ while the model gets text.
 |---|---|
 | `search_docs(query, scope?)` | Top matching doc sections: title, path, anchor, snippet. `scope`: `guide` or `development`; omit to search both. No user data |
 | `read_doc(path, anchor?)` | One doc page or section from the bundle, capped |
-| `run_script(code, purpose)` | Runs with only read host functions bound. Returns its value, printed output, and errors. Recording changes and returning a plan id belong to phase 4. `purpose` is a one-line label for the activity line |
+| `run_script(code, purpose)` | Runs read host functions live and enabled mutations in recording mode. Returns its value, printed output, errors, and a plan id when it proposed changes. `purpose` labels the activity line |
 | `describe_data_source(source)` | The fields of a `data_query` source, so scripts query real columns. Schema only, no user data |
 | `link_to_photos(title, filters, view?)` | A gallery link with filters applied. The filters come from the same table the filter panel uses (`domain/media_filter_params.py`); returns the match count and makes no link when nothing matches |
 | `link_to_page(title, page, values?)` | A link to any page in the app (one photo, a person's faces, an album, Settings, an automation, …). The pages and their URL rules come from the Flask route table (`app_pages.py` + generated `pages.json`); ids that name records are checked to exist |
 
 Keeping the docs and diagnostic tools native means "how do I…" and "what's wrong?"
 questions never involve code, cost the fewest tokens, and show one clear activity
-line per check. Scripts currently answer library queries; edits belong to phase 4.
+line per check. Scripts answer library queries and can propose edits for review.
 
 ### Diagnostic tools
 
@@ -895,7 +894,7 @@ because the drift check above keeps a late undo safe.
 |---|---|---|
 | `reindex_media(ids)` | `index_jobs.reindex_media_items` | medium (the card warns that faces and person links on those photos are rebuilt) |
 | `retry_job(job_id)` | Re-enqueue the job's files / task | low (only failed jobs of retryable kinds) |
-| `start_library_scan()` | `iter_media_scan` as a job | low (read-only, but slow on big or failing drives, so it runs as a job rather than live in preview) |
+| `run_automation(slug)` | Queues the existing automation with a whole-library context; its own worker records the run Job | high (the automation may change the library or files; the card links to its Run history) |
 | `run_sync()` | `perform_sync` | medium. Refused when the scan would remove more than a safe share of the library (the mass-removal guard discussed for unmounted drives) |
 | `set_automation_enabled(slug, enabled)` | Automation repository | low (toggles only; never edits automation code) |
 | `repair_face_statuses()` | The same SQL as migrations 009/010, as a function | medium (the card shows the counts it will change) |
@@ -1004,10 +1003,10 @@ unimplemented plans, so the assistant does not present those plans as features.
   searchable by default; `search_docs` returns results from both, labelled by scope.
   The prompt tells the model to prefer guide pages when they answer the question,
   and to explain internals in plain terms when it uses development notes.
-- **Planned runbooks.** A new `docs/guide/reference-maintenance/troubleshooting/` set of
+- **Troubleshooting runbooks.** The `docs/guide/reference-maintenance/troubleshooting/` set of
   short, factual pages ("Photos show the wrong year", "External drive not showing",
-  "Faces stuck after assigning"). These are user docs first, and the assistant's
-  best grounding second. Add them to `mkdocs.yml` navigation in the same change.
+  "Faces stuck after assigning") are user docs first and assistant grounding
+  second. They are included in `mkdocs.yml` navigation and the knowledge bundle.
 
 ## Privacy, consent and redaction
 
@@ -1052,7 +1051,8 @@ unimplemented plans, so the assistant does not present those plans as features.
 ## Prompt injection
 
 The threat: text the user doesn't write, such as a file name, an EXIF field, a log
-line, or a person's name, tells the model to do something. Current scripts bind read functions only. The phase 4 design adds the following
+line, or a person's name, tells the model to do something. Scripts bind reads and
+record enabled mutations for review. The change-plan design uses the following
 structural protections for writes:
 
 - Scripts run in preview, so a script can only **record** calls to allowlisted
@@ -1086,17 +1086,14 @@ Implemented models are in `yaffo/db/models.py`; persistence is in
   source where applicable. User payloads hold optional contextual-entry data.
 
 The assistant uses its own tables; builder conversations remain separate.
-Phase 4 still needs a numbered migration and matching fresh-install schema update
-for the following proposed table and plan event kinds:
+Migration `012` and the fresh-install schema include change plans:
 
-- `assistant_change_plans`: `id`, `conversation_id`, `event_id`, `tool_use_id`,
-  `steps_json`, `risk`, `status` (`PENDING` | `APPROVED` | `DECLINED` | `EXECUTED`
-  | `PARTIAL` | `FAILED` | `EXPIRED` | `UNDONE`), `created_at`, `decided_at`,
-  `finished_at`.
-  - Each step in `steps_json`: `{seq, name, args, summary, ref}`, where `ref`
-    names the reference token the step's return resolves.
-  - After replay, each step also carries `result`, `undo`, `job_id`, and `error`
-    where they apply.
+- `assistant_change_plans`: `id`, `conversation_id`, `script`, `steps_json`,
+  `risk`, `status` (`PENDING` | `APPROVED` | `DECLINED` | `EXECUTED` |
+  `PARTIAL` | `FAILED` | `EXPIRED` | `UNDONE`), `error`, `created_at`,
+  `expires_at`, `decided_at`, and `finished_at`. Each frozen step holds its call,
+  server-generated summary and count; replay adds its result, inverse calls,
+  state, and error where applicable.
 
 ## Routes (`yaffo/routes/assistant.py`)
 
@@ -1116,14 +1113,16 @@ Implemented routes:
 | `POST /api/assistant/conversations/delete-all` | Delete all conversations |
 | `POST /settings/assistant/enabled` | Enable or disable the assistant |
 | `POST /settings/assistant/diagnostics/<group>` | Enable or disable a diagnostic group |
+| `POST /settings/assistant/actions/<name>` | Enable or disable an allowlisted action |
+| `POST /api/assistant/conversations/<id>/plans/<plan_id>/approve` | Validate and replay a pending plan |
+| `POST /api/assistant/conversations/<id>/plans/<plan_id>/decline` | Decline a pending plan |
+| `POST /api/assistant/conversations/<id>/plans/<plan_id>/undo` | Replay recorded inverses |
 
 Planned endpoints, not implemented:
 
 | Route | Purpose |
 |---|---|
 | `GET /api/assistant/conversations/<id>/events?after=<seq>` | Incremental NDJSON event delivery |
-| `POST /api/assistant/plans/<id>/approve` / `decline` | Approve replay of recorded steps or decline a plan |
-| `POST /api/assistant/plans/<id>/undo` | Replay captured inverse steps in reverse order |
 
 All state-changing routes use the existing CSRF protection. Every user-facing string
 goes through gettext/i18next, per *Internationalization Standards*.
@@ -1137,7 +1136,7 @@ provider, model and key):
 - **Diagnostics:** one switch each for logs, library stats, file checks, and job
   history (on by default), plus capture-date metadata (off by default). All off
   means knowledge-only.
-- **Planned for phase 4 — actions:** one switch per allowlisted action.
+- **Actions:** one switch per allowlisted action.
   - Low-risk library edits and maintenance actions are on by default.
   - High-risk ones (deleting to the trash, moving or renaming files, merging or
     deleting people) are off until the user turns them on.
@@ -1153,11 +1152,11 @@ they are not duplicated in this plan.
 
 ## Testing
 
-Phase 3 coverage lives in `tests/yaffo/site_agents/assistant/`, the assistant
+Assistant coverage lives in `tests/yaffo/site_agents/assistant/`, the assistant
 route/task/repository tests, and `tests_js/assistant/`. Regression cases cover
 metadata opt-in and root confinement, bounded native probes, stale process
-status, historical-evidence filtering/redaction, and call-log retention/deletion.
-The approval, mutation, replay, and undo cases below are requirements for phase 4.
+status, historical-evidence filtering/redaction, call-log retention/deletion,
+approval, replay, and undo. The cases below remain the testing contract.
 
 
 - **Unit, per tool:**
@@ -1230,18 +1229,16 @@ The approval, mutation, replay, and undo cases below are requirements for phase 
    - Watcher/web status, AI-call summaries, opt-in capture-date metadata,
      filesystem-type diagnostics, retained conversation call logs, and bounded
      historical tool evidence.
-4. **Change plans and library edits.**
+4. **Change plans and library edits — implemented.**
    - Recording plans, plan cards, approve/decline, replay with
      references, expiry, undo, partial-failure reporting, and the per-function
      switches.
-   - Ship the existing low-risk host functions first (tags, albums, face
-     assignment), then the new low-risk ones (untag, favorites, location names,
-     dates, people), then `retry_job`, `start_library_scan` and `reindex_media`.
-   - Then the medium-risk functions, and finally the high-risk ones behind their
-     off-by-default switches and typed confirmation.
-5. **Polish.**
-   - The diagnostics bundle export, troubleshooting runbooks in the guide, and
-     cost display from the call log. The conversation list already exists.
+   - Low-, medium-, and high-risk host functions use per-action switches; high-risk
+     changes are off by default and need typed confirmation.
+5. **Polish — in progress.**
+   - Troubleshooting runbooks are in the guide. Diagnostics bundle export and
+     cost display from the call log remain future work. The conversation list
+     already exists.
    - Knowledgebase built on CI server and bundled with release
 
 ## Decisions

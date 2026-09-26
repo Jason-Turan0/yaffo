@@ -1,6 +1,5 @@
-"""The assistant's maintenance host functions (automation_sandbox/maintenance_actions.py)
-and the scan/sync task they start (tasks/library_scan.py). Queue calls are patched:
-these tests never touch the real task queue."""
+"""Assistant maintenance functions and the legacy library-scan task. Queue calls
+are patched; these tests never touch the real task queue."""
 import json
 from datetime import timedelta
 from pathlib import Path
@@ -88,6 +87,34 @@ def test_set_automation_enabled_and_its_undo(session):
     maintenance.set_automation_enabled(session, "file-sync", True, True)   # flipped since: skipped
     assert session.query(Automation).one().enabled is False
     assert maintenance.undo_set_automation_enabled(["file-sync", False], session) == []  # already off
+
+
+def test_run_automation_uses_whole_library_context(session, library, monkeypatch):
+    automation = Automation(slug="export_photo_tag", name="Export photo tag", enabled=False,
+                            is_system=True, handler="export_photo_tag")
+    session.add(automation)
+    session.commit()
+    calls = []
+    monkeypatch.setattr(maintenance, "invoke_automation", lambda target, context: calls.append((target, context)) or True)
+
+    assert maintenance.automation_runnable(["export_photo_tag"], session) is None
+    assert maintenance.run_automation(session, "export_photo_tag") is None
+
+    assert len(calls) == 1
+    target, context = calls[0]
+    assert target.id == automation.id
+    assert context.event_type is None
+    assert context.media_item_ids == [1]
+    assert context.scope_paths == [str(library.resolve())]
+
+
+def test_run_automation_rejects_missing_or_unpublished_automation(session):
+    assert maintenance.automation_runnable(["missing"], session)
+    session.add(Automation(slug="draft", name="Draft", enabled=True))
+    session.commit()
+    assert maintenance.automation_runnable(["draft"], session)
+    with pytest.raises(ValueError, match="no runnable handler"):
+        maintenance.run_automation(session, "draft")
 
 
 # ---- reindex_media --------------------------------------------------------------------

@@ -7,9 +7,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_sandbox import automation_actions as actions
+from yaffo.background_tasks.automation_sandbox import maintenance_actions as maintenance
 from yaffo.background_tasks.automation_sandbox.automation_host import HOST_API, host_api
 from yaffo.background_tasks.automation_sandbox.starlark_runner import RunLimits
-from yaffo.background_tasks.tasks import library_scan
 from yaffo.db import db
 from yaffo.db.models import (
     ASSISTANT_EVENT_PLAN,
@@ -24,7 +24,6 @@ from yaffo.db.models import (
     ApplicationSettings,
     Automation,
     Face,
-    Job,
     MediaItem,
     Person,
     PersonFace,
@@ -528,30 +527,47 @@ def test_delete_person_unassigns_their_faces(session, conversation):
 
 # ---- maintenance ------------------------------------------------------------------------
 
-def test_background_work_is_reported_as_still_running(session, conversation, monkeypatch):
+def test_run_automation_replaces_scan_action_in_assistant_profile():
+    actions = {fn.name: fn for fn in host_api("assistant")}
+    assert "start_library_scan" not in actions
+    assert actions["run_automation"].risk == "high"
+    assert actions["run_automation"].setting_key == "assistant_action_run_automation"
+
+
+def test_run_automation_plan_queues_whole_library_and_links_to_history(session, conversation, monkeypatch):
+    automation = Automation(slug="export_photo_tag", name="Export photo tag", enabled=False,
+                            is_system=True, handler="export_photo_tag")
     session.add_all([
-        ApplicationSettings(name="media_dirs", type="json", value='[{"id": "m1", "path": "/"}]'),
-        ApplicationSettings(name="thumbnail_dir", type="string", value="/tmp/thumbs"),
-        ApplicationSettings(name="assistant_action_start_library_scan", type="string", value="true"),
+        automation,
+        ApplicationSettings(name="assistant_action_run_automation", type="string", value="true"),
     ])
     session.commit()
-    monkeypatch.setattr(library_scan, "library_scan_task", lambda job_id: None)
-    _, plan = _record(session, conversation, "start_library_scan()",
+    monkeypatch.setattr(maintenance, "selected_paths", lambda _session, config: ["/lib"])
+    monkeypatch.setattr(maintenance, "media_item_ids", lambda _session, paths: [1, 2, 3])
+    dispatched = []
+    monkeypatch.setattr(maintenance, "invoke_automation", lambda target, context: dispatched.append((target, context)) or True)
+    _, plan = _record(session, conversation, 'run_automation("export_photo_tag")',
                       actions_on=assistant_settings.enabled_actions(session))
     view = plan_view(plan, 500)
-    assert view.read_only is True and view.reversible is True and view.steps[0].starts_job is True
+    assert view.risk == "high" and view.confirm == "type"
+    assert view.read_only is False and view.reversible is False
+    assert view.steps[0].facts == {"automation": "Export photo tag"}
     assert view.steps[0].job_id is None
+    assert view.steps[0].job_page == "/utilities/automations/export_photo_tag"
+    assert dispatched == []
 
-    plans.approve(session, plan.id, conversation.id)
+    plans.approve(session, plan.id, conversation.id, confirm_count=1)
 
-    view = plan_view(plan, 500)
-    job_id = view.steps[0].job_id
-    assert job_id and session.get(Job, job_id).name == "library_scan"
+    assert len(dispatched) == 1
+    target, context = dispatched[0]
+    assert target.id == automation.id
+    assert context.event_type is None and context.media_item_ids == [1, 2, 3]
+    assert context.scope_paths == ["/lib"]
     text = _events(session, conversation)[-1][1]
-    assert f"Step 1 started background job {job_id}" in text and "job_detail" in text
+    assert "queued automation 'export_photo_tag'" in text and "Run history" in text
     with pytest.raises(plans.PlanError) as error:
         plans.undo(session, plan.id, conversation.id)
-    assert error.value.code == "not_undoable"
+    assert error.value.code == "not_reversible"
 
 
 def test_turning_an_automation_off_is_undone(session, conversation):
