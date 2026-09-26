@@ -168,6 +168,13 @@
     height: 15px;
 }
 
+/* The Menu's "Ask Yaffo" item is a <button> among link items; keep its icon the
+   link items' size, not the smaller button size. */
+[data-theme="neobrutalist"] .nav-assistant-toggle[data-icon]::before {
+    width: 18px;
+    height: 18px;
+}
+
 [data-theme="neobrutalist"] [data-icon="library"]::before { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'> <rect x='3' y='3' width='18' height='18' fill='%23fff' stroke='%23121212' stroke-width='2'/> <circle cx='9' cy='9' r='2.2' fill='%23ffd23f' stroke='%23121212' stroke-width='1.5'/> <path d='M3 17l5-5 4 4 3-3 6 6v2H3z' fill='%238ac926' stroke='%23121212' stroke-width='2' stroke-linejoin='round'/> </svg>"); }
 /* Albums: a stacked pair of photo cards — the back one peeking out, the front one
    carrying the same picture motif as the library icon so the two read as siblings. */

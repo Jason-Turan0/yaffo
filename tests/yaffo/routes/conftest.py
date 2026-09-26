@@ -23,6 +23,16 @@ def app(tmp_path):
         db.drop_all()
 
 
+@pytest.fixture(autouse=True)
+def queue_store(tmp_path, monkeypatch):
+    """A throwaway task queue for routes that read it (the assistant poll), so
+    tests never open the real per-user queue.db."""
+    from yaffo.taskq.store import Store
+    store = Store(str(tmp_path / "queue.db"))
+    monkeypatch.setattr("yaffo.routes.assistant._queue_store", lambda: store)
+    return store
+
+
 @pytest.fixture
 def client(app):
     return app.test_client()

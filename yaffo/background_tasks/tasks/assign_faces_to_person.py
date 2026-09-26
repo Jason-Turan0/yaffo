@@ -13,6 +13,7 @@ from yaffo.db.models import (
 from yaffo.db.repositories.person_repository import update_person_embedding
 from yaffo.logging_config import get_logger
 from yaffo.background_tasks.config import task_queue
+from yaffo.taskq import PRIORITY_INTERACTIVE
 from sqlalchemy.dialects.sqlite import insert
 
 logger = get_logger(__name__, 'background_tasks')
@@ -60,7 +61,7 @@ def assign_faces_to_person_now(
     return len(resolved_face_ids)
 
 
-@task_queue.task()
+@task_queue.task(priority=PRIORITY_INTERACTIVE)
 def assign_faces_to_person(person_id: int, face_ids: list[int]):
     """Background task to assign faces to a person.
 

@@ -391,6 +391,7 @@
         "link_to_photos": "Link zu „{{title}}“ erstellt",
         "link_to_media_item": "Link zu „{{title}}“ erstellt",
         "link_to_page": "Link zu „{{title}}“ erstellt",
+        "link_to_file": "Schaltfläche zum Öffnen von „{{title}}“ erstellt",
         "ai_call_summary": "Letzte KI-Aufrufe geprüft",
         "capture_date_source": "Aufnahmedatum-Metadaten geprüft"
       }
@@ -435,8 +436,12 @@
       "deleted_other": "{{count}} Gespräche gelöscht."
     },
     "sources": "Quellen:",
-    "helpWithThis": "Hilf mir dabei",
+    "askAboutThis": "Yaffo fragen",
     "helpPrompt": "Was ist hier schiefgelaufen, und wie behebe ich es?",
-    "openLinks": "Öffnen:"
+    "openLinks": "Öffnen:",
+    "opening": "Wird auf deinem Computer geöffnet …",
+    "openFailed": "Konnte nicht geöffnet werden.",
+    "openOnComputer": "Auf diesem Computer öffnen",
+    "showInFolder": "Im Ordner anzeigen"
   }
 }

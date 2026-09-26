@@ -58,6 +58,8 @@ def init_jobs_routes(app: Flask):
         # Get has_results from query parameter (defaults to False)
         has_results = request.args.get('has_results', '0') == '1'
         results_route = request.args.get('results_route')
+        # dismiss=0: the page keeps finished runs as history, so no Dismiss (it deletes).
+        show_dismiss = request.args.get('dismiss', '1') != '0'
 
         return render_template(
             "fragments/job_status_fragment.html",
@@ -67,7 +69,8 @@ def init_jobs_routes(app: Flask):
             is_finished=is_finished,
             has_results=has_results,
             results_route=results_route,
-            show_cancel=True
+            show_cancel=True,
+            show_dismiss=show_dismiss,
         )
 
     @app.route("/jobs/<job_id>/cancel", methods=["POST"])
@@ -88,6 +91,7 @@ def init_jobs_routes(app: Flask):
 
             # Get has_results from request (htmx sends it via hx-vals)
             has_results = request.form.get('has_results', 'false').lower() == 'true'
+            show_dismiss = parse_boolean_from_form(request, "dismiss", True)
 
             return render_template(
                 "fragments/job_status_fragment.html",
@@ -96,7 +100,8 @@ def init_jobs_routes(app: Flask):
                 total_count=total_count,
                 is_finished=is_finished,
                 has_results=has_results,
-                show_cancel=True
+                show_cancel=True,
+                show_dismiss=show_dismiss,
             )
 
         return "", 400

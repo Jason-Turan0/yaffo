@@ -391,6 +391,7 @@
         "link_to_photos": "“{{title}}” का लिंक बनाया",
         "link_to_media_item": "“{{title}}” का लिंक बनाया",
         "link_to_page": "“{{title}}” का लिंक बनाया",
+        "link_to_file": "“{{title}}” खोलने का बटन बनाया",
         "ai_call_summary": "हाल के AI कॉल जाँचे",
         "capture_date_source": "कैप्चर तिथि का मेटाडेटा जाँचा"
       }
@@ -435,8 +436,12 @@
       "deleted_other": "{{count}} बातचीत हटाई गईं।"
     },
     "sources": "स्रोत:",
-    "helpWithThis": "इसमें मेरी मदद करें",
+    "askAboutThis": "Yaffo से पूछें",
     "helpPrompt": "यहाँ क्या गड़बड़ हुई, और मैं इसे कैसे ठीक करूँ?",
-    "openLinks": "खोलें:"
+    "openLinks": "खोलें:",
+    "opening": "आपके कंप्यूटर पर खोला जा रहा है…",
+    "openFailed": "इसे खोला नहीं जा सका।",
+    "openOnComputer": "इस कंप्यूटर पर खोलें",
+    "showInFolder": "इसके फ़ोल्डर में दिखाएँ"
   }
 }

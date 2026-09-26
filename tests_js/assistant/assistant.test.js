@@ -18,7 +18,9 @@ const fixture = () => {
       <button id="assistant-close">Close</button>
       <div class="chat-dialog" id="assistant-chat">
         <div id="assistant-chat-messages"></div>
-        <div id="assistant-chat-status" hidden><span id="assistant-chat-elapsed"></span></div>
+        <div id="assistant-chat-status" hidden>
+          <span class="chat-status-text">Generating…</span><span id="assistant-chat-elapsed"></span>
+        </div>
         <form id="assistant-chat-form">
           <textarea id="assistant-chat-message"></textarea>
           <button type="submit">Send</button>
@@ -109,6 +111,26 @@ describe('assistant transcript', () => {
     expect(links[0].target).toBe('_blank');
     const errors = [...feed.querySelectorAll('.chat-message-error')].map((e) => e.textContent);
     expect(errors).toEqual(['Provider error', 'Unknown failure text']);
+  });
+
+  it('says why a queued reply has not started, then goes back to the usual text', async () => {
+    window.localStorage.setItem('yaffo.assistant.conversation', '7');
+    const waiting = { ...statusBody([{ type: 'user', content: 'Hi' }], 'RUNNING'),
+      queue: { state: 'waiting', ahead: 0, workers: 4, busy: 4, busy_with: 'index_photo_task',
+        wait_seconds: 12, message: "Waiting for a background worker; they're busy indexing photos." } };
+    const polls = [waiting, statusBody([{ type: 'user', content: 'Hi' }], 'RUNNING')];
+    server({
+      'GET /api/conversations': { conversations: [conversation(7, 'Hi', 'RUNNING')] },
+      'GET /assistant_conversation/conversation_id/7': () => json(polls.shift()),
+    });
+
+    const api = await start();
+    const text = document.querySelector('#assistant-chat-status .chat-status-text');
+    expect(text.textContent).toBe("Waiting for a background worker; they're busy indexing photos.");
+
+    api.switchTo(7);  // the next poll: the run has started
+    await settle();
+    expect(text.textContent).toBe('Generating…');
   });
 
   it('starts on an empty state with suggestion chips when nothing was open', async () => {
@@ -541,6 +563,33 @@ describe('narrow navbar Menu', () => {
 });
 
 describe('app links', () => {
+  it('offers a button that opens a file on this computer by ids only', async () => {
+    window.localStorage.setItem('yaffo.assistant.conversation', '7');
+    const target = { show: 'folder', media_item_id: 12, media_dir_id: null, path: '' };
+    const fetchMock = server({
+      'GET /api/conversations': { conversations: [conversation(7)] },
+      'GET /assistant_conversation/conversation_id/7': statusBody([
+        { type: 'user', content: 'Which file failed?' },
+        { type: 'tool', content: '', payload: { tool: 'link_to_file', count: 1,
+          opens: [{ title: 'IMG_0412.HEIC', show: 'folder', target }] } },
+        { type: 'assistant', content: 'This one.' },
+      ]),
+      'POST /api/assistant/open': () => Promise.resolve({ ok: true, status: 204, json: () => Promise.resolve({}) }),
+    });
+    window.notification = { success: vi.fn(), error: vi.fn() };
+    await start();
+    window.APP_CONFIG.urls.assistant_open = '/api/assistant/open';
+
+    const button = document.querySelector('.assistant-links button.assistant-open-link');
+    expect(button.textContent).toBe('IMG_0412.HEIC');
+    expect(button.dataset.icon).toBe('folder');
+    button.click();
+    await settle();
+    const post = fetchMock.mock.calls.find(([url]) => url === '/api/assistant/open');
+    expect(JSON.parse(post[1].body)).toEqual(target);
+    expect(window.notification.success).toHaveBeenCalled();
+  });
+
   it('shows the links a run made under its answer, before the doc sources', async () => {
     window.localStorage.setItem('yaffo.assistant.conversation', '6');
     server({
@@ -596,7 +645,7 @@ describe('automation run help', () => {
     await start();
     document.body.insertAdjacentHTML('beforeend', `
       <button data-assistant-help data-job-id="run-1" data-automation="assign_location_name"
-        data-page="Assign location name" data-error="2 errors">Help</button>`);
+        data-page="/utilities/automations/assign_location_name" data-error="2 errors"></button>`);
     document.querySelector('[data-assistant-help]').click();
     expect(document.getElementById('assistant-panel').hidden).toBe(false);
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
@@ -604,7 +653,7 @@ describe('automation run help', () => {
     await vi.waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url === '/api/conversations/new')).toBe(true));
     const create = fetchMock.mock.calls.find(([url]) => url === '/api/conversations/new');
     expect(JSON.parse(create[1].body).context).toEqual({
-      job_id: 'run-1', automation: 'assign_location_name', page: 'Assign location name', error: '2 errors',
+      job_id: 'run-1', automation: 'assign_location_name', page: '/utilities/automations/assign_location_name', error: '2 errors',
     });
   });
 });

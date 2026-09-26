@@ -1,0 +1,91 @@
+/* Run history: a compact list of past runs (Jobs), on an automation's detail page
+   and under the Index Photos job cards. See templates/components/run_history.html. */
+.run-history-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.run-history-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: var(--border-width) solid var(--color-border);
+    font-size: var(--font-size-sm);
+}
+
+.run-history-row:last-child {
+    border-bottom: none;
+}
+
+/* "Ask Yaffo" about a run with errors: a bare assistant icon at the row's end. */
+.run-history-help {
+    flex-shrink: 0;
+    padding: 2px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-text-muted);
+    cursor: pointer;
+}
+
+.run-history-help:hover,
+.run-history-help:focus-visible {
+    color: var(--color-text);
+}
+
+/* display: the icon is the ::before, which phone widths hide on every
+   [data-tooltip] element (responsive.css, for the tooltip arrow). */
+.run-history-help[data-icon]::before {
+    display: block;
+    width: 16px;
+    height: 16px;
+}
+
+/* Touch screens give every button a 44px minimum height (responsive.css), which
+   would stretch the row. Keep the icon's size and grow the tap area with padding
+   that negative margins take back out of the layout. (Not an ::after overlay: the
+   tooltip bubble is the ::after.) */
+@media (hover: none), (pointer: coarse) {
+    .run-history-help {
+        min-height: 0;
+        padding: 14px;
+        margin: -14px -10px;
+    }
+}
+
+.run-history-progress {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--color-text-muted);
+}
+
+.run-history-spacer {
+    flex: 1;
+}
+
+.run-history-time {
+    color: var(--color-text-muted);
+}
+
+.run-history-error {
+    flex-basis: 100%;
+    margin: 0;
+    color: var(--color-danger);
+    font-size: var(--font-size-xs);
+}
+
+.run-history-label {
+    font-weight: 600;
+}
+
+/* Keep user text (paths, names) contained. */
+.run-history-row {
+    overflow-wrap: anywhere;
+}
+
+.run-history-row > * {
+    min-width: 0;
+}

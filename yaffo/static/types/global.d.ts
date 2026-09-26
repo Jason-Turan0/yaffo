@@ -45,6 +45,8 @@ type NotificationType = 'success' | 'error' | 'warning' | 'info';
 
 type NotificationAction = {
     label: string;
+    /** A data-icon name shown before the label (e.g. 'assistant'). */
+    icon?: string;
     run(message: string): void;
 };
 
@@ -666,11 +668,30 @@ type AssistantAppLink = {
     url: string;
 };
 
+/** A link_to_file button: opens a file or folder on the user's computer. `target`
+ *  holds only ids; the server looks up the path when it's clicked. */
+type AssistantOpenLink = {
+    title: string;
+    show: 'file' | 'folder';
+    target: Record<string, unknown>;
+};
+
 type AssistantConversationSummary = {
     id: number;
     title: string;
     status: string;
     updated_at: string | null;
+};
+
+/** Why a reply hasn't started (the poll's `queue`); `message` is ready to show. */
+type AssistantRunQueue = {
+    state: 'waiting' | 'host_stopped';
+    ahead: number;
+    workers: number;
+    busy: number;
+    busy_with: string | null;
+    wait_seconds: number | null;
+    message: string;
 };
 
 type AssistantContext = {

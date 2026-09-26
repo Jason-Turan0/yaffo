@@ -33,12 +33,6 @@
             </label>
             {% endfor %}
         </div>
-        <label class="checkbox-label">
-            <input type="checkbox" name="enabled" id="assistant-redact-people"
-                   hx-post="{{ url_for('settings_assistant_redact_people') }}" hx-swap="none"
-                   {% if assistant.redact_people %}checked{% endif %}>
-            {{ _("Hide people's names") }}
-        </label>
     </fieldset>
 
     <div class="assistant-settings-group assistant-conversations">

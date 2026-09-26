@@ -152,7 +152,7 @@ export default defineWalkthrough({
             await picker.waitFor();
             await picker.locator("#folder-picker-cancel").click();
             await picker.waitFor({state: "hidden"});
-            if (await page.locator("#automation-runs .automation-run-row").count() !== 0) {
+            if (await page.locator("#automation-runs .run-history-row").count() !== 0) {
                 throw new Error("Cancelling Run… unexpectedly created run history");
             }
 

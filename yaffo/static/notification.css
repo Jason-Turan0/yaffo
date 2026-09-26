@@ -46,21 +46,20 @@
 .notification.info {
     background: var(--color-info);
 }
-/* An optional action on the toast (e.g. the assistant's "Help me with this"). */
-.notification-action {
-    display: block;
-    margin-block-start: 10px;
-    padding: 4px 10px;
-    border: var(--border-width) solid currentColor;
-    border-radius: var(--radius-sm);
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    font-size: var(--font-size-sm);
-    cursor: pointer;
+/* An optional action on the toast (e.g. "Ask Yaffo"), on the message's row, pinned
+   to the top of a message that wraps. The button itself is the shared
+   .message-action (base.css), which drops to its icon on a phone. */
+.notification:has(.message-action) {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
 }
 
-.notification-action:hover {
-    background: var(--color-surface-inverse);
-    color: var(--color-text-inverse);
+.notification-message {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.notification .message-action {
+    flex: none;
 }

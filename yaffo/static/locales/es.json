@@ -391,6 +391,7 @@
         "link_to_photos": "Enlace a “{{title}}” creado",
         "link_to_media_item": "Enlace a “{{title}}” creado",
         "link_to_page": "Enlace a “{{title}}” creado",
+        "link_to_file": "Botón para abrir “{{title}}” creado",
         "ai_call_summary": "Se revisaron las llamadas recientes a la IA",
         "capture_date_source": "Se revisaron los metadatos de la fecha de captura"
       }
@@ -435,8 +436,12 @@
       "deleted_other": "Se eliminaron {{count}} conversaciones."
     },
     "sources": "Fuentes:",
-    "helpWithThis": "Ayúdame con esto",
+    "askAboutThis": "Pregunta a Yaffo",
     "helpPrompt": "¿Qué ha fallado aquí y cómo lo soluciono?",
-    "openLinks": "Abrir:"
+    "openLinks": "Abrir:",
+    "opening": "Abriendo en tu ordenador…",
+    "openFailed": "No se pudo abrir.",
+    "openOnComputer": "Abrir en este ordenador",
+    "showInFolder": "Mostrar en su carpeta"
   }
 }

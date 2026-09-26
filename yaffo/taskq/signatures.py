@@ -14,20 +14,28 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Optional, Union
 
+# Dispatch order: the host hands out ready tasks by priority, then age. Interactive
+# work (a person is waiting on it: an assistant reply, a generation, face
+# assignment) and the scheduler tick jump ahead of bulk work (index, import,
+# duplicates), so a big index run can't hold them up behind its whole backlog.
+PRIORITY_NORMAL = 0
+PRIORITY_INTERACTIVE = 10
+
 
 @dataclass(frozen=True)
 class Signature:
     """A deferred call to a registered task.
 
-    `context`/`lock_name` are captured from the task at `.s()` time so the host can
-    insert a row for this signature without importing the task module (the host
-    must never load dlib).
+    `context`/`lock_name`/`priority` are captured from the task at `.s()` time so
+    the host can insert a row for this signature without importing the task module
+    (the host must never load dlib).
     """
     task_name: str
     args: tuple = ()
     kwargs: dict = field(default_factory=dict)
     context: bool = False
     lock_name: Optional[str] = None
+    priority: int = PRIORITY_NORMAL
 
     def then(self, task, *args) -> "Pipeline":
         return Pipeline([SingleLink(self)]).then(task, *args)
@@ -39,6 +47,7 @@ class Signature:
             "kwargs": dict(self.kwargs),
             "context": self.context,
             "lock_name": self.lock_name,
+            "priority": self.priority,
         }
 
     @staticmethod
@@ -49,6 +58,8 @@ class Signature:
             kwargs=dict(d.get("kwargs", {})),
             context=bool(d.get("context", False)),
             lock_name=d.get("lock_name"),
+            # Absent in continuations persisted before priorities existed.
+            priority=int(d.get("priority", PRIORITY_NORMAL)),
         )
 
 

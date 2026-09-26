@@ -301,68 +301,10 @@
     color: var(--color-on-accent);
 }
 
-/* Run history: a compact list of recent runs (Jobs tagged with the automation). */
-.automation-run-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.automation-run-row {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 8px 0;
-    border-bottom: var(--border-width) solid var(--color-border);
-    font-size: var(--font-size-sm);
-}
-
-.automation-run-row:last-child {
-    border-bottom: none;
-}
-
-.automation-run-help {
-    flex-shrink: 0;
-    cursor: pointer;
-}
-
-.automation-run-help[data-icon]::before {
-    display: block;
-}
-
-@media (hover: none), (pointer: coarse) {
-    .automation-run-help {
-        min-width: 44px;
-    }
-}
-
-.automation-run-progress {
-    font-variant-numeric: tabular-nums;
-    font-weight: 600;
-    color: var(--color-text-muted);
-}
-
-.automation-run-spacer {
-    flex: 1;
-}
-
-.automation-run-time {
-    color: var(--color-text-muted);
-}
-
-.automation-run-error {
-    flex-basis: 100%;
-    margin: 0;
-    color: var(--color-danger);
-    font-size: var(--font-size-xs);
-}
-
 /* Keep user text contained while code and result tables own their scrolling. */
 .automation-detail,
 .automation-edit-screen > *,
-.automation-trigger-row > *,
-.automation-run-row > * {
+.automation-trigger-row > * {
     min-width: 0;
 }
 
@@ -376,7 +318,6 @@
 
 .automation-trigger-desc,
 .automation-trigger-event,
-.automation-run-row,
 .automation-test-meta,
 .automation-test-error,
 .automation-test-output {

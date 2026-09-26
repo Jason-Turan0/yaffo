@@ -30,8 +30,8 @@ class AppNotification {
     }
 
     /**
-     * Offer a button on every error toast (e.g. the assistant's "Help me with
-     * this"), called with the error's text. Pass null to remove it.
+     * Offer a button on every error toast (e.g. the assistant's "Ask Yaffo"),
+     * called with the error's text. Pass null to remove it.
      * @param {NotificationAction | null} action
      */
     setErrorAction(action) {
@@ -51,15 +51,23 @@ class AppNotification {
         }
 
         // Set message and type
-        this.element.textContent = message;
+        const text = document.createElement('span');
+        text.className = 'notification-message';
+        text.textContent = message;
+        this.element.replaceChildren(text);
         this.element.className = `notification ${type} visible`;
 
         const action = type === 'error' ? this.errorAction : null;
         if (action) {
             const button = document.createElement('button');
             button.type = 'button';
-            button.className = 'notification-action';
-            button.textContent = action.label;
+            button.className = 'message-action';
+            if (action.icon) button.dataset.icon = action.icon;
+            // A span, so a phone can show just the icon and keep the label as its name.
+            const label = document.createElement('span');
+            label.className = 'message-action-label';
+            label.textContent = action.label;
+            button.appendChild(label);
             button.addEventListener('click', () => {
                 this.hide();
                 action.run(message);

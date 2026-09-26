@@ -207,7 +207,7 @@ def test_500_offers_assistant_help_with_safe_context(app, client, monkeypatch, u
     assert 'data-assistant-help' in body
     assert 'data-page="/_assistant_error"' in body
     assert 'data-error-code="internal_server_error"' in body
-    assert 'Help me with this' in body
+    assert 'class="btn btn-secondary error-action" data-icon="assistant" data-assistant-help' in body
     assert 'private exception details' not in body
     assert 'not-for-the-assistant' not in body
 

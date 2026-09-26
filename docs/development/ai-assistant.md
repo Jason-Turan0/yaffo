@@ -65,9 +65,9 @@ shared chat dialog (`templates/components/chat_dialog.html`).
 - **Entry points.**
   - A global "Ask Yaffo" button in the navbar opens the assistant in the shared chat
     dialog, on every page.
-  - Contextual buttons open it with context attached: an error notification or
-    flash ("Help me with this") or a failed job row on Utilities. Settings
-    sections are excluded. The context is a small structured payload (page, job id, error code),
+  - Contextual "Ask Yaffo" buttons open it with context attached: an error
+    toast or flash, a job card or run-history row with errors, or the internal
+    server error page. Settings sections are excluded. The context is a small structured payload (page, job id, error code),
     not a screenshot.
 - **Conversation.** Answers and tool activity arrive through conversation polling. Links point to guide pages (the docs site and
   the in-app route both work). Conversations persist and are listed for reopening.
@@ -230,7 +230,7 @@ chip in the composer, so the user sees what's being attached.
 ```
  Page: Utilities → Index Photos
 ┌──────────────────────────────────────────────────────────────┐
-│ ⚠ Could not scan the filesystem.        [ Help me with this ]│
+│ ⚠ Could not scan the filesystem.           [ ✦ Ask Yaffo ] ✕ │
 └──────────────────────────────────────────────────────────────┘
                     │
                     ▼  opens the dialog with a new conversation
@@ -439,8 +439,9 @@ Implemented in `yaffo/site_agents/assistant/`:
    *Filesystem access* and *Privacy*. Every path the model supplies goes through
    `AssistantFS`; paths the app itself configures (the thumbnail folder, face crops,
    video posters) are checked directly, with the same timeout helper. A home folder
-   only matches as a whole path component. People-name redaction replaces names
-   with `Person #<id>`.
+   only matches as a whole path component. Configured folders reach the model as
+   labels (`[media folder <id>]/…`), never as full paths. People's names are sent
+   as they are; see *Privacy, consent and redaction*.
 4. **`run_script`, read-only** (`tool_providers/script_tool.py`). Only the assistant profile's
    read host functions are bound (`build_host_functions(..., include_mutating=False)`),
    and `render_host_api("assistant", include_mutating=False)` documents only those,
@@ -453,19 +454,38 @@ Implemented in `yaffo/site_agents/assistant/`:
    was built first and dropped as too wordy for what it guarded: sending messages
    to the provider was already the user's choice under AI Generation, and the
    notice plus the activity lines cover what checks send.
-6. **Contextual entry.** "Help me with this" appears on job cards and automation
-   run-history rows with a failed status, error text, or a nonzero error count;
-   completed runs with partial errors also qualify. It also appears on error
-   toasts (`notification.setErrorAction`), the internal server error page, and
-   server-rendered error/warning flashes
-   when the assistant is ready. Settings has no contextual help buttons,
-   including on its flashes and error toasts. The internal-error button attaches
+6. **Contextual entry.** "Ask Yaffo" buttons, each with the assistant icon, open
+   a new conversation with context attached and a suggested first message left
+   for the user to send. They appear only when the assistant is ready (enabled,
+   with an API key), and never on Settings, including its flashes and error
+   toasts:
+
+   | Where | Shown when | Style |
+   |---|---|---|
+   | Server-rendered flashes | `error`, `danger`, or `warning` category | Outlined in the flash's own text colour (`.message-action`, `base.css`); icon only below 640px |
+   | Error toasts (`notification.setErrorAction`) | Every error toast | Same outlined style, on the message's row; icon only below 640px |
+   | Job cards (`fragments/job_status_fragment.html`) | Failed status, error text, or a nonzero error count | Regular secondary button |
+   | Run-history rows (`components/run_history.html`) | Same rule, per run | Bare icon at the row's end, "Ask Yaffo" tooltip |
+   | Internal server error page | Always | Regular secondary button |
+
+   A flash with the button closes after 10 seconds instead of 5, and hovering
+   or focusing it keeps it open. On touch screens, flash, toast, and row buttons
+   keep their drawn size and get a 44px tap area without stretching the row.
+
+   Run-history rows are shared by an automation's page and Index Photos. Index
+   Photos shows a job card only for the latest import or index run that is still
+   in progress; every other run of either kind is in its Run history. Job cards
+   show the error count and error message. A finished run with failed items shows
+   a "Completed with errors" chip.
+
+   The context is allowlisted and length-capped by the route (`page`, `job_id`,
+   `automation`, `error_code`, `error`). `page` is the app path the button was on,
+   except on job cards, which send the job name. The internal-error button attaches
    the request path and `internal_server_error` code, without query parameters or
-   exception details. The
-   context is allowlisted and length-capped by the route (`page`, `job_id`,
-   `automation`, `error_code`, `error`), stored on the user event's payload, shown
-   as a chip in the composer and above the sent message, and given to the model as
-   a `<context>` block in that turn.
+   exception details; with log checks on, the model can find the traceback logged
+   for that path. The context is stored on the user event's payload, shown as a chip
+   in the composer and above the sent message, and given to the model as a
+   `<context>` block in that turn.
 
 7. **Links into the app** (`tool_providers/links.py`). `link_to_photos` and `link_to_page`
    (library group) validate what they point at and return app-relative links,
@@ -480,6 +500,18 @@ Implemented in `yaffo/site_agents/assistant/`:
    `app_pages.py` says which GET routes are pages, with a description for the
    model. Tests fail when the file drifts from the routes or a GET route is
    unclassified.
+
+   `link_to_file` makes a button that opens a file or folder on the user's
+   computer: a media item by id, or a media folder id plus the path inside it, as
+   in a `[media folder <id>]/…` label. `show` is `file` (open with its default
+   app) or `folder` (show it in its folder: Finder's `open -R`, Explorer's
+   `/select`, or the parent folder on Linux). `file_targets.py` looks up the real
+   path, both when the tool runs and again when the button is clicked. The path
+   must exist inside a configured media folder, and `..` and absolute paths are
+   refused. The model and the transcript only ever hold the ids and the folder
+   label. The button calls `POST /api/assistant/open`, which opens nothing
+   outside the media folders; `utils/open_in_os.py` is shared with the media
+   page's open buttons.
 
 8. **AI-call diagnostics and retention.** `ai_call_summary` reads bounded
    metadata-only summaries: feature, provider, model, success, duration, and cost.
@@ -519,6 +551,11 @@ Phase 3 limits:
   watcher, or web request is healthy.
 - AI-call summaries scan a bounded set of local run directories, so they are a
   troubleshooting sample rather than an exhaustive accounting export.
+- Context is given to the model only in the turn it was attached to; history
+  replay doesn't include it, so a follow-up turn loses the job id and error
+  unless the first answer repeated them.
+- Error toasts offer "Ask Yaffo" for every error, including validation messages
+  and the assistant's own failures.
 
 ### Package organization
 
@@ -537,10 +574,11 @@ providers beside their supporting services.
 | `tool_providers/diagnostics/fs.py` | `AssistantFS`: bounded filesystem diagnostics over named roots |
 | `tool_providers/diagnostics/file_details.py` | Fixed native volume-type and capture-date metadata probes |
 | `tool_providers/script_tool.py` | `ScriptToolProvider`: read-only `run_script` and `describe_data_source` |
-| `tool_providers/links.py` | `LinkToolProvider`: validated links to photos and app pages |
+| `tool_providers/links.py` | `LinkToolProvider`: validated links to photos and app pages, and buttons that open files |
+| `file_targets.py` | Id-only file and folder targets, looked up inside the media folders |
 | `app_pages.py` | Page classifications and the bundled Flask route catalog |
 | `redact.py` | Redaction shared by diagnostics and script results |
-| `settings.py` | Assistant availability, diagnostics groups, name redaction, and model selection |
+| `settings.py` | Assistant availability, diagnostics groups, and model selection |
 | `history.py` | Normalizes text turns and adds bounded, filtered historical tool evidence |
 | `call_logs.py` | Conversation-owned call-log locations and deletion |
 | `schemas.py` | Named conversation, activity, link, and response DTOs |
@@ -566,6 +604,16 @@ PageVersion*): it survives a closed tab or a timeout, and it can be cancelled.
 4. The browser polls `GET /api/assistant/conversations/<id>` for status, run
    start time, and the persisted transcript. Closing the dialog does not stop the
    task; reopening it loads the conversation again.
+
+`assistant_run_task` is registered at `PRIORITY_INTERACTIVE`
+(`task-queue.md` → *Priority*), so a reply is handed the next free worker ahead
+of queued index, import, and duplicate batches. It still waits for a running
+batch to finish. While the run's queue row is still `ready`, the poll adds a
+`queue` object (`run_queue.py`): whether it is waiting for busy workers or the
+task host isn't running, how many tasks go first, what the workers are running,
+and a rough wait from recent run times. It includes a localized `message`, which
+the chat shows in its status bar in place of "Generating…". Nothing is added when
+a worker is free.
 
 `ModelClient.load_history(turns)` restores alternating text turns. `history.py`
 adds prior tool details as escaped historical evidence, with current settings,
@@ -985,13 +1033,23 @@ unimplemented plans, so the assistant does not present those plans as features.
   They also state what is never sent: images, the database, keys, or
   arbitrary file contents. The optional metadata check sends only the capture-date
   candidate, not image bytes or the full metadata payload.
-- **Redaction** (`redact.py`, one pass over every tool result before it reaches the
-  model):
-  - the home directory becomes `~`
+- **Redaction** (`redact.py`, one pass over every tool result and the attached
+  context before it reaches the model):
+  - each configured folder becomes a label, keeping the path inside it:
+    `[media folder <id>]/2019/a.jpg`, `[thumbnail folder]/…`, `[data folder]/…`.
+    Matching is longest folder first, both as configured and resolved, and
+    whole folder names only. The media folder's id is the one the file tools
+    take, so the model can go from a log line to `stat_path`.
+  - the rest of the home directory becomes `~`
   - API-key-like tokens are masked
   - email addresses are masked
   - GPS coordinates are rounded or masked
-  - optionally, people names become `Person #3` (a setting)
+
+  People's names are not redacted. An opt-in `Person #<id>` substitution was
+  built and removed: it only covered tool results, so names the user typed
+  still went out, and the model's answers came back full of placeholders the
+  model couldn't connect to the names in the question. The disclosure notice
+  and the activity lines say what is sent instead.
 
   The expanded activity line in the UI shows the **redacted** text, so the user sees
   exactly what was sent.
@@ -1065,12 +1123,12 @@ Implemented routes:
 | `GET /api/assistant/conversations/<id>` | Poll status, run start time, and transcript |
 | `POST /api/assistant/conversations/<id>/messages` | Append a user message and start a run → `202` |
 | `POST /api/assistant/conversations/<id>/cancel` | Cooperative cancellation |
+| `POST /api/assistant/open` | Open a `link_to_file` target (ids only) on this computer → `204` |
 | `PATCH /api/assistant/conversations/<id>` | Rename a conversation |
 | `DELETE /api/assistant/conversations/<id>` | Delete a conversation and its events |
 | `POST /api/assistant/conversations/delete-all` | Delete all conversations |
 | `POST /settings/assistant/enabled` | Enable or disable the assistant |
 | `POST /settings/assistant/diagnostics/<group>` | Enable or disable a diagnostic group |
-| `POST /settings/assistant/redact-people` | Configure people-name redaction |
 
 Planned endpoints, not implemented:
 
@@ -1100,7 +1158,6 @@ provider, model and key):
   - Actions marked `uses_network` have their own switch.
   - The count above which Approve also asks the user to confirm the count
     (default 500) is configurable.
-- **Redact people names.**
 - **Delete all conversations** (with confirmation). There's no automatic
   expiry.
 - **Model:** automatically use the least expensive model from the AI Generation
@@ -1181,7 +1238,10 @@ The approval, mutation, replay, and undo cases below are requirements for phase 
    - The diagnostic tools, `AssistantFS`, redaction, `health_report`, the
      empty-conversation notice, and the diagnostics switches.
    - `run_script` with read-only results only (library queries).
-   - Contextual "Help me with this" from errors, failed jobs, and flashes; Settings is excluded.
+   - Contextual "Ask Yaffo" from error toasts and flashes, job cards and run
+     history with errors, and the internal error page; Settings is excluded.
+   - Interactive queue priority for assistant replies, and a waiting message
+     while a reply is queued.
    - Watcher/web status, AI-call summaries, opt-in capture-date metadata,
      filesystem-type diagnostics, retained conversation call logs, and bounded
      historical tool evidence.
@@ -1217,7 +1277,7 @@ Settled during review (2026-09-25):
 
 ## Deferred (flagged, not planned)
 
-- **Attaching page state to contextual prompts.** "Help me with this" would also
+- **Attaching page state to contextual prompts.** "Ask Yaffo" would also
   send the current page's visible state (active filters, the selection), useful
   for "why isn't this photo showing?". Deferred because it widens what's sent to
   the provider; revisit with a per-message toggle.

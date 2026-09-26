@@ -9,10 +9,10 @@ code-backed built-ins: read-only chat, can't be deleted.
 """
 import re
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import timezone
 
 from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, url_for
-from flask_babel import gettext, ngettext
+from flask_babel import gettext
 
 from yaffo.background_tasks.automation_config import config_fields_for, config_value
 from yaffo.background_tasks.automation_dispatch import invoke_automation
@@ -24,17 +24,11 @@ from yaffo.db import db
 from yaffo.db.models import (
     Automation,
     AutomationTrigger,
-    Job,
     AUTOMATION_STATUS_ACCEPTED,
     AUTOMATION_STATUS_IN_PROGRESS,
     AUTOMATION_STATUS_READY,
     CONVERSATION_TYPE_USER,
     EVENTS,
-    JOB_STATUS_CANCELLED,
-    JOB_STATUS_COMPLETED,
-    JOB_STATUS_FAILED,
-    JOB_STATUS_PENDING,
-    JOB_STATUS_RUNNING,
 )
 from yaffo.db.repositories import automation_repository as repo
 from yaffo.db.repositories import media_dir_repository
@@ -48,28 +42,10 @@ from yaffo.distance_units import (
 )
 from yaffo.site_agents import llm_config
 from yaffo.routes.utilities.common import automations_sidebar_context
+from yaffo.routes.utilities.run_history import RunView, run_view
 
 _MAX_BASE_SLUG_LENGTH = 30
 
-_RUN_FINISHED_STATUSES = (JOB_STATUS_COMPLETED, JOB_STATUS_FAILED, JOB_STATUS_CANCELLED)
-
-
-@dataclass(frozen=True)
-class AutomationRunView:
-    """A single row of an automation's run history, rendered on the detail page.
-    Built from a Job (runs reuse the Job table) so the template stays dumb and the
-    per-run-kind display logic lives in one tested place."""
-    job_id: str
-    status: str
-    status_label: str
-    status_chip: str       # chip tone modifier for the status badge
-    is_finished: bool
-    is_error: bool
-    progress: int          # 0–100; shown for in-progress runs
-    started_at: datetime | None
-    finished_at: datetime | None
-    summary: str
-    error: str | None
 
 
 @dataclass(frozen=True)
@@ -100,98 +76,10 @@ class AutomationRunStarted:
     media_count: int | None
 
 
-def _run_progress(job: Job) -> int:
-    """Percent complete (0–100) — processed (done + errored + cancelled) over the
-    task count, matching the live job card's math."""
-    if not job.task_count or job.task_count <= 0:
-        return 0
-    processed = (job.completed_count or 0) + (job.error_count or 0) + (job.cancelled_count or 0)
-    return min(100, int(processed / job.task_count * 100))
-
-
-def _run_label(job: Job) -> str:
-    if job.automation is not None and job.automation.is_system:
-        return job.automation.display_name
-    label = job.message or job.name
-    return {
-        "Imported {totalCount}/{taskCount} photos": gettext("Import photos"),
-        "Indexed {totalCount}/{taskCount} photos": gettext("Index photos"),
-        "Processed {totalCount}/{taskCount} media items": gettext("Find duplicates"),
-        "import_photos": gettext("Import photos"),
-        "index_photos": gettext("Index photos"),
-        "find_duplicates": gettext("Find duplicates"),
-    }.get(label, label)
-
-
-def _run_summary(job: Job) -> str:
-    """One-line result for a run: progress counts for batch jobs (find_duplicates /
-    index), else the job's message (custom runs carry the automation name)."""
-    completed = job.completed_count or 0
-    errors = job.error_count or 0
-    cancelled = job.cancelled_count or 0
-    if job.task_count and job.task_count > 1:
-        summary = gettext(
-            "%(completed)s of %(total)s processed",
-            completed=completed,
-            total=job.task_count,
-        )
-        if errors:
-            summary += ", " + ngettext(
-                "%(count)s error",
-                "%(count)s errors",
-                errors,
-                count=errors,
-            )
-        if cancelled:
-            summary += ", " + ngettext(
-                "%(count)s cancelled",
-                "%(count)s cancelled",
-                cancelled,
-                count=cancelled,
-            )
-        return summary
-    return _run_label(job)
-
-
-def _run_status_label(status: str) -> str:
-    return {
-        JOB_STATUS_PENDING: gettext("Pending"),
-        JOB_STATUS_RUNNING: gettext("Running"),
-        JOB_STATUS_COMPLETED: gettext("Completed"),
-        JOB_STATUS_CANCELLED: gettext("Cancelled"),
-        JOB_STATUS_FAILED: gettext("Failed"),
-    }.get(status, status.capitalize())
-
-
-def _run_status_chip(status: str) -> str:
-    return {
-        JOB_STATUS_PENDING: "chip-warning",
-        JOB_STATUS_RUNNING: "chip-warning",
-        JOB_STATUS_COMPLETED: "chip-success",
-        JOB_STATUS_FAILED: "chip-danger",
-    }.get(status, "")
-
-
-def _run_view(job: Job) -> AutomationRunView:
-    return AutomationRunView(
-        job_id=job.id,
-        status=job.status,
-        status_label=_run_status_label(job.status),
-        status_chip=_run_status_chip(job.status),
-        is_finished=job.status in _RUN_FINISHED_STATUSES,
-        is_error=job.status == JOB_STATUS_FAILED or bool(job.error_count) or bool(job.error),
-        progress=_run_progress(job),
-        started_at=job.started_at or job.created_at,
-        finished_at=job.completed_at,
-        summary=_run_summary(job),
-        error=job.error,
-    )
-
-
-def _recent_runs(automation: Automation | None) -> list[AutomationRunView]:
+def _recent_runs(automation: Automation | None) -> list[RunView]:
     if automation is None:
         return []
-    return [_run_view(j) for j in repo.get_recent_jobs(db.session, automation.id)]
+    return [run_view(j) for j in repo.get_recent_jobs(db.session, automation.id)]
 
 
 def _slugify(name: str) -> str:

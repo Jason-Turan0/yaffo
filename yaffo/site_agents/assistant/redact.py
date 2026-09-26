@@ -4,11 +4,13 @@ Applied to the model text of every assistant tool result (and so to what the
 chat's expanded activity line shows, which is the same text): the user sees
 exactly what left the machine.
 
-- the home directory becomes `~`
+- a configured folder (each media folder, the thumbnail folder, the data folder)
+  becomes a label, e.g. `[media folder <id>]`, keeping the path inside it, so
+  where the library lives and what its folders are called never leave the machine
+- the rest of the home directory becomes `~`
 - API-key-like tokens and `key=value` secrets are masked
 - email addresses are masked
 - GPS coordinates are rounded to one decimal place (about 11 km)
-- optionally, people names become `Person #<id>`
 """
 from __future__ import annotations
 
@@ -18,7 +20,10 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from yaffo.db.models import Person
+from yaffo.common import ROOT_DIR
+from yaffo.db.repositories.media_dir_repository import get_media_dir_entries
+from yaffo.utils.settings import get_thumbnail_dir
+
 
 MASK = "[redacted]"
 EMAIL_MASK = "[email]"
@@ -47,29 +52,39 @@ def _round(value: str) -> str:
     return f"{float(value):.1f}"
 
 
-class Redactor:
-    """`home` is replaced by `~`; `people` maps person id → name when names are
-    redacted (None leaves names alone)."""
+def _path_forms(path: Path) -> set[str]:
+    """The path as configured and resolved (symlinks, /private on macOS), without a
+    trailing separator; never a bare filesystem root."""
+    forms = {str(path)}
+    try:
+        forms.add(str(path.resolve()))
+    except OSError:
+        pass
+    return {f.rstrip("/\\") for f in forms if f and f.rstrip("/\\")}
 
-    def __init__(self, *, home: Optional[Path] = None, people: Optional[dict[int, str]] = None):
-        homes = {str(home or Path.home())}
-        try:
-            homes.add(str((home or Path.home()).resolve()))
-        except OSError:
-            pass
-        # Longest first, so /private/var/... wins over /var/...; only whole folder
-        # names match (/Users/alex, not /Users/alexandra).
-        self._homes = [
-            re.compile(re.escape(h) + r"(?![\w.\-])")
-            for h in sorted((h.rstrip("/\\") for h in homes if h and h not in ("/", "\\")), key=len, reverse=True)
+
+def _path_pattern(path_text: str) -> re.Pattern:
+    # Only whole folder names match (/Users/alex, not /Users/alexandra).
+    return re.compile(re.escape(path_text) + r"(?![\w.\-])")
+
+
+class Redactor:
+    """`roots` maps a label to a folder: the folder becomes `[label]`. `home`
+    (default: the user's home) is replaced by `~` wherever no root matched."""
+
+    def __init__(self, *, home: Optional[Path] = None, roots: Optional[dict[str, Path]] = None):
+        # Longest first everywhere, so a media folder inside the data folder gets its
+        # own label and /private/var/... wins over /var/....
+        replacements = [
+            (form, f"[{label}]")
+            for label, path in (roots or {}).items()
+            for form in _path_forms(path)
         ]
-        self._people: list[tuple[re.Pattern, str]] = []
-        for person_id, name in sorted((people or {}).items(), key=lambda item: -len(item[1] or "")):
-            name = (name or "").strip()
-            if len(name) < 2:
-                continue
-            pattern = re.compile(rf"(?<!\w){re.escape(name)}(?!\w)", re.IGNORECASE)
-            self._people.append((pattern, f"Person #{person_id}"))
+        replacements.sort(key=lambda item: len(item[0]), reverse=True)
+        self._roots = [(_path_pattern(form), label) for form, label in replacements]
+        self._homes = [
+            _path_pattern(h) for h in sorted(_path_forms(home or Path.home()), key=len, reverse=True)
+        ]
 
     def __call__(self, text: str) -> str:
         return self.redact(text)
@@ -77,6 +92,8 @@ class Redactor:
     def redact(self, text: str) -> str:
         if not text:
             return text
+        for pattern, label in self._roots:
+            text = pattern.sub(lambda _m, label=label: label, text)
         for home in self._homes:
             text = home.sub("~", text)
         for pattern in _KEY_PATTERNS:
@@ -86,13 +103,21 @@ class Redactor:
         text = _EMAIL.sub(EMAIL_MASK, text)
         text = _COORDINATE_PAIR.sub(lambda m: _round(m.group(1)) + m.group(2) + _round(m.group(3)), text)
         text = _COORDINATE_FIELD.sub(lambda m: m.group(1) + _round(m.group(2)), text)
-        for pattern, replacement in self._people:
-            text = pattern.sub(replacement, text)
         return text
 
 
-def redactor_for(session: Session, *, redact_people: bool) -> Redactor:
-    people = None
-    if redact_people:
-        people = {pid: name for pid, name in session.query(Person.id, Person.name).all() if name}
-    return Redactor(people=people)
+def install_roots(session: Session) -> dict[str, Path]:
+    """This install's configured folders, by the label the model sees. A media
+    folder's label carries its id, which the file tools take."""
+    roots: dict[str, Path] = {"data folder": Path(ROOT_DIR)}
+    thumbnail_dir = get_thumbnail_dir(session)
+    if thumbnail_dir is not None:
+        roots["thumbnail folder"] = thumbnail_dir
+    for entry in get_media_dir_entries(session):
+        roots[f"media folder {entry.id}"] = entry.path
+    return roots
+
+
+def redactor_for(session: Session) -> Redactor:
+    """The redactor for one assistant run: this install's folders become labels."""
+    return Redactor(roots=install_roots(session))

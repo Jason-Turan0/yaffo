@@ -19,6 +19,7 @@ from typing import Callable, Optional
 from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.config import task_queue
+from yaffo.taskq import PRIORITY_INTERACTIVE
 from yaffo.background_tasks.utils import SessionFactory, get_automation_status
 from yaffo.db.models import (
     AUTOMATION_STATUS_FAILED,
@@ -111,7 +112,7 @@ def run_automation_generation(
         repo.set_status(session, slug, AUTOMATION_STATUS_FAILED)
 
 
-@task_queue.task()
+@task_queue.task(priority=PRIORITY_INTERACTIVE)
 def generate_automation_task(slug: str, message: str) -> None:
     session = SessionFactory()
     try:

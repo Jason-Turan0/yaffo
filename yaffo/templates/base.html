@@ -33,6 +33,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='components/modal.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/overlay.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/job_progress.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='components/run_history.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/percentage_slider.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/file_browser.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/intl_date_input.css') }}">
@@ -198,13 +199,15 @@
                 {% for category, message in messages %}
                     <div class="alert alert-{{ category }}">
                         <span class="alert-message">{{ message }}</span>
-                        {% if assistant_ready | default(false) and request.endpoint != 'settings_index' and category in ('error', 'danger', 'warning') %}
-                        <button type="button" class="btn btn-secondary btn-sm" data-assistant-help
-                                data-page="{{ request.path }}" data-error="{{ (message|string)[:500] }}">
-                            {{ _("Help me with this") }}
-                        </button>
-                        {% endif %}
-                        <button class="alert-close" onclick="closeAlert(this)" aria-label="{{ _('Close') }}">&times;</button>
+                        <span class="alert-actions">
+                            {% if assistant_ready | default(false) and request.endpoint != 'settings_index' and category in ('error', 'danger', 'warning') %}
+                            <button type="button" class="message-action" data-icon="assistant" data-assistant-help
+                                    data-page="{{ request.path }}" data-error="{{ (message|string)[:500] }}">
+                                <span class="message-action-label">{{ _("Ask Yaffo") }}</span>
+                            </button>
+                            {% endif %}
+                            <button class="alert-close" onclick="closeAlert(this)" aria-label="{{ _('Close') }}">&times;</button>
+                        </span>
                     </div>
                 {% endfor %}
             </div>

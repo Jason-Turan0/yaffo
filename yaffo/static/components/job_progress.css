@@ -28,6 +28,14 @@
     letter-spacing: 0.5px;
 }
 
+.job-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
 .job-time {
     font-size: var(--font-size-sm);
     color: var(--color-text-muted);
@@ -64,4 +72,61 @@
 
 .job-btn-hidden {
     display: none;
+}
+/* Errors on a run: the count, then the job's error message when it has one. */
+.job-errors {
+    margin-top: 12px;
+    font-size: var(--font-size-sm);
+    color: var(--color-danger);
+}
+
+.job-error-count {
+    font-weight: 600;
+}
+
+.job-error-message {
+    margin: 4px 0 0;
+    overflow-wrap: anywhere;
+}
+
+/* Phone: the card sits inside an already padded section, so it trims its own
+   padding; status and time share a line that can wrap, and the buttons get their
+   own full-width row instead of squeezing the header. */
+@media (max-width: 640px) {
+    .job-card {
+        padding: 12px;
+        margin-top: 12px;
+    }
+
+    .job-header {
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .job-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 8px;
+        min-width: 0;
+    }
+
+    .job-actions {
+        flex-basis: 100%;
+    }
+
+    .job-actions > * {
+        flex: 1 1 0;
+    }
+
+    .job-message {
+        font-size: var(--font-size-sm);
+        margin-bottom: 10px;
+        overflow-wrap: anywhere;
+    }
+
+    .job-card .progress-bar-container {
+        height: 12px;
+    }
 }

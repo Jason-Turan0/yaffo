@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 
 from yaffo import themes
 from yaffo.background_tasks.config import task_queue
+from yaffo.taskq import PRIORITY_INTERACTIVE
 from yaffo.background_tasks.utils import SessionFactory, get_theme_status
 from yaffo.db.models import (
     CONVERSATION_TYPE_ASSISTANT,
@@ -120,7 +121,7 @@ def run_theme_generation(
         themes.set_theme_status(slug, PAGE_VERSION_STATUS_FAILED, session)
 
 
-@task_queue.task()
+@task_queue.task(priority=PRIORITY_INTERACTIVE)
 def generate_theme_task(slug: str, message: str) -> None:
     session = SessionFactory()
     try:

@@ -18,6 +18,7 @@ from typing import Callable, Optional
 from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.config import task_queue
+from yaffo.taskq import PRIORITY_INTERACTIVE
 from yaffo.background_tasks.utils import SessionFactory, get_assistant_status
 from yaffo.db.models import (
     ASSISTANT_EVENT_ASSISTANT,
@@ -57,6 +58,14 @@ def _fail(session: Session, conversation_id: int, code: str, text: str, **detail
     repo.set_status(session, conversation_id, ASSISTANT_STATUS_FAILED)
 
 
+def _redacted_context(context: Optional[dict], redact: Callable[[str], str]) -> Optional[dict]:
+    """The attached context as the model gets it: an error or page can carry a
+    folder path, so it goes through the same redaction as tool results."""
+    if not context:
+        return context
+    return {key: redact(str(value)) for key, value in context.items()}
+
+
 def run_assistant_turn(
     session: Session,
     conversation_id: int,
@@ -75,7 +84,7 @@ def run_assistant_turn(
         return
 
     diagnostics = assistant_settings.enabled_diagnostics(session)
-    redactor = redactor_for(session, redact_people=assistant_settings.redact_people(session))
+    redactor = redactor_for(session)
     turns = transcript_turns(repo.list_events(session, conversation_id), diagnostics, redactor)
     if not turns or turns[-1][0] != ROLE_USER:
         repo.set_status(session, conversation_id, ASSISTANT_STATUS_IDLE)
@@ -95,7 +104,7 @@ def run_assistant_turn(
     history, (_, message) = turns[:-1], turns[-1]
     user_message = build_assistant_user_message(
         message, locale=get_saved_locale(session) or DEFAULT_LOCALE,
-        context=repo.latest_user_context(session, conversation_id))
+        context=_redacted_context(repo.latest_user_context(session, conversation_id), redactor))
     try:
         agent = create_assistant_agent(
             model=model, api_key=api_key, history=history, session=session,
@@ -124,7 +133,7 @@ def run_assistant_turn(
         _fail(session, conversation_id, ERROR_RUN_FAILED, f"The assistant stopped with an error: {exc}")
 
 
-@task_queue.task()
+@task_queue.task(priority=PRIORITY_INTERACTIVE)
 def assistant_run_task(conversation_id: int) -> None:
     session = SessionFactory()
     try:

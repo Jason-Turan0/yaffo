@@ -202,3 +202,78 @@ def test_page_offers_the_reindex_button(client, monkeypatch, tmp_path):
 
     assert 'id="reindex-button"' in body
     assert "Reindex Library" in body
+
+
+def _add_job(app, job_id, name, status, minutes_ago, **fields):
+    from datetime import datetime, timedelta
+    from yaffo.db.models import Job
+    created = datetime(2026, 9, 1, 12, 0) - timedelta(minutes=minutes_ago)
+    with app.app_context():
+        db.session.add(Job(
+            id=job_id, name=name, status=status, created_at=created, started_at=created,
+            task_count=fields.pop("task_count", 10), completed_count=fields.pop("completed_count", 10),
+            cancelled_count=0, error_count=fields.pop("error_count", 0),
+            message=fields.pop("message", "Indexed {totalCount}/{taskCount} photos"), **fields,
+        ))
+        db.session.commit()
+
+
+def test_page_shows_only_in_progress_latest_runs_as_cards(app, client):
+    _add_job(app, "index-old", "index_photos", "COMPLETED", 60, error_count=3)
+    _add_job(app, "index-new", "index_photos", "RUNNING", 5, completed_count=4)
+    _add_job(app, "import-stuck", "import_photos", "RUNNING", 70,
+             message="Imported {totalCount}/{taskCount} photos")
+    _add_job(app, "import-new", "import_photos", "COMPLETED", 6,
+             message="Imported {totalCount}/{taskCount} photos")
+    _add_job(app, "dupes", "find_duplicates", "RUNNING", 1)
+
+    body = client.get("/utilities/index-photos").get_data(as_text=True)
+    cards, history = body.split('class="section index-run-history"')
+
+    # A card only for a kind whose latest run is still in progress.
+    assert 'id="job-index-new"' in cards
+    assert 'id="job-import-new"' not in cards and 'id="job-import-stuck"' not in cards
+    assert 'id="job-index-old"' not in cards
+    # Everything else is history: a finished latest run, an older one, and an
+    # older run that never finished. Labelled by kind; other jobs aren't listed.
+    assert "3 errors" in history
+    assert "Index photos" in history and "Import photos" in history
+    assert history.count('class="run-history-row') == 3
+    assert "dupes" not in body
+    # A card that finishes while the page is open gets no Dismiss (it deletes the job).
+    assert "/jobs/index-new/fragment?has_results=0&amp;dismiss=0" in cards
+    assert "hasActiveJobs: true" in body
+
+
+def test_page_shows_no_cards_when_nothing_is_in_progress(app, client):
+    _add_job(app, "index-done", "index_photos", "COMPLETED", 5)
+    body = client.get("/utilities/index-photos").get_data(as_text=True)
+    assert 'id="job-progress-section"' not in body
+    assert "Run history" in body
+    assert "hasActiveJobs: false" in body
+
+
+def test_page_reports_active_jobs_from_running_runs(app, client):
+    _add_job(app, "index-running", "index_photos", "RUNNING", 1, completed_count=4)
+    body = client.get("/utilities/index-photos").get_data(as_text=True)
+    assert 'id="job-index-running"' in body
+    # Its polling asks for no Dismiss once it finishes, and so does Cancel.
+    assert "/jobs/index-running/fragment?has_results=0&amp;dismiss=0" in body
+    assert '"dismiss": false' in body
+    assert "hasActiveJobs: true" in body
+    assert "Run history" not in body
+
+
+def test_job_card_shows_error_count_and_message(app, client):
+    _add_job(app, "index-errors", "index_photos", "RUNNING", 1, error_count=7,
+             error="Could not read IMG_0412.HEIC")
+    body = client.get("/utilities/index-photos").get_data(as_text=True)
+    assert '<span class="job-error-count">7 errors</span>' in body
+    assert '<p class="job-error-message">Could not read IMG_0412.HEIC</p>' in body
+
+
+def test_job_fragment_omits_dismiss_when_asked(app, client):
+    _add_job(app, "index-done", "index_photos", "COMPLETED", 1)
+    assert "/jobs/index-done/delete" in client.get("/jobs/index-done/fragment").get_data(as_text=True)
+    body = client.get("/jobs/index-done/fragment?dismiss=0").get_data(as_text=True)
+    assert "/jobs/index-done/delete" not in body

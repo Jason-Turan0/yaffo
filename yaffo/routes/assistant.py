@@ -7,16 +7,20 @@ assistant is turned off in Settings, and in demo mode.
 from __future__ import annotations
 
 import json
+import subprocess
 
 from flask import Flask, abort, jsonify, make_response, render_template, request
 from flask_babel import gettext
 
+from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.tasks.assistant_run import assistant_run_task
 from yaffo.db import db
 from yaffo.db.models import ASSISTANT_EVENT_USER, ASSISTANT_STATUS_IDLE, ASSISTANT_STATUS_RUNNING
 from yaffo.db.repositories import assistant_repository as repo
 from yaffo.runtime_mode import demo_mode_enabled
 from yaffo.site_agents.assistant import settings as assistant_settings
+from yaffo.site_agents.assistant.file_targets import SHOW_FOLDER, FileTarget, TargetError, resolve_target
+from yaffo.site_agents.assistant.run_queue import run_queue_status
 from yaffo.site_agents.assistant.schemas import (
     AssistantError,
     ConversationList,
@@ -27,12 +31,18 @@ from yaffo.site_agents.assistant.schemas import (
     conversation_status,
 )
 from yaffo.utils.context import context
+from yaffo.utils.open_in_os import open_in_os
 
 # Longer messages are refused rather than sent; this is a help chat, not a paste bin.
 MESSAGE_MAX_LENGTH = 4000
-# What "Help me with this" may attach, and how long each value may be. Anything
+# What a contextual "Ask Yaffo" button may attach, and how long each value may be. Anything
 # else in the payload is dropped.
 CONTEXT_LIMITS = {"page": 120, "job_id": 64, "automation": 120, "error_code": 64, "error": 500}
+
+
+def _queue_store():
+    """The task queue's store, read for a waiting run's place in line."""
+    return task_queue.store
 
 
 def assistant_available() -> bool:
@@ -103,7 +113,6 @@ def assistant_settings_context() -> dict:
         "enabled": assistant_settings.is_enabled(),
         "conversation_count": repo.count_conversations(db.session),
         "diagnostics": {group: group in enabled for group in assistant_settings.DIAGNOSTIC_GROUPS},
-        "redact_people": assistant_settings.redact_people(),
     }
 
 
@@ -162,11 +171,14 @@ def init_assistant_routes(app: Flask):
 
     @app.route("/api/assistant/conversations/<int:conversation_id>", methods=["GET"])
     def assistant_conversation(conversation_id: int):
-        """The chat dialog's poll: status, run start time, and the transcript."""
+        """The chat dialog's poll: status, run start time, the transcript, and
+        while the run waits for a background worker, why (`queue`)."""
         _require_available()
         conversation = _get_conversation_or_404(conversation_id)
         events = repo.list_events(db.session, conversation_id)
-        return jsonify(conversation_status(conversation, events).to_dict())
+        queue = (run_queue_status(_queue_store(), conversation_id)
+                 if conversation.status == ASSISTANT_STATUS_RUNNING else None)
+        return jsonify(conversation_status(conversation, events, queue).to_dict())
 
     @app.route("/api/assistant/conversations/<int:conversation_id>/messages", methods=["POST"])
     def assistant_message(conversation_id: int):
@@ -184,6 +196,24 @@ def init_assistant_routes(app: Flask):
         assistant_run_task(conversation_id)
         conversation = repo.get_conversation(db.session, conversation_id)
         return jsonify(ConversationStarted(ConversationSummary.from_model(conversation)).to_dict()), 202
+
+    @app.route("/api/assistant/open", methods=["POST"])
+    def assistant_open():
+        """An assistant "open" button (link_to_file) was clicked. The body names the
+        file or folder by ids only; the path is looked up again here and must be in a
+        configured media folder, so the button can't be turned into "open anything"."""
+        _require_available()
+        try:
+            target = FileTarget.from_dict(request.get_json(silent=True))
+            resolved = resolve_target(db.session, target)
+        except TargetError:  # its reasons are worded for the model; the user gets one message
+            return _error(gettext("That file or folder isn't available. It may have moved, or its drive "
+                                  "isn't connected."), "open_target_unavailable", 404)
+        try:
+            open_in_os(resolved.path, reveal=target.show == SHOW_FOLDER and not resolved.is_dir)
+        except (OSError, subprocess.SubprocessError):
+            return _error(gettext("Couldn't open it on this computer."), "open_failed", 500)
+        return "", 204
 
     @app.route("/api/assistant/conversations/<int:conversation_id>/cancel", methods=["POST"])
     def assistant_cancel(conversation_id: int):
@@ -228,13 +258,6 @@ def init_assistant_routes(app: Flask):
         if demo_mode_enabled() or group not in assistant_settings.DIAGNOSTIC_GROUPS:
             abort(404)
         assistant_settings.set_diagnostics_enabled(group, request.form.get("enabled") == "on")
-        return _toast(make_response("", 200), gettext("Assistant settings saved."))
-
-    @app.route("/settings/assistant/redact-people", methods=["POST"])
-    def settings_assistant_redact_people():
-        if demo_mode_enabled():
-            abort(404)
-        assistant_settings.set_redact_people(request.form.get("enabled") == "on")
         return _toast(make_response("", 200), gettext("Assistant settings saved."))
 
     @app.route("/api/assistant/conversations/delete-all", methods=["POST"])

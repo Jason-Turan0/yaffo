@@ -31,7 +31,10 @@
     cursor: pointer;
 }
 
-.assistant-fab[data-icon]::before {
+/* By id: several skins shrink every button icon to 15-16px with
+   `[data-theme] button[data-icon]::before`, which would outrank a class here and
+   leave a small glyph in the 56px circle. This one icon is meant to be large. */
+#assistant-fab[data-icon]::before {
     width: 26px;
     height: 26px;
 }
@@ -242,6 +245,32 @@ li.assistant-tool-error {
     padding-left: 18px;
 }
 
+/* A link_to_file button: reads like the app links beside it, with a file or folder
+   icon to say it opens something on this computer rather than a page. */
+.assistant-open-link {
+    gap: 4px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--color-accent);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.assistant-open-link[data-icon]::before {
+    width: 14px;
+    height: 14px;
+}
+
+@media (hover: none), (pointer: coarse) {
+    .assistant-open-link {
+        min-height: 0;
+        padding-block: 8px;
+        margin-block: -8px;
+    }
+}
+
 .assistant-empty {
     display: flex;
     flex-direction: column;
@@ -367,7 +396,7 @@ li.assistant-tool-error {
     color: var(--color-text-muted);
 }
 
-/* Context attached by "Help me with this": a removable chip in the composer, and a
+/* Context attached by a contextual "Ask Yaffo" button: a removable chip in the composer, and a
    label above the message it went out with. */
 .assistant-context {
     margin-block-end: 6px;

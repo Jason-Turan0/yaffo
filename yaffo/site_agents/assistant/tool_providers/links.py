@@ -7,6 +7,9 @@
 - link_to_page: any page in the app (a person's faces, an album, one photo,
   Settings, an automation, …), from the page table built off the Flask routes
   (app_pages.py).
+- link_to_file: a button that opens a file or folder on the user's computer, named
+  by a media item id or a media folder id plus a relative path. Yaffo resolves the
+  real path (file_targets.py); the model only ever sees the folder label.
 
 Both check what they link to (the people, labels, photos and albums exist; how
 many items match) so the model never offers a dead or empty link. URLs are built
@@ -32,7 +35,10 @@ from yaffo.domain.media_filter_params import (
     media_filter_selections,
 )
 from yaffo.site_agents.assistant.app_pages import app_pages, page_url
-from yaffo.site_agents.assistant.schemas import AppLink, ToolActivity
+from yaffo.site_agents.assistant.file_targets import (
+    SHOW_FILE, SHOW_FOLDER, SHOW_OPTIONS, FileTarget, TargetError, resolve_target,
+)
+from yaffo.site_agents.assistant.schemas import AppLink, OpenLink, ToolActivity
 from yaffo.site_agents.common.tool_providers.tool_provider_types import (
     CallToolReturn,
     RawToolDefinition,
@@ -42,6 +48,7 @@ from yaffo.site_agents.common.tool_providers.tool_provider_types import (
 
 LINK_TO_PHOTOS = "link_to_photos"
 LINK_TO_PAGE = "link_to_page"
+LINK_TO_FILE = "link_to_file"
 MAX_TITLE_CHARS = 80
 GALLERY_ENDPOINT = "index"
 
@@ -69,6 +76,25 @@ _PHOTOS_SCHEMA = {
     "additionalProperties": False,
 }
 
+
+_FILE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "title": _TITLE,
+        "media_item_id": {"type": "integer", "description": "A photo or video, by its media item id."},
+        "media_dir_id": {"type": "string", "description": "Or a media folder id, from a [media folder <id>] label."},
+        "path": {
+            "type": "string",
+            "description": "With media_dir_id: the path inside it, as in the label ('' for the folder itself).",
+        },
+        "show": {
+            "type": "string", "enum": list(SHOW_OPTIONS),
+            "description": f"'{SHOW_FILE}' opens it with its default app; '{SHOW_FOLDER}' shows it in its folder.",
+        },
+    },
+    "required": ["title", "show"],
+    "additionalProperties": False,
+}
 
 
 def _page_schema() -> dict:
@@ -140,6 +166,14 @@ class LinkToolProvider(ToolProvider):
                 "Look up ids first (people, albums, media items) with a script. Pages:\n" + _page_catalog(),
                 _page_schema(),
             ),
+            RawToolDefinition(
+                LINK_TO_FILE,
+                "Give the user a button that opens a file or folder on their computer, e.g. a photo "
+                "that failed to index, or a media folder to check. Name it by media_item_id, or by "
+                "media_dir_id and path from a [media folder <id>]/path label. Yaffo checks it exists; "
+                "the button appears under your answer. It opens only when the user clicks it.",
+                _FILE_SCHEMA,
+            ),
         ]
 
     def call_tool(self, name: str, args: dict) -> CallToolReturn:
@@ -147,6 +181,8 @@ class LinkToolProvider(ToolProvider):
             return self._photos(args)
         if name == LINK_TO_PAGE:
             return self._page(args)
+        if name == LINK_TO_FILE:
+            return self._file(args)
         raise ValueError(f"Unknown tool: {name}")
 
     def _photos(self, args: dict) -> ToolResult:
@@ -212,6 +248,25 @@ class LinkToolProvider(ToolProvider):
         return self._result(
             LINK_TO_PAGE, title, page_url(endpoint, coerced),
             f"Link ready. It's shown under your answer as “{title}”; don't repeat the URL.", count=1)
+
+    def _file(self, args: dict) -> ToolResult:
+        title = _title(args) or "Open"
+        try:
+            target = FileTarget.from_dict({k: args.get(k) for k in ("show", "media_item_id", "media_dir_id", "path")})
+            resolved = resolve_target(self.session, target)
+        except TargetError as exc:
+            activity = ToolActivity(tool=LINK_TO_FILE, args={"title": title}, error=True)
+            return ToolResult(model_text=f"Couldn't make the button: {exc}.", host_data=activity.to_dict())
+        kind = "folder" if resolved.is_dir else "file"
+        verb = "shows it in its folder" if target.show == SHOW_FOLDER and not resolved.is_dir else "opens it"
+        activity = ToolActivity(
+            tool=LINK_TO_FILE, args={"title": title}, count=1,
+            opens=[OpenLink(title=title, show=target.show, target=target.to_dict())],
+        )
+        return ToolResult(
+            model_text=(f"Button ready: “{title}” {verb} ({kind} {resolved.label}) when the user clicks it. "
+                        "It's shown under your answer; don't repeat the path."),
+            host_data=activity.to_dict())
 
     def _result(self, tool: str, title: str, url: Optional[str], text: str, count: int = 0) -> ToolResult:
         activity = ToolActivity(

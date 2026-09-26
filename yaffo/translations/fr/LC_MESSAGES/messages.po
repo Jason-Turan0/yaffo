@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-26 00:08-0500\n"
+"POT-Creation-Date: 2026-09-26 02:29-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -350,39 +350,49 @@ msgstr ""
 "Analysez vos photos indexées à la recherche de doublons selon un calendrier : les résultats "
 "apparaissent dans l'outil Supprimer les doublons."
 
-#: yaffo/routes/assistant.py:75 yaffo/routes/pages.py:250 yaffo/routes/themes_page.py:239
-#: yaffo/routes/utilities/automations.py:651
+#: yaffo/routes/assistant.py:85 yaffo/routes/pages.py:250 yaffo/routes/themes_page.py:239
+#: yaffo/routes/utilities/automations.py:539
 msgid "Message is required."
 msgstr "Un message est requis."
 
-#: yaffo/routes/assistant.py:78
+#: yaffo/routes/assistant.py:88
 #, python-format
 msgid "Messages can be at most %(count)s characters."
 msgstr "Les messages peuvent contenir au maximum %(count)s caractères."
 
-#: yaffo/routes/assistant.py:84 yaffo/routes/pages.py:254 yaffo/routes/themes_page.py:243
-#: yaffo/routes/utilities/automations.py:655
+#: yaffo/routes/assistant.py:94 yaffo/routes/pages.py:254 yaffo/routes/themes_page.py:243
+#: yaffo/routes/utilities/automations.py:543
 #, python-format
 msgid "No API key configured. Add your %(provider)s API key in Settings → AI Generation."
 msgstr "Aucune clé API configurée. Ajoutez votre %(provider)s Clé API dans Paramètres → Génération IA."
 
-#: yaffo/routes/assistant.py:176 yaffo/routes/assistant.py:181
+#: yaffo/routes/assistant.py:188 yaffo/routes/assistant.py:193
 msgid "The assistant is still answering."
 msgstr "L'assistant est encore en train de répondre."
 
-#: yaffo/routes/assistant.py:201
+#: yaffo/routes/assistant.py:210
+msgid "That file or folder isn't available. It may have moved, or its drive isn't connected."
+msgstr ""
+"Ce fichier ou dossier n'est pas disponible. Il a peut-être été déplacé, ou son disque n'est pas "
+"connecté."
+
+#: yaffo/routes/assistant.py:215
+msgid "Couldn't open it on this computer."
+msgstr "Impossible de l'ouvrir sur cet ordinateur."
+
+#: yaffo/routes/assistant.py:231
 msgid "Title is required."
 msgstr "Un titre est requis."
 
-#: yaffo/routes/assistant.py:220
+#: yaffo/routes/assistant.py:250
 msgid "Assistant turned on."
 msgstr "Assistant activé."
 
-#: yaffo/routes/assistant.py:220
+#: yaffo/routes/assistant.py:250
 msgid "Assistant turned off."
 msgstr "Assistant désactivé."
 
-#: yaffo/routes/assistant.py:231 yaffo/routes/assistant.py:238
+#: yaffo/routes/assistant.py:261
 msgid "Assistant settings saved."
 msgstr "Paramètres de l’assistant enregistrés."
 
@@ -526,8 +536,8 @@ msgstr "La latitude et la longitude sont obligatoires"
 msgid "Could not determine a location name"
 msgstr "Impossible de déterminer un nom d'emplacement"
 
-#: yaffo/routes/media.py:54 yaffo/routes/media.py:204 yaffo/routes/media.py:279
-#: yaffo/routes/media.py:296
+#: yaffo/routes/media.py:54 yaffo/routes/media.py:204 yaffo/routes/media.py:265
+#: yaffo/routes/media.py:282
 msgid "Photo not found"
 msgstr "Photo introuvable"
 
@@ -544,27 +554,27 @@ msgstr "Affiche introuvable"
 msgid "Face not found"
 msgstr "Visage introuvable"
 
-#: yaffo/routes/media.py:240
+#: yaffo/routes/media.py:233
 msgid "Could not open file"
 msgstr "Impossible d'ouvrir le fichier"
 
-#: yaffo/routes/media.py:251
+#: yaffo/routes/media.py:244
 msgid "Folder not found"
 msgstr "Dossier introuvable"
 
-#: yaffo/routes/media.py:267
+#: yaffo/routes/media.py:253
 msgid "Could not open folder"
 msgstr "Impossible d'ouvrir le dossier"
 
-#: yaffo/routes/media.py:304
+#: yaffo/routes/media.py:290
 msgid "Tags must be a list"
 msgstr "Les balises doivent être une liste"
 
-#: yaffo/routes/media.py:312
+#: yaffo/routes/media.py:298
 msgid "Each tag must be an object"
 msgstr "Chaque balise doit être un objet"
 
-#: yaffo/routes/media.py:319
+#: yaffo/routes/media.py:305
 msgid "Tag name is required"
 msgstr "Le nom de la balise est obligatoire"
 
@@ -572,7 +582,7 @@ msgstr "Le nom de la balise est obligatoire"
 msgid "Untitled Page"
 msgstr "Page sans titre"
 
-#: yaffo/routes/pages.py:268 yaffo/routes/themes_page.py:235 yaffo/routes/utilities/automations.py:648
+#: yaffo/routes/pages.py:268 yaffo/routes/themes_page.py:235 yaffo/routes/utilities/automations.py:536
 msgid "A generation is already running."
 msgstr "Une génération est déjà en marche."
 
@@ -632,7 +642,7 @@ msgstr ""
 "Les répertoires multimédias et de miniatures ne peuvent pas être modifiés pendant une importation"
 " ou une indexation."
 
-#: yaffo/routes/settings.py:192 yaffo/routes/utilities/automations.py:461
+#: yaffo/routes/settings.py:192 yaffo/routes/utilities/automations.py:349
 msgid "Unsupported distance unit"
 msgstr "Unité de distance non prise en charge"
 
@@ -919,157 +929,106 @@ msgstr "Les thèmes système ne peuvent pas être supprimés"
 msgid "System themes cannot be generated."
 msgstr "Les thèmes système ne peuvent pas être générés."
 
-#: yaffo/routes/utilities/automations.py:117 yaffo/routes/utilities/automations.py:120
-msgid "Import photos"
-msgstr "Importer des photos"
-
-#: yaffo/routes/utilities/automations.py:118 yaffo/routes/utilities/automations.py:121
-msgid "Index photos"
-msgstr "Indexer les photos"
-
-#: yaffo/routes/utilities/automations.py:119 yaffo/routes/utilities/automations.py:122
-msgid "Find duplicates"
-msgstr "Rechercher des doublons"
-
-#: yaffo/routes/utilities/automations.py:134
-#, python-format
-msgid "%(completed)s of %(total)s processed"
-msgstr "%(completed)s de %(total)s traité"
-
-#: yaffo/routes/utilities/automations.py:140
-#, python-format
-msgid "%(count)s error"
-msgid_plural "%(count)s errors"
-msgstr[0] "%(count)s erreur"
-msgstr[1] "%(count)s erreurs"
-
-#: yaffo/routes/utilities/automations.py:147
-#, python-format
-msgid "%(count)s cancelled"
-msgid_plural "%(count)s cancelled"
-msgstr[0] "%(count)s annulé"
-msgstr[1] "%(count)s annulé"
-
-#: yaffo/routes/utilities/automations.py:158
-msgid "Pending"
-msgstr "En attente"
-
-#: yaffo/routes/utilities/automations.py:159
-msgid "Running"
-msgstr "En cours d'exécution"
-
-#: yaffo/routes/utilities/automations.py:160 yaffo/templates/sharing/_transfers_panel.html:29
-msgid "Completed"
-msgstr "Complété"
-
-#: yaffo/routes/utilities/automations.py:161 yaffo/templates/sharing/_transfers_panel.html:32
-msgid "Cancelled"
-msgstr "Annulé"
-
-#: yaffo/routes/utilities/automations.py:162 yaffo/templates/sharing/_transfers_panel.html:31
-msgid "Failed"
-msgstr "Échoué"
-
-#: yaffo/routes/utilities/automations.py:232
+#: yaffo/routes/utilities/automations.py:120
 msgid "Media imported"
 msgstr "Média importé"
 
-#: yaffo/routes/utilities/automations.py:233
+#: yaffo/routes/utilities/automations.py:121
 msgid "Media indexed"
 msgstr "Médias indexés"
 
-#: yaffo/routes/utilities/automations.py:234
+#: yaffo/routes/utilities/automations.py:122
 msgid "Duplicates found"
 msgstr "Doublons trouvés"
 
-#: yaffo/routes/utilities/automations.py:235
+#: yaffo/routes/utilities/automations.py:123
 msgid "Media modified"
 msgstr "Média modifié"
 
-#: yaffo/routes/utilities/automations.py:236
+#: yaffo/routes/utilities/automations.py:124
 msgid "Media labeled"
 msgstr "Médias étiquetés"
 
-#: yaffo/routes/utilities/automations.py:348 yaffo/routes/utilities/automations.py:407
+#: yaffo/routes/utilities/automations.py:236 yaffo/routes/utilities/automations.py:295
 msgid "Automation name is required"
 msgstr "Le nom de l'automatisation est requis"
 
-#: yaffo/routes/utilities/automations.py:404 yaffo/routes/utilities/automations.py:646
+#: yaffo/routes/utilities/automations.py:292 yaffo/routes/utilities/automations.py:534
 msgid "System automations cannot be edited."
 msgstr "Les automatisations du système ne peuvent pas être modifiées."
 
-#: yaffo/routes/utilities/automations.py:426
+#: yaffo/routes/utilities/automations.py:314
 msgid "This automation has no configurable settings."
 msgstr "Cette automatisation n'a aucun paramètre configurable."
 
-#: yaffo/routes/utilities/automations.py:442 yaffo/routes/utilities/automations.py:472
+#: yaffo/routes/utilities/automations.py:330 yaffo/routes/utilities/automations.py:360
 #, python-format
 msgid "%(label)s must be a number."
 msgstr "%(label)s doit être un nombre."
 
-#: yaffo/routes/utilities/automations.py:450 yaffo/routes/utilities/automations.py:480
+#: yaffo/routes/utilities/automations.py:338 yaffo/routes/utilities/automations.py:368
 #, python-format
 msgid "%(label)s must be between %(min)s and %(max)s."
 msgstr "%(label)s doit être entre %(min)s et %(max)s."
 
-#: yaffo/routes/utilities/automations.py:491
+#: yaffo/routes/utilities/automations.py:379
 #, python-format
 msgid "%(label)s is required."
 msgstr "%(label)s est requis."
 
-#: yaffo/routes/utilities/automations.py:500
+#: yaffo/routes/utilities/automations.py:388
 #, python-format
 msgid "%(label)s has an unsupported value."
 msgstr "%(label)s a une valeur non prise en charge."
 
-#: yaffo/routes/utilities/automations.py:518
+#: yaffo/routes/utilities/automations.py:406
 msgid "System automations cannot be deleted"
 msgstr "Les automatisations du système ne peuvent pas être supprimées"
 
-#: yaffo/routes/utilities/automations.py:565
+#: yaffo/routes/utilities/automations.py:453
 msgid "No indexed photos found under that path."
 msgstr "Aucune photo indexée trouvée sous ce chemin."
 
-#: yaffo/routes/utilities/automations.py:573
+#: yaffo/routes/utilities/automations.py:461
 msgid "Nothing to run yet — publish the automation's code first."
 msgstr "Rien à exécuter pour l'instant : publiez d'abord le code de l'automatisation."
 
-#: yaffo/routes/utilities/automations.py:613
+#: yaffo/routes/utilities/automations.py:501
 msgid "Enter a valid 5-field cron expression (e.g. */30 * * * *)."
 msgstr "Entrez une expression cron valide à 5 champs (par exemple */30 * * * *)."
 
-#: yaffo/routes/utilities/automations.py:623
+#: yaffo/routes/utilities/automations.py:511
 msgid "Choose an event type."
 msgstr "Choisissez un type d'événement."
 
-#: yaffo/routes/utilities/automations.py:636
+#: yaffo/routes/utilities/automations.py:524
 msgid "Unknown trigger action."
 msgstr "Action de déclenchement inconnue."
 
-#: yaffo/routes/utilities/automations.py:691
+#: yaffo/routes/utilities/automations.py:579
 msgid "No code to test yet."
 msgstr "Pas de code à tester pour l'instant."
 
-#: yaffo/routes/utilities/automations.py:695
+#: yaffo/routes/utilities/automations.py:583
 msgid "No path selected."
 msgstr "Aucun chemin sélectionné."
 
-#: yaffo/routes/utilities/automations.py:706
+#: yaffo/routes/utilities/automations.py:594
 msgid "No draft to publish."
 msgstr "Aucun brouillon à publier."
 
-#: yaffo/routes/utilities/index_photos.py:77
+#: yaffo/routes/utilities/index_photos.py:104
 msgid "No media directories configured. Please configure media directories in Settings before syncing."
 msgstr ""
 "Aucun répertoire multimédia configuré. Veuillez configurer les répertoires multimédias dans "
 "Paramètres avant la synchronisation."
 
-#: yaffo/routes/utilities/index_photos.py:86
+#: yaffo/routes/utilities/index_photos.py:113
 #, python-format
 msgid "The following media directories do not exist: %(directories)s"
 msgstr "Les répertoires multimédias suivants n'existent pas : %(directories)s"
 
-#: yaffo/routes/utilities/index_photos.py:95
+#: yaffo/routes/utilities/index_photos.py:122
 msgid ""
 "No thumbnail directory configured. Please configure thumbnail directory in Settings before "
 "syncing."
@@ -1077,7 +1036,7 @@ msgstr ""
 "Aucun répertoire de vignettes configuré. Veuillez configurer le répertoire des vignettes dans les"
 " paramètres avant la synchronisation."
 
-#: yaffo/routes/utilities/index_photos.py:102
+#: yaffo/routes/utilities/index_photos.py:129
 #, python-format
 msgid ""
 "Thumbnail directory does not exist: %(directory)s. It will be created automatically during "
@@ -1086,24 +1045,24 @@ msgstr ""
 "Le répertoire des vignettes n'existe pas : %(directory)s. Il sera créé automatiquement lors de "
 "l'indexation."
 
-#: yaffo/routes/utilities/index_photos.py:151
+#: yaffo/routes/utilities/index_photos.py:180
 msgid "Could not scan the filesystem"
 msgstr "Impossible d'analyser le système de fichiers"
 
-#: yaffo/routes/utilities/index_photos.py:174 yaffo/templates/settings/index.html:33
+#: yaffo/routes/utilities/index_photos.py:203 yaffo/templates/settings/index.html:33
 msgid "No media directories configured"
 msgstr "Aucun répertoire multimédia configuré"
 
-#: yaffo/routes/utilities/index_photos.py:182
+#: yaffo/routes/utilities/index_photos.py:211
 #, python-format
 msgid "Media directories do not exist: %(directories)s"
 msgstr "Les répertoires média n'existent pas : %(directories)s"
 
-#: yaffo/routes/utilities/index_photos.py:190 yaffo/routes/utilities/index_photos.py:212
+#: yaffo/routes/utilities/index_photos.py:219 yaffo/routes/utilities/index_photos.py:241
 msgid "No thumbnail directory configured"
 msgstr "Aucun répertoire de vignettes configuré"
 
-#: yaffo/routes/utilities/index_photos.py:226
+#: yaffo/routes/utilities/index_photos.py:255
 msgid "There is nothing indexed to reindex"
 msgstr "Il n'y a rien d'indexé à réindexer"
 
@@ -1161,6 +1120,64 @@ msgid_plural "Started removing %(count)s duplicates"
 msgstr[0] "J'ai commencé à supprimer %(count)s double"
 msgstr[1] "J'ai commencé à supprimer %(count)s doublons"
 
+#: yaffo/routes/utilities/run_history.py:53 yaffo/routes/utilities/run_history.py:56
+#: yaffo/routes/utilities/run_history.py:65
+msgid "Import photos"
+msgstr "Importer des photos"
+
+#: yaffo/routes/utilities/run_history.py:54 yaffo/routes/utilities/run_history.py:57
+#: yaffo/routes/utilities/run_history.py:66
+msgid "Index photos"
+msgstr "Indexer les photos"
+
+#: yaffo/routes/utilities/run_history.py:55 yaffo/routes/utilities/run_history.py:58
+#: yaffo/routes/utilities/run_history.py:67
+msgid "Find duplicates"
+msgstr "Rechercher des doublons"
+
+#: yaffo/routes/utilities/run_history.py:79
+#, python-format
+msgid "%(completed)s of %(total)s processed"
+msgstr "%(completed)s de %(total)s traité"
+
+#: yaffo/routes/utilities/run_history.py:85 yaffo/templates/fragments/job_status_fragment.html:57
+#, python-format
+msgid "%(count)s error"
+msgid_plural "%(count)s errors"
+msgstr[0] "%(count)s erreur"
+msgstr[1] "%(count)s erreurs"
+
+#: yaffo/routes/utilities/run_history.py:92
+#, python-format
+msgid "%(count)s cancelled"
+msgid_plural "%(count)s cancelled"
+msgstr[0] "%(count)s annulé"
+msgstr[1] "%(count)s annulé"
+
+#: yaffo/routes/utilities/run_history.py:103
+msgid "Pending"
+msgstr "En attente"
+
+#: yaffo/routes/utilities/run_history.py:104
+msgid "Running"
+msgstr "En cours d'exécution"
+
+#: yaffo/routes/utilities/run_history.py:105 yaffo/templates/sharing/_transfers_panel.html:29
+msgid "Completed"
+msgstr "Complété"
+
+#: yaffo/routes/utilities/run_history.py:106 yaffo/templates/sharing/_transfers_panel.html:32
+msgid "Cancelled"
+msgstr "Annulé"
+
+#: yaffo/routes/utilities/run_history.py:107 yaffo/templates/sharing/_transfers_panel.html:31
+msgid "Failed"
+msgstr "Échoué"
+
+#: yaffo/routes/utilities/run_history.py:127 yaffo/templates/sharing/_transfers_panel.html:30
+msgid "Completed with errors"
+msgstr "Complété avec des erreurs"
+
 #: yaffo/site_agents/llm_config.py:189
 msgid "Claude Opus 4.8 — most capable"
 msgstr "Claude Opus 4.8 — le plus performant"
@@ -1172,6 +1189,42 @@ msgstr "Claude Sonnet 4.6 — équilibré"
 #: yaffo/site_agents/llm_config.py:191
 msgid "Claude Haiku 4.5 — fastest"
 msgstr "Claude Haiku 4.5 — le plus rapide"
+
+#: yaffo/site_agents/assistant/run_queue.py:41
+msgid "Waiting for a background worker; they're busy indexing photos."
+msgstr "En attente d'un processus en arrière-plan ; ils indexent des photos."
+
+#: yaffo/site_agents/assistant/run_queue.py:42
+msgid "Waiting for a background worker; they're busy importing photos."
+msgstr "En attente d'un processus en arrière-plan ; ils importent des photos."
+
+#: yaffo/site_agents/assistant/run_queue.py:43
+msgid "Waiting for a background worker; they're busy looking for duplicates."
+msgstr "En attente d'un processus en arrière-plan ; ils recherchent des doublons."
+
+#: yaffo/site_agents/assistant/run_queue.py:44
+msgid "Waiting for a background worker; they're busy writing tags to photo files."
+msgstr "En attente d'un processus en arrière-plan ; ils écrivent des tags dans les fichiers photo."
+
+#: yaffo/site_agents/assistant/run_queue.py:45
+msgid "Waiting for a free background worker."
+msgstr "En attente d'un processus en arrière-plan libre."
+
+#: yaffo/site_agents/assistant/run_queue.py:78
+msgid "Waiting to start: Yaffo's background worker isn't running."
+msgstr "En attente de démarrage : le processus en arrière-plan de Yaffo ne tourne pas."
+
+#: yaffo/site_agents/assistant/run_queue.py:87
+#, python-format
+msgid "%(num)d task is ahead of it."
+msgid_plural "%(num)d tasks are ahead of it."
+msgstr[0] "%(num)d tâche passe avant."
+msgstr[1] "%(num)d tâches passent avant."
+
+#: yaffo/site_agents/assistant/run_queue.py:90
+#, python-format
+msgid "Starts in about %(time)s."
+msgstr "Démarre dans environ %(time)s."
 
 #: yaffo/templates/404.html:3
 msgid "Page not found - Yaffo"
@@ -1205,11 +1258,12 @@ msgstr ""
 "Une erreur de traitement a empêché le chargement de cette page. Donnez-lui un autre moment – ​​si"
 " cela continue à se produire, le problème vient de nous, pas du vôtre."
 
-#: yaffo/templates/500.html:19 yaffo/templates/base.html:204
-#: yaffo/templates/fragments/job_status_fragment.html:27
-#: yaffo/templates/utilities/automations_runs.html:24
-msgid "Help me with this"
-msgstr "Aide-moi avec ceci"
+#: yaffo/templates/500.html:19 yaffo/templates/assistant/_panel.html:11
+#: yaffo/templates/assistant/_panel.html:46 yaffo/templates/base.html:157 yaffo/templates/base.html:206
+#: yaffo/templates/base.html:226 yaffo/templates/components/run_history.html:18
+#: yaffo/templates/fragments/job_status_fragment.html:30
+msgid "Ask Yaffo"
+msgstr "Demander à Yaffo"
 
 #: yaffo/templates/_sidebar.html:11 yaffo/templates/components/nav_panel.html:38
 #: yaffo/templates/people/list.html:29 yaffo/templates/people/list.html:54
@@ -1252,113 +1306,108 @@ msgstr "Aucun résultat trouvé"
 msgid "Select…"
 msgstr "Sélectionner…"
 
-#: yaffo/templates/base.html:110 yaffo/templates/demo/feature_disabled.html:18
+#: yaffo/templates/base.html:111 yaffo/templates/demo/feature_disabled.html:18
 msgid "Public demo"
 msgstr "Démo publique"
 
-#: yaffo/templates/base.html:111
+#: yaffo/templates/base.html:112
 msgid "This is one shared, disposable sandbox."
 msgstr "Il s’agit d’un bac à sable partagé et jetable."
 
-#: yaffo/templates/base.html:112
+#: yaffo/templates/base.html:113
 msgid "Changes may affect other visitors."
 msgstr "Les modifications peuvent affecter les autres visiteurs."
 
-#: yaffo/templates/base.html:114
+#: yaffo/templates/base.html:115
 msgid "Next reset:"
 msgstr "Prochaine réinitialisation :"
 
-#: yaffo/templates/base.html:126 yaffo/templates/base.html:128 yaffo/templates/base.html:131
+#: yaffo/templates/base.html:127 yaffo/templates/base.html:129 yaffo/templates/base.html:132
 msgid "Menu"
 msgstr "Menu"
 
-#: yaffo/templates/base.html:132
+#: yaffo/templates/base.html:133
 msgid "Home"
 msgstr "Maison"
 
 #: yaffo/templates/albums/_base.html:27 yaffo/templates/albums/_base.html:33
-#: yaffo/templates/albums/index.html:7 yaffo/templates/base.html:135
+#: yaffo/templates/albums/index.html:7 yaffo/templates/base.html:136
 msgid "Albums"
 msgstr "Albums"
 
-#: yaffo/templates/base.html:137 yaffo/templates/people/list.html:27
+#: yaffo/templates/base.html:138 yaffo/templates/people/list.html:27
 #: yaffo/templates/people/list.html:48
 msgid "Faces"
 msgstr "Visages"
 
-#: yaffo/templates/base.html:140 yaffo/templates/faces/index.html:120
+#: yaffo/templates/base.html:141 yaffo/templates/faces/index.html:120
 #: yaffo/templates/filters/_people.html:4 yaffo/templates/people/list.html:17
 msgid "People"
 msgstr "Personnes"
 
-#: yaffo/templates/base.html:142 yaffo/templates/filters/_locations.html:4
+#: yaffo/templates/base.html:143 yaffo/templates/filters/_locations.html:4
 msgid "Locations"
 msgstr "Emplacements"
 
-#: yaffo/templates/base.html:144 yaffo/templates/utilities/_base.html:34
+#: yaffo/templates/base.html:145 yaffo/templates/utilities/_base.html:34
 #: yaffo/templates/utilities/_base.html:42
 msgid "Utilities"
 msgstr "Utilitaires"
 
-#: yaffo/templates/base.html:146 yaffo/templates/sharing/_base.html:9
+#: yaffo/templates/base.html:147 yaffo/templates/sharing/_base.html:9
 #: yaffo/templates/sharing/_sidebar.html:8
 msgid "Sharing"
 msgstr "Partage"
 
-#: yaffo/templates/base.html:148 yaffo/templates/themes_page/index.html:14
+#: yaffo/templates/base.html:149 yaffo/templates/themes_page/index.html:14
 #: yaffo/templates/themes_page/index.html:20
 msgid "Themes"
 msgstr "Thèmes"
 
-#: yaffo/templates/base.html:151 yaffo/templates/settings/index.html:13
+#: yaffo/templates/base.html:152 yaffo/templates/settings/index.html:13
 msgid "Settings"
 msgstr "Paramètres"
 
-#: yaffo/templates/assistant/_panel.html:11 yaffo/templates/assistant/_panel.html:46
-#: yaffo/templates/base.html:156 yaffo/templates/base.html:223
-msgid "Ask Yaffo"
-msgstr "Demander à Yaffo"
-
-#: yaffo/templates/base.html:162
+#: yaffo/templates/base.html:163
 msgid "Pages"
 msgstr "Pages"
 
-#: yaffo/templates/base.html:180
+#: yaffo/templates/base.html:181
 msgid "Edit page"
 msgstr "Modifier la page"
 
-#: yaffo/templates/base.html:188
+#: yaffo/templates/base.html:189
 msgid "New page"
 msgstr "Nouvelle page"
 
-#: yaffo/templates/assistant/_panel.html:31 yaffo/templates/base.html:207
+#: yaffo/templates/assistant/_panel.html:31 yaffo/templates/base.html:209
 #: yaffo/templates/components/info_modal.html:6 yaffo/templates/components/info_modal.html:12
 #: yaffo/templates/components/modal.html:9
 msgid "Close"
 msgstr "Fermer"
 
-#: yaffo/templates/base.html:231
+#: yaffo/templates/base.html:234
 msgid "Select a folder"
 msgstr "Sélectionnez un dossier"
 
-#: yaffo/templates/base.html:235
+#: yaffo/templates/base.html:238
 msgid "Up"
 msgstr "En haut"
 
-#: yaffo/templates/base.html:250 yaffo/templates/base.html:266
+#: yaffo/templates/base.html:253 yaffo/templates/base.html:269
 #: yaffo/templates/components/chat_dialog.html:39 yaffo/templates/components/modal.html:17
-#: yaffo/templates/fragments/job_status_fragment.html:37
+#: yaffo/templates/fragments/job_status_fragment.html:40
 #: yaffo/templates/sharing/_transfers_panel.html:41
 #: yaffo/templates/utilities/automations_triggers.html:65
 #: yaffo/templates/utilities/automations_triggers.html:85
 msgid "Cancel"
 msgstr "Annuler"
 
-#: yaffo/templates/base.html:251
+#: yaffo/templates/base.html:254
 msgid "Select this folder"
 msgstr "Sélectionnez ce dossier"
 
-#: yaffo/templates/base.html:260 yaffo/templates/base.html:267
+#: yaffo/templates/base.html:263 yaffo/templates/base.html:270
 msgid "Confirm"
 msgstr "Confirmer"
 
@@ -1858,6 +1907,10 @@ msgstr "Coordonnées"
 msgid "Labels"
 msgstr "Étiquettes"
 
+#: yaffo/templates/components/run_history.html:18
+msgid "Ask Yaffo about this run"
+msgstr "Demander à Yaffo à propos de cette exécution"
+
 #: yaffo/templates/components/selection_bar.html:23
 #, python-format
 msgid "%(count)s selected"
@@ -2335,15 +2388,15 @@ msgstr "Année"
 msgid "All Years"
 msgstr "Toutes les années"
 
-#: yaffo/templates/fragments/job_status_fragment.html:13
+#: yaffo/templates/fragments/job_status_fragment.html:16
 msgid "Started:"
 msgstr "Commencé:"
 
-#: yaffo/templates/fragments/job_status_fragment.html:19
+#: yaffo/templates/fragments/job_status_fragment.html:22
 msgid "Show Results"
 msgstr "Afficher les résultats"
 
-#: yaffo/templates/fragments/job_status_fragment.html:37
+#: yaffo/templates/fragments/job_status_fragment.html:40
 #: yaffo/templates/sharing/_transfers_panel.html:47
 msgid "Dismiss"
 msgstr "Rejeter"
@@ -2752,17 +2805,13 @@ msgid "Capture-date metadata (reads file metadata)"
 msgstr "Métadonnées de la date de prise de vue (lit les métadonnées du fichier)"
 
 #: yaffo/templates/settings/_assistant.html:40
-msgid "Hide people's names"
-msgstr "Masquer les noms des personnes"
-
-#: yaffo/templates/settings/_assistant.html:46
 #, python-format
 msgid "%(formatted)s saved conversation"
 msgid_plural "%(formatted)s saved conversations"
 msgstr[0] "%(formatted)s conversation enregistrée"
 msgstr[1] "%(formatted)s conversations enregistrées"
 
-#: yaffo/templates/settings/_assistant.html:50
+#: yaffo/templates/settings/_assistant.html:44
 msgid "Delete all"
 msgstr "Tout supprimer"
 
@@ -3399,10 +3448,6 @@ msgstr "Transfert"
 msgid "Paused"
 msgstr "En pause"
 
-#: yaffo/templates/sharing/_transfers_panel.html:30
-msgid "Completed with errors"
-msgstr "Complété avec des erreurs"
-
 #: yaffo/templates/sharing/_transfers_panel.html:55
 #, python-format
 msgid "%(done)s of %(total)s file"
@@ -3616,7 +3661,7 @@ msgstr "Sur"
 msgid "Automations"
 msgstr "Automatisations"
 
-#: yaffo/templates/utilities/_base.html:47 yaffo/templates/utilities/index_photos.html:19
+#: yaffo/templates/utilities/_base.html:47 yaffo/templates/utilities/index_photos.html:20
 msgid "Index Photos"
 msgstr "Index des photos"
 
@@ -3744,15 +3789,15 @@ msgstr "Test…"
 msgid "Publish draft"
 msgstr "Publier le brouillon"
 
-#: yaffo/templates/utilities/automations_runs.html:10
+#: yaffo/templates/utilities/automations_runs.html:10 yaffo/templates/utilities/index_photos.html:87
 msgid "Run history"
 msgstr "Historique d'exécution"
 
-#: yaffo/templates/utilities/automations_runs.html:34
+#: yaffo/templates/utilities/automations_runs.html:16
 msgid "No runs yet."
 msgstr "Aucune course pour l'instant."
 
-#: yaffo/templates/utilities/automations_runs.html:36
+#: yaffo/templates/utilities/automations_runs.html:18
 msgid "No runs yet — this automation is disabled."
 msgstr "Aucune exécution pour l'instant : cette automatisation est désactivée."
 
@@ -3814,51 +3859,51 @@ msgstr ""
 "Ajoutez, modifiez, activez ou supprimez les déclencheurs qui décident du moment où cette "
 "automatisation s'exécute."
 
-#: yaffo/templates/utilities/index_photos.html:5
+#: yaffo/templates/utilities/index_photos.html:6
 msgid "Index Photos - Utilities - Yaffo"
 msgstr "Index Photos - Utilitaires - Yaffo"
 
-#: yaffo/templates/utilities/index_photos.html:11
+#: yaffo/templates/utilities/index_photos.html:12
 msgid "Sync Database"
 msgstr "Synchroniser la base de données"
 
-#: yaffo/templates/utilities/index_photos.html:16
+#: yaffo/templates/utilities/index_photos.html:17
 msgid "Reindex Library"
 msgstr "Réindexer la bibliothèque"
 
-#: yaffo/templates/utilities/index_photos.html:20
+#: yaffo/templates/utilities/index_photos.html:21
 msgid "Compare photos on the file system with the database"
 msgstr "Comparez les photos du système de fichiers avec la base de données"
 
-#: yaffo/templates/utilities/index_photos.html:30
+#: yaffo/templates/utilities/index_photos.html:31
 msgid "Go to Settings"
 msgstr "Allez dans Paramètres"
 
-#: yaffo/templates/utilities/index_photos.html:42
+#: yaffo/templates/utilities/index_photos.html:46
 msgid "Total on Filesystem"
 msgstr "Total sur le système de fichiers"
 
-#: yaffo/templates/utilities/index_photos.html:46
+#: yaffo/templates/utilities/index_photos.html:50
 msgid "Imported in Database"
 msgstr "Importé dans la base de données"
 
-#: yaffo/templates/utilities/index_photos.html:50
+#: yaffo/templates/utilities/index_photos.html:54
 msgid "Indexed in Database"
 msgstr "Indexé dans la base de données"
 
-#: yaffo/templates/utilities/index_photos.html:54
+#: yaffo/templates/utilities/index_photos.html:58
 msgid "Not Indexed"
 msgstr "Non indexé"
 
-#: yaffo/templates/utilities/index_photos.html:58
+#: yaffo/templates/utilities/index_photos.html:62
 msgid "Orphaned in DB"
 msgstr "Orphelin dans la base de données"
 
-#: yaffo/templates/utilities/index_photos.html:72
+#: yaffo/templates/utilities/index_photos.html:76
 msgid "No Media Directories Configured"
 msgstr "Aucun répertoire multimédia configuré"
 
-#: yaffo/templates/utilities/index_photos.html:74
+#: yaffo/templates/utilities/index_photos.html:78
 #, python-format
 msgid ""
 "\n"

@@ -1,6 +1,5 @@
 import io
 import os
-import platform
 import subprocess
 from pathlib import Path
 
@@ -16,6 +15,7 @@ from yaffo.db.repositories.media_dir_repository import get_media_dirs
 from yaffo.themes import get_theme
 from yaffo.utils.image import upright_image_from_path
 from yaffo.utils.index_jobs import reindex_media_items
+from yaffo.utils.open_in_os import open_in_os
 from yaffo.utils.safe_paths import PathOutsideAllowedRoots, resolve_path_in_roots
 from yaffo.utils.settings import get_thumbnail_dir
 
@@ -226,14 +226,7 @@ def init_media_routes(app: Flask):
             }), 404
 
         try:
-            system = platform.system()
-            if system == "Darwin":  # macOS
-                subprocess.run(["open", file_path], check=True)
-            elif system == "Windows":
-                os.startfile(file_path)
-            else:  # Linux
-                subprocess.run(["xdg-open", file_path], check=True)
-
+            open_in_os(Path(file_path))
             return jsonify({"success": True})
         except (OSError, subprocess.SubprocessError):
             return jsonify({
@@ -253,14 +246,7 @@ def init_media_routes(app: Flask):
             }), 404
 
         try:
-            system = platform.system()
-            if system == "Darwin":  # macOS
-                subprocess.run(["open", folder_path], check=True)
-            elif system == "Windows":
-                os.startfile(folder_path)
-            else:  # Linux
-                subprocess.run(["xdg-open", folder_path], check=True)
-
+            open_in_os(Path(folder_path))
             return jsonify({"success": True})
         except (OSError, subprocess.SubprocessError):
             return jsonify({

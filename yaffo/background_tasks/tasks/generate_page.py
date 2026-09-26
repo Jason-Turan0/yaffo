@@ -18,6 +18,7 @@ from typing import Callable, Optional
 from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.config import task_queue
+from yaffo.taskq import PRIORITY_INTERACTIVE
 from yaffo.background_tasks.utils import SessionFactory, get_version_status
 from yaffo.db.models import (
     CONVERSATION_TYPE_ASSISTANT,
@@ -124,7 +125,7 @@ def run_generation(
         )
 
 
-@task_queue.task()
+@task_queue.task(priority=PRIORITY_INTERACTIVE)
 def generate_page_task(version_id: int, message: str, widget_errors: Optional[dict] = None):
     session = SessionFactory()
     try:

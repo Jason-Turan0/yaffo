@@ -24,7 +24,7 @@
   - `#config-confidence_threshold`
   - `#config-max_labels`
 - Trigger rows are rendered from `templates/utilities/automations_triggers.html`; the classify-labels event trigger is `media_indexed` / "Media indexed" when seeded in the environment. Some isolated runs show the edit-triggers link without trigger rows, so tests should treat rows as optional and still assert the link is present.
-- Run history is `#automation-runs` and rows are `.automation-run-row`. The fragment self-polls while runs are unfinished.
+- Run history is `#automation-runs` and rows are `.run-history-row`. The fragment self-polls while runs are unfinished.
 
 ## Gallery / Details
 - Gallery label filter uses a `.multi-select-wrapper` containing `input[name="labels"]` options.

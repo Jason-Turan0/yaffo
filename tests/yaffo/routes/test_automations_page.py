@@ -376,50 +376,61 @@ def test_no_triggers_show_run_picker(app, client):
 
 
 def test_run_view_summarizes_batch_job():
-    from yaffo.routes.utilities.automations import _run_view
+    from yaffo.routes.utilities.run_history import run_view
     from yaffo.db.models import Job
     job = Job(id="j", name="find_duplicates", status="COMPLETED",
               task_count=120, completed_count=118, error_count=2)
-    view = _run_view(job)
+    view = run_view(job)
     assert view.summary == "118 of 120 processed, 2 errors"
     assert view.is_finished is True
     assert view.is_error is True  # error_count > 0
 
 
+def test_run_view_flags_a_completed_run_with_errors_on_its_chip():
+    from yaffo.routes.utilities.run_history import run_view
+    from yaffo.db.models import Job
+    with_errors = run_view(Job(id="j", name="index_photos", status="COMPLETED",
+                               task_count=10, completed_count=9, error_count=1))
+    assert (with_errors.status_label, with_errors.status_chip) == ("Completed with errors", "chip-warning")
+    clean = run_view(Job(id="k", name="index_photos", status="COMPLETED",
+                         task_count=10, completed_count=10, error_count=0))
+    assert (clean.status_label, clean.status_chip) == ("Completed", "chip-success")
+
+
 def test_run_view_uses_message_for_single_task_run():
-    from yaffo.routes.utilities.automations import _run_view
+    from yaffo.routes.utilities.run_history import run_view
     from yaffo.db.models import Job
     job = Job(id="j", name="my-automation", status="COMPLETED",
               task_count=1, completed_count=1, message="My automation")
-    view = _run_view(job)
+    view = run_view(job)
     assert view.summary == "My automation"
     assert view.is_error is False
 
 
 def test_run_view_flags_failed():
-    from yaffo.routes.utilities.automations import _run_view
+    from yaffo.routes.utilities.run_history import run_view
     from yaffo.db.models import Job
     job = Job(id="j", name="x", status="FAILED", task_count=1, error="boom")
-    view = _run_view(job)
+    view = run_view(job)
     assert view.is_error is True
     assert view.error == "boom"
 
 
 def test_run_view_computes_progress_for_in_progress():
-    from yaffo.routes.utilities.automations import _run_view
+    from yaffo.routes.utilities.run_history import run_view
     from yaffo.db.models import Job
     job = Job(id="j", name="find_duplicates", status="RUNNING",
               task_count=50, completed_count=10, error_count=2)
-    view = _run_view(job)
+    view = run_view(job)
     assert view.is_finished is False
     assert view.progress == 24  # (10 + 2) / 50
 
 
 def test_run_view_progress_zero_when_no_task_count():
-    from yaffo.routes.utilities.automations import _run_view
+    from yaffo.routes.utilities.run_history import run_view
     from yaffo.db.models import Job
     job = Job(id="j", name="x", status="RUNNING", task_count=0)
-    assert _run_view(job).progress == 0
+    assert run_view(job).progress == 0
 
 
 def test_runs_fragment_polls_and_shows_in_progress(app, client):
@@ -450,7 +461,7 @@ def test_detail_page_shows_run_history(app, client):
     body = client.get("/utilities/automations/a1").get_data(as_text=True)
     assert "Run history" in body
     assert "10 of 10 processed" in body
-    assert 'class="automation-run-time"' in body
+    assert 'class="run-history-time"' in body
     assert 'data-local-datetime="2026-07-11T21:07:02+00:00"' in body
 
 
@@ -488,7 +499,7 @@ def test_saved_locale_translates_system_run_history_job_labels(app, client, slug
     body = client.get(f"/utilities/automations/{slug}/runs").get_data(as_text=True)
 
     assert expected in body
-    assert f'<span class="automation-run-summary">{name}</span>' not in body
+    assert f'<span class="run-history-summary">{name}</span>' not in body
 
 
 def test_saved_locale_translates_run_history_empty_state(app, client):
@@ -1011,7 +1022,8 @@ def test_run_error_help_on_page_and_polled_fragment(app, client, monkeypatch, st
     assert ('data-job-id="help-run"' in body) is show_help
     if show_help:
         assert 'data-automation="a1"' in body
-        assert 'Help me with this' in body
+        assert 'aria-label="Ask Yaffo about this run"' in body
+        assert 'data-page="/utilities/automations/a1"' in body
         if error:
             assert 'data-error="Test &lt;error&gt; &#34;details&#34;"' in body
 

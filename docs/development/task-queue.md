@@ -121,6 +121,10 @@ On host startup, `running` tasks stranded by a previous host crash are requeued
 to `ready`, and held task locks are cleared. This gives the queue at-least-once
 execution semantics.
 
+The host dispatches due `ready` rows by `priority` (highest first), then by
+`created_at`. See *Priority* under *Defining Tasks*. Existing `queue.db` files
+gain the `priority` column when a `Store` first opens them.
+
 ## Defining Tasks
 
 Define tasks in `yaffo/background_tasks/tasks/` and decorate them with the
@@ -148,6 +152,36 @@ def find_duplicates_task(job_id: int, *, task: TaskContext) -> None:
 
 `TaskContext.id` is the queue row id and is the value stored in `JobResult.task_id`
 when a durable link between app job data and queue task data is needed.
+
+### Priority
+
+Mark a task `PRIORITY_INTERACTIVE` when a person is waiting on it (an assistant
+reply, a page/automation/theme generation, face assignment):
+
+```python
+from yaffo.taskq import PRIORITY_INTERACTIVE
+
+
+@task_queue.task(priority=PRIORITY_INTERACTIVE)
+def assistant_run_task(conversation_id: int) -> None:
+    ...
+```
+
+Bulk work (index, import, duplicates, tag export, automation runs) stays at the
+default `PRIORITY_NORMAL`. An index run queues its whole backlog of batches at
+once; without priority, anything queued after it waits for all of them. Priority
+only changes the order in which ready tasks get a free worker; it never interrupts
+a running task, so an interactive task can still wait for one running batch to
+finish. Keep interactive tasks short. A long task marked interactive delays the
+other interactive tasks behind it.
+
+The priority is captured in the `Signature`, so chord members, callbacks and
+pipeline steps keep their own task's priority. Periodic ticks are always
+interactive, since a tick stuck behind bulk work would make every schedule late.
+
+`Store.queue_wait(name, args)` reports how many tasks will be dispatched before a
+waiting task and what is running now. The assistant's chat poll uses it to say why
+a reply hasn't started (`yaffo/site_agents/assistant/run_queue.py`).
 
 Rules for task definitions:
 
@@ -270,6 +304,8 @@ dies. Startup recovery clears all stale locks.
 Periodic scheduling is minute-granularity only. The host claims each
 `(task_name, minute)` once in `periodic_state` and inserts the corresponding task
 row.
+
+Periodic ticks are inserted at `PRIORITY_INTERACTIVE`.
 
 The queue-level cron support is intentionally small. Application-level schedules,
 including automation cron expressions and `next_run_at`, are evaluated by the

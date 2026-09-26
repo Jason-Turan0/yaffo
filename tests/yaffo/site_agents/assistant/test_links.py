@@ -5,7 +5,9 @@ from urllib.parse import parse_qs, urlsplit
 
 from yaffo.db import db
 from yaffo.db.models import Face, MediaItem, Person, PersonFace, FACE_STATUS_ASSIGNED
-from yaffo.site_agents.assistant.tool_providers.links import LINK_TO_PAGE, LINK_TO_PHOTOS, LinkToolProvider, gallery_url
+from yaffo.site_agents.assistant.tool_providers.links import (
+    LINK_TO_FILE, LINK_TO_PAGE, LINK_TO_PHOTOS, LinkToolProvider, gallery_url,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -98,7 +100,7 @@ def test_page_link_problems_are_reported(links, library, args, message):
 
 
 def test_page_catalog_lists_pages_with_their_parameters(links):
-    [_, page_tool] = links.get_tools()
+    page_tool = next(tool for tool in links.get_tools() if tool.name == LINK_TO_PAGE)
     assert "- person_faces(person_id): The faces assigned to one person" in page_tool.description
     assert "- settings_index: Settings:" in page_tool.description
     assert "media_view" in page_tool.input_schema["properties"]["page"]["enum"]
@@ -106,3 +108,59 @@ def test_page_catalog_lists_pages_with_their_parameters(links):
 
 def test_gallery_url_without_filters():
     assert gallery_url({}) == "/"
+
+
+@pytest.fixture
+def media_folder(app, tmp_path, monkeypatch):
+    """A configured media folder with one indexed photo in a subfolder."""
+    from types import SimpleNamespace
+    root = tmp_path / "Family Photos"
+    (root / "2019").mkdir(parents=True)
+    photo_path = root / "2019" / "a.jpg"
+    photo_path.write_bytes(b"x")
+    monkeypatch.setattr("yaffo.site_agents.assistant.file_targets.get_media_dir_entries",
+                        lambda session: [SimpleNamespace(id="m1", path=root)])
+    item = MediaItem(full_file_path=str(photo_path), year=2019)
+    outside = MediaItem(full_file_path=str(tmp_path / "elsewhere.jpg"), year=2019)
+    (tmp_path / "elsewhere.jpg").write_bytes(b"x")
+    db.session.add_all([item, outside])
+    db.session.commit()
+    return {"root": root, "photo": item.id, "outside": outside.id}
+
+
+def test_file_link_by_media_item_names_it_by_label_only(links, media_folder):
+    result = links.call_tool(LINK_TO_FILE, {"title": "The photo", "media_item_id": media_folder["photo"], "show": "folder"})
+    assert result.host_data["error"] is False
+    assert result.host_data["opens"] == [{
+        "title": "The photo", "show": "folder",
+        "target": {"show": "folder", "media_item_id": media_folder["photo"], "media_dir_id": None, "path": ""},
+    }]
+    assert "[media folder m1]/2019/a.jpg" in result.model_text
+    assert str(media_folder["root"]) not in result.model_text and "Family Photos" not in result.model_text
+
+
+def test_file_link_by_media_folder_and_path(links, media_folder):
+    result = links.call_tool(LINK_TO_FILE, {"title": "2019", "media_dir_id": "m1", "path": "2019", "show": "file"})
+    assert result.host_data["opens"][0]["target"]["path"] == "2019"
+    assert "folder [media folder m1]/2019" in result.model_text
+
+
+@pytest.mark.parametrize("args,message", [
+    ({"media_dir_id": "m1", "path": "../secrets"}, "can't go up"),
+    ({"media_dir_id": "m1", "path": "/etc/passwd"}, "not an absolute path"),
+    ({"media_dir_id": "m1", "path": "2020"}, "doesn't exist"),
+    ({"media_dir_id": "nope", "path": ""}, "no media folder"),
+    ({"media_item_id": 999999}, "no photo or video"),
+    ({}, "either media_item_id"),
+    ({"media_item_id": 1, "media_dir_id": "m1"}, "either media_item_id"),
+])
+def test_file_link_refuses_what_it_cannot_open(links, media_folder, args, message):
+    result = links.call_tool(LINK_TO_FILE, {"title": "x", "show": "file", **args})
+    assert result.host_data["error"] is True and result.host_data["opens"] == []
+    assert message in result.model_text
+
+
+def test_file_link_refuses_an_item_outside_the_media_folders(links, media_folder):
+    result = links.call_tool(LINK_TO_FILE, {"title": "x", "show": "file", "media_item_id": media_folder["outside"]})
+    assert result.host_data["error"] is True
+    assert "isn't inside a configured media folder" in result.model_text

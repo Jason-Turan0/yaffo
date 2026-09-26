@@ -22,7 +22,7 @@
  *
  * An empty conversation starts with a one-line notice (from the panel template):
  * which model answers, whether it may check this computer, and a link to change
- * that in Settings. Also here: context attached by "Help me with this" buttons, a
+ * that in Settings. Also here: context attached by contextual "Ask Yaffo" buttons, a
  * chip in the composer that goes out with the next message.
  */
 
@@ -274,18 +274,44 @@ assistant.init = (i18n, config) => {
     };
 
     /**
+     * Open a link_to_file target on this computer. The server looks up the path
+     * from the ids and only opens things inside the media folders.
+     * @param {AssistantOpenLink} open
+     */
+    const openOnComputer = async (open) => {
+        try {
+            const response = await fetch(config.urls.assistant_open, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(open.target),
+            });
+            if (!response.ok) {
+                window.notification.error(await errorMessage(response, i18n.t('assistant:openFailed')));
+                return;
+            }
+            window.notification.success(i18n.t('assistant:opening'));
+        } catch {
+            window.notification.error(i18n.t('assistant:openFailed'));
+        }
+    };
+
+    /**
      * @param {ChatMessage[]} tools
      * @returns {HTMLElement | null}
      */
     const renderLinks = (tools) => {
         /** @type {Map<string, AssistantAppLink>} */
         const byUrl = new Map();
+        /** @type {Map<string, AssistantOpenLink>} */
+        const opens = new Map();
         for (const tool of tools) {
             const payload = /** @type {Record<string, any>} */ (tool.payload || {});
             const links = /** @type {AssistantAppLink[]} */ (Array.isArray(payload.links) ? payload.links : []);
             for (const link of links) byUrl.set(link.url, link);
+            const openLinks = /** @type {AssistantOpenLink[]} */ (Array.isArray(payload.opens) ? payload.opens : []);
+            for (const open of openLinks) opens.set(JSON.stringify(open.target), open);
         }
-        if (!byUrl.size) return null;
+        if (!byUrl.size && !opens.size) return null;
         const wrapper = el('div', 'assistant-links');
         wrapper.appendChild(el('span', 'assistant-sources-label', i18n.t('assistant:openLinks')));
         const items = el('ul');
@@ -295,6 +321,16 @@ assistant.init = (i18n, config) => {
             // App-relative, opened in place; the panel stays open across the navigation.
             anchor.href = link.url;
             item.appendChild(anchor);
+            items.appendChild(item);
+        }
+        for (const open of opens.values()) {
+            const item = el('li');
+            const button = /** @type {HTMLButtonElement} */ (el('button', 'assistant-open-link', open.title));
+            button.type = 'button';
+            button.dataset.icon = open.show === 'folder' ? 'folder' : 'file';
+            button.title = i18n.t(open.show === 'folder' ? 'assistant:showInFolder' : 'assistant:openOnComputer');
+            button.addEventListener('click', () => openOnComputer(open));
+            item.appendChild(button);
             items.appendChild(item);
         }
         wrapper.appendChild(items);
@@ -472,12 +508,23 @@ assistant.init = (i18n, config) => {
         renderConversations();
     };
 
+    // While a reply waits for a background worker (e.g. behind a big index run),
+    // the status bar says why instead of only "Generating…".
+    const statusText = document.querySelector('#assistant-chat-status .chat-status-text');
+    const defaultStatusText = statusText?.textContent ?? '';
+    /** @param {AssistantRunQueue | null | undefined} queue */
+    const showQueue = (queue) => {
+        if (statusText) statusText.textContent = queue?.message || defaultStatusText;
+    };
+
     const chat = window.PHOTO_ORGANIZER.COMPONENTS.initChatDialog?.('assistant-chat', {
         startStatus: 'IDLE',
         runningStatus: RUNNING,
         statusUrl: () => config.buildUrl('assistant_conversation', { conversation_id: currentId ?? 0 }),
         renderMessages,
+        onStatus: (body) => showQueue(/** @type {AssistantRunQueue | null | undefined} */ (body.queue)),
         onSend: async (message) => {
+            showQueue(null);
             const url = currentId === null
                 ? config.urls.assistant_conversation_create
                 : config.buildUrl('assistant_message', { conversation_id: currentId });
@@ -539,7 +586,7 @@ assistant.init = (i18n, config) => {
         await refreshList();
     };
 
-    // ---- attached context ("Help me with this") -----------------------------------
+    // ---- attached context (contextual "Ask Yaffo") --------------------------------
 
     /** @param {AssistantContext | null} context */
     const setContext = (context) => {
@@ -663,7 +710,7 @@ assistant.init = (i18n, config) => {
         open();
     };
 
-    // "Help me with this" buttons anywhere on the page (e.g. a failed job card).
+    // Contextual "Ask Yaffo" buttons anywhere on the page (e.g. a failed job card).
     document.addEventListener('click', (event) => {
         const target = event.target instanceof Element ? event.target.closest('[data-assistant-help]') : null;
         if (!(target instanceof HTMLElement)) return;
@@ -711,10 +758,11 @@ assistant.init = (i18n, config) => {
         close();
     });
 
-    // Error toasts offer "Help me with this" once the assistant can answer.
+    // Error toasts offer "Ask Yaffo" once the assistant can answer.
     if ((fab || openButton) && !document.body.hasAttribute('data-assistant-help-disabled')) {
         window.notification.setErrorAction?.({
-            label: i18n.t('assistant:helpWithThis'),
+            label: i18n.t('assistant:askAboutThis'),
+            icon: 'assistant',
             run: (error) => openWithContext({ page: document.title, error }, i18n.t('assistant:helpPrompt')),
         });
     }

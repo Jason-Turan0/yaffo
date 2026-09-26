@@ -26,6 +26,7 @@ import time
 from typing import Any, Optional
 
 from yaffo.taskq.core import on_task_finished
+from yaffo.taskq.signatures import PRIORITY_INTERACTIVE
 from yaffo.taskq.cron import CronSpec
 from yaffo.taskq.store import Store, TaskRow
 from yaffo.taskq.worker import DEFAULT_BOOTSTRAP, DEFAULT_QUEUE_REF, DONE, worker_main
@@ -191,7 +192,7 @@ class Host:
         minute = int(time.time()) // 60
         for name, _cron in self.periodic:
             if self.store.claim_periodic_minute(name, minute):
-                self.store.insert_task(name, [], {})
+                self.store.insert_task(name, [], {}, priority=PRIORITY_INTERACTIVE)
                 logger.debug(f"enqueued periodic task {name} for minute {minute}")
 
     def _beat(self) -> None:

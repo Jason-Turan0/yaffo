@@ -4,8 +4,6 @@
 - `assistant_diag_<group>`: what the assistant may look at (logs, library, files,
   jobs). On by default; all off means knowledge-only. Capture-date metadata is
   a separate, off-by-default group.
-- `assistant_redact_people`: replace people names with `Person #<id>` in what is
-  sent to the model. Off by default.
 The model is automatically the cheapest model of the AI Generation provider.
 """
 from __future__ import annotations
@@ -21,7 +19,6 @@ from yaffo.site_agents import llm_config
 from yaffo.site_agents.model_clients import providers
 
 ENABLED_SETTING = "assistant_enabled"
-REDACT_PEOPLE_SETTING = "assistant_redact_people"
 
 # Diagnostics groups, in the order Settings lists them.
 DIAG_LOGS = "logs"
@@ -74,15 +71,6 @@ def enabled_diagnostics(session: Optional[Session] = None) -> frozenset[str]:
 def set_diagnostics_enabled(group: str, enabled: bool) -> None:
     reject_in_demo("Assistant settings changes")
     _set(_diag_setting(group), "true" if enabled else "false")
-
-
-def redact_people(session: Optional[Session] = None) -> bool:
-    return _get(session or db.session, REDACT_PEOPLE_SETTING) == "true"
-
-
-def set_redact_people(enabled: bool) -> None:
-    reject_in_demo("Assistant settings changes")
-    _set(REDACT_PEOPLE_SETTING, "true" if enabled else "false")
 
 
 def default_model(session: Optional[Session] = None) -> str:

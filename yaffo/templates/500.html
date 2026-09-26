@@ -14,9 +14,9 @@
     _("A processing error stopped this page from loading. Give it another moment — if it keeps happening, the trouble is on our end, not yours.")
 ) %}
     {% if assistant_ready | default(false) and request.endpoint != 'settings_index' %}
-    <button type="button" class="btn btn-secondary error-action" data-assistant-help
+    <button type="button" class="btn btn-secondary error-action" data-icon="assistant" data-assistant-help
             data-page="{{ request.path }}" data-error-code="internal_server_error">
-        {{ _("Help me with this") }}
+        {{ _("Ask Yaffo") }}
     </button>
     {% endif %}
 {% endcall %}

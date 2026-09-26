@@ -1,5 +1,6 @@
 {% extends "utilities/_base.html" %}
 {% from "components/job_section.html" import job_section with context %}
+{% from "components/run_history.html" import run_history_list with context %}
 {% from "components/page_header.html" import page_header %}
 
 {% block title %}{{ _("Index Photos - Utilities - Yaffo") }}{% endblock %}
@@ -34,7 +35,10 @@
     </div>
     {% endif %}
 
-    {{ job_section(active_jobs, show_cancel=true) }}
+    {# The latest import and index runs while in progress. One that finishes while
+       the page is open keeps its card until reload, then it's in the run history,
+       so no Dismiss (it deletes the job). #}
+    {{ job_section(in_progress_jobs, show_cancel=true, show_dismiss=false) }}
 
     {% if media_dirs|length > 0 %}
     <div class="stats-grid">
@@ -75,6 +79,13 @@
                 Please configure media directories in <a href="{{ settings_url }}">Settings</a> to start indexing photos.
             {% endtrans %}
         </p>
+    </div>
+    {% endif %}
+
+    {% if run_history %}
+    <div class="section index-run-history">
+        <h2>{{ _("Run history") }}</h2>
+        {{ run_history_list(run_history, url_for('utilities_index_photos'), show_label=true) }}
     </div>
     {% endif %}
 </div>

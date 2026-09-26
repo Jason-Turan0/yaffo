@@ -40,7 +40,8 @@ CREATE TABLE IF NOT EXISTS task (
     created_at REAL NOT NULL,
     started_at REAL,
     finished_at REAL,
-    attempts INTEGER NOT NULL DEFAULT 0
+    attempts INTEGER NOT NULL DEFAULT 0,
+    priority INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_task_status_eta ON task(status, eta, created_at);
 
@@ -128,6 +129,14 @@ class Heartbeat:
     busy: int
 
 
+@dataclass(frozen=True)
+class QueueWait:
+    """Where a ready task stands: how many due tasks the host will dispatch before
+    it, and what is running now, as (task name, started_at) pairs."""
+    ahead: int
+    running: list[tuple[str, float]]
+
+
 @dataclass
 class GroupState:
     id: str
@@ -157,7 +166,20 @@ class Store:
         return conn
 
     def ensure_schema(self) -> None:
-        self._conn().executescript(_SCHEMA)
+        conn = self._conn()
+        conn.executescript(_SCHEMA)
+        # queue.db files from before priorities lack the column. The web server and
+        # the host may both get here first, so a lost race is fine.
+        columns = {row["name"] for row in conn.execute("PRAGMA table_info(task)")}
+        if "priority" not in columns:
+            try:
+                conn.execute("ALTER TABLE task ADD COLUMN priority INTEGER NOT NULL DEFAULT 0")
+            except sqlite3.OperationalError as e:
+                if "duplicate column" not in str(e):
+                    raise
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_task_ready ON task(status, priority DESC, created_at)"
+        )
 
     # ---- producer side: INSERT only --------------------------------------
 
@@ -169,6 +191,7 @@ class Store:
         *,
         context: bool = False,
         lock_name: Optional[str] = None,
+        priority: int = 0,
         eta: Optional[float] = None,
         group_id: Optional[str] = None,
         continuation: Optional[list] = None,
@@ -176,13 +199,14 @@ class Store:
         task_id = str(uuid.uuid4())
         self._conn().execute(
             """INSERT INTO task (id, name, args_json, kwargs_json, status, eta,
-                                 lock_name, context, group_id, continuation_json, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                                 lock_name, context, group_id, continuation_json, created_at,
+                                 priority)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 task_id, name, json.dumps(args), json.dumps(kwargs), STATUS_READY,
                 eta, lock_name, int(context), group_id,
                 json.dumps(continuation) if continuation is not None else None,
-                time.time(),
+                time.time(), priority,
             ),
         )
         return task_id
@@ -205,7 +229,7 @@ class Store:
         rows = self._conn().execute(
             """SELECT * FROM task
                WHERE status = ? AND (eta IS NULL OR eta <= ?)
-               ORDER BY created_at LIMIT ?""",
+               ORDER BY priority DESC, created_at LIMIT ?""",
             (STATUS_READY, now, limit),
         ).fetchall()
         return [TaskRow.from_sqlite(r) for r in rows]
@@ -392,6 +416,49 @@ class Store:
             "SELECT pid, started_at, beat_at, workers, busy FROM host_heartbeat WHERE id=1"
         ).fetchone()
         return Heartbeat(**dict(row)) if row is not None else None
+
+    # ---- queue position (read-only, for "why hasn't it started?") ---------
+
+    def queue_wait(self, name: str, args: list) -> Optional[QueueWait]:
+        """For the oldest READY task with this name and args (a producer finding the
+        run it queued), how many due tasks go first (higher priority, or the same
+        priority and older) and what the workers are running. None when no such
+        task is waiting."""
+        conn = self._conn()
+        row = conn.execute(
+            """SELECT priority, created_at FROM task
+               WHERE status = ? AND name = ? AND args_json = ?
+               ORDER BY created_at LIMIT 1""",
+            (STATUS_READY, name, json.dumps(args)),
+        ).fetchone()
+        if row is None:
+            return None
+        ahead = conn.execute(
+            """SELECT COUNT(*) FROM task
+               WHERE status = ? AND (eta IS NULL OR eta <= ?)
+                 AND (priority > ? OR (priority = ? AND created_at < ?))""",
+            (STATUS_READY, time.time(), row["priority"], row["priority"], row["created_at"]),
+        ).fetchone()[0]
+        running = [
+            (r["name"], r["started_at"])
+            for r in conn.execute("SELECT name, started_at FROM task WHERE status = ?", (STATUS_RUNNING,))
+        ]
+        return QueueWait(ahead=ahead, running=running)
+
+    def average_durations(self, names: list[str], since: float) -> dict[str, float]:
+        """Mean run time in seconds of each named task that finished successfully
+        since `since` (a unix time). Names with no such runs are left out."""
+        if not names:
+            return {}
+        placeholders = ",".join("?" for _ in names)
+        rows = self._conn().execute(
+            f"""SELECT name, AVG(finished_at - started_at) AS seconds FROM task
+                WHERE status = ? AND finished_at >= ? AND started_at IS NOT NULL
+                  AND name IN ({placeholders})
+                GROUP BY name""",
+            (STATUS_DONE, since, *names),
+        ).fetchall()
+        return {r["name"]: r["seconds"] for r in rows}
 
     # ---- periodic single-fire -------------------------------------------
 

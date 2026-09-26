@@ -391,6 +391,7 @@
         "link_to_photos": "تم إنشاء رابط إلى «{{title}}»",
         "link_to_media_item": "تم إنشاء رابط إلى «{{title}}»",
         "link_to_page": "تم إنشاء رابط إلى «{{title}}»",
+        "link_to_file": "تم إنشاء زر لفتح «{{title}}»",
         "ai_call_summary": "تم فحص استدعاءات الذكاء الاصطناعي الأخيرة",
         "capture_date_source": "تم فحص بيانات تاريخ الالتقاط الوصفية"
       }
@@ -435,8 +436,12 @@
       "deleted_other": "تم حذف {{count}} محادثات."
     },
     "sources": "المصادر:",
-    "helpWithThis": "ساعدني في هذا",
+    "askAboutThis": "اسأل Yaffo",
     "helpPrompt": "ما الذي حدث خطأً هنا، وكيف أصلحه؟",
-    "openLinks": "فتح:"
+    "openLinks": "فتح:",
+    "opening": "جارٍ الفتح على جهازك…",
+    "openFailed": "تعذّر فتحه.",
+    "openOnComputer": "فتح على هذا الجهاز",
+    "showInFolder": "إظهار في المجلد"
   }
 }

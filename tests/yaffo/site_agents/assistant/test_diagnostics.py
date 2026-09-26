@@ -124,13 +124,6 @@ def test_media_item_report(env):
     assert activity["error"] is True
 
 
-def test_people_names_redacted_when_asked(env):
-    provider = env[0]
-    provider.redactor = Redactor(home=Path("/nowhere"), people={1: "Alice Smith"})
-    text, _ = _call(provider, "media_item_report", media_item_id=1)
-    assert "Alice" not in text and "Person #1" in text
-
-
 def test_files_tools(env):
     provider = env[0]
     text, _ = _call(provider, "media_dir_status")

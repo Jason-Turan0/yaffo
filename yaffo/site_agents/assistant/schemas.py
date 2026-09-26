@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from yaffo.db.models import AssistantConversation, AssistantEvent
+from yaffo.site_agents.assistant.run_queue import RunQueueStatus
 
 
 @dataclass(frozen=True)
@@ -32,6 +33,16 @@ class AppLink:
 
 
 @dataclass(frozen=True)
+class OpenLink:
+    """A button the assistant made (link_to_file) that opens a file or folder on
+    the user's computer. `target` holds only ids (see file_targets.FileTarget);
+    the server finds the path again when it's clicked."""
+    title: str
+    show: str
+    target: dict
+
+
+@dataclass(frozen=True)
 class ToolActivity:
     """A tool event's payload. The browser formats the activity line from `tool`
     plus the fields that tool sets (query/count for search_docs, title for
@@ -49,6 +60,7 @@ class ToolActivity:
     purpose: str = ""
     script: str = ""
     links: list[AppLink] = field(default_factory=list)
+    opens: list[OpenLink] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -139,11 +151,12 @@ class TranscriptEvent:
 @dataclass(frozen=True)
 class ConversationStatus:
     """The chat dialog's poll body (`status`, `started_at`, `messages`), plus the
-    conversation it belongs to."""
+    conversation it belongs to, and `queue` while the run waits for a worker."""
     conversation: ConversationSummary
     status: str
     started_at: Optional[str]
     messages: list[TranscriptEvent]
+    queue: Optional[RunQueueStatus] = None
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -154,10 +167,15 @@ def _iso(value: Optional[datetime]) -> Optional[str]:
     return value.replace(tzinfo=timezone.utc).isoformat() if value is not None else None
 
 
-def conversation_status(conversation: AssistantConversation, events: list[AssistantEvent]) -> ConversationStatus:
+def conversation_status(
+    conversation: AssistantConversation,
+    events: list[AssistantEvent],
+    queue: Optional[RunQueueStatus] = None,
+) -> ConversationStatus:
     return ConversationStatus(
         conversation=ConversationSummary.from_model(conversation),
         status=conversation.status,
         started_at=_iso(conversation.run_started_at),
         messages=[TranscriptEvent.from_model(e) for e in events],
+        queue=queue,
     )

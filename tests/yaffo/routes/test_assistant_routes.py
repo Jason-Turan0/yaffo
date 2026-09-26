@@ -6,7 +6,7 @@ import json
 import pytest
 
 from yaffo.db import db
-from yaffo.db.models import ASSISTANT_STATUS_FAILED, ASSISTANT_STATUS_IDLE, ASSISTANT_STATUS_RUNNING, Job
+from yaffo.db.models import ASSISTANT_STATUS_FAILED, ASSISTANT_STATUS_IDLE, ASSISTANT_STATUS_RUNNING, Job, MediaItem
 from yaffo.db.repositories import assistant_repository as repo
 from yaffo.site_agents.assistant import settings as assistant_settings
 
@@ -51,6 +51,25 @@ def test_poll_returns_the_chat_dialog_body(client, runs, with_key):
     assert [(m["type"], m["seq"]) for m in body["messages"]] == [("user", 0), ("tool", 1)]
     assert body["messages"][1]["payload"] == {"tool": "search_docs", "count": 1}
     assert body["conversation"]["id"] == conversation_id
+
+
+def test_poll_says_why_a_queued_reply_has_not_started(client, runs, with_key, queue_store):
+    conversation_id = _start(client).get_json()["conversation"]["id"]
+    url = f"/api/assistant/conversations/{conversation_id}"
+    assert client.get(url).get_json()["queue"] is None  # nothing queued in this test queue
+
+    busy = queue_store.insert_task("index_photo_task", [], {})
+    queue_store.mark_running(busy)
+    queue_store.insert_task("assistant_run_task", [conversation_id], {}, priority=10)
+    queue_store.write_heartbeat(pid=1, started_at=0, workers=1, busy=1)
+
+    queue = client.get(url).get_json()["queue"]
+    assert queue["state"] == "waiting"
+    assert queue["busy_with"] == "index_photo_task"
+    assert "busy indexing photos" in queue["message"]
+
+    repo.set_status(db.session, conversation_id, ASSISTANT_STATUS_IDLE)
+    assert client.get(url).get_json()["queue"] is None  # only while the run is active
 
 
 def test_follow_up_is_refused_while_answering_then_accepted(client, runs, with_key):
@@ -199,18 +218,18 @@ def test_attached_context_is_allowlisted_and_capped(client, runs, with_key):
     assert repo.latest_user_context(db.session, conversation_id) == context
 
 
-def test_diagnostics_and_redaction_switches(client):
+def test_diagnostics_switches(client):
     html = client.get("/settings").get_data(as_text=True)
-    assert 'id="assistant-diag-logs"' in html and 'id="assistant-redact-people"' in html
+    assert 'id="assistant-diag-logs"' in html
+    # People-name redaction was removed; the setting and its route are gone.
+    assert 'id="assistant-redact-people"' not in html
+    assert client.post("/settings/assistant/redact-people", data={"enabled": "on"}).status_code in (404, 405)
 
     client.post("/settings/assistant/diagnostics/files", data={})
     assert "files" not in assistant_settings.enabled_diagnostics()
     client.post("/settings/assistant/diagnostics/files", data={"enabled": "on"})
     assert "files" in assistant_settings.enabled_diagnostics()
     assert client.post("/settings/assistant/diagnostics/bogus", data={}).status_code == 404
-
-    client.post("/settings/assistant/redact-people", data={"enabled": "on"})
-    assert assistant_settings.redact_people() is True
 
 
 
@@ -219,6 +238,7 @@ def test_flash_help_escapes_context_and_requires_ready_assistant(client, with_ke
         session["_flashes"] = [("error", '<img src=x onerror=alert(1)>')]
     html = client.get("/assistant").get_data(as_text=True)
     assert 'data-assistant-help' in html
+    assert 'class="message-action" data-icon="assistant"' in html
     assert 'data-error="&lt;img src=x onerror=alert(1)&gt;"' in html
     assert "metadata" not in assistant_settings.enabled_diagnostics()
     monkeypatch.setattr("yaffo.site_agents.llm_config.get_api_key", lambda *a, **k: None)
@@ -242,7 +262,7 @@ def test_settings_has_no_contextual_help_even_for_errors(client, with_key):
     html = client.get("/settings").get_data(as_text=True)
     assert 'data-assistant-help-disabled' in html
     assert 'data-assistant-help\n' not in html
-    assert 'Help me with this' not in html
+    assert 'class="message-action"' not in html
     assert 'id="assistant-diag-metadata"' in html
 
 
@@ -258,6 +278,8 @@ def test_job_help_is_shown_for_failed_or_error_cards(client, with_key, status, e
     assert ('data-assistant-help' in html) is expected
     if expected:
         assert 'data-job-id="help-job"' in html
+        assert 'class="btn btn-secondary btn-sm" data-icon="assistant" data-assistant-help' in html
+        assert "Ask Yaffo" in html
 
 
 def test_job_help_is_shown_for_partial_errors(client, with_key):
@@ -266,3 +288,57 @@ def test_job_help_is_shown_for_partial_errors(client, with_key):
     db.session.commit()
     body = client.get("/jobs/partial-error/fragment").get_data(as_text=True)
     assert 'data-assistant-help' in body
+
+
+@pytest.fixture
+def opened(monkeypatch):
+    """Record what the open route would hand the OS instead of opening it."""
+    calls = []
+    monkeypatch.setattr("yaffo.routes.assistant.open_in_os", lambda path, reveal=False: calls.append((path, reveal)))
+    return calls
+
+
+@pytest.fixture
+def media_root(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    root = tmp_path / "Photos"
+    (root / "2019").mkdir(parents=True)
+    (root / "2019" / "a.jpg").write_bytes(b"x")
+    monkeypatch.setattr("yaffo.site_agents.assistant.file_targets.get_media_dir_entries",
+                        lambda session: [SimpleNamespace(id="m1", path=root)])
+    return root
+
+
+def test_open_button_opens_the_looked_up_path(client, opened, media_root):
+    photo = media_root / "2019" / "a.jpg"
+    item = MediaItem(full_file_path=str(photo))
+    db.session.add(item)
+    db.session.commit()
+
+    assert client.post("/api/assistant/open", json={"media_item_id": item.id, "show": "folder"}).status_code == 204
+    assert client.post("/api/assistant/open", json={"media_dir_id": "m1", "path": "2019", "show": "file"}).status_code == 204
+    # A file shown "in its folder" is revealed; a folder just opens.
+    assert opened == [(photo.resolve(), True), ((media_root / "2019").resolve(), False)]
+
+
+@pytest.mark.parametrize("body", [
+    {"media_dir_id": "m1", "path": "../..", "show": "file"},
+    {"media_dir_id": "m1", "path": "/etc", "show": "file"},
+    {"path": "/etc/passwd", "show": "file"},
+    {"media_dir_id": "m1", "path": "missing.jpg", "show": "file"},
+    {"media_item_id": 424242, "show": "file"},
+    "not an object",
+])
+def test_open_button_refuses_anything_else(client, opened, media_root, body):
+    response = client.post("/api/assistant/open", json=body)
+    assert response.status_code == 404
+    assert response.get_json()["code"] == "open_target_unavailable"
+    assert opened == []
+
+
+def test_open_button_reports_when_the_os_cannot_open(client, media_root, monkeypatch):
+    def fail(path, reveal=False):
+        raise OSError("no handler")
+    monkeypatch.setattr("yaffo.routes.assistant.open_in_os", fail)
+    response = client.post("/api/assistant/open", json={"media_dir_id": "m1", "path": "", "show": "file"})
+    assert response.status_code == 500 and response.get_json()["code"] == "open_failed"

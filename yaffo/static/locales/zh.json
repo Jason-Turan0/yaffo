@@ -391,6 +391,7 @@
         "link_to_photos": "已创建指向“{{title}}”的链接",
         "link_to_media_item": "已创建指向“{{title}}”的链接",
         "link_to_page": "已创建指向“{{title}}”的链接",
+        "link_to_file": "已创建打开“{{title}}”的按钮",
         "ai_call_summary": "已检查最近的 AI 调用",
         "capture_date_source": "已检查拍摄日期元数据"
       }
@@ -435,8 +436,12 @@
       "deleted_other": "已删除 {{count}} 个对话。"
     },
     "sources": "来源：",
-    "helpWithThis": "帮我处理这个",
+    "askAboutThis": "询问 Yaffo",
     "helpPrompt": "这里出了什么问题？我该如何解决？",
-    "openLinks": "打开："
+    "openLinks": "打开：",
+    "opening": "正在你的电脑上打开…",
+    "openFailed": "无法打开。",
+    "openOnComputer": "在此电脑上打开",
+    "showInFolder": "在文件夹中显示"
   }
 }
