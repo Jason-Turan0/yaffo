@@ -21,15 +21,14 @@
 
 version: 1
 
-# One entry per guide page. Every page has a walkthrough, even when it shows no
-# screenshots: the walkthrough still drives the flows the page describes, so the
-# runtime dependency set is recorded either way.
+# One entry per guide page. Most pages have a walkthrough, even when they show no
+# screenshots: it drives the flows the page describes and records dependencies.
 #
 #   covers           the page's obligation, not its current contents. This is
 #                    compared this against the app's real surface to find gaps.
 #   walkthrough      true when the page has a walkthrough folder at
-#                    {area}/{page}/; false only where the page has no observable
-#                    surface at all and never will.
+#                    {area}/{page}/; false for prose-only pages and runbooks
+#                    that do not have a dedicated capture flow.
 #   also_depends_on  source files the prose describes but no walkthrough can reach.
 pages:
 
@@ -217,6 +216,24 @@ pages:
       stuck or slow jobs, wrong faces or labels or duplicates, map and location
       lookups failing, and AI features failing.
     walkthrough: true
+
+  reference-maintenance/troubleshooting/external-drive-not-showing:
+    covers: >-
+      Diagnose an unavailable external media drive, verify its configured path,
+      and scan safely after reconnecting it.
+    walkthrough: false
+
+  reference-maintenance/troubleshooting/faces-stuck-after-assigning:
+    covers: >-
+      Diagnose faces that remain in review or processing after assignment, check
+      job status, and review the assistant's repair proposal.
+    walkthrough: false
+
+  reference-maintenance/troubleshooting/photos-wrong-year:
+    covers: >-
+      Diagnose incorrect capture dates and gallery year filters, then choose
+      between correcting source metadata, reindexing, or an assistant change.
+    walkthrough: false
 
   reference-maintenance/uninstalling:
     covers: >-
