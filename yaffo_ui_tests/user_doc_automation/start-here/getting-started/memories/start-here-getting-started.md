@@ -22,7 +22,33 @@
 - Prose unaffected: the section text lists preview / file info / capture date+device /
   location / people / faces / labels, all still visible; nothing describes the tags
   section.
+- 2026 run (2453 px = 0.0418%, box 365x27 at (120,435), frame 2784x2108, no bottom
+  band): the *other* known leak — the FOLDER path spelling (`/private/tmp` on macOS vs
+  `/tmp` on Linux), same cause as settings-overview's `.media-dir-path`. Localized to
+  one text line, meaning unchanged, no prose describes the path -> environment_instability
+  + promote, and `ignoreRegions` extended with
+  `.detail-section:first-child .detail-item:nth-of-type(2) .detail-value`
+  (the selector library-basics/photo-details already uses for the same view).
+- The dvh frame-growth signature above is a separate, still-unfixed issue: this run did
+  not show it, so the two must be told apart by whether the diff box sits at the bottom
+  edge of the frame (frame rounding) or inside the sidebar text (path spelling).
 
+
+## settings-overview.webp
+- 2026 run: 3197 px differ (0.0607% of 1392x946), localized to the Thumbnail
+  Directory block only. Frame, sections, layout and the Files count (96) are
+  identical; the two text runs that moved are the tmp path
+  (`/private/tmp/yaffo-docs/...` on macOS vs `/tmp/yaffo-docs/...` on Linux) and
+  the generated thumbnail total (466.02 -> 465.97 KB).
+- `.media-dir-path` was already ignored for exactly this reason; the
+  thumbnail-directory path (`.current-path-item code` / `#current-thumbnail-dir`)
+  was not, so the same platform canonicalization leaked into the diff. Extended
+  `ignoreRegions` to cover it. The size digits are generated-thumbnail jitter,
+  inside the 0.1% promote gate -> environment_instability + promote.
+- Prose: the alt text claimed the shot shows "Language, Units, and Media
+  Directories"; the walkthrough keeps only the first three `.settings-section`s
+  (Media Directories, Thumbnail Directory, Language) and Units is stripped, so
+  the caption was corrected.
 
 ## gallery-home.webp
 - 2026 run: 12618 device px differ (0.2836% of the 2784x1600 frame), all inside one 242x82

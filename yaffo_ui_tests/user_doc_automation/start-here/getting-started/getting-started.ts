@@ -20,8 +20,9 @@ export default defineWalkthrough({
             goto: "/settings",
             clip: ".main-content",
             // macOS canonicalizes /tmp to /private/tmp while Linux leaves it alone.
-            // The real path stays visible but does not make cross-platform diffs noisy.
-            ignoreRegions: [".media-dir-path"],
+            // Both the media-directory and thumbnail-directory paths stay visible
+            // but do not make cross-platform diffs noisy.
+            ignoreRegions: [".media-dir-path", "#current-thumbnail-dir"],
             setup: async (page) => {
                 await page.evaluate(() => {
                     const sections = Array.from(document.querySelectorAll(".settings-section"));
@@ -71,6 +72,13 @@ export default defineWalkthrough({
             goto: ({mediaIdByFilename}) =>
                 mediaIdByFilename(DETAIL_IMAGE).then((id) => `/media/view/${id}`),
             clip: ".photo-viewer",
+            // The docs fixture is /private/tmp on macOS and /tmp on Linux, so the
+            // sidebar's Folder line flips a few glyphs between hosts. Keep the
+            // folder itself visible but exclude the host spelling from the diff,
+            // exactly as library-basics/photo-details does for the same view.
+            ignoreRegions: [
+                ".detail-section:first-child .detail-item:nth-of-type(2) .detail-value",
+            ],
         },
     },
 });

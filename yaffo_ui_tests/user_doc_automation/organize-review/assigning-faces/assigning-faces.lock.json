@@ -1,6 +1,6 @@
 {
     "page": "organize-review/assigning-faces",
-    "lastVerifiedSha": "801d5a6245736fb18a4e81c98e4bbcd1c2648e8e",
+    "lastVerifiedSha": "092686fa06d8bb7d6666f37babcc8f955e607933",
     "observed": {
         "page": "organize-review/assigning-faces",
         "urls": [
@@ -141,7 +141,7 @@
         "yaffo/static/components/panel_nav.css": "c28127a204eec09c16c876782ed6e2bfbe3078d0222289d2f98a99d472666960",
         "yaffo/static/components/percentage_slider.css": "0fbc305daa46240fe7a94d4f48a5dd2a78cbc31118ed74307326cc0e00112f0c",
         "yaffo/static/components/percentage_slider.js": "5c805c659e45c37b701c0392da0ba4613bf4b31daf65c279158a4bcb88120df9",
-        "yaffo/static/components/run_history.css": "843a9776bfbf7fb1042f394334827d3995f525457521f9cdf62683968d6b52b4",
+        "yaffo/static/components/run_history.css": "90eee33bdfede42faa4ac8b2dfb8ff105e147140c237246d82beac9fa38aafbd",
         "yaffo/static/components/scrollbar.css": "74e33ae858d36ded8d45b03860d29736b95f06dae90de715b41d7be1515936b7",
         "yaffo/static/components/selection_bar.css": "c2e880fd4fe18c809ee2978098e4f6c4632c76339e80adee3ceb26e3feb9fed2",
         "yaffo/static/components/selection_bar.js": "da6b442fc3ddc372bfa4315de867bb0166748f7dbde735904acd4815534fba28",
@@ -154,7 +154,7 @@
         "yaffo/static/filters/tags.js": "a1bce55a5d257d9a6dd8fd9312a827f5440f561482160bf7788687ebace81eec",
         "yaffo/static/form.css": "5a286790eecf63abe90335750acbc7ecfc9e4b42679974956ec87e48237dca83",
         "yaffo/static/i18n.js": "55b8645a19d8f982b14aa541c820605c9c9d81b2222e1a1628f69b0eaa7e6bc5",
-        "yaffo/static/locales/en.json": "74e68d47359336fc890e0823f75aa4ee1f75adf731b15416581b653e9dce6713",
+        "yaffo/static/locales/en.json": "d9cf165ba5af7847c0861bcb3cae519c7fda79f633eeb6ca5ce32e41ef54e9d3",
         "yaffo/static/match-type.css": "46a6ac0ede55c7800265e54c0e8b760d5a997aec8b1b5ebd0bb2991b7542e82c",
         "yaffo/static/multi-select.css": "2b898c7aecedd140e3fefc0be2e2dc11e59e4c6ccde1d0c555376f1177772ddb",
         "yaffo/static/multi-select.js": "d4ddd83c069e0900dc22e3d0de3a4b757f96477f820e7f6d78e4c38dc47c238f",

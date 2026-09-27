@@ -30,9 +30,18 @@ A smaller preview image Yaffo creates for fast browsing. Thumbnails are stored i
 Yaffo's app data, not next to your original photos.
 
 **Orphaned item**  
-A database record for a file that is no longer found in the configured media
-folders. The indexing utility can show these so you can clean up the library
-index.
+A database record for a file that is no longer found under the configured media
+folders. The indexing utility lists these with the reason it recorded: the file
+was deleted from disk, or its media directory was removed from Settings.
+Syncing removes the entries.
+
+**Failed item**  
+A media item Yaffo could not index, for example because the file is damaged or
+in a format it cannot decode. The item still appears in the library and opens
+normally, but it has no date, location, faces, or labels, because those are read
+during indexing. Its details panel explains the failure, **Retry all** on Index
+Photos tries the listed files again, and **Reindex** in the details panel retries
+one item. Yaffo leaves a failed file alone until it changes on disk.
 
 ## Organization
 
@@ -71,13 +80,21 @@ your preferred order and can be shared with another Yaffo device.
 A task Yaffo runs outside the current page interaction, such as indexing,
 reclassifying labels, generating a page, or scanning for duplicates.
 
+**Run**  
+One execution of a background job or an automation. While it is going, it
+appears as a job card with its progress; when it finishes, it moves to the
+page's **Run history** with the status it ended in, its result, and - when
+something went wrong - its **Details** and an **Ask Yaffo** button. **Cancel**
+stops a run that is still going, from its card or from its run history row.
+
 **Duplicate group**  
 A set of photos Yaffo believes are duplicates or near-duplicates. You review the
 group before deciding what to keep or remove.
 
 **Automation**  
 A scheduled or event-driven behavior. Some automations are built into Yaffo;
-others can be created for your own workflows.
+others can be created for your own workflows. Each automation runs on one or more
+triggers: a schedule, or an event it responds to.
 
 **Custom page**  
 A page built from your photo library, often with AI-generated widgets. Custom
