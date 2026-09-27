@@ -340,6 +340,18 @@ usually `Job.status`.
 Long-running tasks must poll the relevant app status helper, such as
 `get_job_status(job_id)`, and exit cleanly when cancellation is observed.
 
+- Work that holds its own session should use
+  `job_repository.is_job_cancelled(session, job_id)`. It reads through a fresh
+  session, so it sees a cancel another process committed.
+- `ProgressReporter.run_with_progress` checks every 10 items. It stops early,
+  counts the rest as cancelled, and returns `False`, so automation handlers that
+  use it get cancellation for free.
+- Custom-script runs pass `should_cancel` to the Starlark sandbox. The sandbox
+  polls it between messages and kills the evaluator.
+- Finalizers (`record_run`, `run_and_record`, file sync's `_close_run`) must not
+  overwrite a CANCELLED status with COMPLETED or FAILED. Re-check before writing
+  the final status.
+
 ## Error Handling
 
 Worker behavior:
@@ -347,6 +359,11 @@ Worker behavior:
 - task exceptions are caught in the child and sent to the host with a traceback;
 - non-JSON return values become task failures;
 - native crashes kill only the child process.
+- an errored task is never retried. The host then calls its `on_task_failed`
+  hook, which yaffo binds to `background_tasks/task_failures.py`: the Job keyed
+  by that task's id (a run Job, see `job_repository.run_job_id`) is marked FAILED,
+  or just stopped if it was cancelled, so it doesn't read RUNNING forever. Chord
+  batches are accounted for by their chord's callback instead (`finalize_job`).
 
 Host behavior:
 

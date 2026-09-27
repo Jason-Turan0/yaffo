@@ -3,10 +3,12 @@ import shutil
 import os
 import send2trash
 
-from yaffo.db.models import Job, JOB_STATUS_CANCELLED, JOB_STATUS_RUNNING, JOB_STATUS_PENDING, JOB_STATUS_COMPLETED
+from yaffo.db.models import Job, JOB_STATUS_CANCELLED, JOB_STATUS_RUNNING, JOB_STATUS_PENDING
 from yaffo.logging_config import get_logger
 from yaffo.background_tasks.config import task_queue
-from yaffo.background_tasks.utils import SessionFactory, get_job_status
+from yaffo.background_tasks.utils import SessionFactory, get_job_status, record_job_stopped
+from yaffo.db.repositories.job_repository import earliest_started_at, finished_status, refresh_estimated_completion
+from yaffo.utils.time import utcnow
 
 logger = get_logger(__name__, 'background_tasks')
 
@@ -23,12 +25,14 @@ def remove_duplicates_task(job_id: str, file_paths: list[str], action_type: str,
 
     job_status = get_job_status(job_id)
     if job_status == JOB_STATUS_CANCELLED:
+        record_job_stopped(job_id)
         return
 
     session = SessionFactory()
     try:
         if job_status == JOB_STATUS_PENDING:
-            session.query(Job).filter_by(id=job_id).update({'status': JOB_STATUS_RUNNING})
+            session.query(Job).filter_by(id=job_id).update({
+                'status': JOB_STATUS_RUNNING, 'started_at': earliest_started_at(utcnow())})
             session.commit()
     except Exception as e:
         logger.error(f"Error updating job status: {e}")
@@ -84,6 +88,7 @@ def remove_duplicates_task(job_id: str, file_paths: list[str], action_type: str,
                     'completed_count': processed_count,
                     'error_count': error_count,
                 })
+                refresh_estimated_completion(session, job_id)
                 session.commit()
             except Exception as e:
                 logger.error(f"Error updating job progress: {e}")
@@ -98,8 +103,10 @@ def remove_duplicates_task(job_id: str, file_paths: list[str], action_type: str,
             'completed_count': processed_count,
             'error_count': error_count,
             'cancelled_count': cancel_count,
-            'status': JOB_STATUS_COMPLETED
+            'status': finished_status(),
+            'completed_at': utcnow(),
         })
+        refresh_estimated_completion(session, job_id)
         session.commit()
         logger.debug(
             f"Completed job {job_id}: processed={processed_count}, errors={error_count}, cancelled={cancel_count}"

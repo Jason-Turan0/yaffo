@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Callable, Optional
 
 from sqlalchemy.orm import Session
 
@@ -32,16 +32,19 @@ def run_automation_code(
     functions=None,
     progress: Optional[ProgressReporter] = None,
     filename: str = "automation.star",
+    should_cancel: Optional[Callable[[], bool]] = None,
 ) -> StarlarkResult:
     """Run a Starlark `code` string in the sandbox with the trigger `context` as
     `ctx` and the host API as `functions` (defaults to the live, executing host
     functions bound to `session` + `progress`; pass recording ones to capture a test
-    run's actions). `progress` is this run's ProgressReporter, given to report_progress."""
+    run's actions). `progress` is this run's ProgressReporter, given to report_progress.
+    `should_cancel` stops the run early (see run_starlark)."""
     return run_starlark(
         code,
         inputs={"ctx": context_globals(context)},
         functions=functions if functions is not None else build_host_functions(session, progress),
         filename=filename,
+        should_cancel=should_cancel,
     )
 
 
@@ -54,15 +57,19 @@ def run_automation(
     (data_query, ...) bound to `session` (and `progress` for report_progress); it
     can't reach anything else. Returns the StarlarkResult -- a bad script is data
     (success=False), never an exception, so the caller can record/log it without
-    crashing the worker."""
+    crashing the worker. With `progress`, a cancel of its Job stops the script at the
+    next poll (result.cancelled)."""
     if not automation.published_code:
         logger.warning(f"automation '{automation.slug}' has no published code to run")
         return StarlarkResult(success=False, error="automation has no published code")
 
     result = run_automation_code(
-        session, automation.published_code, context, progress=progress, filename=f"{automation.slug}.star"
+        session, automation.published_code, context, progress=progress, filename=f"{automation.slug}.star",
+        should_cancel=progress.is_cancelled if progress is not None else None,
     )
-    if result.success:
+    if result.cancelled:
+        logger.info(f"automation '{automation.slug}' cancelled")
+    elif result.success:
         logger.debug(f"automation '{automation.slug}' ran; output={result.output}")
     else:
         logger.warning(f"automation '{automation.slug}' failed: {result.error}")

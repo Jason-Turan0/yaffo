@@ -22,6 +22,7 @@ from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.progress_reporter import ProgressReporter
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
+from yaffo.db.repositories.job_repository import run_job_id
 from yaffo.background_tasks.watcher_suppression import record_self_write
 from yaffo.db.models import Automation, Face, MediaItem, MediaLabel, AUTOMATION_HANDLER_EXPORT_PHOTO_TAG
 from yaffo.logging_config import get_logger
@@ -134,8 +135,8 @@ def _export_tags(
     return written
 
 
-@task_queue.task()
-def export_photo_tag_task(automation_id: int, media_item_ids: list[int]):
+@task_queue.task(context=True)
+def export_photo_tag_task(automation_id: int, media_item_ids: list[int], task=None):
     """Write people/location tags to the given photos' files. Enqueued by the
     export_photo_tag handler on a photo_modified event; which tags to write is read
     live from the automation's config. The run is recorded as a Job."""
@@ -162,7 +163,7 @@ def export_photo_tag_task(automation_id: int, media_item_ids: list[int]):
                 f"favorite={export_favorite})"
             )
 
-        record_run(session, automation, work, media_item_ids=media_item_ids)
+        record_run(session, automation, work, media_item_ids=media_item_ids, job_id=run_job_id(task))
     finally:
         session.close()
         SessionFactory.remove()

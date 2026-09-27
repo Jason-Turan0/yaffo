@@ -64,6 +64,12 @@
   Run history is capped at the **10 most recent** jobs — on a long-lived environment a
   row-count comparison saturates and never increases; detect a new run as an
   innerText change of `#automation-runs` instead (see automations_run_now).
+  Unfinished rows carry `.run-history-cancel` (POST `/jobs/<id>/cancel-run`, swaps
+  the row to "Cancelled"); the 5s self-poll may replace the section mid-click.
+  File sync page: a started sync's import/index Jobs fold into its row (no rows of
+  their own; `.run-history-note` carries the step and time left, and its Cancel
+  cancels both). Consecutive quiet "Already in sync" runs collapse into one row
+  ("checked N times since …"), so row count != run count there.
 - Trigger editor: `#automation-triggers`, `.js-add-schedule`, `.js-add-event`,
   `.js-save-schedule`, `.js-cancel`, `.schedule-editor-error`, rows
   `.automation-trigger-row` with `.automation-trigger-kind`, `.automation-trigger-desc[data-cron]`

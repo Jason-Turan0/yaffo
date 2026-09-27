@@ -321,3 +321,20 @@ def test_finished_job_card_with_errors_says_so(app, client):
     _add_job(app, "index-done", "index_photos", "COMPLETED", 1, error_count=2)
     fragment = client.get("/jobs/index-done/fragment").get_data(as_text=True)
     assert '<span class="chip chip-warning job-status">Completed with errors</span>' in fragment
+
+
+def test_job_card_reads_stopping_until_the_cancelled_work_stops(app, client):
+    """Scenario 25: a cancelled job whose task hasn't stopped yet (no completed_at)
+    reads Stopping on its card, then Cancelled once it has."""
+    from datetime import datetime
+    from yaffo.db.models import Job
+    _add_job(app, "index-stopping", "index_photos", "CANCELLED", 1, completed_count=4)
+
+    fragment = client.get("/jobs/index-stopping/fragment").get_data(as_text=True)
+    assert '<span class="chip chip-warning job-status">Stopping</span>' in fragment
+
+    with app.app_context():
+        db.session.get(Job, "index-stopping").completed_at = datetime(2026, 9, 1, 12, 5)
+        db.session.commit()
+    fragment = client.get("/jobs/index-stopping/fragment").get_data(as_text=True)
+    assert "job-status\">Cancelled</span>" in fragment

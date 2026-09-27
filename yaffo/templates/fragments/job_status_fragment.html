@@ -6,7 +6,7 @@
    page's path; the card's refresh and Cancel requests pass it back (as `page`),
    since their own path is /jobs/…. #}
 {% set help_page = help_page | default(none) or request.path %}
-{% set status = run_status(job.status, job.error_count) %}
+{% set status = run_status(job.status, job.error_count, stopped=job.completed_at is not none) %}
 <div class="job-card"
      id="job-{{ job.id }}"
         {% if not is_finished %}

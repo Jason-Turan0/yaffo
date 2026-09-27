@@ -9,6 +9,8 @@ from yaffo.domain.compare_utils import serialize_embedding
 from yaffo.logging_config import get_logger
 from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.utils import SessionFactory, get_job_status, get_current_thumbnail_dir
+from yaffo.db.repositories.job_repository import earliest_started_at, refresh_estimated_completion
+from yaffo.utils.time import utcnow
 
 logger = get_logger(__name__, 'background_tasks')
 
@@ -21,6 +23,7 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
     error_count = 0
     cancel_count = 0
     check_cancel_frequency = 5
+    batch_started_at = utcnow()
     job_status = get_job_status(job_id)
     if job_status == JOB_STATUS_CANCELLED:
         return
@@ -123,10 +126,12 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
             'cancelled_count': Job.cancelled_count + cancel_count,
             'completed_count': Job.completed_count + processed_count,
             'error_count': Job.error_count + error_count,
+            'started_at': earliest_started_at(batch_started_at),
         }
         if job_status == JOB_STATUS_PENDING:
             update_job_params['status'] = JOB_STATUS_RUNNING
         session.query(Job).filter_by(id=job_id).update(update_job_params)
+        refresh_estimated_completion(session, job_id)
         session.commit()
         unlink_face_thumbnails(stale_thumbnails)
         logger.debug(

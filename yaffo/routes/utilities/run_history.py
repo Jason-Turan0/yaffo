@@ -1,11 +1,18 @@
 """Run history rows: the compact list of past Jobs shown on an automation's detail
 page and under the Index Photos job cards. Built from a Job so the template stays
-dumb and the per-run-kind display logic lives in one tested place."""
+dumb and the per-run-kind display logic lives in one tested place.
+
+`run_views` builds a whole list. There, a file sync that started work shows that
+work: the import and index Jobs it queued fold into its row (status, progress,
+time left, and one Cancel for both), and back-to-back "Already in sync" checks
+collapse into a single row."""
 import json
-from dataclasses import dataclass
+import math
+from dataclasses import dataclass, replace
 from datetime import datetime
 
 from flask_babel import gettext, ngettext
+from sqlalchemy.orm import Session
 
 from yaffo.db.models import (
     Job,
@@ -15,9 +22,11 @@ from yaffo.db.models import (
     JOB_STATUS_PENDING,
     JOB_STATUS_RUNNING,
 )
+from yaffo.utils.time import utcnow
 from yaffo.utils.file_sync import (
     FILE_SYNC_JOB,
     SYNC_FAILED,
+    SYNC_CANCELLED,
     SYNC_IN_SYNC,
     SYNC_NO_FOLDER_CONNECTED,
     SYNC_NO_MEDIA_DIRS,
@@ -44,6 +53,10 @@ class RunView:
     summary: str
     error: str | None
     automation_slug: str | None  # set when the run belongs to an automation
+    stage_note: str | None = None  # which step of a file sync's pipeline is running
+    eta_note: str | None = None    # "about 12 minutes left", from estimated_completed_at
+    repeat_count: int = 1          # quiet in-sync checks folded into this row
+    repeat_since: datetime | None = None  # the oldest of those checks
 
 
 def _run_progress(job: Job) -> int:
@@ -107,6 +120,8 @@ def _file_sync_summary(job: Job) -> str:
         return gettext("Skipped: no media folder is connected")
     if outcome == SYNC_FAILED:
         return gettext("The sync failed")
+    if outcome == SYNC_CANCELLED:
+        return gettext("Cancelled")
     return gettext("Running") if job.status in (JOB_STATUS_PENDING, JOB_STATUS_RUNNING) else _run_label(job)
 
 
@@ -186,17 +201,20 @@ class RunStatus:
     chip: str   # chip tone modifier
 
 
-def run_status(status: str, error_count: int | None = 0) -> RunStatus:
+def run_status(status: str, error_count: int | None = 0, stopped: bool = True) -> RunStatus:
     """How a run's status reads on a chip, for the run history and the job card
     alike. A run that finished with some failed items is flagged here, where it's
-    seen at a glance, not only in the summary's error count."""
+    seen at a glance, not only in the summary's error count. A cancelled run whose
+    work hasn't ended yet (`stopped` False: no completed_at) reads Stopping."""
+    if status == JOB_STATUS_CANCELLED and not stopped:
+        return RunStatus(gettext("Stopping"), "chip-warning")
     if status == JOB_STATUS_COMPLETED and error_count:
         return RunStatus(gettext("Completed with errors"), "chip-warning")
     return RunStatus(_run_status_label(status), _run_status_chip(status))
 
 
 def run_view(job: Job) -> RunView:
-    status = run_status(job.status, job.error_count)
+    status = run_status(job.status, job.error_count, stopped=job.completed_at is not None)
     return RunView(
         job_id=job.id,
         status=job.status,
@@ -212,3 +230,117 @@ def run_view(job: Job) -> RunView:
         error=_run_error(job),
         automation_slug=job.automation.slug if job.automation is not None else None,
     )
+
+
+# ---- whole lists: file sync pipelines and repeated in-sync checks -------------------------
+
+_IN_PROGRESS = (JOB_STATUS_PENDING, JOB_STATUS_RUNNING)
+
+
+def _job_data(job: Job) -> dict:
+    try:
+        data = json.loads(job.job_data or "{}")
+    except ValueError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _pipeline_ids(job: Job) -> tuple[str | None, str | None]:
+    """The (import, index) Job ids a file sync queued, or (None, None)."""
+    if job.name != FILE_SYNC_JOB:
+        return None, None
+    data = _job_data(job)
+    if data.get("outcome") != SYNC_STARTED:
+        return None, None
+    return data.get("import_job_id"), data.get("index_job_id")
+
+
+def pipeline_job_ids(job: Job) -> list[str]:
+    """The Jobs a file sync run started; cancelling the run cancels these."""
+    return [job_id for job_id in _pipeline_ids(job) if job_id]
+
+
+def _eta_note(eta: datetime | None, now: datetime) -> str | None:
+    """Time left until `eta`: minutes under an hour; hours and minutes (to the
+    nearest 5) up to ten hours; whole hours beyond that, where minutes are noise.
+    None once the estimate is more than a minute past: a stalled job has outrun its
+    estimate, so the row stops promising a finish."""
+    if eta is None or (eta - now).total_seconds() < -60:
+        return None
+    minutes = math.ceil((eta - now).total_seconds() / 60)
+    if minutes <= 1:
+        return gettext("less than a minute left")
+    if minutes < 60:
+        return ngettext("about %(num)d minute left", "about %(num)d minutes left", minutes)
+    if minutes < 600:
+        # minutes / 5 never lands on .5, so round() can't hit its round-half-to-even case.
+        hours, rest = divmod(5 * round(minutes / 5), 60)
+        if rest:
+            return gettext("about %(hours)d h %(minutes)d min left", hours=hours, minutes=rest)
+        return ngettext("about %(num)d hour left", "about %(num)d hours left", hours)
+    hours = minutes // 60
+    return ngettext("about %(num)d hour left", "about %(num)d hours left", hours)
+
+
+def _pipeline_view(view: RunView, import_job: Job | None, index_job: Job | None, now: datetime) -> RunView:
+    """A started file sync's row, read from the import and index Jobs it queued. The
+    sync's own Job closes as soon as it has queued them, so on its own it would say
+    Completed while photos are still being indexed."""
+    stages = [job for job in (import_job, index_job) if job is not None]
+    if not stages:  # dismissed from the job cards; the sync's own record is all there is
+        return view
+    active = next((job for job in stages if job.status in _IN_PROGRESS), None)
+    if active is not None:
+        status = run_status(JOB_STATUS_RUNNING)
+        return replace(
+            view, status=JOB_STATUS_RUNNING, status_label=status.label, status_chip=status.chip,
+            is_finished=False, progress=_run_progress(active), finished_at=None,
+            stage_note=gettext("importing") if active is import_job else (
+                gettext("import done, indexing") if import_job is not None else gettext("indexing")),
+            eta_note=_eta_note(active.estimated_completed_at, now),
+        )
+    statuses = {job.status for job in stages}
+    overall = (JOB_STATUS_CANCELLED if JOB_STATUS_CANCELLED in statuses
+               else JOB_STATUS_FAILED if JOB_STATUS_FAILED in statuses
+               else view.status)
+    errors = sum(job.error_count or 0 for job in stages)
+    stopped = all(job.completed_at is not None for job in stages if job.status == JOB_STATUS_CANCELLED)
+    status = run_status(overall, errors, stopped=stopped)
+    return replace(
+        view, status=overall, status_label=status.label, status_chip=status.chip,
+        is_error=view.is_error or overall == JOB_STATUS_FAILED or bool(errors),
+        finished_at=max((job.completed_at for job in stages if job.completed_at), default=view.finished_at),
+    )
+
+
+def _quiet_in_sync(job: Job) -> bool:
+    """A sync that found nothing to do and nothing wrong: the hourly no-op."""
+    return (job.name == FILE_SYNC_JOB and job.status == JOB_STATUS_COMPLETED and not job.error
+            and _job_data(job).get("outcome") == SYNC_IN_SYNC)
+
+
+def run_views(session: Session, jobs: list[Job], limit: int | None = None) -> list[RunView]:
+    """Rows for `jobs` (newest first). A started file sync takes over the import and
+    index Jobs it queued, which then get no rows of their own; consecutive quiet
+    in-sync checks become one row counting them. `limit` caps the rows, not the jobs,
+    so callers pass more jobs than rows they want."""
+    linked_ids = {job_id for job in jobs for job_id in pipeline_job_ids(job)}
+    linked = {job.id: job for job in session.query(Job).filter(Job.id.in_(linked_ids))} if linked_ids else {}
+    now = utcnow()
+    views: list[RunView] = []
+    previous_quiet = False
+    for job in jobs:
+        if job.id in linked_ids:
+            continue
+        quiet = _quiet_in_sync(job)
+        if quiet and previous_quiet:
+            views[-1] = replace(views[-1], repeat_count=views[-1].repeat_count + 1,
+                                repeat_since=job.started_at or job.created_at)
+            continue
+        previous_quiet = quiet
+        view = run_view(job)
+        import_id, index_id = _pipeline_ids(job)
+        if import_id or index_id:
+            view = _pipeline_view(view, linked.get(import_id), linked.get(index_id), now)
+        views.append(view)
+    return views[:limit] if limit is not None else views

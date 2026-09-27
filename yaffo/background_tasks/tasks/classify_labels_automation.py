@@ -19,6 +19,7 @@ from yaffo.background_tasks.events import EventContext, emit_event, event_chain_
 from yaffo.background_tasks.progress_reporter import ProgressReporter
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
+from yaffo.db.repositories.job_repository import run_job_id
 from yaffo.db.models import (
     Automation,
     AUTOMATION_HANDLER_CLASSIFY_LABELS,
@@ -138,9 +139,10 @@ def _classify_media_items(
     )
 
 
-@task_queue.task()
+@task_queue.task(context=True)
 def classify_labels_automation_task(
-        automation_id: int, media_item_ids: list[int], origin_automation_ids: list[int] | None = None
+        automation_id: int, media_item_ids: list[int], origin_automation_ids: list[int] | None = None,
+        task=None,
 ):
     """Label `media_item_ids` against the enabled vocabulary. Enqueued by the handler on a
     photo_indexed event (the new photos) or by the Settings backfill (every indexed
@@ -174,7 +176,7 @@ def classify_labels_automation_task(
 
         # Scope the run so the photo_labeled it emits carries this automation (loop guard).
         with event_chain_scope(origin_automation_ids, automation_id):
-            record_run(session, automation, work, media_item_ids=media_item_ids)
+            record_run(session, automation, work, media_item_ids=media_item_ids, job_id=run_job_id(task))
             # Emit after record_run so the labels are committed before subscribers run
             # (record_run commits work's writes); fire only when something was labeled.
             if labeled:

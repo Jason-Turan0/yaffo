@@ -16,6 +16,7 @@ from yaffo.db import db
 from yaffo.db.models import (
     Automation,
     Job,
+    JOB_STATUS_CANCELLED,
     JOB_STATUS_COMPLETED,
     JOB_STATUS_FAILED,
 )
@@ -162,3 +163,111 @@ def test_record_run_completes_empty_media_scope_without_calling_work(session):
     assert job.status == JOB_STATUS_COMPLETED
     assert job.started_at is not None and job.completed_at is not None
     assert json.loads(job.job_data)["output"] == "No indexed media items to process"
+
+
+def _cancel_elsewhere(session, job_id):
+    """Cancel `job_id` as the Cancel button does: a commit from another session."""
+    with Session(session.get_bind()) as other:
+        other.get(Job, job_id).status = JOB_STATUS_CANCELLED
+        other.commit()
+
+
+def test_record_run_stops_at_the_next_check_and_stays_cancelled(session):
+    """A cancel issued mid-run stops run_with_progress at its next check, counts the
+    rest as cancelled, and isn't overwritten by the COMPLETED finalisation."""
+    automation = _system_automation(session, "classify_labels")
+    processed = []
+
+    def work(reporter):
+        def process(item):
+            processed.append(item)
+            if item == 3:
+                _cancel_elsewhere(session, reporter.job_id)
+        finished = reporter.run_with_progress(list(range(25)), process)
+        return f"finished={finished}"
+
+    job = record_run(session, automation, work)
+
+    session.refresh(job)
+    assert processed == list(range(10))  # checks every 10 items
+    assert job.status == JOB_STATUS_CANCELLED
+    assert (job.task_count, job.completed_count, job.cancelled_count) == (25, 10, 15)
+    assert json.loads(job.job_data) == {"output": "finished=False"}
+    assert job.completed_at is not None
+
+
+def test_record_run_failure_after_a_cancel_stays_cancelled(session):
+    automation = _system_automation(session, "export_photo_tag")
+
+    def work(reporter):
+        _cancel_elsewhere(session, reporter.job_id)
+        raise RuntimeError("stopped mid-write")
+
+    job = record_run(session, automation, work)
+
+    session.refresh(job)
+    assert job.status == JOB_STATUS_CANCELLED
+    assert job.error == "stopped mid-write"
+
+
+def test_custom_run_cancelled_while_it_runs_is_recorded_cancelled(session, monkeypatch):
+    automation = _custom_automation(session, "canceller", 'data_query({"source": "media_items"})\nprint("done")')
+
+    def cancel_then_answer(s, q):
+        job = session.query(Job).filter_by(automation_id=automation.id).one()
+        _cancel_elsewhere(session, job.id)
+        return []
+    monkeypatch.setattr(
+        "yaffo.background_tasks.automation_sandbox.automation_actions.resolve_query", cancel_then_answer)
+
+    job = run_and_record(session, automation, None)
+
+    session.refresh(job)
+    assert job.status == JOB_STATUS_CANCELLED
+    assert job.error is None
+
+
+def test_a_retried_task_records_on_the_same_job_and_a_finished_one_does_not_rerun(session):
+    """The queue re-runs a task stranded by a crash with the same id; record_run keys
+    the run Job by it, so the retry reuses that Job instead of opening a second."""
+    automation = _system_automation(session, "classify_labels")
+    stranded = Job(id="task-1", name=automation.slug, status="RUNNING", automation_id=automation.id,
+                   task_count=100, completed_count=30)
+    session.add(stranded)
+    session.commit()
+    ran = []
+
+    job = record_run(session, automation, lambda reporter: ran.append(1) or "done", job_id="task-1")
+    again = record_run(session, automation, lambda reporter: ran.append(2) or "done", job_id="task-1")
+
+    assert job.id == "task-1" and job.status == JOB_STATUS_COMPLETED
+    assert again is None and ran == [1]
+    assert session.query(Job).filter_by(automation_id=automation.id).count() == 1
+
+
+def test_custom_run_cancel_kills_the_script_through_the_sandbox(session, monkeypatch):
+    """Scenario 4: a cancel while a script is still running reaches the sandbox via
+    the executor's should_cancel (progress.is_cancelled), which kills the script.
+    Without that wiring the script would run to the 60s sandbox limit."""
+    import time
+    automation = _custom_automation(
+        session, "spinner",
+        'data_query({"source": "media_items"})\n'
+        'def spin():\n    n = 0\n    for i in range(1000000000):\n        n += i\n    return n\n'
+        'spin()',
+    )
+
+    def cancel_then_answer(s, q):
+        job = session.query(Job).filter_by(automation_id=automation.id).one()
+        _cancel_elsewhere(session, job.id)
+        return []
+    monkeypatch.setattr(
+        "yaffo.background_tasks.automation_sandbox.automation_actions.resolve_query", cancel_then_answer)
+
+    started = time.monotonic()
+    job = run_and_record(session, automation, None)
+    elapsed = time.monotonic() - started
+
+    session.refresh(job)
+    assert job.status == JOB_STATUS_CANCELLED
+    assert elapsed < 15  # killed at the next ~1s poll, not at the sandbox time limit

@@ -56,9 +56,20 @@
     }
 }
 
+/* Cancel an unfinished run: compact, so a running row stays one line. */
+.run-history-cancel {
+    flex-shrink: 0;
+    padding: 2px 10px;
+}
+
 .run-history-progress {
     font-variant-numeric: tabular-nums;
     font-weight: 600;
+    color: var(--color-text-muted);
+}
+
+/* A pipeline step, time left, or repeat count, after the summary. */
+.run-history-note {
     color: var(--color-text-muted);
 }
 

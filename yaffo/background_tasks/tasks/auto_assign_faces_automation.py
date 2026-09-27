@@ -17,6 +17,7 @@ from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.progress_reporter import ProgressReporter
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
+from yaffo.db.repositories.job_repository import run_job_id
 from yaffo.db.models import Automation, AUTOMATION_HANDLER_AUTO_ASSIGN_FACES
 from yaffo.db.repositories import person_repository, media_repository
 from yaffo.db.repositories.person_repository import get_similarity_bounds
@@ -87,8 +88,8 @@ def _assign_faces(
     return assigned
 
 
-@task_queue.task()
-def auto_assign_faces_automation_task(automation_id: int, media_item_ids: list[int]):
+@task_queue.task(context=True)
+def auto_assign_faces_automation_task(automation_id: int, media_item_ids: list[int], task=None):
     """Assign the faces in `media_item_ids` to their unique strong match. Enqueued by the
     auto_assign_faces system handler when a photo_indexed event fires; the threshold
     is read live from the automation's config. The run is recorded as a Job."""
@@ -118,7 +119,7 @@ def auto_assign_faces_automation_task(automation_id: int, media_item_ids: list[i
                 f"{match_policy})"
             )
 
-        record_run(session, automation, work, media_item_ids=media_item_ids)
+        record_run(session, automation, work, media_item_ids=media_item_ids, job_id=run_job_id(task))
     finally:
         session.close()
         SessionFactory.remove()

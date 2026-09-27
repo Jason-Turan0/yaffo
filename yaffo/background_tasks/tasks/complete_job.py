@@ -5,6 +5,7 @@ from yaffo.logging_config import get_logger
 from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import emit_job_completed_event
 from yaffo.background_tasks.utils import SessionFactory
+from yaffo.utils.time import utcnow
 
 logger = get_logger(__name__, 'background_tasks')
 
@@ -13,11 +14,17 @@ def finalize_job(job_id: str) -> None:
     """Mark a job COMPLETED and emit its completion event.
 
     The shared terminal step for the chord completion path. Idempotent and safe
-    to call once a job's tasks have all finished: a CANCELLED job is left
-    untouched and an already-COMPLETED job is a no-op. Chord-dispatched jobs
+    to call once a job's tasks have all finished: a CANCELLED job keeps its status
+    but gets completed_at (its work has now stopped), and an already-COMPLETED job
+    is a no-op. Chord-dispatched jobs
     reach here via complete_job_callback (no polling -- the chord only fires once
     every member finished); the legacy polling complete_job_task keeps its own
     logic for the duplicate-removal flow.
+
+    Every item is accounted for at the end. A batch whose worker crashed never
+    wrote its counts (the queue marks it errored and still fires the callback), so
+    items no batch reported count as errors -- or, on a cancelled job, as cancelled
+    (a batch that saw the cancel before starting doesn't count its items).
     """
     session = SessionFactory()
     try:
@@ -25,9 +32,21 @@ def finalize_job(job_id: str) -> None:
         if not job:
             logger.error(f"Job {job_id} not found in finalize_job")
             return
-        if job.status in (JOB_STATUS_CANCELLED, JOB_STATUS_COMPLETED):
+        if job.status == JOB_STATUS_COMPLETED:
             return
+        unreported = _unreported_items(job)
+        if job.status == JOB_STATUS_CANCELLED:
+            job.cancelled_count = (job.cancelled_count or 0) + unreported
+            if job.completed_at is None:
+                job.completed_at = utcnow()
+            session.commit()
+            return
+        if unreported:
+            job.error_count = (job.error_count or 0) + unreported
+            job.error = job.error or f"{unreported} item(s) were never processed: a worker stopped unexpectedly"
+            logger.warning(f"Job {job_id}: {unreported} item(s) unreported by its batches; counted as errors")
         job.status = JOB_STATUS_COMPLETED
+        job.completed_at = utcnow()
         session.commit()
         logger.info(
             f"Job {job_id} completed: {job.completed_count} completed, "
@@ -40,6 +59,12 @@ def finalize_job(job_id: str) -> None:
     finally:
         session.close()
         SessionFactory.remove()
+
+
+def _unreported_items(job: Job) -> int:
+    """Items no batch counted as completed, errored or cancelled."""
+    reported = (job.completed_count or 0) + (job.error_count or 0) + (job.cancelled_count or 0)
+    return max((job.task_count or 0) - reported, 0)
 
 
 @task_queue.task()

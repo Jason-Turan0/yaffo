@@ -14,6 +14,11 @@ point: it stays alive to recover crashed children. Responsibilities:
 - **Supervisor**: detect a child that exited (incl. SIGSEGV) and respawn it; a
   crash mid-task is recorded and the composition is still advanced so a poisoned
   batch can't wedge a chord forever.
+
+Whenever a task is recorded as errored (crash or unhandled exception) the host
+calls its `on_task_failed(task_id, name, error)` hook, if given, so the app can
+finish whatever state the task left behind (yaffo: the run's Job). A failing hook
+is logged and never takes the host down.
 """
 from __future__ import annotations
 
@@ -23,8 +28,9 @@ import os
 import queue as _queue
 import signal
 import time
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
+from yaffo.background_tasks.task_failures import on_task_failed as record_failed_run_job
 from yaffo.taskq.core import on_task_finished
 from yaffo.taskq.signatures import PRIORITY_INTERACTIVE
 from yaffo.taskq.cron import CronSpec
@@ -58,8 +64,10 @@ class Host:
         max_tasks_per_worker: int,
         bootstrap: str = DEFAULT_BOOTSTRAP,
         queue_ref: str = DEFAULT_QUEUE_REF,
+        on_task_failed: Optional[Callable[[str, str, str], None]] = None,
     ):
         self.store = Store(filename)
+        self.on_task_failed = on_task_failed
         self.periodic = periodic
         self.num_workers = num_workers
         self.max_tasks_per_worker = max_tasks_per_worker
@@ -156,12 +164,12 @@ class Host:
                     self._advance(row, payload)
                 else:
                     logger.error(f"task {row.name}[{task_id}] failed:\n{payload}")
-                    self.store.mark_error(task_id, str(payload))
+                    self._mark_error(row, str(payload))
                     self._advance(row, None)
             except Exception:
                 logger.exception(f"failed to record result for {row.name}[{task_id}]")
                 try:
-                    self.store.mark_error(task_id, "host failed to record result")
+                    self._mark_error(row, "host failed to record result")
                 except Exception:
                     logger.exception(f"could not even mark {task_id} errored")
 
@@ -175,12 +183,22 @@ class Host:
                     f"worker {worker_id} died (exitcode={w.proc.exitcode}) running "
                     f"{row.name}[{row.id}]; recording failure and advancing"
                 )
-                self.store.mark_error(row.id, f"worker crashed (exitcode={w.proc.exitcode})")
+                self._mark_error(row, f"worker crashed (exitcode={w.proc.exitcode})")
                 if w.lock_name:
                     self.store.release_lock(w.lock_name)
                 self._advance(row, None)
             del self.workers[worker_id]
             self._spawn(worker_id)
+
+    def _mark_error(self, row: TaskRow, error: str) -> None:
+        """Record the task as errored, then let the app finish what it left behind."""
+        self.store.mark_error(row.id, error)
+        if self.on_task_failed is None:
+            return
+        try:
+            self.on_task_failed(row.id, row.name, error)
+        except Exception:
+            logger.exception(f"on_task_failed hook failed for {row.name}[{row.id}]")
 
     def _advance(self, row: TaskRow, result: Any) -> None:
         try:
@@ -264,6 +282,7 @@ def main() -> None:
         periodic=PERIODIC_TASKS,
         num_workers=args.workers,
         max_tasks_per_worker=args.recycle,
+        on_task_failed=record_failed_run_job,
     ).start()
 
 

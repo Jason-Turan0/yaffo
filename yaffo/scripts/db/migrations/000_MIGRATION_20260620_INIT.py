@@ -156,6 +156,7 @@ def migrate(conn: sqlite3.Connection) -> None:
             error_count INTEGER DEFAULT 0,
             started_at TIMESTAMP,
             completed_at TIMESTAMP,
+            estimated_completed_at TIMESTAMP,
             error TEXT,
             message TEXT,
             job_data TEXT,

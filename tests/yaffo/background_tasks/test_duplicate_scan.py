@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import pytest
 
 from yaffo.background_tasks.tasks import duplicate_scan as mod
-from yaffo.db.models import JOB_STATUS_PENDING
+from yaffo.db.models import JOB_STATUS_PENDING, Automation
 
 pytestmark = pytest.mark.unit
 
@@ -59,14 +59,16 @@ def test_empty_automation_scan_records_run(monkeypatch):
 
     class FakeFactory:
         def __call__(self):
-            return SimpleNamespace(get=lambda model, automation_id: automation, close=lambda: None)
+            return SimpleNamespace(get=lambda model, key: automation if model is Automation else None,
+                                   close=lambda: None)
 
         def remove(self):
             pass
 
     monkeypatch.setattr(mod, "SessionFactory", FakeFactory())
-    monkeypatch.setattr(mod, "_open_scan_job", lambda session, automation_id, ids: None)
-    monkeypatch.setattr(mod, "record_run", lambda session, target, work, media_item_ids: calls.append((target, media_item_ids)))
+    monkeypatch.setattr(mod, "_open_scan_job", lambda session, automation_id, ids, job_id: None)
+    monkeypatch.setattr(mod, "record_run",
+                        lambda session, target, work, media_item_ids, job_id: calls.append((target, media_item_ids)))
     monkeypatch.setattr(mod, "find_duplicates_task", lambda **kwargs: pytest.fail("empty scan enqueued hashing"))
 
     mod.duplicate_scan_task.fn(automation_id=7, media_item_ids=[])

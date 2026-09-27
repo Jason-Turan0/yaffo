@@ -75,6 +75,25 @@ def test_imports_valid_files_creates_photo_rows(db_for_import, tmp_path):
         assert job.status == JOB_STATUS_RUNNING  # PENDING -> RUNNING on first batch
 
 
+def test_batches_stamp_the_earliest_start_and_refresh_the_estimate(db_for_import, tmp_path):
+    engine = db_for_import
+    files = _make_files(tmp_path, 4)
+    _make_job(engine, "job-eta", status=JOB_STATUS_PENDING, task_count=8)
+
+    import_photo_task("job-eta", files[:2])
+    with Session(engine) as s:
+        first = s.query(Job).filter_by(id="job-eta").one()
+        first_started, first_eta = first.started_at, first.estimated_completed_at
+    import_photo_task("job-eta", files[2:])
+
+    with Session(engine) as s:
+        job = s.query(Job).filter_by(id="job-eta").one()
+        assert first_started is not None and first_eta is not None
+        assert job.started_at == first_started  # a later batch doesn't move the start
+        assert job.estimated_completed_at != first_eta  # recomputed on the second tick
+        assert job.estimated_completed_at > job.started_at
+
+
 def test_missing_files_counted_as_errors_not_imported(db_for_import, tmp_path):
     engine = db_for_import
     present = _make_files(tmp_path, 2)

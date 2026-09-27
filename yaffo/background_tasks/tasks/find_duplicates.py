@@ -6,11 +6,13 @@ import imagehash
 
 from yaffo.common import MEDIA_TYPE_VIDEO, media_type_for_path
 from yaffo.db.models import Job, JobResult, MediaItem, JOB_STATUS_CANCELLED, JOB_STATUS_RUNNING, JOB_STATUS_PENDING, \
-    JOB_STATUS_COMPLETED, EVENT_DUPLICATES_FOUND
+    EVENT_DUPLICATES_FOUND
 from yaffo.logging_config import get_logger
 from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import emit_event
-from yaffo.background_tasks.utils import SessionFactory, get_job_status
+from yaffo.background_tasks.utils import SessionFactory, get_job_status, record_job_stopped
+from yaffo.db.repositories.job_repository import earliest_started_at, finished_status, refresh_estimated_completion
+from yaffo.utils.time import utcnow
 from yaffo.utils.image import image_from_path
 from yaffo.utils.index_video import extract_poster
 
@@ -84,12 +86,14 @@ def find_duplicates_task(job_id: str, file_paths: list[str], task=None):
 
     job_status = get_job_status(job_id)
     if job_status == JOB_STATUS_CANCELLED:
+        record_job_stopped(job_id)
         return
 
     session = SessionFactory()
     try:
         if job_status == JOB_STATUS_PENDING:
-            session.query(Job).filter_by(id=job_id).update({'status': JOB_STATUS_RUNNING})
+            session.query(Job).filter_by(id=job_id).update({
+                'status': JOB_STATUS_RUNNING, 'started_at': earliest_started_at(utcnow())})
             session.commit()
     except Exception as e:
         logger.error(f"Error updating job status: {e}")
@@ -124,6 +128,7 @@ def find_duplicates_task(job_id: str, file_paths: list[str], task=None):
                         'completed_count': processed_count,
                         'error_count': error_count,
                     })
+                    refresh_estimated_completion(session, job_id)
                     session.commit()
                 except Exception as e:
                     logger.error(f"Error updating job progress: {e}")
@@ -157,8 +162,10 @@ def find_duplicates_task(job_id: str, file_paths: list[str], task=None):
             'completed_count': processed_count,
             'error_count': error_count,
             'cancelled_count': cancel_count,
-            'status': JOB_STATUS_COMPLETED
+            'status': finished_status(),
+            'completed_at': utcnow(),
         })
+        refresh_estimated_completion(session, job_id)
         session.commit()
         if duplicate_groups:
             event_groups = _resolve_group_media_item_ids(session, duplicate_groups)

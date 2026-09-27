@@ -2,6 +2,8 @@ import time
 from typing import Sequence, Callable, TypeVar
 from sqlalchemy.orm import Session
 from yaffo.db.models import Job
+from yaffo.db.repositories.job_repository import estimate_completion, is_job_cancelled
+from yaffo.utils.time import utcnow
 
 T = TypeVar('T')
 
@@ -21,13 +23,22 @@ class ProgressReporter:
         job.completed_count = completed_count
         job.cancelled_count = cancelled
         job.error_count = error_count
+        job.estimated_completed_at = estimate_completion(
+            job.started_at, task_count, completed_count, error_count, cancelled, utcnow())
         self.session.commit()
+
+    def is_cancelled(self) -> bool:
+        return is_job_cancelled(self.session, self.job_id)
 
     def run_with_progress(self,
             items: Sequence[T],
             item_processor: Callable[[T], None],
             percentage: float = 0.05,
-            time_interval_seconds: float = 30.0):
+            time_interval_seconds: float = 30.0,
+            cancel_check_every: int = 10) -> bool:
+        """Run `item_processor` over `items`, reporting progress on the Job. Stops early
+        when the Job is cancelled, counting the unprocessed items as cancelled. Returns
+        False when it stopped for a cancel, True when it processed every item."""
         completed = 0
         errors = 0
         processed = 0
@@ -36,6 +47,9 @@ class ProgressReporter:
         last_report_time = time.monotonic()
         self.progress_update(total_tasks, completed, 0, errors)
         for item in items:
+            if processed > 0 and processed % cancel_check_every == 0 and self.is_cancelled():
+                self.progress_update(total_tasks, completed, total_tasks - processed, errors)
+                return False
             try:
                 item_processor(item)
                 completed += 1
@@ -48,3 +62,4 @@ class ProgressReporter:
                 (current_time - last_report_time) >= time_interval_seconds):
                 self.progress_update(total_tasks, completed, 0, errors)
                 last_report_time = current_time
+        return True

@@ -9,6 +9,7 @@ from yaffo.db.models import (
     AssistantConversation,
 )
 from yaffo.common import DB_PATH
+from yaffo.db.repositories.job_repository import mark_job_stopped
 from yaffo.logging_config import get_logger
 from yaffo.themes import _setting_name, _theme_from_json
 from yaffo.utils.settings import get_thumbnail_dir
@@ -32,6 +33,18 @@ def get_job_status(job_id: str) -> str:
     finally:
         session.close()
         SessionFactory.remove()
+
+def record_job_stopped(job_id: str) -> None:
+    """Mark a job's work as ended, for a task that returns early because its job
+    was cancelled before it started (see job_repository.mark_job_stopped)."""
+    session = SessionFactory()
+    try:
+        mark_job_stopped(session, job_id)
+        session.commit()
+    finally:
+        session.close()
+        SessionFactory.remove()
+
 
 def get_current_thumbnail_dir() -> Path | None:
     """Get the current status of a job."""

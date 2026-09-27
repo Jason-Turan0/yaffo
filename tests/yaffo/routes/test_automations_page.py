@@ -315,6 +315,120 @@ def test_schedule_scope_failure_appears_in_run_history(app, client):
     assert "Edit the trigger" in body
 
 
+def test_only_unfinished_runs_offer_cancel(app, client):
+    _add(app)
+    _add_job(app, id="running", name="a1", status="RUNNING", task_count=4, completed_count=1)
+    _add_job(app, id="done", name="a1", status="COMPLETED", task_count=1, completed_count=1)
+
+    body = client.get("/utilities/automations/a1/runs").get_data(as_text=True)
+
+    assert body.count('class="btn btn-danger btn-sm run-history-cancel"') == 1
+    assert "/jobs/running/cancel-run" in body and "/jobs/done/cancel-run" not in body
+
+
+def test_cancel_from_run_history_cancels_and_returns_the_row(app, client):
+    from yaffo.db.models import Job
+    _add(app)
+    _add_job(app, id="running", name="a1", status="RUNNING", task_count=4, completed_count=1)
+
+    resp = client.post("/jobs/running/cancel-run",
+                       data={"page": "/utilities/automations/a1", "show_label": "false"})
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert body.strip().startswith('<li class="run-history-row')
+    assert "Stopping" in body and "run-history-cancel" not in body  # its task hasn't stopped yet
+    with app.app_context():
+        job = db.session.get(Job, "running")
+        assert job.status == "CANCELLED"
+        job.completed_at = job.updated_at  # the task reaches its cancellation check
+        db.session.commit()
+
+    body = client.get("/utilities/automations/a1/runs").get_data(as_text=True)
+    assert "Cancelled" in body and "Stopping" not in body
+
+
+def test_cancel_from_run_history_leaves_a_finished_run_alone(app, client):
+    from yaffo.db.models import Job
+    _add(app)
+    _add_job(app, id="done", name="a1", status="COMPLETED", task_count=1, completed_count=1)
+
+    assert client.post("/jobs/done/cancel-run").status_code == 200
+    assert client.post("/jobs/missing/cancel-run").status_code == 404
+    with app.app_context():
+        assert db.session.get(Job, "done").status == "COMPLETED"
+
+
+def _sync_pipeline(app, import_status="COMPLETED", index_status="RUNNING", **index_kw):
+    """A started file sync (created at 10:00) and the import/index Jobs it queued."""
+    from datetime import datetime
+    at = datetime(2026, 9, 27, 10, 0)
+    _add(app, slug="sync", name="File sync", is_system=True, handler="file_sync")
+    _add_job(app, slug="sync", id="s1", name="file_sync", task_count=1, completed_count=1, created_at=at,
+             job_data=json.dumps({"outcome": "started", "indexed": 40, "removed": 0,
+                                  "import_job_id": "imp", "index_job_id": "idx"}))
+    _add_job(app, slug="sync", id="imp", name="import_photos", status=import_status, task_count=40,
+             completed_count=40, created_at=at)
+    _add_job(app, slug="sync", id="idx", name="index_photos", status=index_status, task_count=40,
+             created_at=at, **index_kw)
+
+
+def test_a_started_sync_row_shows_its_import_and_index_progress(app, client):
+    from datetime import timedelta
+    from yaffo.utils.time import utcnow
+    _sync_pipeline(app, completed_count=24, estimated_completed_at=utcnow() + timedelta(minutes=12, seconds=30))
+
+    body = client.get("/utilities/automations/sync/runs").get_data(as_text=True)
+
+    assert body.count('class="run-history-row') == 1  # import/index fold into the sync's row
+    assert "Running" in body and "60%" in body
+    assert "Indexing 40 new files" in body
+    assert "import done, indexing" in body
+    assert "about 13 minutes left" in body
+    assert "/jobs/s1/cancel-run" in body
+
+
+def test_a_finished_sync_pipeline_reads_its_outcome(app, client):
+    _sync_pipeline(app, index_status="COMPLETED", completed_count=37, error_count=3)
+
+    body = client.get("/utilities/automations/sync/runs").get_data(as_text=True)
+
+    assert "Completed with errors" in body
+    assert "run-history-cancel" not in body
+
+
+def test_cancelling_a_sync_row_cancels_the_work_it_started(app, client):
+    from yaffo.db.models import Job
+    _sync_pipeline(app, import_status="RUNNING", index_status="PENDING")
+
+    body = client.post("/jobs/s1/cancel-run").get_data(as_text=True)
+
+    assert "Stopping" in body and "run-history-cancel" not in body
+    with app.app_context():
+        assert db.session.get(Job, "imp").status == "CANCELLED"
+        assert db.session.get(Job, "idx").status == "CANCELLED"
+        assert db.session.get(Job, "s1").status == "COMPLETED"  # the sync itself had already finished
+
+
+def test_consecutive_in_sync_checks_collapse_into_one_row(app, client):
+    from datetime import datetime, timedelta
+    _add(app, slug="sync", name="File sync", is_system=True, handler="file_sync")
+    start = datetime(2026, 9, 27, 1, 0)
+    outcomes = ["in_sync", "in_sync", "no_folder_connected", "in_sync", "in_sync", "in_sync"]
+    for hour, outcome in enumerate(outcomes):
+        failed = outcome != "in_sync"
+        _add_job(app, slug="sync", id=f"r{hour}", name="file_sync", task_count=1,
+                 status="FAILED" if failed else "COMPLETED", error="No drive." if failed else None,
+                 created_at=start + timedelta(hours=hour), started_at=start + timedelta(hours=hour),
+                 job_data=json.dumps({"outcome": outcome}))
+
+    body = client.get("/utilities/automations/sync/runs").get_data(as_text=True)
+
+    assert body.count('class="run-history-row') == 3  # 3 checks, the failure, 2 checks
+    assert "checked 3 times since" in body and "checked 2 times since" in body
+    assert "Skipped: no media folder is connected" in body
+
+
 def test_run_now_nothing_to_run_400(app, client, monkeypatch):
     _add(app)
     monkeypatch.setattr(
@@ -1153,3 +1267,109 @@ def test_run_error_help_hidden_without_assistant_key(app, client):
     _add_job(app, id="help-run", status="FAILED", error="test")
     body = client.get("/utilities/automations/a1/runs").get_data(as_text=True)
     assert 'data-assistant-help' not in body
+
+
+def test_a_sync_row_reads_stopping_until_its_cancelled_work_stops(app, client):
+    """Scenario 24: after a cascade cancel the row reads Stopping while either linked
+    Job is still stopping, and Cancelled once both have."""
+    from datetime import datetime
+    from yaffo.db.models import Job
+    _sync_pipeline(app, import_status="CANCELLED", index_status="CANCELLED")
+
+    assert "Stopping" in client.get("/utilities/automations/sync/runs").get_data(as_text=True)
+
+    with app.app_context():
+        db.session.get(Job, "imp").completed_at = datetime(2026, 9, 27, 10, 1)
+        db.session.commit()
+    assert "Stopping" in client.get("/utilities/automations/sync/runs").get_data(as_text=True)  # index still stopping
+
+    with app.app_context():
+        db.session.get(Job, "idx").completed_at = datetime(2026, 9, 27, 10, 1)
+        db.session.commit()
+    body = client.get("/utilities/automations/sync/runs").get_data(as_text=True)
+    assert "Cancelled" in body and "Stopping" not in body
+
+
+def test_an_estimate_already_passed_does_not_promise_under_a_minute():
+    """Scenario 49: a stalled job's estimate slips into the past; the row shouldn't
+    keep saying "less than a minute left" indefinitely."""
+    from datetime import datetime, timedelta
+    from yaffo.routes.utilities.run_history import _eta_note
+    now = datetime(2026, 9, 27, 12, 0)
+    assert _eta_note(now + timedelta(seconds=30), now) == "less than a minute left"  # still ahead: fine
+    assert _eta_note(now - timedelta(minutes=10), now) != "less than a minute left"
+
+
+def test_a_sync_whose_import_failed_reads_failed(app, client):
+    """Scenario 52a: a failed stage makes the whole pipeline row Failed."""
+    _sync_pipeline(app, import_status="FAILED", index_status="COMPLETED")
+
+    body = client.get("/utilities/automations/sync/runs").get_data(as_text=True)
+
+    assert "Failed" in body and "run-history-cancel" not in body
+
+
+def test_a_sync_whose_linked_jobs_were_dismissed_falls_back_to_its_own_record(app, client):
+    """Scenario 52b: with the import/index Jobs dismissed, the row is the sync's own
+    record: Completed, with what it queued."""
+    from yaffo.db.models import Job
+    _sync_pipeline(app, index_status="COMPLETED")
+    with app.app_context():
+        for job_id in ("imp", "idx"):
+            db.session.delete(db.session.get(Job, job_id))
+        db.session.commit()
+
+    body = client.get("/utilities/automations/sync/runs").get_data(as_text=True)
+
+    assert body.count('class="run-history-row') == 1
+    assert "Completed" in body and "Indexing 40 new files" in body
+
+
+def test_cancel_route_keeps_show_label_and_drops_an_unsafe_page(app, client):
+    """Scenario 56: the re-rendered row keeps the list's show_label, and a page that
+    isn't an app path never reaches the markup."""
+    _add(app)
+    _add_job(app, id="running", name="find_duplicates", status="RUNNING", task_count=4, message="Scan")
+
+    labelled = client.post("/jobs/running/cancel-run",
+                           data={"page": "//evil.example/x", "show_label": "true"}).get_data(as_text=True)
+
+    assert "run-history-label" in labelled
+    assert "evil.example" not in labelled
+
+    _add_job(app, id="running2", name="find_duplicates", status="RUNNING", task_count=4, message="Scan")
+    unlabelled = client.post("/jobs/running2/cancel-run", data={"show_label": "maybe"}).get_data(as_text=True)
+    assert "run-history-label" not in unlabelled  # not a boolean: default off
+
+
+def test_saved_locale_translates_the_new_run_history_strings(app, client):
+    """Scenario 57: today's new run-history strings are translated like the rest."""
+    from datetime import timedelta
+    from yaffo.utils.time import utcnow
+    _sync_pipeline(app, completed_count=24, estimated_completed_at=utcnow() + timedelta(minutes=12))
+    client.post("/settings/locale", data={"locale": "de"})
+
+    body = client.get("/utilities/automations/sync/runs").get_data(as_text=True)
+
+    assert "import done, indexing" not in body
+    assert "minutes left" not in body
+
+
+@pytest.mark.parametrize(("seconds_left", "expected"), [
+    (30, "less than a minute left"),
+    (59 * 60, "about 59 minutes left"),
+    (60 * 60, "about 1 hour left"),
+    (62 * 60, "about 1 hour left"),          # 62 min -> nearest 5 is 60
+    (63 * 60, "about 1 h 5 min left"),
+    (95 * 60, "about 1 h 35 min left"),
+    (150 * 60, "about 2 h 30 min left"),     # no round-half-to-even surprise
+    (121 * 60, "about 2 hours left"),
+    (598 * 60, "about 10 hours left"),       # rounds up into whole hours
+    (600 * 60, "about 10 hours left"),
+    (659 * 60, "about 10 hours left"),       # past ten hours: whole hours, rounded down
+])
+def test_time_left_reads_in_hours_and_minutes(seconds_left, expected):
+    from datetime import datetime, timedelta
+    from yaffo.routes.utilities.run_history import _eta_note
+    now = datetime(2026, 9, 27, 12, 0)
+    assert _eta_note(now + timedelta(seconds=seconds_left), now) == expected

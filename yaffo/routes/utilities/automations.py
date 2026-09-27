@@ -46,9 +46,12 @@ from yaffo.distance_units import (
 )
 from yaffo.site_agents import llm_config
 from yaffo.routes.utilities.common import automations_sidebar_context
-from yaffo.routes.utilities.run_history import RunView, run_view
+from yaffo.routes.utilities.run_history import RunView, run_views
 
 _MAX_BASE_SLUG_LENGTH = 30
+
+# Rows in an automation's run history.
+RUN_HISTORY_ROWS = 10
 
 # The queue task a file-sync run executes (tasks/file_sync.py).
 FILE_SYNC_TASK = "file_sync_task"
@@ -97,7 +100,10 @@ class AutomationRunStarted:
 def _recent_runs(automation: Automation | None) -> list[RunView]:
     if automation is None:
         return []
-    return [run_view(j) for j in repo.get_recent_jobs(db.session, automation.id)]
+    # Read further back than the rows shown: a started sync's import/index Jobs fold
+    # into its row and repeated in-sync checks collapse, so jobs outnumber rows.
+    jobs = repo.get_recent_jobs(db.session, automation.id, limit=RUN_HISTORY_ROWS * 6)
+    return run_views(db.session, jobs, limit=RUN_HISTORY_ROWS)
 
 
 def _slugify(name: str) -> str:

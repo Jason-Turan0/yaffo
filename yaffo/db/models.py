@@ -225,6 +225,9 @@ class Job(db.Model):
 
     started_at = db.Column(db.DateTime)
     completed_at = db.Column(db.DateTime)
+    # Projected finish, recomputed on every progress tick from the rate since
+    # started_at (db/repositories/job_repository.py). NULL until there's a rate.
+    estimated_completed_at = db.Column(db.DateTime)
 
     error = db.Column(db.Text)
     message = db.Column(db.Text)
@@ -251,6 +254,8 @@ class Job(db.Model):
             'progress': progress,
             'started_at': self.started_at.isoformat() if self.started_at else None,
             'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+            'estimated_completed_at': (
+                self.estimated_completed_at.isoformat() if self.estimated_completed_at else None),
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'error': self.error,
             'message': self.message,

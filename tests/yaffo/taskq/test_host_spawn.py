@@ -43,6 +43,29 @@ def boom():
 @tq.task()
 def bad_return():
     return {1, 2, 3}  # a set: not JSON-serializable
+
+@tq.task(context=True)
+def raise_mid_run(task=None):
+    # Open a run Job keyed by this task's id, then raise outside any handling.
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+    from yaffo.db.repositories.job_repository import open_run_job
+    engine = create_engine("sqlite:///" + os.environ["TASKQ_APP_DB"])
+    with Session(engine) as session:
+        open_run_job(session, task.id, name="probe_run")
+    raise RuntimeError("database is locked")
+
+@tq.task(context=True)
+def crash_mid_run(task=None):
+    # Open a run Job keyed by this task's id, as the automation tasks do, then die
+    # the way a native crash in the ML code would.
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+    from yaffo.db.repositories.job_repository import open_run_job
+    engine = create_engine("sqlite:///" + os.environ["TASKQ_APP_DB"])
+    with Session(engine) as session:
+        open_run_job(session, task.id, name="probe_run")
+    os._exit(139)
 '''
 
 
@@ -65,6 +88,13 @@ def probe(tmp_path, monkeypatch):
     monkeypatch.syspath_prepend(str(tmp_path))
     monkeypatch.setenv("TASKQ_DB", str(db))
     monkeypatch.setenv("TASKQ_OUT", str(out))
+    app_db = tmp_path / "app.db"
+    from sqlalchemy import create_engine
+    from yaffo.db import db as app_models
+    app_engine = create_engine(f"sqlite:///{app_db}")
+    app_models.metadata.create_all(app_engine)
+    app_engine.dispose()
+    monkeypatch.setenv("TASKQ_APP_DB", str(app_db))
 
     # drop any cached import so the test process picks up the env-bound module
     sys.modules.pop("taskq_probe", None)
@@ -97,8 +127,9 @@ def _run_until(host, predicate, timeout=20.0):
         host.shutdown()
 
 
-def _host(db):
+def _host(db, on_task_failed=None):
     return Host(
+        on_task_failed=on_task_failed,
         filename=str(db),
         periodic=[],
         num_workers=2,
@@ -157,3 +188,59 @@ def test_non_json_return_is_a_clean_failure(probe):
 
     assert _task_status(db, res.id) == "error"  # reported as a failure, not a host crash
     assert len(host.workers) == 2               # host survived, pool intact
+
+
+def test_a_worker_crash_does_not_leave_its_run_job_running(probe, tmp_path):
+    """Scenario 32: a worker that dies mid-run (host still up) has its task marked
+    error and never retried -- not now, not on the next host start. The host's
+    failure hook fails its run Job, so it isn't left RUNNING forever."""
+    mod, db, out = probe
+    res = mod.crash_mid_run()
+
+    host = _host(db, on_task_failed=_app_db_hook(tmp_path))
+    assert _run_until(host, lambda: _task_status(db, res.id) == "error"), _task_status(db, res.id)
+    assert _host(db).store.requeue_running() == 0  # a later host start doesn't retry it either
+
+    assert _job(tmp_path, res.id) == ("FAILED", "worker crashed (exitcode=139)")
+
+
+def test_a_task_that_raises_does_not_leave_its_run_job_running(probe, tmp_path):
+    """The other way a task errors without finishing its Job: an exception its own
+    code didn't handle (e.g. a locked database outside record_run's try)."""
+    mod, db, out = probe
+    res = mod.raise_mid_run()
+
+    host = _host(db, on_task_failed=_app_db_hook(tmp_path))
+    assert _run_until(host, lambda: (_job(tmp_path, res.id) or (None,))[0] == "FAILED"), _job(tmp_path, res.id)
+
+    assert _job(tmp_path, res.id) == ("FAILED", "RuntimeError: database is locked")
+
+
+def test_a_failing_hook_does_not_take_the_host_down(probe):
+    mod, db, out = probe
+    res = mod.boom()
+    mod.marker("after")
+
+    def broken_hook(task_id, name, error):
+        raise RuntimeError("hook bug")
+
+    host = _host(db, on_task_failed=broken_hook)
+    ok = _run_until(host, lambda: _recorded(out) >= {"after"} and _task_status(db, res.id) == "error")
+    assert ok, (_recorded(out), _task_status(db, res.id))
+
+
+def _app_db_hook(tmp_path):
+    """yaffo's failure hook, bound to the probe's app db instead of the real one."""
+    from functools import partial
+    from sqlalchemy import create_engine
+    from yaffo.background_tasks.task_failures import record_task_failure
+    return partial(record_task_failure, create_engine(f"sqlite:///{tmp_path / 'app.db'}"))
+
+
+def _job(tmp_path, job_id):
+    import sqlite3
+    conn = sqlite3.connect(tmp_path / "app.db")
+    try:
+        return conn.execute("SELECT status, error FROM jobs WHERE id=?", (job_id,)).fetchone()
+    finally:
+        conn.close()

@@ -235,3 +235,69 @@ def test_reindex_resets_the_rows_and_deletes_faces_thumbnails_and_assignments(im
         assert person.stage_embeddings == []
 
     assert not thumbnail.exists()  # unlinked after the commit
+
+
+def test_a_pipeline_cancelled_before_it_runs_ends_cancelled_not_stopping(immediate_db, tmp_path, monkeypatch):
+    """Scenario 23: cancel both Jobs as the pipeline starts. Every batch bails out,
+    each chord's callback still fires, and both Jobs end CANCELLED with completed_at,
+    so their rows read Cancelled, not Stopping."""
+    import yaffo.background_tasks.tasks.import_photo as import_photo_mod
+    from yaffo.db.models import JOB_STATUS_CANCELLED
+    from yaffo.routes.utilities.run_history import run_view
+    engine, _ = immediate_db
+    files = _make_files(tmp_path, 3)
+    real_status = import_photo_mod.get_job_status
+
+    def cancel_everything(job_id):
+        with _session(engine) as s:
+            for job in s.query(Job).all():
+                job.status = JOB_STATUS_CANCELLED
+            s.commit()
+        return real_status(job_id)
+    monkeypatch.setattr(import_photo_mod, "get_job_status", cancel_everything)
+
+    jobs = enqueue_index_jobs(Session(engine), files)
+
+    with _session(engine) as s:
+        for job_id in (jobs.import_job_id, jobs.index_job_id):
+            job = s.get(Job, job_id)
+            assert job.status == JOB_STATUS_CANCELLED and job.completed_at is not None
+            assert run_view(job).status_label == "Cancelled"
+        assert s.query(MediaItem).count() == 0
+
+
+def test_finalize_after_a_crashed_batch_accounts_for_every_item(immediate_db):
+    """Scenario 33: when a chord member's worker crashes, the queue marks it errored
+    and still fires the callback, so finalize_job runs with that batch's items never
+    counted. The finished Job should still account for every item (the missing ones
+    as errors), not read Completed at 60%."""
+    engine, _ = immediate_db
+    with _session(engine) as s:
+        s.add(Job(id="idx", name="index_photos", status="RUNNING", task_count=20,
+                  completed_count=12, error_count=0, cancelled_count=0))  # one 8-item batch crashed
+        s.commit()
+
+    complete_job.finalize_job("idx")
+
+    with _session(engine) as s:
+        job = s.get(Job, "idx")
+        assert job.completed_count + job.error_count + job.cancelled_count == job.task_count
+        assert (job.status, job.error_count) == ("COMPLETED", 8)  # reads "Completed with errors"
+        assert "never processed" in job.error
+
+
+def test_finalize_counts_a_cancelled_jobs_unreported_items_as_cancelled(immediate_db):
+    """Batches that saw the cancel before starting don't count their items, so the
+    cancelled Job's unreported items become cancelled, not errors."""
+    engine, _ = immediate_db
+    with _session(engine) as s:
+        s.add(Job(id="idx", name="index_photos", status="CANCELLED", task_count=20,
+                  completed_count=5, error_count=0, cancelled_count=3))
+        s.commit()
+
+    complete_job.finalize_job("idx")
+
+    with _session(engine) as s:
+        job = s.get(Job, "idx")
+        assert (job.completed_count, job.error_count, job.cancelled_count) == (5, 0, 15)
+        assert job.status == "CANCELLED" and job.completed_at is not None

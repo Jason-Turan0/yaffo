@@ -26,6 +26,7 @@ from yaffo.background_tasks.events import EventContext, emit_event, event_chain_
 from yaffo.background_tasks.progress_reporter import ProgressReporter
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
+from yaffo.db.repositories.job_repository import run_job_id
 from yaffo.db.models import (
     Automation,
     EVENT_MEDIA_MODIFIED,
@@ -127,9 +128,10 @@ def _throttled_geocoder() -> Callable[[float, float], Optional[str]]:
     return geocode
 
 
-@task_queue.task()
+@task_queue.task(context=True)
 def assign_location_name_automation_task(
-    automation_id: int, media_item_ids: list[int], origin_automation_ids: list[int] | None = None
+    automation_id: int, media_item_ids: list[int], origin_automation_ids: list[int] | None = None,
+    task=None,
 ):
     """Assign location names to the given photos. Enqueued by the
     assign_location_name handler on a photo_indexed event; config is read live. The
@@ -166,7 +168,7 @@ def assign_location_name_automation_task(
 
         # Scope the run so the photo_modified it emits carries this automation (loop guard).
         with event_chain_scope(origin_automation_ids, automation_id):
-            record_run(session, automation, work, media_item_ids=media_item_ids)
+            record_run(session, automation, work, media_item_ids=media_item_ids, job_id=run_job_id(task))
     finally:
         session.close()
         SessionFactory.remove()
