@@ -1,0 +1,3 @@
+{# One run-history row, re-rendered after its Cancel button (jobs.run_cancel). #}
+{% from "components/run_history.html" import run_history_row with context %}
+{{ run_history_row(run, help_page, show_label) }}
