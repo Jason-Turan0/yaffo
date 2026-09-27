@@ -59,9 +59,12 @@ run.
 
 The **Index Photos** page shows the import or index run in progress as a job
 card, with its progress, any error count, and **Cancel** when cancellation is
-available. Finished runs move to the page's **Run history**, each with a status
-chip: **Completed**, **Completed with errors** when some files failed,
-**Cancelled**, or **Failed**.
+available. After you cancel, the run shows **Stopping** until it finishes the
+item it's working on, then **Cancelled**. Finished runs move to the page's
+**Run history**, each with a status chip: **Completed**, **Completed with
+errors** when some files failed, **Cancelled**, or **Failed**. A run that is
+still in progress has **Cancel** in the run history too, and a run's technical
+error, when it has one, is under **Details**.
 
 A failed run, or one with errors, has an **Ask Yaffo** button that opens the
 [assistant](../start-here/ask-yaffo.md) with that run attached, so it can look up

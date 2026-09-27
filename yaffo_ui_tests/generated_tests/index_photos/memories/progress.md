@@ -46,3 +46,12 @@
   `static/base.css`: `[hidden] { display: none !important; }` (safe: all visibility
   toggling in the app drives the attribute itself; no CSS anywhere styles [hidden]
   visible). If the Sync-button-hidden assertion regresses, check that reset first.
+- Files that couldn't be indexed (media status FAILED, see utils/index_errors.py):
+  `#index-failures` section, only rendered when there are any; rows in
+  `.index-failure-list li` (link to `/media/view/<id>`, `.index-failure-folder`,
+  `.index-failure-reason` — translated from the code). `#retry-failed-button`
+  (Retry all) POSTs `/utilities/index-photos/retry-failed` with no confirm dialog,
+  toasts, then reloads. The scan skips FAILED files whose size:mtime is unchanged,
+  so they're NOT in the scan's unindexed count. To stage one in the sandbox, set a
+  row's status to FAILED with index_error/index_error_detail/index_failed_signature
+  (direct DB write is fine in setup, per the no-routing-around-bugs rule).
