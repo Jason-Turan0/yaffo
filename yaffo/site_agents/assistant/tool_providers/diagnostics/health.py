@@ -25,6 +25,7 @@ DOC_FACES = "guide/reference-maintenance/troubleshooting/faces-stuck-after-assig
 DOC_DATES = "guide/reference-maintenance/troubleshooting/photos-wrong-year.md"
 DOC_SYSTEM = "guide/reference-maintenance/settings.md#system-information"
 DOC_AUTOMATIONS = "guide/create-customize/automations.md"
+DOC_INDEXING = "guide/library-basics/indexing-library.md"
 
 # A drive with less free space than this is almost full.
 LOW_SPACE_FRACTION = 0.05
@@ -178,6 +179,21 @@ def check_dates(implausible: int, undated: int, total: int) -> list[Finding]:
             DOC_DATES,
         ))
     return findings or [_ok("dates", "Dates look plausible.")]
+
+
+def check_index_failures(failed_by_code: dict[str, int]) -> list[Finding]:
+    """Items whose indexing failed permanently (status FAILED), by reason code."""
+    total = sum(failed_by_code.values())
+    if not total:
+        return [_ok("index_failures", "No files failed to index.")]
+    reasons = ", ".join(f"{code}: {n}" for code, n in sorted(failed_by_code.items(), key=lambda kv: -kv[1]))
+    return [Finding(
+        "index_failures", WARNING,
+        f"{total} file(s) couldn't be indexed ({reasons}). They show in the library without dates, "
+        "locations, faces or labels; file sync skips them until they change. After fixing the files, "
+        "Retry all on Index Photos tries again.",
+        DOC_INDEXING,
+    )]
 
 
 # ---- jobs and the task queue -------------------------------------------

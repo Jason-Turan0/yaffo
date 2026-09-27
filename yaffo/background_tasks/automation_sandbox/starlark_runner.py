@@ -35,6 +35,10 @@ class RunLimits:
 
 DEFAULT_LIMITS = RunLimits()
 
+# Errors the sandbox returns for its limits (automation_runs maps them to problem codes).
+TIMEOUT_ERROR = "Sandbox wall-clock time limit exceeded"
+HOST_CALL_LIMIT_ERROR = "Sandbox host-call limit exceeded"
+
 
 @dataclass(frozen=True)
 class StarlarkResult:
@@ -42,6 +46,11 @@ class StarlarkResult:
     value: Any = None
     output: list[str] = field(default_factory=list)
     error: str | None = None
+    cancelled: bool = False
+
+
+class SandboxCancelled(Exception):
+    """The run's `should_cancel` reported a cancel; the evaluator is killed."""
 
 
 def validate_starlark(code: str, *, filename: str = "automation.star") -> str | None:
@@ -74,6 +83,8 @@ def run_starlark(
     functions: dict[str, Callable[..., Any]] | None = None,
     filename: str = "automation.star",
     limits: RunLimits = DEFAULT_LIMITS,
+    should_cancel: Callable[[], bool] | None = None,
+    cancel_poll_seconds: float = 1.0,
 ) -> StarlarkResult:
     """Kill runaway evaluation; return failures and partial output as data.
 
@@ -81,6 +92,10 @@ def run_starlark(
     to finish on the owning thread; no further calls run after the deadline. Host
     I/O therefore still needs its own timeouts (killing a DB write mid-commit is
     unsafe). The evaluator itself is always killed at the deadline.
+
+    `should_cancel` is polled on the owning thread at most every
+    `cancel_poll_seconds`, between messages, so a cancel never interrupts a host
+    call; a cancelled run kills the evaluator and returns `cancelled=True`.
     """
     functions = functions or {}
     output: list[str] = []
@@ -91,6 +106,7 @@ def run_starlark(
     timer = None
     expired = threading.Event()
     deadline = time.monotonic() + limits.timeout_seconds
+    next_cancel_check = time.monotonic() + cancel_poll_seconds
     env = {**os.environ, "YAFFO_ROLE": "starlark"}
     command = [sys.executable] if getattr(sys, "frozen", False) else [
         sys.executable, "-m", "yaffo.starlark_worker"]
@@ -105,6 +121,14 @@ def run_starlark(
             raise ValueError("Sandbox message size limit exceeded")
         proc.stdin.write(encoded)
         proc.stdin.flush()
+
+    def check_cancel() -> None:
+        nonlocal next_cancel_check
+        if should_cancel is None or time.monotonic() < next_cancel_check:
+            return
+        next_cancel_check = time.monotonic() + cancel_poll_seconds
+        if should_cancel():
+            raise SandboxCancelled()
 
     def timeout() -> None:
         expired.set()
@@ -128,14 +152,19 @@ def run_starlark(
         while True:
             remaining = deadline - time.monotonic()
             if remaining <= 0 or expired.is_set():
-                raise TimeoutError("Sandbox wall-clock time limit exceeded")
+                raise TimeoutError(TIMEOUT_ERROR)
+            wait = remaining if should_cancel is None else min(remaining, cancel_poll_seconds)
             try:
-                message = messages.get(timeout=remaining)
+                message = messages.get(timeout=wait)
             except queue.Empty:
-                raise TimeoutError("Sandbox wall-clock time limit exceeded") from None
+                if wait < remaining:
+                    check_cancel()
+                    continue
+                raise TimeoutError(TIMEOUT_ERROR) from None
+            check_cancel()
             if message is None:
                 if expired.is_set():
-                    raise TimeoutError("Sandbox wall-clock time limit exceeded")
+                    raise TimeoutError(TIMEOUT_ERROR)
                 raise RuntimeError("Sandbox interpreter exited without a result")
             if isinstance(message, Exception):
                 raise message
@@ -143,7 +172,7 @@ def run_starlark(
             if kind == "call":
                 calls += 1
                 if calls > limits.max_host_calls:
-                    raise ValueError("Sandbox host-call limit exceeded")
+                    raise ValueError(HOST_CALL_LIMIT_ERROR)
                 name = message["name"]
                 if name not in functions:
                     raise ValueError("Unknown sandbox host function")
@@ -153,7 +182,7 @@ def run_starlark(
                     send({"error": str(exc)})
                 else:
                     if expired.is_set() or time.monotonic() >= deadline:
-                        raise TimeoutError("Sandbox wall-clock time limit exceeded")
+                        raise TimeoutError(TIMEOUT_ERROR)
                     send({"value": value})
             elif kind == "print":
                 line = message["text"]
@@ -166,8 +195,10 @@ def run_starlark(
                 return StarlarkResult(message["success"], message.get("value"), output, message.get("error"))
             else:
                 raise ValueError("Invalid sandbox message")
+    except SandboxCancelled:
+        return StarlarkResult(False, output=output, error="Cancelled", cancelled=True)
     except Exception as exc:
-        error = "Sandbox wall-clock time limit exceeded" if expired.is_set() else str(exc)
+        error = TIMEOUT_ERROR if expired.is_set() else str(exc)
         return StarlarkResult(False, output=output, error=error)
     finally:
         if timer is not None:

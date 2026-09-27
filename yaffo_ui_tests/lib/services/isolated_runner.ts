@@ -289,7 +289,12 @@ export const provisionInstanceData = (options: ProvisionOptions): void => {
         });
     } catch (e) {
         console.error(`   ⚠️ Warning: ${seedScript} failed: ${e}`);
-        if (strictSeed) throw e;
+        if (strictSeed) {
+            // Don't leave the empty yaffo.db behind: a later --preseeded run (or a
+            // CI cache save) would otherwise serve it as a valid seed.
+            rmSync(tempDir, {recursive: true, force: true});
+            throw e;
+        }
     }
 };
 
@@ -510,12 +515,15 @@ export const buildSeedCache = (options: {withPeer?: boolean; docsFixture?: boole
     }
     const primaryDir = seedCacheDir("primary");
     rmSync(primaryDir, {recursive: true, force: true});
+    // Strict: a failed seed throws (non-zero exit), so CI caches nothing rather
+    // than an empty database every suite would then restore.
     provisionInstanceData({
         label: "A",
         tempDir: primaryDir,
         fixtureDir: PRIMARY_FIXTURE_DIR,
         seedProfile: "bennett",
         includeVideos: true,
+        strictSeed: true,
     });
     if (!withPeer) {
         return {primary: primaryDir};
@@ -527,6 +535,7 @@ export const buildSeedCache = (options: {withPeer?: boolean; docsFixture?: boole
         tempDir: peerDir,
         fixtureDir: PEER_FIXTURE_DIR,
         seedProfile: "obama",
+        strictSeed: true,
     });
     return {primary: primaryDir, peer: peerDir};
 };

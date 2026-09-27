@@ -1,8 +1,6 @@
-"""Assistant maintenance functions and the legacy library-scan task. Queue calls
+"""Assistant maintenance functions and the file-sync run. Queue calls
 are patched; these tests never touch the real task queue."""
 import json
-from datetime import timedelta
-from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine
@@ -10,7 +8,6 @@ from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_sandbox import automation_actions
 from yaffo.background_tasks.automation_sandbox import maintenance_actions as maintenance
-from yaffo.background_tasks.tasks import library_scan
 from yaffo.utils import file_sync
 from yaffo.db import db
 from yaffo.db.models import (
@@ -18,9 +15,9 @@ from yaffo.db.models import (
     FACE_STATUS_IGNORED,
     FACE_STATUS_PROCESSING,
     FACE_STATUS_UNASSIGNED,
+    JOB_STATUS_CANCELLED,
     JOB_STATUS_COMPLETED,
     JOB_STATUS_FAILED,
-    JOB_STATUS_PENDING,
     MEDIA_STATUS_INDEXED,
     ApplicationSettings,
     Automation,
@@ -181,114 +178,7 @@ def test_reindex_media_skips_items_whose_file_is_gone(session, library, monkeypa
         maintenance.reindex_media(session, [2])
 
 
-# ---- scan, then index_files / remove_missing_items ------------------------------------------
-
-def _scan(session, job_id="scan"):
-    session.add(Job(id=job_id, name=maintenance.JOB_NAME_SCAN, status=JOB_STATUS_PENDING))
-    session.commit()
-    library_scan.run_library_scan(session, job_id)
-    job = session.get(Job, job_id)
-    session.refresh(job)
-    return job
-
-
-def test_start_library_scan_creates_a_job_and_queues_the_task(session, library, monkeypatch):
-    queued = []
-    monkeypatch.setattr(library_scan, "library_scan_task", queued.append)
-
-    job_id = maintenance.start_library_scan(session)
-
-    assert queued == [job_id]
-    assert session.get(Job, job_id).status == JOB_STATUS_PENDING
-
-
-def test_a_scan_records_exactly_what_it_found_and_changes_nothing(session, library):
-    session.add(MediaItem(id=2, full_file_path=str(library / "gone.jpg"), status=MEDIA_STATUS_INDEXED))
-    session.commit()
-
-    job = _scan(session)
-
-    assert job.status == JOB_STATUS_COMPLETED and job.completed_at is not None
-    assert job.message.startswith("2 file(s) in the media folders aren't indexed yet; 1 indexed item(s)")
-    assert "gone.jpg (missing)" in job.message
-    data = json.loads(job.job_data)
-    assert sorted(Path(p).name for p in data["unindexed_paths"]) == ["b.jpg", "c.jpg"]
-    assert data["missing"] == [{"id": 2, "reason": "missing"}]
-    assert session.query(MediaItem).count() == 2
-
-
-def test_an_empty_media_folder_is_reported_not_counted_as_missing(session, library, tmp_path):
-    """A mount point that came back empty: every item under it looks deleted."""
-    empty = tmp_path / "drive"
-    empty.mkdir()
-    setting = session.query(ApplicationSettings).filter_by(name="media_dirs").one()
-    setting.value = json.dumps(json.loads(setting.value) + [{"id": "m2", "path": str(empty)}])
-    session.add_all([MediaItem(id=i, full_file_path=str(empty / f"{i}.jpg"), status=MEDIA_STATUS_INDEXED)
-                     for i in (10, 11)])
-    session.commit()
-
-    job = _scan(session)
-
-    data = json.loads(job.job_data)
-    assert data["missing"] == [] and data["empty_roots"] == [str(empty)]
-    assert "hold no media files at all" in job.message and "2 indexed item(s) aren't counted" in job.message
-
-
-def test_index_files_indexes_what_the_scan_found(session, library, monkeypatch):
-    job = _scan(session)
-    queued = []
-    monkeypatch.setattr(maintenance, "enqueue_index_jobs",
-                        lambda s, files: queued.append(sorted(Path(f).name for f in files)) or IndexJobs("i", "x"))
-
-    assert maintenance.scan_has_files([job.id], session) is None
-    assert maintenance.index_files(session, job.id) == "x"
-    assert queued == [["b.jpg", "c.jpg"]]
-
-
-@pytest.mark.parametrize("state, message", [
-    ("unknown", "No scan job with that id"),
-    ("running", "hasn't finished"),
-    ("old", "more than a day old"),
-])
-def test_acting_on_a_scan_needs_a_recent_finished_one(session, library, state, message):
-    job_id = "nope"
-    if state != "unknown":
-        job = _scan(session)
-        job_id = job.id
-        if state == "running":
-            job.status = JOB_STATUS_PENDING
-        else:
-            job.completed_at = job.completed_at - maintenance.SCAN_MAX_AGE - timedelta(minutes=1)
-        session.commit()
-    assert message in maintenance.scan_has_files([job_id], session)
-    assert message in maintenance.scan_has_missing([job_id], session)
-
-
-def test_remove_missing_items_removes_only_what_is_still_missing(session, library, tmp_path):
-    for i in (2, 3, 4):
-        session.add(MediaItem(id=i, full_file_path=str((library / f"gone{i}.jpg").resolve()),
-                              status=MEDIA_STATUS_INDEXED))
-    session.commit()
-    job = _scan(session)
-    assert sorted(maintenance.scan_missing_ids(session, job.id)) == [2, 3, 4]
-    assert maintenance.scan_missing_ids(session, job.id, [3, 99]) == [3]
-    (library / "gone4.jpg").write_bytes(b"x")  # back since the scan
-
-    assert maintenance.remove_missing_items(session, job.id) == 2
-
-    assert sorted(i.id for i in session.query(MediaItem)) == [1, 4]
-
-
-def test_remove_missing_items_keeps_items_when_their_folder_disconnects(session, library):
-    session.add(MediaItem(id=2, full_file_path=str((library / "gone.jpg").resolve()), status=MEDIA_STATUS_INDEXED))
-    session.commit()
-    job = _scan(session)
-    for path in library.iterdir():  # the drive comes back empty before approval
-        path.unlink()
-
-    assert maintenance.remove_missing_items(session, job.id) == 0
-    assert session.query(MediaItem).count() == 2
-
+# ---- file sync ------------------------------------------------------------------------
 
 def test_the_unattended_sync_leaves_items_under_an_empty_folder_alone(session, library, tmp_path, monkeypatch):
     empty = tmp_path / "drive"
@@ -316,6 +206,7 @@ def test_the_unattended_sync_leaves_items_under_an_empty_folder_alone(session, l
     assert str(empty) in run.error and "The 1 indexed item(s) under them were left" in run.error
     assert json.loads(run.job_data) == {
         "outcome": "started", "indexed": 2, "removed": 1, "held_back": 1, "empty_roots": [str(empty)],
+        "problem": "media_folder_empty", "problem_params": {"roots": [str(empty)], "count": 1},
         "import_job_id": "i", "index_job_id": "x"}
 
 
@@ -362,6 +253,45 @@ def test_a_file_sync_that_raises_is_recorded_as_failed(session, library, monkeyp
 
     run = session.query(Job).filter_by(name=file_sync.FILE_SYNC_JOB).one()
     assert run.status == JOB_STATUS_FAILED and "drive error" in run.error
+
+
+
+
+def test_a_retried_file_sync_reuses_its_run_job(session, library, monkeypatch):
+    monkeypatch.setattr(file_sync, "perform_sync", lambda *a, **k: IndexJobs("i", "x"))
+    session.add(Job(id="task-1", name=file_sync.FILE_SYNC_JOB, status="RUNNING", task_count=1))
+    session.commit()
+
+    file_sync.run_file_sync(session, job_id="task-1")  # the retry finishes the stranded run
+    assert file_sync.run_file_sync(session, job_id="task-1") is None  # a finished run doesn't sync again
+
+    runs = session.query(Job).filter_by(name=file_sync.FILE_SYNC_JOB).all()
+    assert [r.id for r in runs] == ["task-1"] and runs[0].status == JOB_STATUS_COMPLETED
+
+def _cancel_elsewhere(session, job_id):
+    """Cancel `job_id` as the Cancel button does: a commit from another session."""
+    with Session(session.get_bind()) as other:
+        other.get(Job, job_id).status = JOB_STATUS_CANCELLED
+        other.commit()
+
+
+def test_a_file_sync_cancelled_during_its_scan_changes_nothing(session, library, monkeypatch):
+    scan = file_sync.scan_media_dirs
+
+    def scan_then_cancel(s, *args, **kwargs):
+        result = scan(s, *args, **kwargs)
+        _cancel_elsewhere(s, s.query(Job).filter_by(name=file_sync.FILE_SYNC_JOB).one().id)
+        return result
+    monkeypatch.setattr(file_sync, "scan_media_dirs", scan_then_cancel)
+    monkeypatch.setattr(file_sync, "perform_sync", lambda *a, **k: pytest.fail("a cancelled sync must not sync"))
+
+    assert file_sync.run_file_sync(session) is None
+
+    run = session.query(Job).filter_by(name=file_sync.FILE_SYNC_JOB).one()
+    session.refresh(run)
+    assert run.status == JOB_STATUS_CANCELLED
+    assert json.loads(run.job_data)["outcome"] == file_sync.SYNC_CANCELLED
+    assert session.query(MediaItem).count() == 1
 
 
 # ---- repair_face_statuses ------------------------------------------------------------------

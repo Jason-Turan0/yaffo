@@ -1,0 +1,15 @@
+{# A run's Details: English diagnostics and tuning values (run_history.job_details),
+   collapsed under a translated summary. The values stay English on purpose: they're
+   for debugging and for the assistant, not user-facing copy.
+   Run-history sections and job cards re-render every 5s; hx-preserve (keyed by the
+   stable id) keeps this element across those swaps, so an opened panel stays open. #}
+{% macro job_details_block(details, class_name, job_id) %}
+<details class="job-details {{ class_name }}" id="{{ class_name }}-{{ job_id }}" hx-preserve="true">
+    <summary>{{ _("Details") }}</summary>
+    <dl>
+        {% for key, value in details %}
+        <dt>{{ key }}</dt><dd>{{ value }}</dd>
+        {% endfor %}
+    </dl>
+</details>
+{% endmacro %}

@@ -2,13 +2,16 @@ from pathlib import Path
 
 from yaffo.common import MEDIA_TYPE_VIDEO, media_type_for_path
 from yaffo.db.models import Job, MediaItem, Face, JOB_STATUS_CANCELLED, FACE_STATUS_UNASSIGNED, \
-    JOB_STATUS_RUNNING, JOB_STATUS_PENDING, MEDIA_STATUS_INDEXED
+    JOB_STATUS_RUNNING, JOB_STATUS_PENDING, MEDIA_STATUS_FAILED, MEDIA_STATUS_INDEXED
 from yaffo.utils.index_photos import index_photo, clear_faces_for_media_items, unlink_face_thumbnails
+from yaffo.utils.index_errors import IndexFailure, file_signature
 from yaffo.utils.index_video import index_video
 from yaffo.domain.compare_utils import serialize_embedding
 from yaffo.logging_config import get_logger
 from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.utils import SessionFactory, get_job_status, get_current_thumbnail_dir
+from yaffo.db.repositories.job_repository import earliest_started_at, refresh_estimated_completion
+from yaffo.utils.time import utcnow
 
 logger = get_logger(__name__, 'background_tasks')
 
@@ -18,9 +21,11 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
     """Background task to index photos - detect faces, extract tags, etc."""
     logger.debug(f"Starting index_photo_task for job {job_id} with {len(file_path_batch)} files")
     processed_results = []
+    failures: list[tuple[str, IndexFailure]] = []
     error_count = 0
     cancel_count = 0
     check_cancel_frequency = 5
+    batch_started_at = utcnow()
     job_status = get_job_status(job_id)
     if job_status == JOB_STATUS_CANCELLED:
         return
@@ -40,8 +45,10 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
             index_results = index_video(path, thumbnail_dir)
         else:
             index_results = index_photo(path, thumbnail_dir)
-        if index_results is None:
-            logger.warning(f"Failed to process faces for photo {file_path}")
+        if isinstance(index_results, IndexFailure):
+            logger.warning(f"Could not index {file_path} ({index_results.code}, "
+                           f"{'permanent' if index_results.permanent else 'will retry'})")
+            failures.append((file_path, index_results))
             error_count += 1
             continue
 
@@ -101,6 +108,8 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
                 media_item.video_codec = index_results.get("video_codec")
                 media_item.poster_path = index_results.get("poster_path")
             media_item.status = MEDIA_STATUS_INDEXED
+            media_item.index_error = media_item.index_error_detail = None
+            media_item.index_failed_at = media_item.index_failed_signature = None
 
             for face_data in faces_data:
                 face = Face(
@@ -119,14 +128,29 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
                 session.add(face)
             processed_count += 1
 
+        # A permanent failure marks the item FAILED, so file sync stops retrying it
+        # until the file changes or the user asks; a file that couldn't be reached
+        # stays IMPORTED for the next sync.
+        failed_at = utcnow()
+        for file_path, failure in failures:
+            media_item = photos_by_path.get(file_path)
+            if media_item is None or not failure.permanent:
+                continue
+            media_item.status = MEDIA_STATUS_FAILED
+            media_item.index_error, media_item.index_error_detail = failure.code, failure.detail
+            media_item.index_failed_at = failed_at
+            media_item.index_failed_signature = file_signature(Path(file_path))
+
         update_job_params = {
             'cancelled_count': Job.cancelled_count + cancel_count,
             'completed_count': Job.completed_count + processed_count,
             'error_count': Job.error_count + error_count,
+            'started_at': earliest_started_at(batch_started_at),
         }
         if job_status == JOB_STATUS_PENDING:
             update_job_params['status'] = JOB_STATUS_RUNNING
         session.query(Job).filter_by(id=job_id).update(update_job_params)
+        refresh_estimated_completion(session, job_id)
         session.commit()
         unlink_face_thumbnails(stale_thumbnails)
         logger.debug(

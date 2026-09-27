@@ -63,3 +63,7 @@
 - The missing-video state is exercised by temporarily moving one seeded video's
   source inside the disposable environment, reloading its detail route, and
   restoring the source in a `finally` block.
+- A FAILED item's detail page shows `.index-failure-note` at the top of File
+  Information (translated reason + "Use Reindex to try again."), with the English
+  error in `details.job-details` (id `media-index-details-<id>`). Retrying is the
+  existing `#reindex-btn`; a successful reindex clears the failure.

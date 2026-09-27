@@ -7,11 +7,12 @@ from flask import Flask, Response, current_app, jsonify, render_template, reques
 from flask_babel import gettext
 
 from yaffo.db import db
-from yaffo.db.models import Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, MediaItem
+from yaffo.db.models import Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, MEDIA_STATUS_FAILED, MediaItem
 from yaffo.routes.utilities.common import get_media_dirs, get_thumbnail_dir, automations_sidebar_context
+from yaffo.routes.utilities.index_failures import failed_media
 from yaffo.routes.utilities.run_history import run_view
 from yaffo.utils.file_sync import FILE_SYNC_JOB, MediaScan, iter_media_scan, perform_sync
-from yaffo.utils.index_jobs import reindex_media_items
+from yaffo.utils.index_jobs import enqueue_index_jobs, reindex_media_items
 from yaffo.utils.thumbnail_marker import ensure_thumbnail_dir
 
 
@@ -144,6 +145,7 @@ def init_index_photos_routes(app: Flask):
         can_scan = any(d.exists() for d in media_dirs)
 
         in_progress_jobs, history_jobs = _in_progress_and_history()
+        failed_rows, failed_total = failed_media(db.session)
         has_active_jobs = db.session.query(Job.id).filter(
             Job.status.in_(_IN_PROGRESS),
             Job.name.in_(INDEX_JOB_NAMES),
@@ -155,6 +157,8 @@ def init_index_photos_routes(app: Flask):
             media_dirs=[str(d) for d in media_dirs],
             in_progress_jobs=[job.to_dict_with_view_props() for job in in_progress_jobs],
             run_history=[run_view(job) for job in history_jobs],
+            failed_media=failed_rows,
+            failed_count=failed_total,
             warnings=warnings,
             can_sync=can_sync,
             can_scan=can_scan,
@@ -233,6 +237,29 @@ def init_index_photos_routes(app: Flask):
 
         jobs = perform_sync(db.session, files_to_index, files_to_delete, thumbnail_dir)
         return jsonify(asdict(SyncStarted(job_id=jobs.import_job_id))), 202
+
+    @app.route("/utilities/index-photos/retry-failed", methods=["POST"])
+    def utilities_retry_failed():
+        """Index again every file that failed permanently (status FAILED) -- the "ask"
+        that file sync otherwise waits for. Failed files have no faces, so nothing is
+        lost and no confirmation is needed. Files that have since vanished are
+        skipped; Sync reconciles those."""
+        thumbnail_dir = get_thumbnail_dir()
+        if thumbnail_dir is None:
+            return jsonify({
+                "error": gettext("No thumbnail directory configured"),
+                "code": "thumbnail_directory_not_configured",
+            }), 400
+        ensure_thumbnail_dir(thumbnail_dir)
+        paths = [
+            path for (path,) in db.session.query(MediaItem.full_file_path)
+            .filter(MediaItem.status == MEDIA_STATUS_FAILED)
+            if path and Path(path).exists()
+        ]
+        if not paths:
+            return jsonify({"error": gettext("There are no failed files to retry"), "code": "nothing_failed"}), 400
+        jobs = enqueue_index_jobs(db.session, paths)
+        return jsonify(asdict(ReindexStarted(job_id=jobs.index_job_id, media_item_count=len(paths)))), 202
 
     @app.route("/utilities/index-photos/reindex", methods=["POST"])
     def utilities_reindex_library():

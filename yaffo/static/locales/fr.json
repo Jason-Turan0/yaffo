@@ -348,7 +348,14 @@
         "title": "Photos non indexées"
       },
       "emptyFolders_one": "Ce dossier multimédia ne contient aucun fichier multimédia, ce qui signifie généralement que son disque n'est pas connecté : {{folders}}. Ses photos sont listées comme manquantes ci-dessous, et la synchronisation les supprimerait de la photothèque. Vérifiez le disque avant de synchroniser.",
-      "emptyFolders_other": "Ces dossiers multimédias ne contiennent aucun fichier multimédia, ce qui signifie généralement que leurs disques ne sont pas connectés : {{folders}}. Leurs photos sont listées comme manquantes ci-dessous, et la synchronisation les supprimerait de la photothèque. Vérifiez les disques avant de synchroniser."
+      "emptyFolders_other": "Ces dossiers multimédias ne contiennent aucun fichier multimédia, ce qui signifie généralement que leurs disques ne sont pas connectés : {{folders}}. Leurs photos sont listées comme manquantes ci-dessous, et la synchronisation les supprimerait de la photothèque. Vérifiez les disques avant de synchroniser.",
+      "retryFailed": {
+        "button": "Tout réessayer",
+        "error": "Échec du démarrage de l'indexation : {{reason}}",
+        "startFailed": "Échec du démarrage de l'indexation",
+        "started": "Indexation de {{count}} fichier(s) à nouveau",
+        "starting": "Démarrage…"
+      }
     }
   },
   "assistant": {

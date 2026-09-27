@@ -173,3 +173,37 @@ describe('initIndexPhotos runScan — request failure', () => {
     expect(document.getElementById('scan-status').hidden).toBe(true);
   });
 });
+
+describe('initIndexPhotos startRetryFailed — Retry all', () => {
+  const RETRY_URL = '/utilities/index-photos/retry-failed';
+  const retryConfig = { urls: { ...config.urls, utilities_retry_failed: RETRY_URL } };
+  const initRetry = async () => (
+    await loadModule('utilities/index_photos.js')
+  ).indexPhotos.init(opts, window.testI18n, retryConfig);
+
+  beforeEach(() => {
+    document.body.insertAdjacentHTML('beforeend', '<button id="retry-failed-button">Retry all</button>');
+  });
+
+  it('posts without a confirmation and announces the count', async () => {
+    const fetchMock = stubFetch({ ok: true, json: () => Promise.resolve({ media_item_count: 67 }) });
+    const api = await initRetry();
+
+    await api.startRetryFailed();
+
+    expect(fetchMock).toHaveBeenCalledWith(RETRY_URL, { method: 'POST' });
+    expect(window.notification.success).toHaveBeenCalledWith(
+      window.testI18n.t('utilities:indexPhotos.retryFailed.started', { count: 67 }));
+  });
+
+  it('shows the server error and re-enables the button when it fails', async () => {
+    stubFetch({ ok: false, json: () => Promise.resolve({ error: 'There are no failed files to retry' }) });
+    const api = await initRetry();
+
+    await api.startRetryFailed();
+
+    expect(window.notification.failure).toHaveBeenCalledWith('There are no failed files to retry');
+    const button = document.getElementById('retry-failed-button');
+    expect(button.disabled).toBe(false);
+  });
+});

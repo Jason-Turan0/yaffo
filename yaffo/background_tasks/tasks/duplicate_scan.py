@@ -9,11 +9,13 @@ import json
 import uuid
 
 from yaffo.background_tasks.config import task_queue
-from yaffo.background_tasks.automation_runs import record_run
+from yaffo.background_tasks.automation_runs import RunOutcome, record_run
+from yaffo.utils import job_codes as codes
 from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.tasks.find_duplicates import find_duplicates_task
 from yaffo.background_tasks.utils import SessionFactory
+from yaffo.db.repositories.job_repository import run_job_id
 from yaffo.db.models import Automation, Job, JOB_STATUS_PENDING, AUTOMATION_HANDLER_DUPLICATE_SCAN
 from yaffo.db.repositories import media_repository
 from yaffo.logging_config import get_logger
@@ -21,15 +23,17 @@ from yaffo.logging_config import get_logger
 logger = get_logger(__name__, 'background_tasks')
 
 
-def _open_scan_job(session, automation_id: int | None, media_item_ids: list[int] | None = None) -> tuple[str, list[str]] | None:
+def _open_scan_job(session, automation_id: int | None, media_item_ids: list[int] | None = None,
+                   job_id: str | None = None) -> tuple[str, list[str]] | None:
     """Create a find_duplicates Job over selected indexed media items, tagged with
     `automation_id` as the run. Returns None when there is nothing to scan;
-    the caller records that empty automation run through `record_run`."""
+    the caller records that empty automation run through `record_run`. `job_id` is
+    the task's queue id (a fresh id when None)."""
+    job_id = job_id or str(uuid.uuid4())
     file_paths = (media_repository.get_all_media_item_paths(session) if media_item_ids is None
                   else list(media_repository.get_paths_by_ids(session, media_item_ids).values()))
     if not file_paths:
         return None
-    job_id = str(uuid.uuid4())
     session.add(Job(
         id=job_id,
         name='find_duplicates',
@@ -46,18 +50,25 @@ def _open_scan_job(session, automation_id: int | None, media_item_ids: list[int]
     return job_id, file_paths
 
 
-@task_queue.task()
-def duplicate_scan_task(automation_id: int | None = None, media_item_ids: list[int] | None = None):
+@task_queue.task(context=True)
+def duplicate_scan_task(automation_id: int | None = None, media_item_ids: list[int] | None = None, task=None):
     """Open a find_duplicates Job over every indexed media item and enqueue the scan.
     `automation_id` tags the Job as that automation's run. An empty automation
     scan is recorded through the shared run handler."""
+    job_id = run_job_id(task)
     session = SessionFactory()
     try:
-        opened = _open_scan_job(session, automation_id, media_item_ids)
+        if session.get(Job, job_id) is not None:
+            # A queue retry of a scan that already opened its Job: that attempt
+            # queued the hashing (or recorded the empty run), so there's nothing to redo.
+            logger.info(f"duplicate_scan: run {job_id} already opened; not scanning again")
+            return
+        opened = _open_scan_job(session, automation_id, media_item_ids, job_id)
         if opened is None and automation_id is not None:
             automation = session.get(Automation, automation_id)
             if automation is not None:
-                record_run(session, automation, lambda _: "", media_item_ids=[])
+                record_run(session, automation, lambda _: RunOutcome(codes.OUTCOME_NO_MEDIA),
+                           media_item_ids=[], job_id=job_id)
     finally:
         session.close()
         SessionFactory.remove()

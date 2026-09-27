@@ -23,6 +23,7 @@ from yaffo.utils.index_photos import (
 )
 from yaffo.utils.photo_dates import get_date_from_filename
 from yaffo.utils.thumbnail_marker import ensure_thumbnail_dir
+from yaffo.utils.index_errors import IndexFailure, classify_index_error
 
 logger = get_logger(__name__)
 
@@ -297,11 +298,11 @@ def _to_float(value: Optional[str]) -> Optional[float]:
         return None
 
 
-def index_video(video_path: Path, thumbnail_dir: Path) -> Optional[dict]:
+def index_video(video_path: Path, thumbnail_dir: Path) -> dict | IndexFailure:
     """Index a video the same shape index_photo returns, so the DB-write half of
     index_photo_task is shared: exiftool metadata, an ffmpeg-extracted poster frame,
-    and faces detected on sampled frames (deduped per clip). Returns None on a hard
-    failure; poster/faces degrade to None/[] when ffmpeg is unavailable."""
+    and faces detected on sampled frames (deduped per clip). Returns an IndexFailure
+    on a hard failure; poster/faces degrade to None/[] when ffmpeg is unavailable."""
     try:
         exif_data = get_exif_data_with_exiftool(video_path) or {}
 
@@ -340,4 +341,4 @@ def index_video(video_path: Path, thumbnail_dir: Path) -> Optional[dict]:
         }
     except Exception as e:
         logger.error(f"Error processing video {video_path}: {e}")
-        return None
+        return classify_index_error(video_path, e, video=True)

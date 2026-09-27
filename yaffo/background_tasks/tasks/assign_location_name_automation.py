@@ -20,12 +20,14 @@ from typing import Callable, Optional
 from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_config import AUTOMATION_CONFIG, config_value
-from yaffo.background_tasks.automation_runs import record_run
+from yaffo.background_tasks.automation_runs import RunOutcome, record_run
+from yaffo.utils import job_codes as codes
 from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import EventContext, emit_event, event_chain_scope
 from yaffo.background_tasks.progress_reporter import ProgressReporter
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
+from yaffo.db.repositories.job_repository import run_job_id
 from yaffo.db.models import (
     Automation,
     EVENT_MEDIA_MODIFIED,
@@ -127,9 +129,10 @@ def _throttled_geocoder() -> Callable[[float, float], Optional[str]]:
     return geocode
 
 
-@task_queue.task()
+@task_queue.task(context=True)
 def assign_location_name_automation_task(
-    automation_id: int, media_item_ids: list[int], origin_automation_ids: list[int] | None = None
+    automation_id: int, media_item_ids: list[int], origin_automation_ids: list[int] | None = None,
+    task=None,
 ):
     """Assign location names to the given photos. Enqueued by the
     assign_location_name handler on a photo_indexed event; config is read live. The
@@ -146,7 +149,7 @@ def assign_location_name_automation_task(
         overwrite = bool(config_value(automation, _FIELDS["overwrite_existing"]))
         geocode = _throttled_geocoder() if bool(config_value(automation, _FIELDS["reverse_geocode_enabled"])) else None
 
-        def work(progress_callback: ProgressReporter) -> str:
+        def work(progress_callback: ProgressReporter) -> RunOutcome:
             updated = _assign_location_names(
                 session,
                 progress_callback,
@@ -159,14 +162,15 @@ def assign_location_name_automation_task(
             if updated:
                 # Let export_photo_tag (photo_modified) write the new name into the file.
                 emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": updated})
-            return (
-                f"named {len(updated)}/{len(media_item_ids)} photo(s) "
-                f"(reuse={reuse_enabled} radius={radius_km}km geocode={geocode is not None})"
+            return RunOutcome(
+                codes.OUTCOME_NAMED,
+                {"named": len(updated), "total": len(media_item_ids)},
+                {"reuse": reuse_enabled, "radius_km": radius_km, "reverse_geocode": geocode is not None},
             )
 
         # Scope the run so the photo_modified it emits carries this automation (loop guard).
         with event_chain_scope(origin_automation_ids, automation_id):
-            record_run(session, automation, work, media_item_ids=media_item_ids)
+            record_run(session, automation, work, media_item_ids=media_item_ids, job_id=run_job_id(task))
     finally:
         session.close()
         SessionFactory.remove()

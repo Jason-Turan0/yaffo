@@ -125,3 +125,48 @@ def test_runs_are_isolated_no_shared_globals():
     run_starlark("leaked = 99")
     result = run_starlark("leaked")
     assert result.success is False  # 'leaked' must not persist across runs
+
+
+def test_should_cancel_kills_a_running_script_and_reports_cancelled():
+    started = []
+
+    result = run_starlark(
+        "def spin():\n    n = 0\n    for i in range(1000000000):\n        n += i\n    return n\n"
+        "print('start')\nmark_started()\nspin()",
+        functions={"mark_started": lambda: started.append(True)},
+        should_cancel=lambda: bool(started),
+        cancel_poll_seconds=0.05,
+    )
+
+    assert result.cancelled is True and result.success is False
+    assert result.error == "Cancelled"
+    assert result.output == ["start"]
+
+
+def test_should_cancel_false_lets_the_script_finish():
+    result = run_starlark("1 + 1", should_cancel=lambda: False, cancel_poll_seconds=0.01)
+    assert result.success is True and result.cancelled is False and result.value == 2
+
+
+def test_a_cancel_during_a_host_call_lets_the_call_finish_then_stops_the_script():
+    """Scenario 6: a host call in progress is never interrupted (killing a DB write
+    mid-commit is unsafe); the cancel is seen on the next message, so the script's
+    next host call never runs."""
+    import time
+    calls = []
+    cancelled = []
+
+    def slow_write():
+        cancelled.append(True)  # the cancel lands while this call is running
+        time.sleep(0.3)
+        calls.append("slow_write finished")
+
+    result = run_starlark(
+        "slow_write()\nafter()",
+        functions={"slow_write": slow_write, "after": lambda: calls.append("after ran")},
+        should_cancel=lambda: bool(cancelled),
+        cancel_poll_seconds=0.05,
+    )
+
+    assert calls == ["slow_write finished"]
+    assert result.cancelled is True

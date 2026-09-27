@@ -3,6 +3,7 @@ from yaffo.db import db
 from yaffo.db.models import Job, JOB_STATUS_COMPLETED, JOB_STATUS_FAILED, JOB_STATUS_CANCELLED, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JobResult
 import json
 
+from yaffo.routes.utilities.run_history import pipeline_job_ids, run_views
 from yaffo.utils.request_helpers import parse_boolean_from_form
 
 
@@ -122,6 +123,26 @@ def init_jobs_routes(app: Flask):
             )
 
         return "", 400
+
+    @app.route("/jobs/<job_id>/cancel-run", methods=["POST"])
+    def run_cancel(job_id: str):
+        """Cancel a pending or running job from its run-history row; returns the row.
+        A file sync's row cancels the import and index Jobs it started (the sync's
+        own Job is already closed by then). Finished jobs are left alone."""
+        job = db.session.get(Job, job_id)
+        if not job:
+            return "", 404
+        targets = [job] + [linked for linked in (db.session.get(Job, i) for i in pipeline_job_ids(job)) if linked]
+        for target in targets:
+            if target.status in [JOB_STATUS_PENDING, JOB_STATUS_RUNNING]:
+                target.status = JOB_STATUS_CANCELLED
+        db.session.commit()
+        return render_template(
+            "fragments/run_history_row_fragment.html",
+            run=run_views(db.session, [job])[0],
+            help_page=_help_page(request.form.get("page")),
+            show_label=parse_boolean_from_form(request, "show_label", False),
+        )
 
     @app.route("/jobs/<job_id>/delete", methods=["POST"])
     def job_delete(job_id: str):

@@ -8,7 +8,7 @@
  * @property {string[]} mediaDirs
  *
  * @typedef {Object} IndexPhotoConfig
- * @property {{ utilities_index_photos_scan: string, utilities_sync_photos: string, utilities_reindex_library: string }} urls
+ * @property {{ utilities_index_photos_scan: string, utilities_sync_photos: string, utilities_reindex_library: string, utilities_retry_failed: string }} urls
  *
  * @typedef {Object} UnindexedPhoto
  * @property {string} filename
@@ -28,6 +28,7 @@
  * @property {() => Promise<void>} runScan
  * @property {() => Promise<void>} startSync
  * @property {() => Promise<void>} startReindex
+ * @property {() => Promise<void>} startRetryFailed
  */
 
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
@@ -315,6 +316,43 @@ const initIndexPhotos = (opts, i18n, config) => {
         }
     };
 
+    const retryFailedButton = /** @type {HTMLButtonElement | null} */ (
+        document.getElementById('retry-failed-button')
+    );
+
+    // Index the files that failed permanently again. File sync leaves them alone until
+    // they change, so this is how the user asks. They have no faces yet, so nothing is
+    // lost: no confirmation.
+    const startRetryFailed = async () => {
+        if (!retryFailedButton) return;
+        retryFailedButton.disabled = true;
+        retryFailedButton.textContent = i18n.t('utilities:indexPhotos.retryFailed.starting');
+        const restore = () => {
+            retryFailedButton.disabled = false;
+            retryFailedButton.textContent = i18n.t('utilities:indexPhotos.retryFailed.button');
+        };
+        try {
+            const response = await fetch(config.urls.utilities_retry_failed, { method: 'POST' });
+            const data = /** @type {{ error?: string, media_item_count?: number }} */ (
+                await response.json().catch(() => ({}))
+            );
+            if (response.ok) {
+                window.notification.success(i18n.t('utilities:indexPhotos.retryFailed.started', {
+                    count: data.media_item_count,
+                }));
+                window.location.reload();
+            } else {
+                window.notification.failure(
+                    data.error || i18n.t('utilities:indexPhotos.retryFailed.startFailed'));
+                restore();
+            }
+        } catch (error) {
+            const reason = error instanceof Error ? error.message : String(error);
+            window.notification.failure(i18n.t('utilities:indexPhotos.retryFailed.error', { reason }));
+            restore();
+        }
+    };
+
     /**
      * @param {ScanRecord} record
      */
@@ -372,9 +410,10 @@ const initIndexPhotos = (opts, i18n, config) => {
 
     if (syncButton) syncButton.addEventListener('click', startSync);
     if (reindexButton) reindexButton.addEventListener('click', startReindex);
+    if (retryFailedButton) retryFailedButton.addEventListener('click', startRetryFailed);
     if (canScan) runScan();
 
-    return { runScan, startSync, startReindex };
+    return { runScan, startSync, startReindex, startRetryFailed };
 };
 
 indexPhotosApi.init = initIndexPhotos;

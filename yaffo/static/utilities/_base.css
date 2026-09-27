@@ -233,3 +233,31 @@
         min-height: 44px;
     }
 }
+
+/* Index Photos: files that couldn't be indexed (templates/utilities/index_photos.html). */
+.index-failure-list {
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 0;
+}
+
+.index-failure-list li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    padding: 6px 0;
+    border-bottom: var(--border-width) solid var(--color-border);
+    font-size: var(--font-size-sm);
+    overflow-wrap: anywhere;
+}
+
+.index-failure-folder {
+    color: var(--color-text-muted);
+    flex: 1;
+    min-width: 0;
+}
+
+.index-failure-reason {
+    color: var(--color-warning-soft-text);
+}

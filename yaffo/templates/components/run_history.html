@@ -1,28 +1,54 @@
 {# A compact list of past runs (Jobs): status, progress while running, a summary,
    the time, and any error text. Import it `with context` (it reads assistant_help).
    `help_page` is the page path "Ask Yaffo" attaches; `show_label` names
-   what ran, for lists that mix kinds (Index Photos lists index and import runs). #}
+   what ran, for lists that mix kinds (Index Photos lists index and import runs).
+   Unfinished runs get a Cancel button. #}
 {% from "macros/local_datetime.html" import local_datetime %}
+{% from "components/job_details.html" import job_details_block %}
 {% macro run_history_list(runs, help_page, show_label=false) %}
 <ul class="run-history-list">
     {% for run in runs %}
-    <li class="run-history-row{% if run.is_error %} is-error{% endif %}">
-        <span class="chip {{ run.status_chip }}">{{ run.status_label }}</span>
-        {% if not run.is_finished %}<span class="run-history-progress">{{ (run.progress / 100) | format_percent }}</span>{% endif %}
-        {% if show_label and run.label != run.summary %}<span class="run-history-label">{{ run.label }}</span>{% endif %}
-        <span class="run-history-summary">{{ run.summary }}</span>
-        <span class="run-history-spacer"></span>
-        {{ local_datetime(run.finished_at or run.started_at, "run-history-time") }}
-        {% if assistant_help | default(false) and run.is_error %}
-        <button type="button" class="run-history-help" data-icon="assistant" data-assistant-help
-                aria-label="{{ _("Ask Yaffo about this run") }}" data-tooltip="{{ _("Ask Yaffo") }}"
-                data-job-id="{{ run.job_id }}"
-                {% if run.automation_slug %}data-automation="{{ run.automation_slug }}"{% endif %}
-                data-page="{{ help_page }}" data-error="{{ (run.error or run.summary)[:500] }}">
-        </button>
-        {% endif %}
-        {% if run.error %}<p class="run-history-error">{{ run.error }}</p>{% endif %}
-    </li>
+    {{ run_history_row(run, help_page, show_label) }}
     {% endfor %}
 </ul>
+{% endmacro %}
+
+{# One row. An unfinished run gets a Cancel button that swaps the row for its
+   cancelled state (jobs.run_cancel); the task stops at its next cancellation check.
+   A file sync row notes its pipeline step and time left, or how many quiet
+   in-sync checks it stands for (run_history.run_views). #}
+{% macro run_history_row(run, help_page, show_label=false) %}
+<li class="run-history-row{% if run.is_error %} is-error{% endif %}">
+    <span class="chip {{ run.status_chip }}">{{ run.status_label }}</span>
+    {% if not run.is_finished %}<span class="run-history-progress">{{ (run.progress / 100) | format_percent }}</span>{% endif %}
+    {% if show_label and run.label != run.summary %}<span class="run-history-label">{{ run.label }}</span>{% endif %}
+    <span class="run-history-summary">{{ run.summary }}</span>
+    {% if run.stage_note %}<span class="run-history-note">{{ run.stage_note }}</span>{% endif %}
+    {% if run.eta_note %}<span class="run-history-note">{{ run.eta_note }}</span>{% endif %}
+    {% if run.repeat_count > 1 %}
+    <span class="run-history-note">{{ ngettext("checked %(num)d time since", "checked %(num)d times since", run.repeat_count) }}
+        {{ local_datetime(run.repeat_since) }}</span>
+    {% endif %}
+    <span class="run-history-spacer"></span>
+    {{ local_datetime(run.finished_at or run.started_at, "run-history-time") }}
+    {% if not run.is_finished %}
+    <button type="button" class="btn btn-danger btn-sm run-history-cancel"
+            hx-post="{{ url_for('run_cancel', job_id=run.job_id) }}"
+            hx-vals='{{ {"page": help_page, "show_label": show_label} | tojson }}'
+            hx-target="closest .run-history-row"
+            hx-swap="outerHTML">
+        {{ _("Cancel") }}
+    </button>
+    {% endif %}
+    {% if assistant_help | default(false) and run.is_error %}
+    <button type="button" class="run-history-help" data-icon="assistant" data-assistant-help
+            aria-label="{{ _("Ask Yaffo about this run") }}" data-tooltip="{{ _("Ask Yaffo") }}"
+            data-job-id="{{ run.job_id }}"
+            {% if run.automation_slug %}data-automation="{{ run.automation_slug }}"{% endif %}
+            data-page="{{ help_page }}" data-error="{{ run.assistant_error }}">
+    </button>
+    {% endif %}
+    {% if run.problem %}<p class="run-history-error">{{ run.problem }}</p>{% endif %}
+    {% if run.details %}{{ job_details_block(run.details, "run-history-details", run.job_id) }}{% endif %}
+</li>
 {% endmacro %}

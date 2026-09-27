@@ -80,7 +80,11 @@ def migrate(conn: sqlite3.Connection) -> None:
                 longitude REAL,
                 location_name TEXT,
                 device TEXT,
-                favorite INTEGER
+                favorite INTEGER,
+                index_error TEXT,
+                index_error_detail TEXT,
+                index_failed_at TIMESTAMP,
+                index_failed_signature TEXT
             )
         """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_photos_full_file_path ON photos(full_file_path)")
@@ -156,6 +160,7 @@ def migrate(conn: sqlite3.Connection) -> None:
             error_count INTEGER DEFAULT 0,
             started_at TIMESTAMP,
             completed_at TIMESTAMP,
+            estimated_completed_at TIMESTAMP,
             error TEXT,
             message TEXT,
             job_data TEXT,

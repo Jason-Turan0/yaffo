@@ -16,6 +16,10 @@ class FakeProgressReporter:
         self.run_with_progress_calls.append(list(items))
         for item in items:
             item_processor(item)
+        return True
+
+    def is_cancelled(self) -> bool:
+        return False
 
     def progress_update(self, task_count, completed_count, cancelled, error_count):
         self.progress_update_calls.append((task_count, completed_count, cancelled, error_count))

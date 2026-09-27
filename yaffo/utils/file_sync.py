@@ -9,8 +9,11 @@ from sqlalchemy.orm import Session
 
 from yaffo.common import MEDIA_EXTENSIONS
 from yaffo.db.models import (
-    JOB_STATUS_COMPLETED, JOB_STATUS_FAILED, JOB_STATUS_RUNNING, MEDIA_STATUS_INDEXED, Job, MediaItem,
+    JOB_STATUS_COMPLETED, JOB_STATUS_FAILED, MEDIA_STATUS_FAILED, MEDIA_STATUS_INDEXED, Job, MediaItem,
 )
+from yaffo.db.repositories.job_repository import is_job_cancelled, open_run_job
+from yaffo.utils.index_errors import file_signature
+from yaffo.utils.job_codes import PROBLEM_MEDIA_FOLDER_EMPTY
 from yaffo.db.repositories.media_dir_repository import get_media_dirs
 from yaffo.logging_config import get_logger
 from yaffo.utils.index_jobs import enqueue_index_jobs
@@ -44,6 +47,7 @@ SYNC_NO_FOLDER_CONNECTED = "no_folder_connected"
 SYNC_IN_SYNC = "in_sync"
 SYNC_STARTED = "started"
 SYNC_FAILED = "failed"
+SYNC_CANCELLED = "cancelled"
 FILE_SYNC_OUTCOMES = (SYNC_NO_MEDIA_DIRS, SYNC_NO_THUMBNAIL_DIR, SYNC_NO_FOLDER_CONNECTED,
                       SYNC_IN_SYNC, SYNC_STARTED, SYNC_FAILED)
 # Outcomes where the sync didn't run at all.
@@ -67,6 +71,9 @@ class MediaScan:
     # drive that didn't mount properly (an empty mount point), not a deliberate
     # deletion. Unattended syncs leave the items under them alone.
     empty_roots: list[str] = field(default_factory=list)
+    # FAILED items whose file is unchanged since they failed: known, not new work.
+    # (A FAILED item whose file changed is back in `unindexed`, to be retried.)
+    failed_unchanged: int = 0
 
     @property
     def files_to_index(self) -> list[str]:
@@ -140,7 +147,14 @@ def iter_media_scan(
     The slow part is the recursive walk and the per-row `exists()` check; emitting the
     count incrementally lets the page show progress instead of blocking on the whole
     scan. `scan_media_dirs` consumes this for callers that just want the result."""
-    db_photos = session.query(MediaItem.id, MediaItem.full_file_path, MediaItem.status).all()
+    rows = session.query(MediaItem.id, MediaItem.full_file_path, MediaItem.status,
+                         MediaItem.index_failed_signature).all()
+    db_photos = [(row[0], row[1], row[2]) for row in rows]
+    # A FAILED item is skipped until its file changes (signature: size:mtime).
+    failed_signatures = {
+        str(Path(path).expanduser().resolve(strict=False)): signature
+        for _id, path, status, signature in rows if status == MEDIA_STATUS_FAILED
+    }
     if scoped:
         db_photos = [row for row in db_photos if any(
             Path(row[1]).is_relative_to(root) for root in media_dirs
@@ -155,6 +169,7 @@ def iter_media_scan(
     unindexed: list[dict] = []
     empty_roots: list[str] = []
     walked = 0
+    failed_unchanged = 0
     marked_dirs: dict[Path, bool] = {}
     started_at = monotonic_time.monotonic()
     for media_dir in media_dirs:
@@ -189,8 +204,12 @@ def iter_media_scan(
                 continue
             full_path = str(resolved_photo)
             filesystem_paths.add(full_path)
-            if full_path not in indexed_paths:
-                unindexed.append({'filename': photo_file.name, 'full_path': full_path})
+            if full_path in indexed_paths:
+                continue
+            if full_path in failed_signatures and file_signature(resolved_photo) == failed_signatures[full_path]:
+                failed_unchanged += 1
+                continue
+            unindexed.append({'filename': photo_file.name, 'full_path': full_path})
         if len(filesystem_paths) == found_before:
             empty_roots.append(str(media_dir))
 
@@ -210,6 +229,7 @@ def iter_media_scan(
         total_indexed=len(indexed_paths),
         total_filesystem=len(filesystem_paths),
         empty_roots=empty_roots,
+        failed_unchanged=failed_unchanged,
     )
 
 
@@ -262,20 +282,21 @@ def perform_sync(
     return enqueue_index_jobs(session, files_to_index, automation_id=automation_id)
 
 
-def _open_run(session: Session, automation_id: int | None) -> Job:
-    now = utcnow()
-    job = Job(id=str(uuid.uuid4()), name=FILE_SYNC_JOB, status=JOB_STATUS_RUNNING, automation_id=automation_id,
-              task_count=1, completed_count=0, error_count=0, cancelled_count=0, created_at=now, started_at=now)
-    session.add(job)
-    session.commit()
-    return job
+def _open_run(session: Session, automation_id: int | None, job_id: str | None) -> Job | None:
+    """Open (or, on a queue retry, adopt) the run's Job; None when it already ended."""
+    return open_run_job(session, job_id or str(uuid.uuid4()), name=FILE_SYNC_JOB,
+                        automation_id=automation_id, task_count=1)
 
 
 def _close_run(session: Session, job: Job, outcome: str, data: dict | None = None, error: str | None = None) -> None:
     """Finish the run's Job. A skipped or failed run is FAILED; a run that finished
-    but needs attention (items left alone) is COMPLETED with an error."""
-    failed = outcome in SYNC_SKIPPED or outcome == SYNC_FAILED
-    job.status = JOB_STATUS_FAILED if failed else JOB_STATUS_COMPLETED
+    but needs attention (items left alone) is COMPLETED with an error. A run
+    cancelled while it ran stays CANCELLED."""
+    if is_job_cancelled(session, job.id):
+        outcome = SYNC_CANCELLED
+    failed = outcome in SYNC_SKIPPED or outcome in (SYNC_FAILED, SYNC_CANCELLED)
+    if outcome != SYNC_CANCELLED:
+        job.status = JOB_STATUS_FAILED if failed else JOB_STATUS_COMPLETED
     job.completed_count = 0 if failed else 1
     job.error_count = 1 if error else 0
     job.error = error
@@ -285,14 +306,19 @@ def _close_run(session: Session, job: Job, outcome: str, data: dict | None = Non
 
 
 def run_file_sync(session: Session, automation_id: int | None = None,
-                  scope_paths: list[str] | None = None) -> IndexJobs | None:
+                  scope_paths: list[str] | None = None, job_id: str | None = None) -> IndexJobs | None:
     """Full reconcile for the file-sync automation (scheduled, or Run now): scan
     the configured media dirs and run the same sync the user would trigger by
     hand. Each run records its own FILE_SYNC_JOB with how it ended, so the run
     history shows it even when there was nothing to do. Returns the created
     import/index Jobs, or None when it skipped or was already in sync.
-    `automation_id` tags the Jobs as that automation's run."""
-    run = _open_run(session, automation_id)
+    `automation_id` tags the Jobs as that automation's run. `job_id` is the task's
+    queue id, so a retried task records on the same run Job; a run whose Job
+    already ended doesn't sync again."""
+    run = _open_run(session, automation_id, job_id)
+    if run is None:
+        logger.info(f"file_sync: run {job_id} already ended; not syncing again")
+        return None
     try:
         return _file_sync(session, run, scope_paths)
     except Exception as exc:
@@ -336,6 +362,15 @@ def _file_sync(session: Session, run: Job, scope_paths: list[str] | None = None)
                  "library. Check the drive, or remove the folder in Settings if it's empty on purpose.")
     data = {"indexed": len(scan.files_to_index), "removed": len(orphaned_ids), "held_back": held_back,
             "empty_roots": scan.empty_roots}
+    if held_back:
+        data.update(problem=PROBLEM_MEDIA_FOLDER_EMPTY,
+                    problem_params={"roots": scan.empty_roots, "count": held_back})
+    # The scan is the slow part; a cancel during it must stop the sync before it
+    # deletes orphans or enqueues indexing.
+    if is_job_cancelled(session, run.id):
+        logger.info(f"file_sync: run {run.id} cancelled after the scan; nothing changed")
+        _close_run(session, run, SYNC_CANCELLED, data)
+        return None
     if not scan.files_to_index and not orphaned_ids:
         logger.info("file_sync: index already in sync; nothing to do")
         _close_run(session, run, SYNC_IN_SYNC, data, error)

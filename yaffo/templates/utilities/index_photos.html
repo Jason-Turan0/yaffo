@@ -85,6 +85,26 @@
     </div>
     {% endif %}
 
+    {% if failed_count %}
+    <div class="section index-failures" id="index-failures">
+        <h2>{{ ngettext("%(num)d file couldn't be indexed", "%(num)d files couldn't be indexed", failed_count) }}</h2>
+        <p class="hint-text">{{ _("They still show in your library, but without the date, location, faces or labels that indexing reads. Sync leaves them alone until a file changes; retry after fixing a file or updating Yaffo.") }}</p>
+        <ul class="index-failure-list">
+            {% for item in failed_media %}
+            <li>
+                <a href="{{ url_for('media_view', media_item_id=item.id) }}">{{ item.file_name }}</a>
+                <span class="index-failure-folder">{{ item.folder }}</span>
+                <span class="index-failure-reason">{{ item.reason }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% if failed_count > failed_media|length %}
+        <p class="hint-text">{{ ngettext("and %(num)d more", "and %(num)d more", failed_count - failed_media|length) }}</p>
+        {% endif %}
+        <button class="btn btn-secondary" id="retry-failed-button" data-icon="sync">{{ _("Retry all") }}</button>
+    </div>
+    {% endif %}
+
     {% if run_history %}
     <div class="section index-run-history">
         <h2>{{ _("Run history") }}</h2>

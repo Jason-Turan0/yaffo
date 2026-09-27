@@ -20,12 +20,14 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_config import AUTOMATION_CONFIG, config_value
-from yaffo.background_tasks.automation_runs import record_run
+from yaffo.background_tasks.automation_runs import RunOutcome, record_run
+from yaffo.utils import job_codes as codes
 from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.progress_reporter import ProgressReporter
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
+from yaffo.db.repositories.job_repository import run_job_id
 from yaffo.db.models import Automation, AUTOMATION_HANDLER_GEOTAG_FROM_NEIGHBORS, MediaItem
 from yaffo.db.repositories import media_repository
 from yaffo.utils.photo_dates import parse_date_taken
@@ -114,8 +116,8 @@ def _geotag_from_neighbors(session: Session, progress_reporter: ProgressReporter
     return updated
 
 
-@task_queue.task()
-def geotag_from_neighbors_automation_task(automation_id: int, media_item_ids: list[int]):
+@task_queue.task(context=True)
+def geotag_from_neighbors_automation_task(automation_id: int, media_item_ids: list[int], task=None):
     """Geotag the GPS-less photos in `media_item_ids` from their temporal neighbours.
     Enqueued by the geotag_from_neighbors handler on a photo_indexed event; the time
     window is read live from the automation's config. The run is recorded as a Job."""
@@ -126,11 +128,15 @@ def geotag_from_neighbors_automation_task(automation_id: int, media_item_ids: li
             return
         max_minutes = int(config_value(automation, _MINUTES_FIELD))
 
-        def work(progress_reporter: ProgressReporter) -> str:
+        def work(progress_reporter: ProgressReporter) -> RunOutcome:
             updated = _geotag_from_neighbors(session, progress_reporter, media_item_ids, max_minutes)
-            return f"geotagged {len(updated)}/{len(media_item_ids)} photo(s) within {max_minutes} min"
+            return RunOutcome(
+                codes.OUTCOME_GEOTAGGED,
+                {"geotagged": len(updated), "total": len(media_item_ids)},
+                {"max_minutes": max_minutes},
+            )
 
-        record_run(session, automation, work, media_item_ids=media_item_ids)
+        record_run(session, automation, work, media_item_ids=media_item_ids, job_id=run_job_id(task))
     finally:
         session.close()
         SessionFactory.remove()

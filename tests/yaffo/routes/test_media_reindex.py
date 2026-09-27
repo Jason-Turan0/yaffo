@@ -62,3 +62,28 @@ def test_photo_view_offers_the_reindex_action(app, client, tmp_path):
 
     assert 'id="reindex-btn"' in body
     assert f"photoView.reindex({media_item.id})" in body
+
+
+def test_photo_view_explains_a_file_that_couldnt_be_indexed(app, client, tmp_path):
+    photo = tmp_path / "burst.jpg"
+    photo.write_bytes(b"\xff\xd8\xff")
+    media_item = MediaItem(full_file_path=str(photo), status="FAILED", index_error="decode_error",
+                           index_error_detail="OSError: image file is truncated (78 bytes not processed)")
+    db.session.add(media_item)
+    db.session.commit()
+
+    body = client.get(f"/media/view/{media_item.id}").data.decode()
+
+    assert "it appears to be damaged or incomplete" in body
+    assert "Use Reindex to try again." in body and 'id="reindex-btn"' in body
+    assert "<summary>Details</summary>" in body and "image file is truncated (78 bytes not processed)" in body
+
+
+def test_photo_view_has_no_failure_note_for_an_indexed_photo(app, client, tmp_path):
+    photo = tmp_path / "photo.jpg"
+    photo.write_bytes(b"\xff\xd8\xff")
+    media_item = MediaItem(full_file_path=str(photo), status="INDEXED")
+    db.session.add(media_item)
+    db.session.commit()
+
+    assert "index-failure-note" not in client.get(f"/media/view/{media_item.id}").data.decode()

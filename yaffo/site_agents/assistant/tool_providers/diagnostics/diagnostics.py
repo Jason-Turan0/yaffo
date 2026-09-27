@@ -31,6 +31,7 @@ from sqlalchemy.orm import Session
 import yaffo
 from yaffo import config as app_config
 from yaffo.db.models import (
+    MEDIA_STATUS_FAILED,
     Album,
     AlbumItem,
     Automation,
@@ -68,6 +69,7 @@ from yaffo.utils.exiftool_path import is_exiftool_available
 from yaffo.utils.ffmpeg_path import is_ffmpeg_available
 from yaffo.utils.settings import get_thumbnail_dir
 from yaffo.utils.thumbnail_marker import THUMBNAIL_DIR_MARKER
+from yaffo.utils.job_codes import load_job_data
 
 OVERVIEW = "overview"
 
@@ -250,8 +252,8 @@ TOOLS: tuple[DiagnosticTool, ...] = (
     ),
     DiagnosticTool(
         "job_detail", DIAG_JOBS,
-        "One job with its automation (if any) and its queued tasks: status, attempts, error, and a "
-        "summary of their arguments.",
+        "One job with its automation (if any), how it ended (outcome and problem codes, details) and "
+        "its queued tasks: status, attempts, error, and a summary of their arguments.",
         _schema({"job_id": {"type": "string"}}, ["job_id"]),
     ),
     DiagnosticTool(
@@ -410,6 +412,10 @@ class DiagnosticsToolProvider(ToolProvider):
                 faces["linked_not_assigned"], faces["processing"], self._face_tasks_queued(), faces["ignored_linked"])
             stats = self._date_counts()
             findings += health.check_dates(stats["implausible"], stats["undated"], stats["total"])
+            failed_by_code = dict(
+                self.session.query(MediaItem.index_error, func.count(MediaItem.id))
+                .filter(MediaItem.status == MEDIA_STATUS_FAILED).group_by(MediaItem.index_error).all())
+            findings += health.check_index_failures({code or "unknown": n for code, n in failed_by_code.items()})
         if DIAG_JOBS in self.groups:
             heartbeat = self.store.read_heartbeat()
             running = self.session.query(func.count(Job.id)).filter(Job.status == JOB_STATUS_RUNNING).scalar() or 0
@@ -580,8 +586,13 @@ class DiagnosticsToolProvider(ToolProvider):
                 lines.append(f"File check: {exc}")
         else:
             lines.append(f"Location: {Path(item.full_file_path or '').name} (not inside any configured media folder)")
+        lines.append(f"Index status: {item.status}")
+        if item.status == MEDIA_STATUS_FAILED:
+            lines.append(
+                f"Index failure: {item.index_error or 'unknown'} -- {_first_line(item.index_error_detail, 300)} "
+                f"(failed {_iso(item.index_failed_at)}). File sync skips it until the file changes; "
+                "Reindex on the photo, or Retry all on Index Photos, tries again.")
         lines += [
-            f"Index status: {item.status}",
             f"Date taken: {item.date_taken or '(none)'}",
             f"Device: {item.device or '-'}",
             f"Location name: {item.location_name or '-'}; has GPS: {'yes' if item.latitude is not None else 'no'}",
@@ -935,7 +946,25 @@ class DiagnosticsToolProvider(ToolProvider):
             lines.append(f"Automation: {job.automation.display_name} (slug {job.automation.slug})")
         if job.message:
             lines.append(f"Message: {_first_line(job.message)}")
+        data = load_job_data(job.job_data)
+        if data.get("outcome"):
+            params = {k: v for k, v in data.items()
+                      if k not in ("outcome", "problem", "problem_params", "details", "output")
+                      and not isinstance(v, (list, dict))}
+            lines.append(f"Outcome: {data['outcome']}" + (f" {json.dumps(params)}" if params else ""))
+        problem = data.get("problem") or data.get("dispatch_error_code")
+        if problem:
+            params = data.get("problem_params")
+            lines.append(f"Problem: {problem}" + (f" {json.dumps(params)}" if params else ""))
+        if data.get("details"):
+            lines.append(f"Details: {json.dumps(data['details'])}")
+        if job.error:
+            lines.append(f"Error: {_first_line(job.error, 300)}")
         tasks = self.store.tasks_mentioning(job.id)
+        # A run Job is keyed by its own task's id, which isn't in any task's arguments.
+        own_task = self.store.task_by_id(job.id)
+        if own_task is not None and all(task["id"] != own_task["id"] for task in tasks):
+            tasks.insert(0, own_task)
         lines.append(f"Queue tasks: {len(tasks)}" + (" (first 50)" if len(tasks) >= 50 else ""))
         for task in tasks[:20]:
             task_args = json.loads(task["args_json"] or "[]")

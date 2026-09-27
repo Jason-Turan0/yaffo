@@ -8,6 +8,9 @@ from yaffo.common import MEDIA_TYPE_PHOTO, MEDIA_TYPE_VIDEO as MEDIA_TYPE_VIDEO
 
 MEDIA_STATUS_IMPORTED = "IMPORTED"
 MEDIA_STATUS_INDEXED = "INDEXED"
+# Indexing failed in a way retrying won't fix (utils/index_errors.py). File sync
+# leaves it alone until the file changes on disk or the user asks to retry.
+MEDIA_STATUS_FAILED = "FAILED"
 
 class MediaItem(db.Model):
     __tablename__ = "media_items"
@@ -47,6 +50,13 @@ class MediaItem(db.Model):
     # True = favorited. Toggled from the photo view; exported as a keyword only when set.
     favorite = db.Column(db.Boolean, nullable=True)
     status = db.Column(db.String, default=MEDIA_STATUS_IMPORTED)
+    # Set when status is FAILED (cleared when indexing succeeds): the reason code the
+    # UI translates, the English detail, when it failed, and the file's size:mtime
+    # then -- file sync retries the item only once that signature changes.
+    index_error = db.Column(db.String, nullable=True)
+    index_error_detail = db.Column(db.Text, nullable=True)
+    index_failed_at = db.Column(db.DateTime, nullable=True)
+    index_failed_signature = db.Column(db.String, nullable=True)
     faces = db.relationship(
         "Face",
         back_populates="media_item"
@@ -225,6 +235,9 @@ class Job(db.Model):
 
     started_at = db.Column(db.DateTime)
     completed_at = db.Column(db.DateTime)
+    # Projected finish, recomputed on every progress tick from the rate since
+    # started_at (db/repositories/job_repository.py). NULL until there's a rate.
+    estimated_completed_at = db.Column(db.DateTime)
 
     error = db.Column(db.Text)
     message = db.Column(db.Text)
@@ -251,6 +264,8 @@ class Job(db.Model):
             'progress': progress,
             'started_at': self.started_at.isoformat() if self.started_at else None,
             'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+            'estimated_completed_at': (
+                self.estimated_completed_at.isoformat() if self.estimated_completed_at else None),
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'error': self.error,
             'message': self.message,
@@ -259,6 +274,9 @@ class Job(db.Model):
     def to_dict_with_view_props(self, has_results: bool = False, results_route: str | None = None):
         """Convert job to dict with view-specific properties"""
         job_dict = self.to_dict()
+        # For the job card's translated text (kind, action, problem, Details); kept out
+        # of to_dict, which is served as JSON.
+        job_dict['job_data'] = self.job_data
         job_dict['has_results'] = has_results
         job_dict['results_route'] = results_route
         return job_dict
