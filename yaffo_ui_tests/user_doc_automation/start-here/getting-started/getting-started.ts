@@ -20,8 +20,10 @@ export default defineWalkthrough({
             goto: "/settings",
             clip: ".main-content",
             // macOS canonicalizes /tmp to /private/tmp while Linux leaves it alone.
-            // The real path stays visible but does not make cross-platform diffs noisy.
-            ignoreRegions: [".media-dir-path"],
+            // Both displayed paths stay visible but do not make cross-platform diffs
+            // noisy: the media-directory row and the current thumbnail-directory
+            // <code id="current-thumbnail-dir">, which leaked the same prefix.
+            ignoreRegions: [".media-dir-path", "#current-thumbnail-dir"],
             setup: async (page) => {
                 await page.evaluate(() => {
                     const sections = Array.from(document.querySelectorAll(".settings-section"));
@@ -71,6 +73,15 @@ export default defineWalkthrough({
             goto: ({mediaIdByFilename}) =>
                 mediaIdByFilename(DETAIL_IMAGE).then((id) => `/media/view/${id}`),
             clip: ".photo-viewer",
+            // The docs fixture is /private/tmp on macOS and /tmp on Linux, so the File
+            // Information folder value moves between runs even though the folder it
+            // names does not. Same host-spelling leak as library-basics/photo-details:
+            // keep the folder visible and exclude only its host spelling. The region
+            // changed in the last recapture (365x27 box at 120,435); without this the
+            // shot flips again on the next run.
+            ignoreRegions: [
+                ".detail-section:first-child .detail-item:nth-of-type(2) .detail-value",
+            ],
         },
     },
 });

@@ -41,6 +41,9 @@ Common filters include:
 - **Device:** filter by camera or device metadata.
 - **Favorites:** show only favorited media.
 - **Media Type:** show photos only or videos only.
+- **Shape:** show only **Portrait**, **Landscape**, or **Square** photos, based on
+  the stored picture dimensions. Photos indexed before those dimensions were
+  recorded match no shape.
 
 Click **Apply Filters** to update the gallery.
 
@@ -83,6 +86,7 @@ Try these common patterns:
 - **Find photos from one camera:** choose a **Device**.
 - **Find classified photos:** choose one or more **Label** values.
 - **Find custom organization:** choose a **Tag Name**, then a **Tag Value**.
+- **Find portrait photos:** set **Shape** to **Portrait**.
 
 ## When Results Look Wrong
 

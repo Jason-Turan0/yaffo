@@ -58,6 +58,10 @@ export default defineWalkthrough({
         // same templates either way.
         await visit("/?view=grid&year=2017");
 
+        // "Use the Filter Sidebar" — the Shape group (portrait/landscape/square)
+        // reads stored dimensions, so it is a branch of its own.
+        await visit("/?view=grid&shape=portrait");
+
         // "When Results Look Wrong" — the empty state is its own template branch.
         await visit("/?view=grid&year=1900");
 

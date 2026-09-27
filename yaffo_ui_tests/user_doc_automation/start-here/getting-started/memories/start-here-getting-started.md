@@ -24,6 +24,15 @@
   section.
 
 
+- 2026 run: 2453 device px (0.0418%) differ, all in one 365x27 box on the File
+  Information FOLDER value: the docs fixture path flips /tmp (Linux) <-> /private/tmp
+  (macOS), so the string and its wrap point move. Same class as settings-overview's
+  `#current-thumbnail-dir` leak. The sibling library-basics/photo-details shot already
+  ignores `.detail-section:first-child .detail-item:nth-of-type(2) .detail-value`;
+  this shot did not -> environment_instability, promote (0.0418% is under the 0.1%
+  gate, frame unchanged, photo/people(3)/faces(3)/labels(2) pixel-identical, prose
+  unaffected), and the same ignoreRegion was added here so it stops recurring.
+
 ## gallery-home.webp
 - 2026 run: 12618 device px differ (0.2836% of the 2784x1600 frame), all inside one 242x82
   device box at (2468, 73) = the header's Grid|Timeline `view-toggle` (`yaffo/templates/index.html`
@@ -37,3 +46,22 @@
 - 0.2836% is ~3x the 0.1% "tiny variation" promote gate and the whole control repainted, so do not
   adopt: quarantine. If the toggle keeps jittering run after run, pin the header metrics (fixed-size
   view-toggle / explicit crop) instead of chasing a baseline.
+
+
+## settings-overview.webp
+- 2026 run: 3197 device px differ (0.0607%), all in one 426x154 box inside the Thumbnail
+  Directory section. Two changes only: the displayed current thumbnail path lost the macOS
+  `/private` prefix (`/private/tmp/yaffo-docs/thumbnails` -> `/tmp/yaffo-docs/thumbnails`) and
+  the thumbnail total moved 466.02 KB -> 465.97 KB. Same `.settings-section` slicing (first
+  three sections: Media Directories, Thumbnail Directory, Language), same 96 files, layout
+  unchanged -> environment/fixture, not the product (the dependency diff that run touched
+  Index Photos / media view, not Settings) -> promote; 0.06% is under the 0.1% gate.
+- Root cause of the noise: the walkthrough ignores `.media-dir-path` for the /tmp
+  canonicalization but not the sibling `#current-thumbnail-dir` <code>, so the platform
+  difference leaked into the diff. Extended `ignoreRegions` to cover it.
+- Watch: `#thumbnail-size` (generated-thumbnail bytes) is fixture-derived and moved by
+  0.05 KB between platforms. Left unmasked on purpose (it is real content); if it jitters
+  run after run on a single platform, pin or mask it rather than chasing a baseline.
+- Caption was stale independently of the diff: it said "Language, Units, and Media
+  Directories" while the shot (before and after) shows Media Directories, Thumbnail
+  Directory, Language — the setup drops `sections.slice(3)`, i.e. Units never appears.
