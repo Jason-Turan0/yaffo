@@ -8,6 +8,7 @@ import pytest
 
 from yaffo.db.models import MEDIA_TYPE_VIDEO
 from yaffo.utils import index_video as iv
+from yaffo.utils.index_errors import IndexFailure
 from yaffo.utils.index_video import index_video, extract_poster
 
 pytestmark = pytest.mark.unit
@@ -66,9 +67,20 @@ def test_unknown_codec_passes_through_raw():
     assert result["video_codec"] == "weird"
 
 
-def test_returns_none_on_exiftool_failure():
+def test_a_video_that_cant_be_processed_is_a_permanent_video_error(tmp_path):
+    clip = tmp_path / "clip.mov"
+    clip.write_bytes(b"not really a video")
     with patch("yaffo.utils.index_video.get_exif_data_with_exiftool", side_effect=RuntimeError("boom")):
-        assert index_video(Path("/library/clip.mov"), Path("/thumbs")) is None
+        failure = index_video(clip, tmp_path)
+    assert isinstance(failure, IndexFailure)
+    assert (failure.code, failure.permanent) == ("video_error", True)
+    assert failure.detail == "RuntimeError: boom"
+
+
+def test_a_video_that_is_gone_is_retried_not_failed():
+    with patch("yaffo.utils.index_video.get_exif_data_with_exiftool", side_effect=RuntimeError("boom")):
+        failure = index_video(Path("/library/clip.mov"), Path("/thumbs"))
+    assert (failure.code, failure.permanent) == ("unreadable", False)
 
 
 class TestExtractPoster:

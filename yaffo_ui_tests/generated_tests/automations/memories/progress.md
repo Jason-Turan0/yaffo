@@ -70,6 +70,10 @@
   their own; `.run-history-note` carries the step and time left, and its Cancel
   cancels both). Consecutive quiet "Already in sync" runs collapse into one row
   ("checked N times since …"), so row count != run count there.
+  Row text is translated from Job codes; the English error/tuning values sit in a
+  collapsed `details.job-details` ("Details"), id `run-history-details-<job id>`,
+  kept open across the 5s refresh by hx-preserve. `.run-history-error` holds the
+  translated problem line, not the raw error.
 - Trigger editor: `#automation-triggers`, `.js-add-schedule`, `.js-add-event`,
   `.js-save-schedule`, `.js-cancel`, `.schedule-editor-error`, rows
   `.automation-trigger-row` with `.automation-trigger-kind`, `.automation-trigger-desc[data-cron]`

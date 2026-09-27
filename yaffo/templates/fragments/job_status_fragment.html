@@ -1,4 +1,5 @@
 {% from "macros/local_datetime.html" import local_datetime %}
+{% from "components/job_details.html" import job_details_block %}
 {# show_dismiss=false leaves a finished job without Dismiss (which deletes it), for
    pages that keep finished runs as history, like Index Photos. #}
 {% set dismissible = show_dismiss | default(true) %}
@@ -48,8 +49,9 @@
         </div>
     </div>
 
-    {# Some jobs (e.g. file sync runs) are created without a message. #}
-    <div class="job-message">{{ (job.message or '').replace('{totalCount}', total_count|string).replace('{taskCount}', job.task_count|string) }}</div>
+    {# Translated from the job's kind and counts; the stored `message` is an English
+       note for debugging and the assistant only. #}
+    <div class="job-message">{{ job_progress_text(job) }}</div>
 
     <div class="progress-bar-container">
         <div class="progress-bar" style="width: {{ progress }}%"></div>
@@ -57,12 +59,15 @@
 
     <div class="progress-text">{{ (progress / 100) | format_percent(2) }}</div>
 
-    {% if job.error_count or job.error %}
+    {% set problem = problem_text(job) %}
+    {% set details = job_details(job) %}
+    {% if job.error_count or problem or details %}
     <div class="job-errors">
         {% if job.error_count %}
         <span class="job-error-count">{{ ngettext("%(count)s error", "%(count)s errors", job.error_count, count=job.error_count) }}</span>
         {% endif %}
-        {% if job.error %}<p class="job-error-message">{{ job.error }}</p>{% endif %}
+        {% if problem %}<p class="job-error-message">{{ problem }}</p>{% endif %}
+        {% if details %}{{ job_details_block(details, "job-card-details", job.id) }}{% endif %}
     </div>
     {% endif %}
 </div>

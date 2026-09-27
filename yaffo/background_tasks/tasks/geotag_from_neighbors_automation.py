@@ -20,7 +20,8 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_config import AUTOMATION_CONFIG, config_value
-from yaffo.background_tasks.automation_runs import record_run
+from yaffo.background_tasks.automation_runs import RunOutcome, record_run
+from yaffo.utils import job_codes as codes
 from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.progress_reporter import ProgressReporter
@@ -127,9 +128,13 @@ def geotag_from_neighbors_automation_task(automation_id: int, media_item_ids: li
             return
         max_minutes = int(config_value(automation, _MINUTES_FIELD))
 
-        def work(progress_reporter: ProgressReporter) -> str:
+        def work(progress_reporter: ProgressReporter) -> RunOutcome:
             updated = _geotag_from_neighbors(session, progress_reporter, media_item_ids, max_minutes)
-            return f"geotagged {len(updated)}/{len(media_item_ids)} photo(s) within {max_minutes} min"
+            return RunOutcome(
+                codes.OUTCOME_GEOTAGGED,
+                {"geotagged": len(updated), "total": len(media_item_ids)},
+                {"max_minutes": max_minutes},
+            )
 
         record_run(session, automation, work, media_item_ids=media_item_ids, job_id=run_job_id(task))
     finally:

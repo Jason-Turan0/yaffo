@@ -233,3 +233,20 @@ def test_scan_skips_any_marked_thumbnail_dir(tmp_path, session):
     scan = scan_media_dirs(session, [media_dir], None)
 
     assert [u["filename"] for u in scan.unindexed] == ["photo.jpg"]
+
+
+def test_a_failed_file_is_skipped_until_it_changes(tmp_path, session):
+    from yaffo.db.models import MEDIA_STATUS_FAILED
+    from yaffo.utils.index_errors import file_signature
+    media_dir = tmp_path / "organized"
+    broken = _touch(media_dir / "burst.jpg")
+    session.add(MediaItem(full_file_path=str(broken.resolve()), status=MEDIA_STATUS_FAILED,
+                          index_error="decode_error", index_failed_signature=file_signature(broken)))
+    session.commit()
+
+    scan = scan_media_dirs(session, [media_dir], None)
+    assert scan.files_to_index == [] and scan.failed_unchanged == 1
+
+    broken.write_bytes(b"\xff\xd8\xff\xd9 repaired")  # the file changed: new work
+    scan = scan_media_dirs(session, [media_dir], None)
+    assert scan.files_to_index == [str(broken.resolve())] and scan.failed_unchanged == 0

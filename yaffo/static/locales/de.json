@@ -348,7 +348,14 @@
         "title": "Nicht indizierte Fotos"
       },
       "emptyFolders_one": "Dieser Medienordner enthält keine Mediendateien, was normalerweise bedeutet, dass sein Laufwerk nicht verbunden ist: {{folders}}. Seine Fotos werden unten als fehlend aufgeführt, und Sync würde sie aus der Bibliothek entfernen. Überprüfe das Laufwerk vor dem Synchronisieren.",
-      "emptyFolders_other": "Diese Medienordner enthalten keine Mediendateien, was normalerweise bedeutet, dass ihre Laufwerke nicht verbunden sind: {{folders}}. Ihre Fotos werden unten als fehlend aufgeführt, und Sync würde sie aus der Bibliothek entfernen. Überprüfe die Laufwerke vor dem Synchronisieren."
+      "emptyFolders_other": "Diese Medienordner enthalten keine Mediendateien, was normalerweise bedeutet, dass ihre Laufwerke nicht verbunden sind: {{folders}}. Ihre Fotos werden unten als fehlend aufgeführt, und Sync würde sie aus der Bibliothek entfernen. Überprüfe die Laufwerke vor dem Synchronisieren.",
+      "retryFailed": {
+        "button": "Alle wiederholen",
+        "error": "Indizierung konnte nicht gestartet werden: {{reason}}",
+        "startFailed": "Indizierung konnte nicht gestartet werden",
+        "started": "{{count}} Datei(en) werden erneut indiziert",
+        "starting": "Wird gestartet…"
+      }
     }
   },
   "assistant": {

@@ -297,7 +297,9 @@ def test_job_card_shows_error_count_and_message(app, client):
              error="Could not read IMG_0412.HEIC")
     body = client.get("/utilities/index-photos").get_data(as_text=True)
     assert '<span class="job-error-count">7 errors</span>' in body
-    assert '<p class="job-error-message">Could not read IMG_0412.HEIC</p>' in body
+    # The English error isn't the card's message: it sits under Details.
+    assert '<p class="job-error-message">' not in body
+    assert "<summary>Details</summary>" in body and "<dd>Could not read IMG_0412.HEIC</dd>" in body
 
 
 def test_job_fragment_omits_dismiss_when_asked(app, client):
@@ -338,3 +340,51 @@ def test_job_card_reads_stopping_until_the_cancelled_work_stops(app, client):
         db.session.commit()
     fragment = client.get("/jobs/index-stopping/fragment").get_data(as_text=True)
     assert "job-status\">Cancelled</span>" in fragment
+
+
+def _add_failed(app, path, code="decode_error"):
+    from yaffo.db.models import MediaItem
+    with app.app_context():
+        item = MediaItem(full_file_path=str(path), status="FAILED", index_error=code,
+                         index_error_detail="OSError: image file is truncated (78 bytes not processed)")
+        db.session.add(item)
+        db.session.commit()
+        return item.id
+
+
+def test_page_lists_files_that_couldnt_be_indexed(app, client, tmp_path):
+    item_id = _add_failed(app, tmp_path / "burst.jpg")
+
+    body = client.get("/utilities/index-photos").get_data(as_text=True)
+
+    assert "1 file couldn't be indexed" in body
+    assert f'href="/media/view/{item_id}"' in body and "burst.jpg" in body
+    assert "Damaged or incomplete file" in body
+    assert 'id="retry-failed-button"' in body
+
+
+def test_page_has_no_failures_section_without_failures(app, client):
+    assert 'id="index-failures"' not in client.get("/utilities/index-photos").get_data(as_text=True)
+
+
+def test_retry_all_queues_the_failed_files_that_still_exist(app, client, tmp_path, monkeypatch):
+    from yaffo.utils.index_jobs_dto import IndexJobs
+    present = tmp_path / "burst.jpg"
+    present.write_bytes(b"x")
+    _add_failed(app, present)
+    _add_failed(app, tmp_path / "gone.jpg")
+    queued = []
+    monkeypatch.setattr("yaffo.routes.utilities.index_photos.get_thumbnail_dir", lambda: tmp_path / "thumbs")
+    monkeypatch.setattr("yaffo.routes.utilities.index_photos.enqueue_index_jobs",
+                        lambda session, paths: queued.append(paths) or IndexJobs("i", "x"))
+
+    resp = client.post("/utilities/index-photos/retry-failed")
+
+    assert resp.status_code == 202 and resp.get_json()["media_item_count"] == 1
+    assert queued == [[str(present)]]
+
+
+def test_retry_all_with_nothing_failed_says_so(app, client, tmp_path, monkeypatch):
+    monkeypatch.setattr("yaffo.routes.utilities.index_photos.get_thumbnail_dir", lambda: tmp_path / "thumbs")
+    resp = client.post("/utilities/index-photos/retry-failed")
+    assert resp.status_code == 400 and resp.get_json()["code"] == "nothing_failed"

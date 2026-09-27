@@ -387,6 +387,16 @@ class Store:
         params.append(limit)
         return [dict(row) for row in self._conn().execute(sql, params).fetchall()]
 
+    def task_by_id(self, task_id: str) -> Optional[dict]:
+        """One task by its id, with the same columns as tasks_mentioning."""
+        row = self._conn().execute(
+            """SELECT id, name, args_json, kwargs_json, status, error, attempts, created_at,
+                      started_at, finished_at
+               FROM task WHERE id = ?""",
+            (task_id,),
+        ).fetchone()
+        return dict(row) if row else None
+
     def tasks_mentioning(self, text: str, limit: int = 50) -> list[dict]:
         """Tasks whose arguments contain `text` as a JSON string (a job id), oldest
         first."""

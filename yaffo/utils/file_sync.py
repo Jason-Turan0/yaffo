@@ -9,9 +9,11 @@ from sqlalchemy.orm import Session
 
 from yaffo.common import MEDIA_EXTENSIONS
 from yaffo.db.models import (
-    JOB_STATUS_COMPLETED, JOB_STATUS_FAILED, MEDIA_STATUS_INDEXED, Job, MediaItem,
+    JOB_STATUS_COMPLETED, JOB_STATUS_FAILED, MEDIA_STATUS_FAILED, MEDIA_STATUS_INDEXED, Job, MediaItem,
 )
 from yaffo.db.repositories.job_repository import is_job_cancelled, open_run_job
+from yaffo.utils.index_errors import file_signature
+from yaffo.utils.job_codes import PROBLEM_MEDIA_FOLDER_EMPTY
 from yaffo.db.repositories.media_dir_repository import get_media_dirs
 from yaffo.logging_config import get_logger
 from yaffo.utils.index_jobs import enqueue_index_jobs
@@ -69,6 +71,9 @@ class MediaScan:
     # drive that didn't mount properly (an empty mount point), not a deliberate
     # deletion. Unattended syncs leave the items under them alone.
     empty_roots: list[str] = field(default_factory=list)
+    # FAILED items whose file is unchanged since they failed: known, not new work.
+    # (A FAILED item whose file changed is back in `unindexed`, to be retried.)
+    failed_unchanged: int = 0
 
     @property
     def files_to_index(self) -> list[str]:
@@ -142,7 +147,14 @@ def iter_media_scan(
     The slow part is the recursive walk and the per-row `exists()` check; emitting the
     count incrementally lets the page show progress instead of blocking on the whole
     scan. `scan_media_dirs` consumes this for callers that just want the result."""
-    db_photos = session.query(MediaItem.id, MediaItem.full_file_path, MediaItem.status).all()
+    rows = session.query(MediaItem.id, MediaItem.full_file_path, MediaItem.status,
+                         MediaItem.index_failed_signature).all()
+    db_photos = [(row[0], row[1], row[2]) for row in rows]
+    # A FAILED item is skipped until its file changes (signature: size:mtime).
+    failed_signatures = {
+        str(Path(path).expanduser().resolve(strict=False)): signature
+        for _id, path, status, signature in rows if status == MEDIA_STATUS_FAILED
+    }
     if scoped:
         db_photos = [row for row in db_photos if any(
             Path(row[1]).is_relative_to(root) for root in media_dirs
@@ -157,6 +169,7 @@ def iter_media_scan(
     unindexed: list[dict] = []
     empty_roots: list[str] = []
     walked = 0
+    failed_unchanged = 0
     marked_dirs: dict[Path, bool] = {}
     started_at = monotonic_time.monotonic()
     for media_dir in media_dirs:
@@ -191,8 +204,12 @@ def iter_media_scan(
                 continue
             full_path = str(resolved_photo)
             filesystem_paths.add(full_path)
-            if full_path not in indexed_paths:
-                unindexed.append({'filename': photo_file.name, 'full_path': full_path})
+            if full_path in indexed_paths:
+                continue
+            if full_path in failed_signatures and file_signature(resolved_photo) == failed_signatures[full_path]:
+                failed_unchanged += 1
+                continue
+            unindexed.append({'filename': photo_file.name, 'full_path': full_path})
         if len(filesystem_paths) == found_before:
             empty_roots.append(str(media_dir))
 
@@ -212,6 +229,7 @@ def iter_media_scan(
         total_indexed=len(indexed_paths),
         total_filesystem=len(filesystem_paths),
         empty_roots=empty_roots,
+        failed_unchanged=failed_unchanged,
     )
 
 
@@ -344,6 +362,9 @@ def _file_sync(session: Session, run: Job, scope_paths: list[str] | None = None)
                  "library. Check the drive, or remove the folder in Settings if it's empty on purpose.")
     data = {"indexed": len(scan.files_to_index), "removed": len(orphaned_ids), "held_back": held_back,
             "empty_roots": scan.empty_roots}
+    if held_back:
+        data.update(problem=PROBLEM_MEDIA_FOLDER_EMPTY,
+                    problem_params={"roots": scan.empty_roots, "count": held_back})
     # The scan is the slow part; a cancel during it must stop the sync before it
     # deletes orphans or enqueues indexing.
     if is_job_cancelled(session, run.id):

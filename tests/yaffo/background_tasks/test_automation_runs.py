@@ -11,7 +11,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from yaffo.background_tasks.automation_runs import record_run, run_and_record
+from yaffo.background_tasks.automation_runs import RunOutcome, record_run, run_and_record
 from yaffo.db import db
 from yaffo.db.models import (
     Automation,
@@ -106,7 +106,8 @@ def _system_automation(session, slug):
 
 def test_record_run_writes_completed_job(session):
     """A system automation's run is recorded as a COMPLETED Job with the work's
-    summary in job_data, discoverable via jobs.automation_id. record_run hands the
+    outcome code and numbers in job_data (tuning values under "details"),
+    discoverable via jobs.automation_id. record_run hands the
     work a ProgressReporter bound to the run's Job, and the counts it reports land on
     the Job."""
     automation = _system_automation(session, "assign_location_name")
@@ -115,7 +116,7 @@ def test_record_run_writes_completed_job(session):
     def work(progress_reporter):
         reporters.append(progress_reporter)
         progress_reporter.progress_update(5, 3, 0, 0)
-        return "named 3/5 photo(s)"
+        return RunOutcome("named", {"named": 3, "total": 5}, {"radius_km": 1.5})
 
     job = record_run(session, automation, work)
 
@@ -127,7 +128,7 @@ def test_record_run_writes_completed_job(session):
     assert job.task_count == 5
     assert job.completed_count == 3
     assert job.started_at is not None and job.completed_at is not None
-    assert json.loads(job.job_data)["output"] == "named 3/5 photo(s)"
+    assert json.loads(job.job_data) == {"outcome": "named", "named": 3, "total": 5, "details": {"radius_km": 1.5}}
     assert session.query(Job).filter_by(automation_id=automation.id).count() == 1
 
 
@@ -147,6 +148,7 @@ def test_record_run_captures_work_failure(session):
     assert reporters[0].job_id == job.id
     assert job.status == JOB_STATUS_FAILED
     assert "disk on fire" in job.error
+    assert json.loads(job.job_data) == {"problem": "task_error"}
     assert job.automation_id == automation.id
     assert job.completed_at is not None
 
@@ -162,7 +164,7 @@ def test_record_run_completes_empty_media_scope_without_calling_work(session):
     assert job.automation_id == automation.id
     assert job.status == JOB_STATUS_COMPLETED
     assert job.started_at is not None and job.completed_at is not None
-    assert json.loads(job.job_data)["output"] == "No indexed media items to process"
+    assert json.loads(job.job_data) == {"outcome": "no_media"}
 
 
 def _cancel_elsewhere(session, job_id):
@@ -184,7 +186,7 @@ def test_record_run_stops_at_the_next_check_and_stays_cancelled(session):
             if item == 3:
                 _cancel_elsewhere(session, reporter.job_id)
         finished = reporter.run_with_progress(list(range(25)), process)
-        return f"finished={finished}"
+        return RunOutcome("labeled", {"labeled": 0, "total": 25}, {"finished": finished})
 
     job = record_run(session, automation, work)
 
@@ -192,7 +194,7 @@ def test_record_run_stops_at_the_next_check_and_stays_cancelled(session):
     assert processed == list(range(10))  # checks every 10 items
     assert job.status == JOB_STATUS_CANCELLED
     assert (job.task_count, job.completed_count, job.cancelled_count) == (25, 10, 15)
-    assert json.loads(job.job_data) == {"output": "finished=False"}
+    assert json.loads(job.job_data)["details"] == {"finished": False}
     assert job.completed_at is not None
 
 
@@ -237,8 +239,8 @@ def test_a_retried_task_records_on_the_same_job_and_a_finished_one_does_not_reru
     session.commit()
     ran = []
 
-    job = record_run(session, automation, lambda reporter: ran.append(1) or "done", job_id="task-1")
-    again = record_run(session, automation, lambda reporter: ran.append(2) or "done", job_id="task-1")
+    job = record_run(session, automation, lambda reporter: ran.append(1) or RunOutcome("labeled"), job_id="task-1")
+    again = record_run(session, automation, lambda reporter: ran.append(2) or RunOutcome("labeled"), job_id="task-1")
 
     assert job.id == "task-1" and job.status == JOB_STATUS_COMPLETED
     assert again is None and ran == [1]
@@ -271,3 +273,23 @@ def test_custom_run_cancel_kills_the_script_through_the_sandbox(session, monkeyp
     session.refresh(job)
     assert job.status == JOB_STATUS_CANCELLED
     assert elapsed < 15  # killed at the next ~1s poll, not at the sandbox time limit
+
+
+@pytest.mark.parametrize(("code", "problem"), [
+    ("x = 1 +", "script_error"),                        # parse error
+])
+def test_a_failed_script_records_a_script_problem(session, code, problem):
+    automation = _custom_automation(session, "broken", code)
+
+    job = run_and_record(session, automation, None)
+
+    assert job.status == JOB_STATUS_FAILED and job.error
+    assert json.loads(job.job_data)["problem"] == problem
+
+
+def test_sandbox_limit_errors_map_to_their_own_problems():
+    from yaffo.background_tasks.automation_runs import _script_problem
+    from yaffo.background_tasks.automation_sandbox.starlark_runner import HOST_CALL_LIMIT_ERROR, TIMEOUT_ERROR
+    assert _script_problem(TIMEOUT_ERROR) == "script_timeout"
+    assert _script_problem(HOST_CALL_LIMIT_ERROR) == "script_call_limit"
+    assert _script_problem("NameError: x") == "script_error"

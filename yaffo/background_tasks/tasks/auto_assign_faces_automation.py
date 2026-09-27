@@ -11,7 +11,8 @@ UI -- this one matches each face against *all* people and is fired by an event.
 from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_config import AUTOMATION_CONFIG, config_value
-from yaffo.background_tasks.automation_runs import record_run
+from yaffo.background_tasks.automation_runs import RunOutcome, record_run
+from yaffo.utils import job_codes as codes
 from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.progress_reporter import ProgressReporter
@@ -104,7 +105,7 @@ def auto_assign_faces_automation_task(automation_id: int, media_item_ids: list[i
         threshold = ui_threshold_to_similarity(ui_threshold, *get_similarity_bounds(session))
         assign_multiple_matches = bool(config_value(automation, _ASSIGN_MULTIPLE_MATCHES_FIELD))
 
-        def work(progress_reporter: ProgressReporter) -> str:
+        def work(progress_reporter: ProgressReporter) -> RunOutcome:
             assigned = _assign_faces(
                 session,
                 progress_reporter,
@@ -112,11 +113,11 @@ def auto_assign_faces_automation_task(automation_id: int, media_item_ids: list[i
                 threshold,
                 assign_multiple_matches=assign_multiple_matches,
             )
-            match_policy = "allowing multiple matches" if assign_multiple_matches else "unique matches only"
-            return (
-                f"assigned {assigned} face(s) across {len(media_item_ids)} "
-                f"photo(s) at threshold {ui_threshold} (cosine {threshold:.3f}, "
-                f"{match_policy})"
+            return RunOutcome(
+                codes.OUTCOME_ASSIGNED,
+                {"faces": assigned, "photos": len(media_item_ids)},
+                {"threshold": ui_threshold, "cosine": round(threshold, 3),
+                 "multiple_matches": assign_multiple_matches},
             )
 
         record_run(session, automation, work, media_item_ids=media_item_ids, job_id=run_job_id(task))

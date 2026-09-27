@@ -4,7 +4,14 @@ import numpy as np
 import pillow_heif
 from pathlib import Path
 from PIL.Image import Image as PIL_Image
-from PIL import Image, ImageOps
+from PIL import Image, ImageFile, ImageOps
+
+# Decode what a truncated file holds instead of refusing it. Some phone burst JPEGs
+# end ~100 bytes short (missing their end marker); by default Pillow raises "image
+# file is truncated" on them, so they never index and the hourly file sync retries
+# them forever. Process-wide by design: every pixel decode goes through this module
+# (indexing, classification, duplicate hashing, previews).
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 def convert_heif(file_path: Path):
     heif_file = pillow_heif.read_heif(str(file_path))

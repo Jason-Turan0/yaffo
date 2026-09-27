@@ -348,7 +348,14 @@
         "title": "Fotos no indexadas"
       },
       "emptyFolders_one": "Esta carpeta de medios no contiene archivos multimedia, lo que suele significar que su unidad no está conectada: {{folders}}. Sus fotos aparecen como faltantes a continuación, y Sincronizar las eliminaría de la biblioteca. Comprueba la unidad antes de sincronizar.",
-      "emptyFolders_other": "Estas carpetas de medios no contienen archivos multimedia, lo que suele significar que sus unidades no están conectadas: {{folders}}. Sus fotos aparecen como faltantes a continuación, y Sincronizar las eliminaría de la biblioteca. Comprueba las unidades antes de sincronizar."
+      "emptyFolders_other": "Estas carpetas de medios no contienen archivos multimedia, lo que suele significar que sus unidades no están conectadas: {{folders}}. Sus fotos aparecen como faltantes a continuación, y Sincronizar las eliminaría de la biblioteca. Comprueba las unidades antes de sincronizar.",
+      "retryFailed": {
+        "button": "Reintentar todo",
+        "error": "No se pudo iniciar la indexación: {{reason}}",
+        "startFailed": "No se pudo iniciar la indexación",
+        "started": "Indexando de nuevo {{count}} archivo(s)",
+        "starting": "Iniciando…"
+      }
     }
   },
   "assistant": {

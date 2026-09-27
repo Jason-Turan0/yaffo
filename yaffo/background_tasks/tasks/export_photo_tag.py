@@ -16,7 +16,8 @@ from pathlib import Path
 from sqlalchemy.orm import Session, joinedload
 
 from yaffo.background_tasks.automation_config import AUTOMATION_CONFIG, config_value
-from yaffo.background_tasks.automation_runs import record_run
+from yaffo.background_tasks.automation_runs import RunOutcome, record_run
+from yaffo.utils import job_codes as codes
 from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.progress_reporter import ProgressReporter
@@ -151,16 +152,16 @@ def export_photo_tag_task(automation_id: int, media_item_ids: list[int], task=No
         export_custom_tags = bool(config_value(automation, _CUSTOM_TAGS_FIELD))
         export_favorite = bool(config_value(automation, _FAVORITE_FIELD))
 
-        def work(progress_reporter: ProgressReporter) -> str:
+        def work(progress_reporter: ProgressReporter) -> RunOutcome:
             written = _export_tags(
                 session, progress_reporter, media_item_ids, export_location, export_people,
                 export_labels, export_custom_tags, export_favorite,
             )
-            return (
-                f"wrote metadata to {written}/{len(media_item_ids)} file(s) "
-                f"(location={export_location}, people={export_people}, "
-                f"labels={export_labels}, custom_tags={export_custom_tags}, "
-                f"favorite={export_favorite})"
+            return RunOutcome(
+                codes.OUTCOME_WRITTEN,
+                {"written": written, "total": len(media_item_ids)},
+                {"location": export_location, "people": export_people, "labels": export_labels,
+                 "custom_tags": export_custom_tags, "favorite": export_favorite},
             )
 
         record_run(session, automation, work, media_item_ids=media_item_ids, job_id=run_job_id(task))

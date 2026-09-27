@@ -377,6 +377,59 @@ Task code should still record user-facing failure state in the app database when
 that state is part of the feature contract. The queue status is operational
 state, not the primary UI progress model.
 
+## Job Outcomes and Problems
+
+A Job never stores text a user reads. It stores codes, and the run history and
+job cards translate them at render time (`routes/utilities/run_history.py`), so
+every run reads in the viewer's language. The codes live in
+`yaffo/utils/job_codes.py`; file sync's outcomes live with it
+(`utils/file_sync.py`, `SYNC_*`).
+
+| Field | Holds |
+|---|---|
+| `name` | The job kind (`import_photos`, `index_photos`, `find_duplicates`, `remove_duplicates`, `file_sync`) or, for an automation run, the automation's slug. Picks the row's label. |
+| `job_data.outcome` + params | How the run ended, with the numbers its sentence needs. |
+| `job_data.problem` + `problem_params` | Why the run needs attention (the row's red line). |
+| `job_data.details` | Tuning values (thresholds, radius, flags), shown only under the row's Details. |
+| `error` | English diagnostics (exception line, sandbox error), shown only under Details and to the assistant. |
+| `message` | An English note for debugging and the assistant. The UI never shows it. |
+
+Never store translated text on a Job: a stored translation is frozen in the
+language of whoever started the job. A custom script's printed output is its own
+content and is shown as-is.
+
+System automation outcomes (`automation_runs.RunOutcome`):
+
+| Code | Automation | Params |
+|---|---|---|
+| `labeled` | classify_labels | `labeled`, `total` |
+| `assigned` | auto_assign_faces | `faces`, `photos` |
+| `named` | assign_location_name | `named`, `total` |
+| `geotagged` | geotag_from_neighbors | `geotagged`, `total` |
+| `written` | export_photo_tag | `written`, `total` |
+| `no_media` | any | The scope held no indexed media. |
+
+File sync outcomes: `in_sync`, `started` (`indexed`, `removed`), `failed`,
+`cancelled`, and the skips `no_media_dirs`, `no_thumbnail_dir`,
+`no_folder_connected`, which read as **Skipped**.
+
+Problems:
+
+| Code | Meaning |
+|---|---|
+| `media_folder_empty` | File sync left items alone under media folders that hold no files, usually a drive that isn't connected (`roots`, `count`). |
+| `items_unprocessed` | Items no batch reported, because a worker stopped mid-batch (`count`). Counted as errors. |
+| `worker_stopped` | The task's worker crashed (the host's failure hook). |
+| `task_error` | The task raised an exception it didn't handle. |
+| `script_error` | A custom script failed. |
+| `script_timeout` | A custom script ran past the sandbox time limit. |
+| `script_call_limit` | A custom script made too many host calls. |
+| `invalid_scope`, `dispatch_failed`, `event_dispatch_failed` | A trigger couldn't start the run (stored as `dispatch_error_code`). |
+
+Chips derived from a Job: Pending, Running, **Stopping** (cancelled, work not
+ended: no `completed_at`), Completed, Completed with errors, **Skipped** (a file
+sync skip outcome), Failed, Cancelled.
+
 ## Immediate Mode for Tests
 
 Set `task_queue.immediate = True` in tests that need synchronous in-process

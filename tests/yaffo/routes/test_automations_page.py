@@ -383,7 +383,7 @@ def test_a_started_sync_row_shows_its_import_and_index_progress(app, client):
     assert body.count('class="run-history-row') == 1  # import/index fold into the sync's row
     assert "Running" in body and "60%" in body
     assert "Indexing 40 new files" in body
-    assert "import done, indexing" in body
+    assert "Indexing</span>" in body  # the step note
     assert "about 13 minutes left" in body
     assert "/jobs/s1/cancel-run" in body
 
@@ -561,13 +561,15 @@ def test_run_view_flags_a_completed_run_with_errors_on_its_chip():
     assert (clean.status_label, clean.status_chip) == ("Completed", "chip-success")
 
 
-def test_run_view_uses_message_for_single_task_run():
+def test_run_view_never_shows_the_stored_message():
+    """`message` is an English note for debugging and the assistant; a run reads
+    from its kind (or its automation's name) instead."""
     from yaffo.routes.utilities.run_history import run_view
     from yaffo.db.models import Job
-    job = Job(id="j", name="my-automation", status="COMPLETED",
-              task_count=1, completed_count=1, message="My automation")
+    job = Job(id="j", name="index_photos", status="COMPLETED",
+              task_count=1, completed_count=1, message="Indexed {totalCount}/{taskCount} photos")
     view = run_view(job)
-    assert view.summary == "My automation"
+    assert view.summary == "Index photos"
     assert view.is_error is False
 
 
@@ -575,22 +577,36 @@ def test_run_view_shows_empty_automation_run_summary():
     from yaffo.routes.utilities.run_history import run_view
     from yaffo.db.models import Job
     job = Job(id="empty", name="duplicate_scan", status="COMPLETED",
-              automation_id=7, task_count=0,
-              job_data='{"output": "No indexed media items to process"}')
+              automation_id=7, task_count=0, job_data='{"outcome": "no_media"}')
     view = run_view(job)
-    assert view.summary == "No indexed media items to process"
+    assert view.summary == "No indexed media to process"
     assert view.status_label == "Completed"
 
 
-def test_run_view_shows_completed_automation_output_with_one_processed_photo():
+def test_run_view_reads_a_system_automation_outcome_with_tuning_under_details():
     from yaffo.routes.utilities.run_history import run_view
     from yaffo.db.models import Job
     job = Job(id="one-photo", name="classify_labels", status="COMPLETED",
               automation_id=6, task_count=1, completed_count=1,
-              job_data='{"output": "labeled 0 of 1 photo(s) at threshold 0.24 (max 4 each)"}')
+              job_data='{"outcome": "labeled", "labeled": 0, "total": 1, '
+                       '"details": {"threshold": 0.24, "max_labels": 4}}')
     view = run_view(job)
-    assert view.summary == "labeled 0 of 1 photo(s) at threshold 0.24 (max 4 each)"
+    assert view.summary == "Labeled 0 of 1 photo"
     assert view.status_label == "Completed"
+    assert view.details == [("threshold", "0.24"), ("max_labels", "4")]
+
+
+def test_run_view_moves_a_pre_codes_summary_sentence_to_details():
+    """No migration: a system run recorded before outcome codes reads from its
+    counts, with its old English sentence only under Details."""
+    from yaffo.routes.utilities.run_history import run_view
+    from yaffo.db.models import Job
+    job = Job(id="old", name="classify_labels", status="COMPLETED",
+              automation_id=6, task_count=40, completed_count=40,
+              job_data='{"output": "labeled 12 of 40 photo(s) at threshold 0.24 (max 4 each)"}')
+    view = run_view(job)
+    assert view.summary == "40 of 40 processed"
+    assert view.details == [("output", "labeled 12 of 40 photo(s) at threshold 0.24 (max 4 each)")]
 
 
 def test_run_view_flags_failed():
@@ -599,7 +615,9 @@ def test_run_view_flags_failed():
     job = Job(id="j", name="x", status="FAILED", task_count=1, error="boom")
     view = run_view(job)
     assert view.is_error is True
-    assert view.error == "boom"
+    assert view.problem == "The run stopped with an error."  # translated; no code recorded
+    assert view.details == [("error", "boom")]  # the English, under Details
+    assert view.assistant_error == "boom"
 
 
 def test_run_view_computes_progress_for_in_progress():
@@ -1260,6 +1278,9 @@ def test_run_error_help_on_page_and_polled_fragment(app, client, monkeypatch, st
         assert 'data-page="/utilities/automations/a1"' in body
         if error:
             assert 'data-error="Test &lt;error&gt; &#34;details&#34;"' in body
+            assert "<summary>Details</summary>" in body  # the English error sits under Details
+            # kept across the 5s refresh swaps, so an opened panel stays open
+            assert 'id="run-history-details-help-run" hx-preserve="true"' in body
 
 
 def test_run_error_help_hidden_without_assistant_key(app, client):
@@ -1351,7 +1372,7 @@ def test_saved_locale_translates_the_new_run_history_strings(app, client):
 
     body = client.get("/utilities/automations/sync/runs").get_data(as_text=True)
 
-    assert "import done, indexing" not in body
+    assert 'run-history-note">Indexing</span>' not in body
     assert "minutes left" not in body
 
 
@@ -1373,3 +1394,102 @@ def test_time_left_reads_in_hours_and_minutes(seconds_left, expected):
     from yaffo.routes.utilities.run_history import _eta_note
     now = datetime(2026, 9, 27, 12, 0)
     assert _eta_note(now + timedelta(seconds=seconds_left), now) == expected
+
+
+@pytest.mark.parametrize(("data", "summary"), [
+    ({"outcome": "labeled", "labeled": 12, "total": 40}, "Labeled 12 of 40 photos"),
+    ({"outcome": "assigned", "faces": 1, "photos": 3}, "Assigned 1 face"),
+    ({"outcome": "assigned", "faces": 5, "photos": 3}, "Assigned 5 faces"),
+    ({"outcome": "named", "named": 2, "total": 9}, "Named the location of 2 of 9 photos"),
+    ({"outcome": "geotagged", "geotagged": 0, "total": 1}, "Geotagged 0 of 1 photo"),
+    ({"outcome": "written", "written": 7, "total": 8}, "Wrote metadata to 7 of 8 files"),
+    ({"outcome": "no_media"}, "No indexed media to process"),
+])
+def test_system_automation_outcomes_read_as_sentences(data, summary):
+    from yaffo.routes.utilities.run_history import run_view
+    from yaffo.db.models import Job
+    job = Job(id="j", name="x", status="COMPLETED", automation_id=1, task_count=1, completed_count=1,
+              job_data=json.dumps(data))
+    assert run_view(job).summary == summary
+
+
+def test_a_custom_scripts_output_is_shown_as_is():
+    from yaffo.routes.utilities.run_history import run_view
+    from yaffo.db.models import Automation, Job
+    job = Job(id="j", name="tag-cats", status="COMPLETED", automation_id=1, task_count=1, completed_count=1,
+              job_data=json.dumps({"output": ["tagged 3 cats"]}))
+    job.automation = Automation(slug="tag-cats", name="Tag cats", is_system=False)
+    view = run_view(job)
+    assert view.summary == "tagged 3 cats"
+    assert view.details == []  # one line: the summary already shows all of it
+
+
+def test_a_custom_scripts_last_line_is_its_summary_with_the_full_output_under_details():
+    from yaffo.routes.utilities.run_history import run_view
+    from yaffo.db.models import Automation, Job
+    output = ["checking 40 photos", "photo 7: cat", "", "Tagged 12 of 40 photos"]
+    job = Job(id="j", name="tag-cats", status="COMPLETED", automation_id=1, task_count=1, completed_count=1,
+              job_data=json.dumps({"output": output}))
+    job.automation = Automation(slug="tag-cats", name="Tag cats", is_system=False)
+    view = run_view(job)
+    assert view.summary == "Tagged 12 of 40 photos"
+    assert view.details == [("output", "checking 40 photos\nphoto 7: cat\nTagged 12 of 40 photos")]
+
+
+def test_a_failed_custom_scripts_output_stays_reachable_under_details():
+    from yaffo.routes.utilities.run_history import run_view
+    from yaffo.db.models import Automation, Job
+    job = Job(id="j", name="tag-cats", status="FAILED", automation_id=1, task_count=1, error_count=1,
+              error="NameError: tagg", job_data=json.dumps({"output": ["starting"], "problem": "script_error"}))
+    job.automation = Automation(slug="tag-cats", name="Tag cats", is_system=False)
+    view = run_view(job)
+    assert view.problem == "The script stopped with an error."
+    assert view.details == [("error", "NameError: tagg"), ("output", "starting")]
+
+
+@pytest.mark.parametrize("outcome", ["no_media_dirs", "no_thumbnail_dir", "no_folder_connected"])
+def test_a_skipped_file_sync_reads_skipped(outcome):
+    from yaffo.routes.utilities.run_history import run_view
+    from yaffo.db.models import Job
+    job = Job(id="j", name="file_sync", status="FAILED", task_count=1,
+              job_data=json.dumps({"outcome": outcome}), error="No media folders are configured.")
+    view = run_view(job)
+    assert (view.status_label, view.status_chip) == ("Skipped", "chip-warning")
+    assert view.problem is None  # the summary already says why
+    assert view.details == [("error", "No media folders are configured.")]
+
+
+def test_problem_lines_are_rendered_from_their_codes():
+    from yaffo.routes.utilities.run_history import problem_text
+    from yaffo.db.models import Job
+
+    def text(data, status="COMPLETED"):
+        return problem_text(Job(id="j", name="x", status=status, job_data=json.dumps(data)))
+
+    assert text({"problem": "media_folder_empty", "problem_params": {"roots": ["/Volumes/Photos"], "count": 3}}) == (
+        "These media folders hold no files, so 3 items under them were left alone: /Volumes/Photos. "
+        "Check the drive is connected, or remove the folder in Settings.")
+    assert text({"problem": "items_unprocessed", "problem_params": {"count": 1}}) == (
+        "1 item was never processed because a background worker stopped unexpectedly.")
+    assert text({"problem": "worker_stopped"}, "FAILED") == "The background worker stopped unexpectedly."
+    assert text({"problem": "script_timeout"}, "FAILED") == "The script ran past its time limit."
+    assert text({}) is None
+
+
+@pytest.mark.parametrize(("name", "data", "expected"), [
+    ("import_photos", None, "Imported 3/10 photos"),
+    ("index_photos", None, "Indexed 3/10 photos"),
+    ("find_duplicates", None, "Processed 3/10 media items"),
+    ("remove_duplicates", {"action_type": "trash"}, "Moved 3/10 files to the trash"),
+    ("remove_duplicates", {"action_type": "delete"}, "Deleted 3/10 files"),
+    ("remove_duplicates", {"action_type": "moveFolder", "destination_folder": "/tmp/dupes"},
+     "Moved 3/10 files to /tmp/dupes"),
+    ("remove_duplicates", None, "Processed 3/10 files"),
+])
+def test_job_card_progress_reads_from_the_kind_for_a_job_or_its_dict(name, data, expected):
+    from yaffo.routes.utilities.run_history import job_progress_text
+    from yaffo.db.models import Job
+    job = Job(id="j", name=name, status="RUNNING", task_count=10, completed_count=2, error_count=1,
+              cancelled_count=0, message="ignored", job_data=json.dumps(data) if data else None)
+    assert job_progress_text(job) == expected
+    assert job_progress_text(job.to_dict_with_view_props()) == expected  # the card's other input

@@ -9,7 +9,8 @@ import json
 import uuid
 
 from yaffo.background_tasks.config import task_queue
-from yaffo.background_tasks.automation_runs import record_run
+from yaffo.background_tasks.automation_runs import RunOutcome, record_run
+from yaffo.utils import job_codes as codes
 from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.tasks.find_duplicates import find_duplicates_task
@@ -66,7 +67,8 @@ def duplicate_scan_task(automation_id: int | None = None, media_item_ids: list[i
         if opened is None and automation_id is not None:
             automation = session.get(Automation, automation_id)
             if automation is not None:
-                record_run(session, automation, lambda _: "", media_item_ids=[], job_id=job_id)
+                record_run(session, automation, lambda _: RunOutcome(codes.OUTCOME_NO_MEDIA),
+                           media_item_ids=[], job_id=job_id)
     finally:
         session.close()
         SessionFactory.remove()

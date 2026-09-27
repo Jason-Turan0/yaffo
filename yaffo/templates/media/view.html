@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/job_details.html" import job_details_block %}
 
 {% block title %}{{ file_name }} - Yaffo{% endblock %}
 
@@ -18,6 +19,17 @@
             <div class="sidebar-content thin-scrollbar">
                 <div class="detail-section">
                     <h3>{{ _("File Information") }}</h3>
+                    {% if media_item.status == 'FAILED' %}
+                        {# Indexing failed permanently (utils/index_errors.py): the file shows
+                           fine, but its date, location, faces and labels weren't read. #}
+                        <div class="index-failure-note">
+                            <p>{{ index_failure_message(media_item.index_error) }}
+                               {{ _("Its date, location, faces and labels weren't read. Use Reindex to try again.") }}</p>
+                            {% if media_item.index_error_detail %}
+                                {{ job_details_block([("error", media_item.index_error_detail)], "media-index-details", media_item.id) }}
+                            {% endif %}
+                        </div>
+                    {% endif %}
                     <div class="detail-item">
                         <label>{{ _("Name:") }}</label>
                         <span class="detail-value">{{ file_name }}</span>

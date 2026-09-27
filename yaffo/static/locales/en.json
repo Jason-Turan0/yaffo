@@ -302,6 +302,8 @@
       }
     },
     "indexPhotos": {
+      "emptyFolders_one": "This media folder holds no media files, which usually means its drive isn't connected: {{folders}}. Its photos are listed as missing below, and Sync would remove them from the library. Check the drive before syncing.",
+      "emptyFolders_other": "These media folders hold no media files, which usually means their drives aren't connected: {{folders}}. Their photos are listed as missing below, and Sync would remove them from the library. Check the drives before syncing.",
       "filename": "Filename",
       "inSync": {
         "description": "All photos on the filesystem are indexed, and all database entries have corresponding files.",
@@ -329,6 +331,13 @@
         "starting": "Starting…",
         "title": "Reindex the whole library?"
       },
+      "retryFailed": {
+        "button": "Retry all",
+        "error": "Failed to start indexing: {{reason}}",
+        "startFailed": "Failed to start indexing",
+        "started": "Indexing {{count}} file(s) again",
+        "starting": "Starting…"
+      },
       "scan": {
         "error": "Scan error: {{reason}}",
         "failed": "Failed to scan the filesystem.",
@@ -346,9 +355,7 @@
       "unindexed": {
         "description": "The following photos exist in the configured media directories but are not in the database.",
         "title": "Unindexed Photos"
-      },
-      "emptyFolders_one": "This media folder holds no media files, which usually means its drive isn't connected: {{folders}}. Its photos are listed as missing below, and Sync would remove them from the library. Check the drive before syncing.",
-      "emptyFolders_other": "These media folders hold no media files, which usually means their drives aren't connected: {{folders}}. Their photos are listed as missing below, and Sync would remove them from the library. Check the drives before syncing."
+      }
     }
   },
   "assistant": {

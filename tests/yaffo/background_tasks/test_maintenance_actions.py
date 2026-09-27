@@ -206,6 +206,7 @@ def test_the_unattended_sync_leaves_items_under_an_empty_folder_alone(session, l
     assert str(empty) in run.error and "The 1 indexed item(s) under them were left" in run.error
     assert json.loads(run.job_data) == {
         "outcome": "started", "indexed": 2, "removed": 1, "held_back": 1, "empty_roots": [str(empty)],
+        "problem": "media_folder_empty", "problem_params": {"roots": [str(empty)], "count": 1},
         "import_job_id": "i", "index_job_id": "x"}
 
 

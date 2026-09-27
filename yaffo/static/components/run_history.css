@@ -100,3 +100,33 @@
 .run-history-row > * {
     min-width: 0;
 }
+
+/* A run's Details: English diagnostics and tuning values, collapsed by default
+   (templates/components/job_details.html). Shared by run-history rows and job cards. */
+.job-details {
+    flex-basis: 100%;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+}
+
+.job-details summary {
+    cursor: pointer;
+    width: fit-content;
+}
+
+.job-details dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 2px 12px;
+    margin: 4px 0 0;
+}
+
+.job-details dt {
+    font-family: var(--font-mono);
+}
+
+.job-details dd {
+    margin: 0;
+    font-family: var(--font-mono);
+    white-space: pre-wrap;
+}

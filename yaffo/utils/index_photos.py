@@ -27,6 +27,7 @@ from yaffo.utils.image import (
     upright_image_from_path,
 )
 from yaffo.utils.face_analysis import detect_faces
+from yaffo.utils.index_errors import IndexFailure, classify_index_error
 from yaffo.utils.exiftool_path import get_exiftool_path
 from yaffo.utils.settings import get_thumbnail_dir
 
@@ -310,7 +311,9 @@ def get_exif_tags(img: PIL_Image) -> List[Dict[str, str]]:
         logger.warning("Failed to extract tag value from image")
         return []
 
-def index_photo(photo_path: Path, thumbnail_dir: Path) -> Optional[dict]:
+def index_photo(photo_path: Path, thumbnail_dir: Path) -> dict | IndexFailure:
+    """Index one photo: metadata, dates, dimensions and faces. Returns the result
+    dict, or an IndexFailure saying why it couldn't be indexed (utils/index_errors.py)."""
     try:
         # Try exiftool first for comprehensive metadata (includes XMP)
         exif_data = get_exif_data_with_exiftool(photo_path)
@@ -396,7 +399,7 @@ def index_photo(photo_path: Path, thumbnail_dir: Path) -> Optional[dict]:
 
     except Exception as e:
         logger.error(f"Error processing photo {photo_path}: {e}")
-        return None
+        return classify_index_error(photo_path, e)
 
 
 def index_photos_batch(

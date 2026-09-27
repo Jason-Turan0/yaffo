@@ -265,3 +265,41 @@ def test_automation_config_shows_values_defaults_and_meaning(env):
     assert "Nearby radius (nearby_radius): 3 km (default" in text and "How close an already-named photo" in text
     assert "has no settings" in _call(provider, "automation_config", slug="plain")[0]
     assert _call(provider, "automation_config", slug="nope")[1]["error"] is True
+
+
+def test_job_detail_shows_how_a_run_ended_and_finds_its_own_task(env):
+    """A run Job is keyed by its task's id: job_detail finds that task although no
+    task mentions the id in its arguments, and prints the outcome, problem and
+    details codes the UI translates."""
+    provider, session, store = env[0], env[1], env[2]
+    task_id = store.insert_task("classify_labels_automation_task", [6, [1, 2]], {})
+    store.mark_running(task_id)
+    store.mark_error(task_id, "worker crashed (exitcode=139)")
+    session.add(Job(id=task_id, name="classify_labels", status="FAILED", error="worker crashed (exitcode=139)",
+                    job_data=json.dumps({"outcome": "labeled", "labeled": 3, "total": 9,
+                                         "details": {"threshold": 0.24}, "problem": "worker_stopped"})))
+    session.commit()
+
+    text, _ = _call(provider, "job_detail", job_id=task_id)
+
+    assert 'Outcome: labeled {"labeled": 3, "total": 9}' in text
+    assert "Problem: worker_stopped" in text
+    assert 'Details: {"threshold": 0.24}' in text
+    assert "Error: worker crashed (exitcode=139)" in text
+    assert "classify_labels_automation_task(" in text and "attempts 1" in text
+
+
+def test_the_assistant_sees_files_that_couldnt_be_indexed(env):
+    provider, session = env[0], env[1]
+    session.add(MediaItem(id=50, full_file_path=str(env[4] / "2019" / "burst.jpg"), status="FAILED",
+                          media_type="photo", index_error="decode_error",
+                          index_error_detail="OSError: image file is truncated (78 bytes not processed)"))
+    session.commit()
+
+    report, _ = _call(provider, "media_item_report", media_item_id=50)
+    assert "Index status: FAILED" in report
+    assert "Index failure: decode_error -- OSError: image file is truncated (78 bytes not processed)" in report
+    assert "skips it until the file changes" in report
+
+    health_text, _ = _call(provider, "health_report")
+    assert "1 file(s) couldn't be indexed (decode_error: 1)" in health_text

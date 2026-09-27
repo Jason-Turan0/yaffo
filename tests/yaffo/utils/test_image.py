@@ -98,3 +98,28 @@ class TestUprightBox:
         )
         # Rotate 90 CCW: displayed 100x200, x' = y, y' = height - x.
         assert (left, top, right, bottom) == (10, 110, 80, 180)
+
+
+def _truncated_jpeg(tmp_path: Path, cut: int = 100) -> Path:
+    """A real JPEG with its last `cut` bytes chopped off, like the phone burst shots
+    that ended ~100 bytes short and never indexed."""
+    source = tmp_path / "full.jpg"
+    rng = np.random.default_rng(0)
+    Image.fromarray(rng.integers(0, 255, (120, 160, 3), dtype=np.uint8)).save(source, "JPEG", quality=90)
+    truncated = tmp_path / "burst.jpg"
+    truncated.write_bytes(source.read_bytes()[:-cut])
+    return truncated
+
+
+def test_a_truncated_jpeg_still_decodes_for_indexing(tmp_path):
+    path = _truncated_jpeg(tmp_path)
+
+    pixels = image_to_numpy(image_from_path(path))
+
+    assert pixels.shape == (120, 160, 3)
+
+
+def test_a_truncated_jpeg_still_decodes_for_previews(tmp_path):
+    image = upright_image_from_path(_truncated_jpeg(tmp_path))
+    image.load()
+    assert image.size == (160, 120)

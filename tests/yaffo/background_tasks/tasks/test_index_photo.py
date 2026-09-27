@@ -154,3 +154,45 @@ def test_an_index_batch_stamps_its_start_and_refreshes_the_estimate(db_for_index
         job = s.get(Job, "job-1")
         assert job.started_at is not None
         assert job.estimated_completed_at is not None and job.estimated_completed_at >= job.started_at
+
+
+def test_a_permanent_failure_marks_the_item_failed_and_a_success_clears_it(db_for_index, tmp_path, monkeypatch):
+    from yaffo.db.models import MEDIA_STATUS_FAILED
+    from yaffo.utils.index_errors import IndexFailure, file_signature
+    engine, thumbnail_dir = db_for_index
+    files = _batch(engine, tmp_path, 1)
+    real_index_photo = index_photo_mod.index_photo
+    monkeypatch.setattr(index_photo_mod, "index_photo", lambda path, thumbs: IndexFailure(
+        "decode_error", "OSError: image file is truncated", permanent=True))
+
+    index_photo_task("job-1", files)
+
+    with Session(engine) as s:
+        item = s.query(MediaItem).one()
+        assert item.status == MEDIA_STATUS_FAILED
+        assert (item.index_error, item.index_error_detail) == ("decode_error", "OSError: image file is truncated")
+        assert item.index_failed_at is not None and item.index_failed_signature == file_signature(Path(files[0]))
+        assert s.get(Job, "job-1").error_count == 1
+
+    monkeypatch.setattr(index_photo_mod, "index_photo", real_index_photo)  # the stubbed success
+    index_photo_task("job-1", files)  # the user retries
+
+    with Session(engine) as s:
+        item = s.query(MediaItem).one()
+        assert item.status == MEDIA_STATUS_INDEXED
+        assert (item.index_error, item.index_error_detail, item.index_failed_at, item.index_failed_signature) == (
+            None, None, None, None)
+
+
+def test_a_file_that_couldnt_be_reached_stays_imported_for_the_next_sync(db_for_index, tmp_path, monkeypatch):
+    from yaffo.utils.index_errors import IndexFailure
+    engine, _ = db_for_index
+    files = _batch(engine, tmp_path, 1)
+    monkeypatch.setattr(index_photo_mod, "index_photo", lambda path, thumbs: IndexFailure(
+        "unreadable", "OSError: [Errno 5] Input/output error", permanent=False))
+
+    index_photo_task("job-1", files)
+
+    with Session(engine) as s:
+        item = s.query(MediaItem).one()
+        assert item.status == "IMPORTED" and item.index_error is None

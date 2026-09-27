@@ -103,6 +103,31 @@ Some operations, such as changing the automatic label vocabulary, have their own
 reprocessing controls. Use the indexing utility for file-system changes or when
 you do not want to wait for the watcher or hourly sync.
 
+## Files That Couldn't Be Indexed
+
+Occasionally a file can't be indexed, for example because it's damaged, cut off
+partway through, or in a format Yaffo can't decode. The file still appears in your
+library and you can open it, but it has no date, location, faces, or labels,
+because those are read during indexing. Undated files sort with other undated
+items rather than near when they were taken.
+
+When this happens:
+
+- **Index Photos** lists the files that couldn't be indexed, with the reason for
+  each. Select a file name to open it.
+- The photo's details panel explains why, with the technical error under
+  **Details**.
+- Sync leaves these files alone, so they aren't retried every hour. A file is
+  tried again automatically only when it changes on disk, for example after you
+  repair or replace it.
+
+To try again yourself, select **Retry all** on Index Photos, or **Reindex** in
+the photo's details panel. Retrying is also worthwhile after updating Yaffo, since
+a newer version may handle the file.
+
+If a file can't be reached at all, for example because its drive was disconnected
+during indexing, it isn't marked as failed. The next sync tries it again.
+
 ## Supported Media
 
 Yaffo indexes these file extensions:

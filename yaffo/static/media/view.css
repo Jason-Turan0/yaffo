@@ -657,3 +657,18 @@
     font-size: var(--font-size-sm);
     font-weight: 600;
 }
+
+/* A file that couldn't be indexed: why, with the English error under Details. */
+.index-failure-note {
+    margin-bottom: 12px;
+    padding: 8px 10px;
+    border: var(--border-width) solid var(--color-warning-soft-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-warning-soft);
+    color: var(--color-warning-soft-text);
+    font-size: var(--font-size-sm);
+}
+
+.index-failure-note p {
+    margin: 0;
+}

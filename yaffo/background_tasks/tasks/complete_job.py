@@ -5,6 +5,7 @@ from yaffo.logging_config import get_logger
 from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import emit_job_completed_event
 from yaffo.background_tasks.utils import SessionFactory
+from yaffo.utils.job_codes import PROBLEM_ITEMS_UNPROCESSED, with_problem
 from yaffo.utils.time import utcnow
 
 logger = get_logger(__name__, 'background_tasks')
@@ -44,6 +45,7 @@ def finalize_job(job_id: str) -> None:
         if unreported:
             job.error_count = (job.error_count or 0) + unreported
             job.error = job.error or f"{unreported} item(s) were never processed: a worker stopped unexpectedly"
+            job.job_data = with_problem(job.job_data, PROBLEM_ITEMS_UNPROCESSED, count=unreported)
             logger.warning(f"Job {job_id}: {unreported} item(s) unreported by its batches; counted as errors")
         job.status = JOB_STATUS_COMPLETED
         job.completed_at = utcnow()

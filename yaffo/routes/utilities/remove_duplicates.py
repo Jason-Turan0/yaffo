@@ -240,7 +240,7 @@ def init_remove_duplicates_routes(app: Flask):
             name='find_duplicates',
             status=JOB_STATUS_PENDING,
             task_count=len(file_paths),
-            message=gettext("Processed {totalCount}/{taskCount} media items"),
+            message="Processed {totalCount}/{taskCount} media items",
             completed_count=0,
             error_count=0,
             cancelled_count=0,
@@ -391,26 +391,16 @@ def init_remove_duplicates_routes(app: Flask):
             })
             return response
 
-        # Create background job for removing duplicates
-        action_names = {
-            'trash': gettext("Moving to trash"),
-            'delete': gettext("Permanently deleting"),
-            'moveFolder': gettext(
-                "Moving to %(destination)s",
-                destination=destination_folder,
-            ),
-        }
-
+        # Create background job for removing duplicates. Its card reads the action
+        # from job_data and translates at render time (run_history.job_progress_text);
+        # `message` is an English note for debugging and the assistant only.
         execution_job_id = str(uuid.uuid4())
         execution_job = Job(
             id=execution_job_id,
             name='remove_duplicates',
             status=JOB_STATUS_PENDING,
             task_count=len(selected_files),
-            message=gettext(
-                "%(action)s {totalCount}/{taskCount} files",
-                action=action_names.get(action_type, gettext("Processing")),
-            ),
+            message=f"Removing duplicates ({action_type}): {{totalCount}}/{{taskCount}} files",
             completed_count=0,
             error_count=0,
             cancelled_count=0,

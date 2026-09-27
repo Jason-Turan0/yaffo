@@ -13,7 +13,8 @@ import numpy as np
 from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_config import AUTOMATION_CONFIG, config_value
-from yaffo.background_tasks.automation_runs import record_run
+from yaffo.background_tasks.automation_runs import RunOutcome, record_run
+from yaffo.utils import job_codes as codes
 from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import EventContext, emit_event, event_chain_scope
 from yaffo.background_tasks.progress_reporter import ProgressReporter
@@ -160,7 +161,7 @@ def classify_labels_automation_task(
 
         labeled: list[int] = []
 
-        def work(progress_reporter: ProgressReporter) -> str:
+        def work(progress_reporter: ProgressReporter) -> RunOutcome:
             nonlocal labeled
             labeled = classify_media_items(
                 session,
@@ -169,9 +170,10 @@ def classify_labels_automation_task(
                 max_labels,
                 progress_reporter,
             )
-            return (
-                f"labeled {len(labeled)} of {len(media_item_ids)} photo(s) "
-                f"at threshold {threshold:.2f} (max {max_labels} each)"
+            return RunOutcome(
+                codes.OUTCOME_LABELED,
+                {"labeled": len(labeled), "total": len(media_item_ids)},
+                {"threshold": round(threshold, 2), "max_labels": max_labels},
             )
 
         # Scope the run so the photo_labeled it emits carries this automation (loop guard).

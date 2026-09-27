@@ -4,6 +4,7 @@
    what ran, for lists that mix kinds (Index Photos lists index and import runs).
    Unfinished runs get a Cancel button. #}
 {% from "macros/local_datetime.html" import local_datetime %}
+{% from "components/job_details.html" import job_details_block %}
 {% macro run_history_list(runs, help_page, show_label=false) %}
 <ul class="run-history-list">
     {% for run in runs %}
@@ -44,9 +45,10 @@
             aria-label="{{ _("Ask Yaffo about this run") }}" data-tooltip="{{ _("Ask Yaffo") }}"
             data-job-id="{{ run.job_id }}"
             {% if run.automation_slug %}data-automation="{{ run.automation_slug }}"{% endif %}
-            data-page="{{ help_page }}" data-error="{{ (run.error or run.summary)[:500] }}">
+            data-page="{{ help_page }}" data-error="{{ run.assistant_error }}">
     </button>
     {% endif %}
-    {% if run.error %}<p class="run-history-error">{{ run.error }}</p>{% endif %}
+    {% if run.problem %}<p class="run-history-error">{{ run.problem }}</p>{% endif %}
+    {% if run.details %}{{ job_details_block(run.details, "run-history-details", run.job_id) }}{% endif %}
 </li>
 {% endmacro %}
