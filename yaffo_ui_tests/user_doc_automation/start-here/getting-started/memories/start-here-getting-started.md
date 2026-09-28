@@ -22,6 +22,21 @@
 - Prose unaffected: the section text lists preview / file info / capture date+device /
   location / people / faces / labels, all still visible; nothing describes the tags
   section.
+- Later run: 2453 px differ (0.0418%) in a single 365x27 device-px box at (120,435),
+  i.e. CSS (60,217) 182x13.5 = one text line at the sidebar's text left edge. Working
+  the box positions (card padding 20 + content padding 20, h2 18px, h3 14px, labels
+  13px @ lh 1.4) lands on the FOLDER value's FIRST line: `/tmp/yaffo-docs/Family`
+  (Linux) vs `/private/tmp/yaffo-docs/Family` (macOS). The break stays at the space
+  before `Photos/...`, which is why line 2 never changes and the diff box is one line
+  tall, not two.
+- Not a product change and not a capture error: the host path spelling again. The
+  library-basics/photo-details walkthrough documents this exact view and already masks
+  it, so this shot now carries the same ignoreRegions entry
+  (`".detail-section:first-child .detail-item:nth-of-type(2) .detail-value"`) — mask,
+  never adopt, because the next host flips it back.
+- Still outstanding here: the dvh-derived frame growth (+7 CSS px bottom band, above).
+  It did not recur in this run (no bottom band in the diff), so no new baseline; if it
+  returns, pin the pane height instead of adopting the frame.
 
 
 ## gallery-home.webp
@@ -37,3 +52,20 @@
 - 0.2836% is ~3x the 0.1% "tiny variation" promote gate and the whole control repainted, so do not
   adopt: quarantine. If the toggle keeps jittering run after run, pin the header metrics (fixed-size
   view-toggle / explicit crop) instead of chasing a baseline.
+
+
+## settings-overview.webp
+- 2026 run: 3197 px differ (0.0607% of the 1392x946 CSS-px frame), one 426x154 box at (142,1052) = the
+  `#current-thumbnail-dir` value plus the `#thumbnail-stats` bar. The three kept `.settings-section`s
+  (Media Directories / Thumbnail Directory / Language), the clip and the framing are pixel-identical.
+- Two causes, both fixture/host, not product: the path rendered `/tmp/yaffo-docs/thumbnails` where the
+  baseline had `/private/tmp/...` — the very macOS/Linux /tmp canonicalization the shot already masks for
+  `.media-dir-path`, but the thumbnail path was not in the mask — and `Total Size` drifted
+  466.02 -> 465.97 KB (`Files:` stayed 96), a number computed by counting the generated thumbnail cache,
+  so it moves whenever the fixture is rebuilt.
+- Fix applied: ignoreRegions extended to `#current-thumbnail-dir` and `#thumbnail-stats`, so the shot no
+  longer flips on host canonicalization or fixture rebuild. The paths/numbers stay visible in the image.
+- Prose bug found while checking this shot: the alt text claimed "Language, Units, and Media Directories",
+  but the setup removes every `.settings-section` after the third one, so Units (section 4 in
+  `templates/settings/index.html`) can never appear. Alt text now names Media Directories, Thumbnail
+  Directory, and Language.

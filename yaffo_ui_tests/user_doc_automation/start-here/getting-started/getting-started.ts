@@ -19,9 +19,11 @@ export default defineWalkthrough({
             viewport: {width: 1400, height: 1200},
             goto: "/settings",
             clip: ".main-content",
-            // macOS canonicalizes /tmp to /private/tmp while Linux leaves it alone.
-            // The real path stays visible but does not make cross-platform diffs noisy.
-            ignoreRegions: [".media-dir-path"],
+            // Paths stay visible in the capture but must not make diffs noisy: macOS
+            // canonicalizes /tmp to /private/tmp while Linux leaves it alone, and the
+            // thumbnail stats are counted from the generated fixture thumbnails, so
+            // they move whenever that cache is rebuilt.
+            ignoreRegions: [".media-dir-path", "#current-thumbnail-dir", "#thumbnail-stats"],
             setup: async (page) => {
                 await page.evaluate(() => {
                     const sections = Array.from(document.querySelectorAll(".settings-section"));
@@ -71,6 +73,14 @@ export default defineWalkthrough({
             goto: ({mediaIdByFilename}) =>
                 mediaIdByFilename(DETAIL_IMAGE).then((id) => `/media/view/${id}`),
             clip: ".photo-viewer",
+            // The changed line is the FOLDER value's first line: the docs fixture
+            // is /private/tmp on macOS and /tmp on Linux, so that line follows the
+            // host, not the app. Keep the folder visible in the capture and exclude
+            // only its host spelling from comparison — the same region the
+            // library-basics/photo-details page masks for this same view.
+            ignoreRegions: [
+                ".detail-section:first-child .detail-item:nth-of-type(2) .detail-value",
+            ],
         },
     },
 });
