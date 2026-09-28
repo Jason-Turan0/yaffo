@@ -88,10 +88,42 @@ def extract_poster(video_path: Path, thumbnail_dir: Path, duration_seconds: Opti
         logger.warning("ffmpeg not available; skipping poster for %s", video_path)
         return None
 
-    offset = duration_seconds / 2 if duration_seconds and duration_seconds > 0 else _POSTER_FALLBACK_OFFSET
     poster_path = _poster_path_for(video_path, thumbnail_dir)
     ensure_thumbnail_dir(thumbnail_dir)
-    return poster_path if _grab_frame(ffmpeg, video_path, offset, poster_path) else None
+    return poster_path if _grab_frame(ffmpeg, video_path, _poster_offset(duration_seconds), poster_path) else None
+
+
+def _poster_offset(duration_seconds: Optional[float]) -> float:
+    return duration_seconds / 2 if duration_seconds and duration_seconds > 0 else _POSTER_FALLBACK_OFFSET
+
+
+def write_poster(video_path: Path, poster_path: Path, duration_seconds: Optional[float]) -> bool:
+    """Grab the poster frame (as extract_poster picks it) into an existing poster's
+    recorded path. False if ffmpeg is unavailable or fails."""
+    ffmpeg = get_ffmpeg_path()
+    return ffmpeg is not None and _grab_frame(ffmpeg, video_path, _poster_offset(duration_seconds), poster_path)
+
+
+def write_sampled_frame(video_path: Path, frame_index: int, duration_seconds: Optional[float],
+                        out_path: Path) -> bool:
+    """Grab one of the frames face detection samples (see extract_sample_frames) into
+    `out_path`. False if the index is out of range, or ffmpeg is unavailable or fails."""
+    ffmpeg = get_ffmpeg_path()
+    offsets = _sample_offsets(duration_seconds)
+    if ffmpeg is None or not 0 <= frame_index < len(offsets):
+        return False
+    return _grab_frame(ffmpeg, video_path, offsets[frame_index], out_path)
+
+
+def face_crop_frame_index(crop_path: Path, video_path: Path) -> Optional[int]:
+    """Which sampled frame a video's face crop was cut from, read back from its file
+    name: detect_video_faces crops from frames named "{video stem}_f{index}", and
+    save_face_thumbnail names the crop "face_{frame stem}_{face}_{id}.jpg"."""
+    prefix = f"face_{video_path.stem}_f"
+    if not crop_path.name.startswith(prefix):
+        return None
+    index = crop_path.name[len(prefix):].split("_", 1)[0]
+    return int(index) if index.isdigit() else None
 
 
 def _sample_offsets(duration_seconds: Optional[float]) -> list[float]:

@@ -303,19 +303,11 @@
     },
     "indexPhotos": {
       "filename": "Dateiname",
-      "inSync": {
-        "description": "Alle Fotos im Dateisystem sind indiziert und alle Datenbankeinträge haben entsprechende Dateien.",
-        "title": "Alles ist synchronisiert"
-      },
       "location": "Speicherort",
       "mediaDirectories": "Medienverzeichnisse: ",
       "orphanReasons": {
         "missing": "Datei wurde vom Datenträger gelöscht",
         "unconfigured": "Medienverzeichnis ist nicht mehr konfiguriert"
-      },
-      "orphaned": {
-        "description": "Die folgenden Fotos befinden sich in der Datenbank, haben aber keine Datei mehr in den konfigurierten Medienverzeichnissen — entweder wurde die Datei gelöscht oder ihr Medienverzeichnis aus den Einstellungen entfernt. Beim Synchronisieren werden diese Einträge entfernt.",
-        "title": "Verwaiste Datenbankeinträge"
       },
       "photoId": "Foto-ID",
       "reason": "Grund",
@@ -335,18 +327,7 @@
         "requestFailed": "Scananfrage fehlgeschlagen",
         "scanning": "Dateisystem wird durchsucht…"
       },
-      "sync": {
-        "button": "Datenbank synchronisieren",
-        "error": "Fehler beim Starten der Synchronisierung: {{reason}}",
-        "startFailed": "Synchronisierungsauftrag konnte nicht gestartet werden",
-        "started": "Synchronisierungsauftrag wurde gestartet",
-        "starting": "Synchronisierung wird gestartet…"
-      },
       "truncation": "Die ersten {{shown}} von {{total}} werden angezeigt. Die Synchronisierung verarbeitet alle.",
-      "unindexed": {
-        "description": "Die folgenden Fotos befinden sich in den konfigurierten Medienverzeichnissen, aber nicht in der Datenbank.",
-        "title": "Nicht indizierte Fotos"
-      },
       "emptyFolders_one": "Dieser Medienordner enthält keine Mediendateien, was normalerweise bedeutet, dass sein Laufwerk nicht verbunden ist: {{folders}}. Seine Fotos werden unten als fehlend aufgeführt, und Sync würde sie aus der Bibliothek entfernen. Überprüfe das Laufwerk vor dem Synchronisieren.",
       "emptyFolders_other": "Diese Medienordner enthalten keine Mediendateien, was normalerweise bedeutet, dass ihre Laufwerke nicht verbunden sind: {{folders}}. Ihre Fotos werden unten als fehlend aufgeführt, und Sync würde sie aus der Bibliothek entfernen. Überprüfe die Laufwerke vor dem Synchronisieren.",
       "retryFailed": {
@@ -355,7 +336,38 @@
         "startFailed": "Indizierung konnte nicht gestartet werden",
         "started": "{{count}} Datei(en) werden erneut indiziert",
         "starting": "Wird gestartet…"
-      }
+      },
+      "indexNew": {
+        "button": "Indizieren",
+        "error": "Fehler beim Starten der Indizierung: {{reason}}",
+        "startFailed": "Indizierung konnte nicht gestartet werden",
+        "started": "Die neuen Dateien werden indiziert",
+        "starting": "Wird gestartet…"
+      },
+      "issues": {
+        "orphaned_one": "{{formattedCount}} Bibliothekseintrag hat keine Datei",
+        "orphaned_other": "{{formattedCount}} Bibliothekseinträge haben keine Datei",
+        "unindexed_one": "{{formattedCount}} Foto ist nicht indiziert",
+        "unindexed_other": "{{formattedCount}} Fotos sind nicht indiziert"
+      },
+      "missingThumbnails": {
+        "button": "Vorschaubilder neu generieren",
+        "error": "Fehler beim Starten der Neugenerierung der Vorschaubilder: {{reason}}",
+        "startFailed": "Neugenerierung der Vorschaubilder konnte nicht gestartet werden",
+        "started_one": "{{count}} Vorschaubild wird neu generiert",
+        "started_other": "{{count}} Vorschaubilder werden neu generiert",
+        "starting": "Wird gestartet…",
+        "title_one": "{{formattedCount}} Vorschaubild fehlt",
+        "title_other": "{{formattedCount}} Vorschaubilder fehlen"
+      },
+      "removeOrphaned": {
+        "button": "Entfernen",
+        "error": "Fehler beim Entfernen der Einträge: {{reason}}",
+        "startFailed": "Die Einträge konnten nicht entfernt werden",
+        "started": "Einträge werden entfernt",
+        "starting": "Wird gestartet…"
+      },
+      "thumbnailFolderUnavailable": "Der Miniaturansichten-Ordner ist nicht verfügbar, daher wurden die Miniaturansichten nicht überprüft. Stelle sicher, dass das Laufwerk verbunden ist."
     }
   },
   "assistant": {
@@ -572,7 +584,9 @@
         "set_person_birthdate": "Geburtsdatum von „{{person}}“ auf {{date}} setzen",
         "set_person_birthdate_clear": "Geburtsdatum von „{{person}}“ löschen",
         "unignore_faces_one": "{{formattedCount}} ignoriertes Gesicht zurück zu Nicht zugewiesene Gesichter verschieben",
-        "unignore_faces_other": "{{formattedCount}} ignorierte Gesichter zurück zu Nicht zugewiesene Gesichter verschieben"
+        "unignore_faces_other": "{{formattedCount}} ignorierte Gesichter zurück zu Nicht zugewiesene Gesichter verschieben",
+        "regenerate_thumbnails_one": "{{formattedCount}} fehlendes Vorschaubild neu generieren (Gesichter behalten ihre Personen)",
+        "regenerate_thumbnails_other": "{{formattedCount}} fehlende Vorschaubilder neu generieren (Gesichter behalten ihre Personen)"
       },
       "undo": "Rückgängig",
       "undoConfirm": {
@@ -586,7 +600,7 @@
       "waitForReply": "Verfügbar, wenn die Antwort abgeschlossen ist.",
       "background": "Läuft im Hintergrund",
       "confirmRun": "Gib {{formattedCount}} ein, um den Start dieser Automatisierung zu bestätigen:",
-      "jobProgress": "Fortschritt in Index Photos anzeigen",
+      "jobProgress": "Fortschritt in Bibliothekszustand anzeigen",
       "readOnly": "Ändert nichts",
       "runHistory": "Ausführungsverlauf anzeigen"
     },

@@ -17,7 +17,7 @@ export default defineWalkthrough({
         // Library, media items, index, thumbnails, favorites, and filters.
         await visit("/?view=grid");
         await visit("/settings");
-        await visit("/utilities/index-photos");
+        await visit("/library/health");
 
         // Background jobs are rendered as fragments within utility pages. Visit
         // the fragment directly so its route and template are observed too.

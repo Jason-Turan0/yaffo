@@ -17,4 +17,4 @@ different causes.
 
 For ordinary unassigned faces, continue with the [Assigning Faces](../../organize-review/assigning-faces.md)
 workflow. If automatic assignment is enabled, review its threshold and recent
-runs under **Utilities** → **Automations** → **Auto-assign faces**.
+runs under **Library** → **Automations** → **Auto-assign faces**.

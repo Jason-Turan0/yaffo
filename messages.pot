@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-27 14:13-0500\n"
+"POT-Creation-Date: 2026-09-27 19:02-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -256,7 +256,7 @@ msgstr ""
 msgid "At most this many labels are kept per photo (the highest-scoring ones)."
 msgstr ""
 
-#: yaffo/db/models.py:377 yaffo/routes/utilities/run_history.py:98
+#: yaffo/db/models.py:377 yaffo/routes/utilities/run_history.py:102
 msgid "File sync"
 msgstr ""
 
@@ -398,264 +398,274 @@ msgstr ""
 
 #: yaffo/routes/assistant.py:165
 msgid ""
+"Writes missing face crops and video posters again from your photos and "
+"videos. Faces keep their people; nothing is re-detected."
+msgstr ""
+
+#: yaffo/routes/assistant.py:168
+msgid ""
 "Takes a face off the person it's assigned to, e.g. a wrong match. The "
 "face goes back to Unassigned Faces; the photo and the person stay."
 msgstr ""
 
-#: yaffo/routes/assistant.py:168
+#: yaffo/routes/assistant.py:171
 msgid ""
 "Combines two people who are really the same person: every face of one "
 "moves to the other, and the emptied one is deleted."
 msgstr ""
 
-#: yaffo/routes/assistant.py:171
+#: yaffo/routes/assistant.py:174
 msgid ""
 "Fixes faces whose status doesn't match their person link: assigned to "
 "someone but still listed as unassigned, stuck mid-assignment, or ignored "
 "but still linked (the link is removed). Nothing is re-detected."
 msgstr ""
 
-#: yaffo/routes/assistant.py:175
+#: yaffo/routes/assistant.py:178
 msgid ""
 "Starts the chosen automation once for all media, selected media "
 "directories, files, or folders. The automation may change your library or"
 " files; review its Run history for the result."
 msgstr ""
 
-#: yaffo/routes/assistant.py:182
+#: yaffo/routes/assistant.py:185
 msgid "Logs"
 msgstr ""
 
-#: yaffo/routes/assistant.py:183
+#: yaffo/routes/assistant.py:186
 msgid "Library contents"
 msgstr ""
 
-#: yaffo/routes/assistant.py:184
+#: yaffo/routes/assistant.py:187
 msgid "Media folders"
 msgstr ""
 
-#: yaffo/routes/assistant.py:185
+#: yaffo/routes/assistant.py:188
 msgid "Background jobs"
 msgstr ""
 
-#: yaffo/routes/assistant.py:186
+#: yaffo/routes/assistant.py:189
 msgid "Capture-date metadata"
 msgstr ""
 
-#: yaffo/routes/assistant.py:195
+#: yaffo/routes/assistant.py:198
 msgid "Tags and favorites"
 msgstr ""
 
-#: yaffo/routes/assistant.py:196
+#: yaffo/routes/assistant.py:199
 msgid "Add tags"
 msgstr ""
 
-#: yaffo/routes/assistant.py:197
+#: yaffo/routes/assistant.py:200
 msgid "Remove tags"
 msgstr ""
 
-#: yaffo/routes/assistant.py:198
+#: yaffo/routes/assistant.py:201
 msgid "Mark favorites"
 msgstr ""
 
-#: yaffo/routes/assistant.py:200 yaffo/templates/albums/_base.html:27
+#: yaffo/routes/assistant.py:203 yaffo/templates/albums/_base.html:27
 #: yaffo/templates/albums/_base.html:33 yaffo/templates/albums/index.html:7
 #: yaffo/templates/base.html:136
 msgid "Albums"
 msgstr ""
 
-#: yaffo/routes/assistant.py:201
+#: yaffo/routes/assistant.py:204
 msgid "Create albums"
 msgstr ""
 
-#: yaffo/routes/assistant.py:202
+#: yaffo/routes/assistant.py:205
 msgid "Rename albums"
 msgstr ""
 
-#: yaffo/routes/assistant.py:203
+#: yaffo/routes/assistant.py:206
 msgid "Add photos to albums"
 msgstr ""
 
-#: yaffo/routes/assistant.py:204
+#: yaffo/routes/assistant.py:207
 msgid "Remove photos from albums"
 msgstr ""
 
-#: yaffo/routes/assistant.py:205
+#: yaffo/routes/assistant.py:208
 msgid "Change album covers"
 msgstr ""
 
-#: yaffo/routes/assistant.py:206
+#: yaffo/routes/assistant.py:209
 msgid "Reorder photos in albums"
 msgstr ""
 
-#: yaffo/routes/assistant.py:207
+#: yaffo/routes/assistant.py:210
 msgid "Delete albums"
 msgstr ""
 
-#: yaffo/routes/assistant.py:209
+#: yaffo/routes/assistant.py:212
 msgid "People and faces"
 msgstr ""
 
-#: yaffo/routes/assistant.py:210
+#: yaffo/routes/assistant.py:213
 msgid "Assign faces to people"
 msgstr ""
 
-#: yaffo/routes/assistant.py:211
+#: yaffo/routes/assistant.py:214
 msgid "Unassign faces"
 msgstr ""
 
-#: yaffo/routes/assistant.py:212
+#: yaffo/routes/assistant.py:215
 msgid "Ignore faces"
 msgstr ""
 
-#: yaffo/routes/assistant.py:213
+#: yaffo/routes/assistant.py:216
 msgid "Stop ignoring faces"
 msgstr ""
 
-#: yaffo/routes/assistant.py:214
+#: yaffo/routes/assistant.py:217
 msgid "Set birthdates"
 msgstr ""
 
-#: yaffo/routes/assistant.py:215
+#: yaffo/routes/assistant.py:218
 msgid "Create people"
 msgstr ""
 
-#: yaffo/routes/assistant.py:216
+#: yaffo/routes/assistant.py:219
 msgid "Rename people"
 msgstr ""
 
-#: yaffo/routes/assistant.py:217
+#: yaffo/routes/assistant.py:220
 msgid "Merge people"
 msgstr ""
 
-#: yaffo/routes/assistant.py:218
+#: yaffo/routes/assistant.py:221
 msgid "Delete people"
 msgstr ""
 
-#: yaffo/routes/assistant.py:219
+#: yaffo/routes/assistant.py:222
 msgid "Repair faces"
 msgstr ""
 
-#: yaffo/routes/assistant.py:221
+#: yaffo/routes/assistant.py:224
 msgid "Dates and places"
 msgstr ""
 
-#: yaffo/routes/assistant.py:222
+#: yaffo/routes/assistant.py:225
 msgid "Change capture dates"
 msgstr ""
 
-#: yaffo/routes/assistant.py:223
+#: yaffo/routes/assistant.py:226
 msgid "Change location names"
 msgstr ""
 
-#: yaffo/routes/assistant.py:224
+#: yaffo/routes/assistant.py:227
 msgid "Change GPS coordinates"
 msgstr ""
 
-#: yaffo/routes/assistant.py:226 yaffo/templates/components/photo_card.html:62
+#: yaffo/routes/assistant.py:229 yaffo/templates/components/photo_card.html:62
 msgid "Labels"
 msgstr ""
 
-#: yaffo/routes/assistant.py:227
+#: yaffo/routes/assistant.py:230
 msgid "Add labels to the vocabulary"
 msgstr ""
 
-#: yaffo/routes/assistant.py:228
+#: yaffo/routes/assistant.py:231
 msgid "Remove labels from the vocabulary"
 msgstr ""
 
-#: yaffo/routes/assistant.py:230
+#: yaffo/routes/assistant.py:233
 msgid "Files on disk"
 msgstr ""
 
-#: yaffo/routes/assistant.py:231
+#: yaffo/routes/assistant.py:234
 msgid "Rename files"
 msgstr ""
 
-#: yaffo/routes/assistant.py:232
+#: yaffo/routes/assistant.py:235
 msgid "Move files to other folders"
 msgstr ""
 
-#: yaffo/routes/assistant.py:233
+#: yaffo/routes/assistant.py:236
 msgid "Move photos to the system trash"
 msgstr ""
 
-#: yaffo/routes/assistant.py:235
+#: yaffo/routes/assistant.py:238
 msgid "Library upkeep"
 msgstr ""
 
-#: yaffo/routes/assistant.py:236
+#: yaffo/routes/assistant.py:239
 msgid "Run automation"
 msgstr ""
 
-#: yaffo/routes/assistant.py:237
+#: yaffo/routes/assistant.py:240
 msgid "Re-index items"
 msgstr ""
 
-#: yaffo/routes/assistant.py:238
-msgid "Cancel background jobs"
-msgstr ""
-
-#: yaffo/routes/assistant.py:239
-msgid "Turn automations on or off"
-msgstr ""
-
 #: yaffo/routes/assistant.py:241
-msgid "Preferences"
+msgid "Regenerate missing thumbnails"
 msgstr ""
 
 #: yaffo/routes/assistant.py:242
-msgid "Change the theme"
+msgid "Cancel background jobs"
 msgstr ""
 
 #: yaffo/routes/assistant.py:243
-msgid "Change the language"
-msgstr ""
-
-#: yaffo/routes/assistant.py:244
-msgid "Change the distance unit"
+msgid "Turn automations on or off"
 msgstr ""
 
 #: yaffo/routes/assistant.py:245
+msgid "Preferences"
+msgstr ""
+
+#: yaffo/routes/assistant.py:246
+msgid "Change the theme"
+msgstr ""
+
+#: yaffo/routes/assistant.py:247
+msgid "Change the language"
+msgstr ""
+
+#: yaffo/routes/assistant.py:248
+msgid "Change the distance unit"
+msgstr ""
+
+#: yaffo/routes/assistant.py:249
 msgid "Arrange the sidebar filters"
 msgstr ""
 
-#: yaffo/routes/assistant.py:379 yaffo/routes/assistant.py:384
+#: yaffo/routes/assistant.py:384 yaffo/routes/assistant.py:389
 msgid "The assistant is still answering."
 msgstr ""
 
-#: yaffo/routes/assistant.py:398
+#: yaffo/routes/assistant.py:403
 msgid "Wait for the assistant to finish answering."
 msgstr ""
 
-#: yaffo/routes/assistant.py:439
+#: yaffo/routes/assistant.py:444
 msgid ""
 "That file or folder isn't available. It may have moved, or its drive "
 "isn't connected."
 msgstr ""
 
-#: yaffo/routes/assistant.py:444
+#: yaffo/routes/assistant.py:449
 msgid "Couldn't open it on this computer."
 msgstr ""
 
-#: yaffo/routes/assistant.py:460
+#: yaffo/routes/assistant.py:465
 msgid "Title is required."
 msgstr ""
 
-#: yaffo/routes/assistant.py:479
+#: yaffo/routes/assistant.py:484
 msgid "Assistant turned on."
 msgstr ""
 
-#: yaffo/routes/assistant.py:479
+#: yaffo/routes/assistant.py:484
 msgid "Assistant turned off."
 msgstr ""
 
-#: yaffo/routes/assistant.py:490 yaffo/routes/assistant.py:497
-#: yaffo/routes/assistant.py:510
+#: yaffo/routes/assistant.py:495 yaffo/routes/assistant.py:502
+#: yaffo/routes/assistant.py:515
 msgid "Assistant settings saved."
 msgstr ""
 
-#: yaffo/routes/assistant.py:506 yaffo/routes/assistant.py:508
+#: yaffo/routes/assistant.py:511 yaffo/routes/assistant.py:513
 msgid "Enter a whole number."
 msgstr ""
 
@@ -1331,56 +1341,64 @@ msgstr ""
 msgid "This file couldn't be indexed because of an error while processing it."
 msgstr ""
 
-#: yaffo/routes/utilities/index_photos.py:114
+#: yaffo/routes/utilities/index_photos.py:128
 msgid ""
 "No media directories configured. Please configure media directories in "
 "Settings before syncing."
 msgstr ""
 
-#: yaffo/routes/utilities/index_photos.py:123
+#: yaffo/routes/utilities/index_photos.py:137
 #, python-format
 msgid "The following media directories do not exist: %(directories)s"
 msgstr ""
 
-#: yaffo/routes/utilities/index_photos.py:132
+#: yaffo/routes/utilities/index_photos.py:146
 msgid ""
 "No thumbnail directory configured. Please configure thumbnail directory "
 "in Settings before syncing."
 msgstr ""
 
-#: yaffo/routes/utilities/index_photos.py:139
+#: yaffo/routes/utilities/index_photos.py:153
 #, python-format
 msgid ""
 "Thumbnail directory does not exist: %(directory)s. It will be created "
 "automatically during indexing."
 msgstr ""
 
-#: yaffo/routes/utilities/index_photos.py:193
+#: yaffo/routes/utilities/index_photos.py:208
 msgid "Could not scan the filesystem"
 msgstr ""
 
-#: yaffo/routes/utilities/index_photos.py:216
+#: yaffo/routes/utilities/index_photos.py:231
 #: yaffo/templates/settings/index.html:33
 msgid "No media directories configured"
 msgstr ""
 
-#: yaffo/routes/utilities/index_photos.py:224
+#: yaffo/routes/utilities/index_photos.py:239
 #, python-format
 msgid "Media directories do not exist: %(directories)s"
 msgstr ""
 
-#: yaffo/routes/utilities/index_photos.py:232
-#: yaffo/routes/utilities/index_photos.py:250
-#: yaffo/routes/utilities/index_photos.py:277
+#: yaffo/routes/utilities/index_photos.py:247
+#: yaffo/routes/utilities/index_photos.py:265
+#: yaffo/routes/utilities/index_photos.py:292
 msgid "No thumbnail directory configured"
 msgstr ""
 
-#: yaffo/routes/utilities/index_photos.py:260
+#: yaffo/routes/utilities/index_photos.py:275
 msgid "There are no failed files to retry"
 msgstr ""
 
-#: yaffo/routes/utilities/index_photos.py:291
+#: yaffo/routes/utilities/index_photos.py:306
 msgid "There is nothing indexed to reindex"
+msgstr ""
+
+#: yaffo/routes/utilities/index_photos.py:324
+msgid "The thumbnail folder isn't available. Check its drive is connected."
+msgstr ""
+
+#: yaffo/routes/utilities/index_photos.py:328
+msgid "No thumbnails are missing"
 msgstr ""
 
 #: yaffo/routes/utilities/remove_duplicates.py:225
@@ -1414,145 +1432,173 @@ msgid_plural "Started removing %(count)s duplicates"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/routes/utilities/run_history.py:94
+#: yaffo/routes/utilities/run_history.py:98
 msgid "Import photos"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:95
+#: yaffo/routes/utilities/run_history.py:99
 msgid "Index photos"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:96
+#: yaffo/routes/utilities/run_history.py:100
 msgid "Find duplicates"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:97
+#: yaffo/routes/utilities/run_history.py:101
 msgid "Remove duplicates"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:122
+#: yaffo/routes/utilities/run_history.py:103
+#: yaffo/templates/utilities/index_photos.html:92
+msgid "Regenerate thumbnails"
+msgstr ""
+
+#: yaffo/routes/utilities/run_history.py:127
 #, python-format
 msgid "Imported %(done)s/%(total)s photos"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:124
+#: yaffo/routes/utilities/run_history.py:129
 #, python-format
 msgid "Indexed %(done)s/%(total)s photos"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:126
+#: yaffo/routes/utilities/run_history.py:131
 #, python-format
 msgid "Processed %(done)s/%(total)s media items"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:131
+#: yaffo/routes/utilities/run_history.py:133
+#, python-format
+msgid "Regenerated %(done)s/%(total)s thumbnails"
+msgstr ""
+
+#: yaffo/routes/utilities/run_history.py:138
 #, python-format
 msgid "Moved %(done)s/%(total)s files to the trash"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:133
+#: yaffo/routes/utilities/run_history.py:140
 #, python-format
 msgid "Deleted %(done)s/%(total)s files"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:135
+#: yaffo/routes/utilities/run_history.py:142
 #, python-format
 msgid "Moved %(done)s/%(total)s files to %(destination)s"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:137
+#: yaffo/routes/utilities/run_history.py:144
 #, python-format
 msgid "Processed %(done)s/%(total)s files"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:147
+#: yaffo/routes/utilities/run_history.py:154
 msgid "Already in sync"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:152
+#: yaffo/routes/utilities/run_history.py:159
 #, python-format
 msgid "Indexing %(count)s new file"
 msgid_plural "Indexing %(count)s new files"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/routes/utilities/run_history.py:155
+#: yaffo/routes/utilities/run_history.py:162
 #, python-format
 msgid "removed %(count)s missing item"
 msgid_plural "removed %(count)s missing items"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/routes/utilities/run_history.py:159
+#: yaffo/routes/utilities/run_history.py:166
 msgid "Skipped: no media folders are configured"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:161
+#: yaffo/routes/utilities/run_history.py:168
 msgid "Skipped: no thumbnail folder is configured"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:163
+#: yaffo/routes/utilities/run_history.py:170
 msgid "Skipped: no media folder is connected"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:165
+#: yaffo/routes/utilities/run_history.py:172
 msgid "The sync failed"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:167
+#: yaffo/routes/utilities/run_history.py:174
 msgid "Cancelled before changing anything"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:168
-#: yaffo/routes/utilities/run_history.py:336
+#: yaffo/routes/utilities/run_history.py:175
+#: yaffo/routes/utilities/run_history.py:360
 msgid "Running"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:182
+#: yaffo/routes/utilities/run_history.py:189
 msgid "No indexed media to process"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:184
+#: yaffo/routes/utilities/run_history.py:191
 #, python-format
 msgid "Labeled %(labeled)s of %(num)d photo"
 msgid_plural "Labeled %(labeled)s of %(num)d photos"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/routes/utilities/run_history.py:188
+#: yaffo/routes/utilities/run_history.py:195
 #, python-format
 msgid "Assigned %(num)d face"
 msgid_plural "Assigned %(num)d faces"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/routes/utilities/run_history.py:190
+#: yaffo/routes/utilities/run_history.py:197
 #, python-format
 msgid "Named the location of %(named)s of %(num)d photo"
 msgid_plural "Named the location of %(named)s of %(num)d photos"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/routes/utilities/run_history.py:193
+#: yaffo/routes/utilities/run_history.py:200
 #, python-format
 msgid "Geotagged %(geotagged)s of %(num)d photo"
 msgid_plural "Geotagged %(geotagged)s of %(num)d photos"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/routes/utilities/run_history.py:196
+#: yaffo/routes/utilities/run_history.py:203
 #, python-format
 msgid "Wrote metadata to %(written)s of %(num)d file"
 msgid_plural "Wrote metadata to %(written)s of %(num)d files"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/routes/utilities/run_history.py:237
+#: yaffo/routes/utilities/run_history.py:214
+msgid "No thumbnails were missing"
+msgstr ""
+
+#: yaffo/routes/utilities/run_history.py:216
+#, python-format
+msgid "Regenerated %(num)d thumbnail"
+msgid_plural "Regenerated %(num)d thumbnails"
+msgstr[0] ""
+msgstr[1] ""
+
+#: yaffo/routes/utilities/run_history.py:217
+#, python-format
+msgid "Regenerated %(written)s of %(num)d thumbnail"
+msgid_plural "Regenerated %(written)s of %(num)d thumbnails"
+msgstr[0] ""
+msgstr[1] ""
+
+#: yaffo/routes/utilities/run_history.py:261
 #, python-format
 msgid "%(completed)s of %(total)s processed"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:243
+#: yaffo/routes/utilities/run_history.py:267
 #: yaffo/templates/fragments/job_status_fragment.html:67
 #, python-format
 msgid "%(count)s error"
@@ -1560,14 +1606,14 @@ msgid_plural "%(count)s errors"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/routes/utilities/run_history.py:250
+#: yaffo/routes/utilities/run_history.py:274
 #, python-format
 msgid "%(count)s cancelled"
 msgid_plural "%(count)s cancelled"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/routes/utilities/run_history.py:275
+#: yaffo/routes/utilities/run_history.py:299
 #, python-format
 msgid ""
 "These media folders hold no files, so %(num)d item under them was left "
@@ -1580,7 +1626,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/routes/utilities/run_history.py:282
+#: yaffo/routes/utilities/run_history.py:306
 #, python-format
 msgid ""
 "%(num)d item was never processed because a background worker stopped "
@@ -1591,102 +1637,102 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/routes/utilities/run_history.py:286
+#: yaffo/routes/utilities/run_history.py:310
 msgid "The background worker stopped unexpectedly."
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:288
-#: yaffo/routes/utilities/run_history.py:302
+#: yaffo/routes/utilities/run_history.py:312
+#: yaffo/routes/utilities/run_history.py:326
 msgid "The run stopped with an error."
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:290
+#: yaffo/routes/utilities/run_history.py:314
 msgid "The script stopped with an error."
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:292
+#: yaffo/routes/utilities/run_history.py:316
 msgid "The script ran past its time limit."
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:294
+#: yaffo/routes/utilities/run_history.py:318
 msgid "The script made too many calls."
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:296
+#: yaffo/routes/utilities/run_history.py:320
 msgid ""
 "The scheduled scope is no longer valid. Edit the trigger to choose a "
 "configured media directory or a folder inside one."
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:299
+#: yaffo/routes/utilities/run_history.py:323
 msgid "The scheduled run could not start."
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:300
+#: yaffo/routes/utilities/run_history.py:324
 msgid "The run could not start."
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:335
+#: yaffo/routes/utilities/run_history.py:359
 msgid "Pending"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:337
+#: yaffo/routes/utilities/run_history.py:361
 #: yaffo/templates/sharing/_transfers_panel.html:29
 msgid "Completed"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:338
+#: yaffo/routes/utilities/run_history.py:362
 #: yaffo/templates/sharing/_transfers_panel.html:32
 msgid "Cancelled"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:339
+#: yaffo/routes/utilities/run_history.py:363
 #: yaffo/templates/sharing/_transfers_panel.html:31
 msgid "Failed"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:366
+#: yaffo/routes/utilities/run_history.py:390
 msgid "Skipped"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:368
+#: yaffo/routes/utilities/run_history.py:392
 msgid "Stopping"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:370
+#: yaffo/routes/utilities/run_history.py:394
 #: yaffo/templates/sharing/_transfers_panel.html:30
 msgid "Completed with errors"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:432
+#: yaffo/routes/utilities/run_history.py:457
 msgid "less than a minute left"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:434
+#: yaffo/routes/utilities/run_history.py:459
 #, python-format
 msgid "about %(num)d minute left"
 msgid_plural "about %(num)d minutes left"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/routes/utilities/run_history.py:439
+#: yaffo/routes/utilities/run_history.py:464
 #, python-format
 msgid "about %(hours)d h %(minutes)d min left"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:440
-#: yaffo/routes/utilities/run_history.py:442
+#: yaffo/routes/utilities/run_history.py:465
+#: yaffo/routes/utilities/run_history.py:467
 #, python-format
 msgid "about %(num)d hour left"
 msgid_plural "about %(num)d hours left"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/routes/utilities/run_history.py:458
+#: yaffo/routes/utilities/run_history.py:483
 msgid "Importing"
 msgstr ""
 
-#: yaffo/routes/utilities/run_history.py:458
+#: yaffo/routes/utilities/run_history.py:483
 msgid "Indexing"
 msgstr ""
 
@@ -1858,7 +1904,7 @@ msgstr ""
 
 #: yaffo/templates/base.html:145 yaffo/templates/utilities/_base.html:34
 #: yaffo/templates/utilities/_base.html:42
-msgid "Utilities"
+msgid "Library"
 msgstr ""
 
 #: yaffo/templates/base.html:147 yaffo/templates/sharing/_base.html:9
@@ -2413,6 +2459,10 @@ msgstr ""
 #: yaffo/templates/components/pagination.html:81
 #: yaffo/templates/faces/index.html:275
 msgid "Last"
+msgstr ""
+
+#: yaffo/templates/components/issue_card.html:19
+msgid "Show files"
 msgstr ""
 
 #: yaffo/templates/components/job_details.html:8
@@ -4203,8 +4253,8 @@ msgid "Automations"
 msgstr ""
 
 #: yaffo/templates/utilities/_base.html:47
-#: yaffo/templates/utilities/index_photos.html:20
-msgid "Index Photos"
+#: yaffo/templates/utilities/index_photos.html:19
+msgid "Library Health"
 msgstr ""
 
 #: yaffo/templates/utilities/_base.html:53
@@ -4338,7 +4388,7 @@ msgid "Publish draft"
 msgstr ""
 
 #: yaffo/templates/utilities/automations_runs.html:10
-#: yaffo/templates/utilities/index_photos.html:110
+#: yaffo/templates/utilities/index_photos.html:128
 msgid "Run history"
 msgstr ""
 
@@ -4477,51 +4527,115 @@ msgid ""
 "automation runs."
 msgstr ""
 
-#: yaffo/templates/utilities/index_photos.html:6
-msgid "Index Photos - Utilities - Yaffo"
+#: yaffo/templates/utilities/index_photos.html:7
+msgid "Library Health - Library - Yaffo"
 msgstr ""
 
-#: yaffo/templates/utilities/index_photos.html:12
-msgid "Sync Database"
-msgstr ""
-
-#: yaffo/templates/utilities/index_photos.html:17
+#: yaffo/templates/utilities/index_photos.html:16
 msgid "Reindex Library"
 msgstr ""
 
-#: yaffo/templates/utilities/index_photos.html:21
+#: yaffo/templates/utilities/index_photos.html:20
 msgid "Compare photos on the file system with the database"
 msgstr ""
 
-#: yaffo/templates/utilities/index_photos.html:31
+#: yaffo/templates/utilities/index_photos.html:30
 msgid "Go to Settings"
 msgstr ""
 
-#: yaffo/templates/utilities/index_photos.html:46
+#: yaffo/templates/utilities/index_photos.html:45
 msgid "Total on Filesystem"
 msgstr ""
 
-#: yaffo/templates/utilities/index_photos.html:50
+#: yaffo/templates/utilities/index_photos.html:49
 msgid "Imported in Database"
 msgstr ""
 
-#: yaffo/templates/utilities/index_photos.html:54
+#: yaffo/templates/utilities/index_photos.html:53
 msgid "Indexed in Database"
 msgstr ""
 
-#: yaffo/templates/utilities/index_photos.html:58
+#: yaffo/templates/utilities/index_photos.html:57
 msgid "Not Indexed"
 msgstr ""
 
-#: yaffo/templates/utilities/index_photos.html:62
+#: yaffo/templates/utilities/index_photos.html:61
 msgid "Orphaned in DB"
 msgstr ""
 
-#: yaffo/templates/utilities/index_photos.html:79
-msgid "No Media Directories Configured"
+#: yaffo/templates/utilities/index_photos.html:65
+msgid "Missing Thumbnails"
+msgstr ""
+
+#: yaffo/templates/utilities/index_photos.html:76
+msgid "Library status"
+msgstr ""
+
+#: yaffo/templates/utilities/index_photos.html:80
+msgid "Everything is in sync"
 msgstr ""
 
 #: yaffo/templates/utilities/index_photos.html:81
+msgid ""
+"Every photo on the filesystem is indexed, every database entry has its "
+"file, and every thumbnail is in place."
+msgstr ""
+
+#: yaffo/templates/utilities/index_photos.html:85
+msgid "New files in your media folders that aren't in the library yet."
+msgstr ""
+
+#: yaffo/templates/utilities/index_photos.html:86
+msgid "Index them"
+msgstr ""
+
+#: yaffo/templates/utilities/index_photos.html:88
+msgid ""
+"Library entries whose file was deleted, or whose media folder was removed"
+" from Settings. Removing them also removes their faces."
+msgstr ""
+
+#: yaffo/templates/utilities/index_photos.html:89
+msgid "Remove them"
+msgstr ""
+
+#: yaffo/templates/utilities/index_photos.html:91
+msgid ""
+"Face crops and video posters are gone from the thumbnail folder, so they "
+"show as broken images. Regenerating writes them again from your photos "
+"and videos; faces keep their people."
+msgstr ""
+
+#: yaffo/templates/utilities/index_photos.html:94
+#, python-format
+msgid "%(num)d file couldn't be indexed"
+msgid_plural "%(num)d files couldn't be indexed"
+msgstr[0] ""
+msgstr[1] ""
+
+#: yaffo/templates/utilities/index_photos.html:95
+msgid ""
+"They still show in your library, but without the date, location, faces or"
+" labels that indexing reads. Yaffo leaves them alone until a file "
+"changes; retry after fixing a file or updating Yaffo."
+msgstr ""
+
+#: yaffo/templates/utilities/index_photos.html:96
+msgid "Retry all"
+msgstr ""
+
+#: yaffo/templates/utilities/index_photos.html:108
+#, python-format
+msgid "and %(num)d more"
+msgid_plural "and %(num)d more"
+msgstr[0] ""
+msgstr[1] ""
+
+#: yaffo/templates/utilities/index_photos.html:117
+msgid "No Media Directories Configured"
+msgstr ""
+
+#: yaffo/templates/utilities/index_photos.html:119
 #, python-format
 msgid ""
 "\n"
@@ -4530,33 +4644,8 @@ msgid ""
 "            "
 msgstr ""
 
-#: yaffo/templates/utilities/index_photos.html:90
-#, python-format
-msgid "%(num)d file couldn't be indexed"
-msgid_plural "%(num)d files couldn't be indexed"
-msgstr[0] ""
-msgstr[1] ""
-
-#: yaffo/templates/utilities/index_photos.html:91
-msgid ""
-"They still show in your library, but without the date, location, faces or"
-" labels that indexing reads. Sync leaves them alone until a file changes;"
-" retry after fixing a file or updating Yaffo."
-msgstr ""
-
-#: yaffo/templates/utilities/index_photos.html:102
-#, python-format
-msgid "and %(num)d more"
-msgid_plural "and %(num)d more"
-msgstr[0] ""
-msgstr[1] ""
-
-#: yaffo/templates/utilities/index_photos.html:104
-msgid "Retry all"
-msgstr ""
-
 #: yaffo/templates/utilities/remove_duplicates.html:4
-msgid "Remove Duplicates - Utilities - Yaffo"
+msgid "Remove Duplicates - Library - Yaffo"
 msgstr ""
 
 #: yaffo/templates/utilities/remove_duplicates.html:10
@@ -4614,7 +4703,7 @@ msgid "Duplicate photo"
 msgstr ""
 
 #: yaffo/templates/utilities/remove_duplicates_results.html:4
-msgid "Duplicate Results - Utilities - Yaffo"
+msgid "Duplicate Results - Library - Yaffo"
 msgstr ""
 
 #: yaffo/templates/utilities/remove_duplicates_results.html:14

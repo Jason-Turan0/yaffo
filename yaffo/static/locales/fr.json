@@ -303,19 +303,11 @@
     },
     "indexPhotos": {
       "filename": "Nom de fichier",
-      "inSync": {
-        "description": "Toutes les photos du système de fichiers sont indexées et toutes les entrées de la base de données ont des fichiers correspondants.",
-        "title": "Tout est synchronisé"
-      },
       "location": "Emplacement",
       "mediaDirectories": "Annuaires des médias : ",
       "orphanReasons": {
         "missing": "Fichier supprimé du disque",
         "unconfigured": "Le répertoire multimédia n'est plus configuré"
-      },
-      "orphaned": {
-        "description": "Les photos suivantes sont dans la base de données mais n'ont plus de fichier dans les répertoires multimédias configurés : soit le fichier a été supprimé, soit son répertoire multimédia a été supprimé des paramètres. La synchronisation supprime ces entrées.",
-        "title": "Entrées de base de données orphelines"
       },
       "photoId": "Photo d'identité",
       "reason": "Raison",
@@ -335,18 +327,7 @@
         "requestFailed": "La demande d'analyse a échoué",
         "scanning": "Analyse du système de fichiers…"
       },
-      "sync": {
-        "button": "Synchroniser la base de données",
-        "error": "Erreur lors du démarrage de la synchronisation : {{reason}}",
-        "startFailed": "Échec du démarrage de la tâche de synchronisation",
-        "started": "Travail de synchronisation démarré",
-        "starting": "Démarrage de la synchronisation…"
-      },
       "truncation": "Montrant le premier {{shown}} de {{total}}. La synchronisation les traite tous.",
-      "unindexed": {
-        "description": "Les photos suivantes existent dans les répertoires multimédias configurés mais ne sont pas dans la base de données.",
-        "title": "Photos non indexées"
-      },
       "emptyFolders_one": "Ce dossier multimédia ne contient aucun fichier multimédia, ce qui signifie généralement que son disque n'est pas connecté : {{folders}}. Ses photos sont listées comme manquantes ci-dessous, et la synchronisation les supprimerait de la photothèque. Vérifiez le disque avant de synchroniser.",
       "emptyFolders_other": "Ces dossiers multimédias ne contiennent aucun fichier multimédia, ce qui signifie généralement que leurs disques ne sont pas connectés : {{folders}}. Leurs photos sont listées comme manquantes ci-dessous, et la synchronisation les supprimerait de la photothèque. Vérifiez les disques avant de synchroniser.",
       "retryFailed": {
@@ -355,7 +336,38 @@
         "startFailed": "Échec du démarrage de l'indexation",
         "started": "Indexation de {{count}} fichier(s) à nouveau",
         "starting": "Démarrage…"
-      }
+      },
+      "indexNew": {
+        "button": "Les indexer",
+        "error": "Erreur lors du démarrage de l'indexation : {{reason}}",
+        "startFailed": "Échec du démarrage de l'indexation",
+        "started": "Indexation des nouveaux fichiers",
+        "starting": "Démarrage…"
+      },
+      "issues": {
+        "orphaned_one": "{{formattedCount}} entrée de la bibliothèque n'a pas de fichier",
+        "orphaned_other": "{{formattedCount}} entrées de la bibliothèque n'ont pas de fichier",
+        "unindexed_one": "{{formattedCount}} photo n'est pas indexée",
+        "unindexed_other": "{{formattedCount}} photos ne sont pas indexées"
+      },
+      "missingThumbnails": {
+        "button": "Régénérer les miniatures",
+        "error": "Échec du démarrage de la régénération des miniatures : {{reason}}",
+        "startFailed": "Échec du démarrage de la régénération des miniatures",
+        "started_one": "Régénération de {{count}} miniature",
+        "started_other": "Régénération de {{count}} miniatures",
+        "starting": "Démarrage…",
+        "title_one": "{{formattedCount}} miniature est manquante",
+        "title_other": "{{formattedCount}} miniatures sont manquantes"
+      },
+      "removeOrphaned": {
+        "button": "Les supprimer",
+        "error": "Erreur lors de la suppression des entrées : {{reason}}",
+        "startFailed": "Échec de la suppression des entrées",
+        "started": "Suppression des entrées",
+        "starting": "Démarrage…"
+      },
+      "thumbnailFolderUnavailable": "Le dossier des vignettes n'est pas disponible, donc les vignettes n'ont pas été vérifiées. Vérifiez que son lecteur est connecté."
     }
   },
   "assistant": {
@@ -572,7 +584,9 @@
         "set_person_birthdate": "Définir la date de naissance de « {{person}} » sur {{date}}",
         "set_person_birthdate_clear": "Effacer la date de naissance de « {{person}} »",
         "unignore_faces_one": "Renvoyer {{formattedCount}} visage ignoré vers Visages non attribués",
-        "unignore_faces_other": "Renvoyer {{formattedCount}} visages ignorés vers Visages non attribués"
+        "unignore_faces_other": "Renvoyer {{formattedCount}} visages ignorés vers Visages non attribués",
+        "regenerate_thumbnails_one": "Régénérer {{formattedCount}} miniature manquante (les visages conservent leurs personnes)",
+        "regenerate_thumbnails_other": "Régénérer {{formattedCount}} miniatures manquantes (les visages conservent leurs personnes)"
       },
       "undo": "Annuler",
       "undoConfirm": {
@@ -586,7 +600,7 @@
       "waitForReply": "Disponible lorsque la réponse sera terminée.",
       "background": "S'exécute en arrière-plan",
       "confirmRun": "Saisissez {{formattedCount}} pour confirmer le lancement de cette automatisation :",
-      "jobProgress": "Voir sa progression dans Index Photos",
+      "jobProgress": "Voir sa progression dans État de la bibliothèque",
       "readOnly": "Ne modifie rien",
       "runHistory": "Voir son historique d'exécution"
     },

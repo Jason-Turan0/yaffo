@@ -30,7 +30,7 @@ attached, shown as a chip above your message, and suggests a first question:
 "What went wrong here, and how do I fix it?" Edit the question if you like, or
 remove the chip with its ✕, then send it.
 
-![The Ask Yaffo panel opened from an Index Photos error, with the error attached above the suggested question](assets/ask-yaffo/ask-yaffo-context.webp)
+![The Ask Yaffo panel opened from a Library Health error, with the error attached above the suggested question](assets/ask-yaffo/ask-yaffo-context.webp)
 
 When the attached context names a job or an automation, and the assistant may
 look at background jobs, Yaffo looks up that job or the automation's recent runs
@@ -135,7 +135,7 @@ the system trash, merging or deleting people, and running an automation.
 
 **Duplicates.** The assistant can read the results of a duplicate scan, suggest
 which copy in each group to keep, and propose moving the others to the system
-trash or into a folder for review. Start the scan from **Utilities** →
+trash or into a folder for review. Start the scan from **Library** →
 **Remove Duplicates** yourself, or let the assistant start it when **Run automation** is on; moving
 files needs those file switches on too. See
 [Finding Duplicates](../organize-review/duplicates.md).

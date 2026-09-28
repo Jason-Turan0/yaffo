@@ -1,0 +1,24 @@
+{# One problem in a status list: a title with the count, a line saying what it
+   means, the action that fixes it, and optionally the affected files folded
+   under "Show files". Page JS reveals the card and fills the title
+   (#issue-<key>-title) and file list (#issue-<key>-files) when it knows the
+   count; pass `shown=true` for a card the server already knows applies.
+   `caller()` renders into the files panel for server-rendered lists. #}
+{% macro issue_card(key, title='', description='', action_id=none, action_label=none,
+                    has_files=false, shown=false) %}
+<div class="issue-card" id="issue-{{ key }}" {% if not shown %}hidden{% endif %}>
+    <div class="issue-card-head">
+        <h3 class="issue-card-title" id="issue-{{ key }}-title">{{ title }}</h3>
+        {% if action_id %}
+        <button class="btn btn-secondary btn-sm" id="{{ action_id }}" data-icon="sync">{{ action_label }}</button>
+        {% endif %}
+    </div>
+    <p class="issue-card-text">{{ description }}</p>
+    {% if has_files %}
+    <details class="issue-card-files">
+        <summary>{{ _("Show files") }}</summary>
+        <div id="issue-{{ key }}-files">{% if caller %}{{ caller() }}{% endif %}</div>
+    </details>
+    {% endif %}
+</div>
+{% endmacro %}

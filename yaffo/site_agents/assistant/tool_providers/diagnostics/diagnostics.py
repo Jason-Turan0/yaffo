@@ -591,7 +591,7 @@ class DiagnosticsToolProvider(ToolProvider):
             lines.append(
                 f"Index failure: {item.index_error or 'unknown'} -- {_first_line(item.index_error_detail, 300)} "
                 f"(failed {_iso(item.index_failed_at)}). File sync skips it until the file changes; "
-                "Reindex on the photo, or Retry all on Index Photos, tries again.")
+                "Reindex on the photo, or Retry all on Library Health, tries again.")
         lines += [
             f"Date taken: {item.date_taken or '(none)'}",
             f"Device: {item.device or '-'}",

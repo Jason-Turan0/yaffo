@@ -22,7 +22,7 @@
   "themes_index": "/themes",
   "themes_show": "/themes/<slug>",
   "utilities_index": "/utilities",
-  "utilities_index_photos": "/utilities/index-photos",
+  "utilities_index_photos": "/library/health",
   "utilities_remove_duplicates": "/utilities/remove-duplicates",
   "utilities_remove_duplicates_results": "/utilities/remove-duplicates/results/<job_id>"
 }

@@ -3,7 +3,7 @@ the app, beyond editing metadata. Assistant profile only (automations don't get
 them), and like every mutation they only run when the user approves a plan.
 
 Some start background work rather than finishing in the approval request:
-reindex_media returns a Job id (its HostFunction has `starts_job`). run_automation
+reindex_media and regenerate_thumbnails return a Job id (its HostFunction has `starts_job`). run_automation
 queues a run whose worker creates the Job, so its plan links to the automation's
 Run history. The assistant checks the resulting job afterwards.
 
@@ -36,6 +36,7 @@ from yaffo.taskq.store import STATUS_READY, STATUS_RUNNING
 from yaffo.utils.index_jobs import reindex_media_items
 from yaffo.utils.settings import get_thumbnail_dir
 from yaffo.utils.thumbnail_marker import ensure_thumbnail_dir
+from yaffo.utils.thumbnail_repair import find_missing_thumbnails, start_thumbnail_repair
 
 # Queue tasks that hold faces PROCESSING while they assign them.
 FACE_TASK_NAMES = ["assign_faces_to_person", "auto_assign_faces_automation_task"]
@@ -64,6 +65,13 @@ def automation_runnable(args: list[Any], session: Session) -> str | None:
     return None
 
 
+def thumbnails_missing(args: list[Any], session: Session) -> str | None:
+    missing = find_missing_thumbnails(session, get_thumbnail_dir(session))
+    if not missing.available:
+        return "The thumbnail folder isn't available"
+    return None if missing.media_item_ids else "No thumbnails are missing"
+
+
 def faces_need_repair(args: list[Any], session: Session) -> str | None:
     return None if face_repair_counts(session).total else "No faces need repairing"
 
@@ -84,6 +92,25 @@ def reindex_media(session: Session, media_item_ids: list[int]) -> Annotated[str,
 def summarize_reindex_media(args: list[Any], session: Session) -> str:
     ids = args[0] if args and isinstance(args[0], list) else []
     return f"Re-index {len(ids)} item(s)"
+
+
+# ---- regenerate_thumbnails -------------------------------------------------------------
+
+def regenerate_thumbnails(session: Session) -> Annotated[str, "The id of the repair job."]:
+    """Write the face crops and video posters whose files are gone again, from the
+    photos and videos. Faces keep their people and ignored status."""
+    missing = find_missing_thumbnails(session, get_thumbnail_dir(session))
+    if not missing.media_item_ids:
+        raise ValueError("No thumbnails are missing")
+    return start_thumbnail_repair(session, missing)
+
+
+def missing_thumbnail_count(session: Session) -> int:
+    return find_missing_thumbnails(session, get_thumbnail_dir(session)).total
+
+
+def summarize_regenerate_thumbnails(args: list[Any], session: Session) -> str:
+    return f"Regenerate {missing_thumbnail_count(session)} missing thumbnail(s)"
 
 
 # ---- cancel_job -------------------------------------------------------------------

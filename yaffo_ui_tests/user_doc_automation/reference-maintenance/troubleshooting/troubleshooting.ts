@@ -14,16 +14,16 @@ const waitForIndexScan = async (page: Page): Promise<void> => {
         undefined,
         {timeout: 30_000}
     );
-    await page.locator("#scan-results").getByText("Everything is in sync").waitFor();
+    await page.locator("#status-in-sync").getByText("Everything is in sync").waitFor();
 };
 
 export default defineWalkthrough({
     page: "reference-maintenance/troubleshooting",
 
     shots: {
-        "index-photos-status.webp": {
+        "library-health-status.webp": {
             viewport: {width: 1400, height: 1000},
-            goto: "/utilities/index-photos",
+            goto: "/library/health",
             clip: ".utility-page",
             setup: waitForIndexScan,
         },
@@ -48,7 +48,7 @@ export default defineWalkthrough({
         // read-only scan of the documentation fixture.
         await visit("/settings");
         await page.locator("#media-dirs-list .media-dir-item").first().waitFor();
-        await visit("/utilities/index-photos");
+        await visit("/library/health");
         await waitForIndexScan(page);
 
         // These are the correction and review surfaces linked from the ML section.

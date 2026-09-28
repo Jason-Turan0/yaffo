@@ -20,9 +20,9 @@ export default defineWalkthrough({
     page: "library-basics/indexing-library",
 
     shots: {
-        "utilities-index-photos.webp": {
+        "library-health.webp": {
             viewport: {width: 1400, height: 1000},
-            goto: "/utilities/index-photos",
+            goto: "/library/health",
             clip: ".utility-page",
             setup: waitForScan,
         },
@@ -32,9 +32,10 @@ export default defineWalkthrough({
         // Media-directory configuration is the start of the indexing lifecycle.
         await visit("/settings");
 
-        // Exercise the two scan result tables and Sync button without writing to
-        // the fixture. The real scan route was already observed by the shot above.
-        await page.route("**/utilities/index-photos/scan", async (route) => {
+        // Exercise the new-file and orphan status cards and their fixes without
+        // writing to the fixture. The real scan route was already observed by the
+        // shot above.
+        await page.route("**/library/health/scan", async (route) => {
             await route.fulfill({
                 contentType: "application/x-ndjson",
                 body: `${JSON.stringify({
@@ -51,19 +52,22 @@ export default defineWalkthrough({
                         reason: "missing",
                         full_path: "/docs-fixture/missing-photo.jpg",
                     }],
+                    empty_roots: [],
+                    missing_thumbnails: 0,
                 })}\n`,
             });
         });
-        await visit("/utilities/index-photos");
+        await visit("/library/health");
         await waitForScan(page);
-        await page.locator("#scan-results").getByText("Unindexed Photos").waitFor();
-        await page.locator("#scan-results").getByText("Orphaned Database Entries").waitFor();
-        await page.locator("#sync-button").waitFor({state: "visible"});
-        await page.unroute("**/utilities/index-photos/scan");
+        await page.locator("#issue-unindexed").waitFor({state: "visible"});
+        await page.locator("#issue-orphaned").waitFor({state: "visible"});
+        await page.locator("#index-new-button").waitFor({state: "visible"});
+        await page.locator("#remove-orphaned-button").waitFor({state: "visible"});
+        await page.unroute("**/library/health/scan");
 
         // Reindex is destructive to face assignments. Observe its confirmation
         // contract and cancel instead of starting the job.
-        await visit("/utilities/index-photos");
+        await visit("/library/health");
         await waitForScan(page);
         await page.locator("#reindex-button").click();
         await page.locator("#global-confirm-dialog.active").waitFor();

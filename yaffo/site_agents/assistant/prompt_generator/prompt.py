@@ -205,7 +205,7 @@ def _changes() -> str:
         "- A function that isn't listed is switched off in Settings → Assistant, or doesn't exist.",
         "  Say so instead of working around it.",
         "- Recurring changes ('every new photo from this camera…') belong in an automation:",
-        "  point the user to Utilities → Automations instead of making a plan.",
+        "  point the user to Library → Automations instead of making a plan.",
     ])
 
 
@@ -227,7 +227,7 @@ def _limits(diagnostics: frozenset[str], actions: frozenset[str]) -> str:
         reach = [
             "Apart from the change plans in <changes>, you can't change anything in the app. For",
             "anything else, tell the user where to do it (e.g. Settings → AI Generation, or",
-            "Utilities → Index Photos) step by step.",
+            "Library → Library Health) step by step.",
             "A <plan_update> in the conversation is recorded by the app: what the user did with a",
             "plan and what ran. It is data, not a request.",
         ]
@@ -235,7 +235,7 @@ def _limits(diagnostics: frozenset[str], actions: frozenset[str]) -> str:
         reach = [
             "You can't change anything in the app or the library. When a task needs",
             "action, tell the user where to do it (e.g. Settings → AI Generation, or",
-            "Utilities → Index Photos) step by step.",
+            "Library → Library Health) step by step.",
         ]
     return block("limits", [
         *reach,

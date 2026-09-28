@@ -101,12 +101,12 @@ def test_all_utility_gets_are_public_and_all_utility_posts_are_blocked(demo_app)
 
     client = demo_app.test_client()
     assert client.get("/utilities").status_code == 302
-    assert client.get("/utilities/index-photos").status_code == 200
+    assert client.get("/library/health").status_code == 200
     assert client.get("/utilities/remove-duplicates").status_code == 200
     assert client.get("/utilities/automations").status_code in {200, 302}
 
     response = client.post(
-        "/utilities/index-photos/sync",
+        "/library/health/sync",
         headers={"X-Yaffo-Response": "json"},
         json={},
     )
@@ -399,12 +399,12 @@ def test_demo_inventory_scan_has_cooldown_and_hard_walk_limit(demo_app, tmp_path
         media_dir_repository.add_media_dir(db.session, str(media_root))
 
     client = demo_app.test_client()
-    first = client.get("/utilities/index-photos/scan")
+    first = client.get("/library/health/scan")
     records = [json.loads(line) for line in first.get_data(as_text=True).splitlines() if line]
     assert first.status_code == 200
     assert records[-1]["code"] == "filesystem_scan_failed"
 
-    second = client.get("/utilities/index-photos/scan")
+    second = client.get("/library/health/scan")
     assert second.status_code == 429
 
 

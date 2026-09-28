@@ -261,3 +261,81 @@
 .index-failure-reason {
     color: var(--color-warning-soft-text);
 }
+
+/* Index Photos: the Library status list, one card per problem with its fix
+   (components/issue_card.html), or the all-clear when there are none. */
+.issue-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.issue-card {
+    border: var(--border-width) solid var(--color-warning-soft-border);
+    border-left-width: 4px;
+    border-left-color: var(--color-warning);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    background: var(--color-surface);
+}
+
+.issue-card-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+}
+
+.issue-card-title {
+    font-size: var(--font-size-md);
+    margin: 0;
+    color: var(--color-text);
+}
+
+.issue-card-text {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    margin: 6px 0 0;
+}
+
+.issue-card-files {
+    margin-top: 10px;
+    font-size: var(--font-size-sm);
+}
+
+.issue-card-files summary {
+    cursor: pointer;
+    width: fit-content;
+    color: var(--color-text-secondary);
+}
+
+.issue-card-files[open] summary {
+    margin-bottom: 10px;
+}
+
+.status-all-clear {
+    border: var(--border-width) solid var(--color-success-soft-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-success-soft);
+    color: var(--color-success-soft-text);
+    padding: 14px 16px;
+}
+
+.status-all-clear h3 {
+    font-size: var(--font-size-md);
+    margin: 0 0 4px;
+}
+
+.status-all-clear h3::before {
+    content: "✓ ";
+}
+
+.status-all-clear p {
+    font-size: var(--font-size-sm);
+    margin: 0;
+}
+
+.library-status .warnings-section {
+    margin-bottom: 12px;
+}

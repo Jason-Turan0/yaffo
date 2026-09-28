@@ -191,7 +191,7 @@ def check_index_failures(failed_by_code: dict[str, int]) -> list[Finding]:
         "index_failures", WARNING,
         f"{total} file(s) couldn't be indexed ({reasons}). They show in the library without dates, "
         "locations, faces or labels; file sync skips them until they change. After fixing the files, "
-        "Retry all on Index Photos tries again.",
+        "Retry all on Library Health tries again.",
         DOC_INDEXING,
     )]
 

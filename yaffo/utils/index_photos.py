@@ -50,21 +50,27 @@ def get_photo_files(root: Path) -> List[Path]:
     ]
 
 
-def save_face_thumbnail(
-        image_path: Path,
-        face_index: int,
-        thumbnail_dir: Path,
-        face_location) -> Path:
+def write_face_crop(image_path: Path, face_location: Tuple[int, int, int, int], out_path: Path) -> None:
+    """Crop `face_location` (top, right, bottom, left) out of `image_path` and save it
+    as the face thumbnail at `out_path`."""
     # Upright, like detection: the box is in as-displayed coordinates, so cropping
     # the raw buffer would cut the wrong region out of an EXIF-rotated photo.
     image = upright_image_from_path(image_path)
     top, right, bottom, left = face_location
     face_image = image.crop((left, top, right, bottom))
     face_image.thumbnail((150, 150))
+    face_image.save(out_path, "JPEG")
+
+
+def save_face_thumbnail(
+        image_path: Path,
+        face_index: int,
+        thumbnail_dir: Path,
+        face_location) -> Path:
     stem = image_path.stem
     face_id = str(uuid.uuid4())[:8]
     thumb_path = thumbnail_dir / f"face_{stem}_{face_index}_{face_id}.jpg"
-    face_image.save(thumb_path, "JPEG")
+    write_face_crop(image_path, face_location, thumb_path)
     return thumb_path
 
 

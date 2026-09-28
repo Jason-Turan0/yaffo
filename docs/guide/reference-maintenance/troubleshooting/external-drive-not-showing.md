@@ -11,13 +11,15 @@ the drive is connected, mounted at the expected path, and readable.
    library configuration.
 3. If the folder responds slowly or file listings fail, check the cable, power,
    and drive health before starting another scan. Keep a backup of the originals.
-4. Once the files are visible again, use **Utilities** → **Index Photos** to compare
-   the filesystem and database. Only run **Sync Database** after the expected
-   files appear in the scan.
+4. Once the files are visible again, use **Library** → **Library Health** to compare
+   the filesystem and database. Only select **Remove them** on the
+   **Library entries have no file** card after the expected files appear in the
+   scan.
 
 An unattended File sync run leaves indexed items under an unexpectedly empty
-media folder alone. A manual sync can remove missing items from Yaffo's index, so
-verify the drive before confirming it. Removing an item from the index does not
+media folder alone, and Library Health warns about that folder above its cards.
+**Remove them** does drop missing items from Yaffo's index, so verify the drive
+before you select it. Removing an item from the index does not
 repair or reconnect the drive.
 
 If **Ask Yaffo** is available, ask it to check media-folder availability. Its

@@ -14,7 +14,7 @@ export default defineWalkthrough({
 
     flows: async ({page, visit, mediaIdByFilename}) => {
         // Indexing and temporary gallery views.
-        await visit("/utilities/index-photos");
+        await visit("/library/health");
         await visit("/?view=grid&year=2021");
         await visit("/?view=grid&favorite=1");
 

@@ -68,7 +68,7 @@ scenarios:
     priority: medium
     steps:
       - Make a job fail (for example, index a media folder whose drive is not mounted)
-      - Navigate to Utilities → Index Photos
+      - Navigate to Library → Library Health
       - Click "Help me with this" on the failed job card
     verify:
       - The panel opens on a new conversation

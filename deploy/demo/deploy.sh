@@ -68,6 +68,10 @@ gcloud compute ssh "$vm" \
         sudo env DOCKER_CONFIG=\"\$DOCKER_CONFIG_DIR\" /var/lib/yaffo-demo/bin/docker-compose --env-file \"\$ENV_FILE\" -f \"\$BUNDLE\" config --quiet
         sudo env DOCKER_CONFIG=\"\$DOCKER_CONFIG_DIR\" /var/lib/yaffo-demo/bin/docker-compose --env-file \"\$ENV_FILE\" -f \"\$BUNDLE\" pull
         sudo env DOCKER_CONFIG=\"\$DOCKER_CONFIG_DIR\" /var/lib/yaffo-demo/bin/docker-compose --env-file \"\$ENV_FILE\" -f \"\$BUNDLE\" up --detach --remove-orphans
+        # The bundle was just unpacked into fresh directories, but Compose only
+        # recreates containers whose config changed. An unchanged Caddy would keep
+        # its bind mounts on the deleted walkthrough/ and Caddyfile, serving 404s.
+        sudo env DOCKER_CONFIG=\"\$DOCKER_CONFIG_DIR\" /var/lib/yaffo-demo/bin/docker-compose --env-file \"\$ENV_FILE\" -f \"\$BUNDLE\" up --detach --force-recreate caddy
         sudo /var/lib/yaffo-demo/bin/docker-compose --env-file \"\$ENV_FILE\" -f \"\$BUNDLE\" ps
     "
 

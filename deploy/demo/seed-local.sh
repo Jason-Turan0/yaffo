@@ -22,8 +22,9 @@ fixtures_b="$script_dir/fixtures/b"
 
 if [ -z "$(ls -A "$fixtures_a" 2>/dev/null)" ]; then
     echo "Copying synthetic fixture media for device A (Bennett)..."
+    # Bennett includes its own generated video (2021_gulf_beach_trip). The UI-test
+    # duplicate-detection clips in test_data/mp4 are for Playwright, not the demo.
     cp -R "$repo_root/yaffo_ui_tests/test_data/bennett/." "$fixtures_a/"
-    cp "$repo_root/yaffo_ui_tests/test_data/mp4/"*.mp4 "$fixtures_a/"
 fi
 if [ -z "$(ls -A "$fixtures_b" 2>/dev/null)" ]; then
     echo "Copying real, public-domain fixture media for device B (Obama)..."

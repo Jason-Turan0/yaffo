@@ -25,7 +25,7 @@ def test_page_renders_shell_without_scanning(app, client, monkeypatch, tmp_path)
     monkeypatch.setattr("yaffo.routes.utilities.index_photos.get_media_dirs", lambda: [media])
     monkeypatch.setattr("yaffo.routes.utilities.index_photos.get_thumbnail_dir", lambda: tmp_path / "thumbs")
 
-    resp = client.get("/utilities/index-photos")
+    resp = client.get("/library/health")
     assert resp.status_code == 200
     assert b'id="scan-results"' in resp.data        # shell present for JS to fill
     assert b'id="stat-total-filesystem"' in resp.data
@@ -49,10 +49,10 @@ def test_page_translates_shared_utilities_navigation(app, client):
         db.session.commit()
 
     client.post("/settings/locale", data={"locale": "de"})
-    body = client.get("/utilities/index-photos").get_data(as_text=True)
+    body = client.get("/library/health").get_data(as_text=True)
 
-    assert "<h2>Werkzeuge</h2>" in body
-    assert "Fotos indizieren" in body
+    assert "<h2>Bibliothek</h2>" in body
+    assert "Bibliothekszustand" in body
     assert "Duplikate entfernen" in body
     assert "<h2>Automatisierungen</h2>" in body
     assert ">System</h3>" in body
@@ -78,11 +78,10 @@ def test_page_translates_indexing_content(client, monkeypatch, tmp_path):
     )
     client.post("/settings/locale", data={"locale": "de"})
 
-    body = client.get("/utilities/index-photos").get_data(as_text=True)
+    body = client.get("/library/health").get_data(as_text=True)
 
-    assert "<title>Fotos indizieren - Werkzeuge - Yaffo</title>" in body
+    assert "<title>Bibliothekszustand - Bibliothek - Yaffo</title>" in body
     assert "Fotos im Dateisystem mit der Datenbank vergleichen" in body
-    assert "Datenbank synchronisieren" in body
     assert "Gesamtzahl im Dateisystem" in body
     assert "In die Datenbank importiert" in body
     assert "In der Datenbank indiziert" in body
@@ -104,7 +103,7 @@ def test_scan_stream_emits_progress_then_done(app, client, monkeypatch):
         lambda *a, **k: iter([7, fake]),
     )
 
-    resp = client.get("/utilities/index-photos/scan")
+    resp = client.get("/library/health/scan")
     assert resp.status_code == 200
     assert resp.mimetype == "application/x-ndjson"
     assert resp.headers.get("Cache-Control") == "no-store"  # live data, never cached
@@ -123,11 +122,11 @@ def test_scan_stream_names_empty_media_folders(app, client, monkeypatch, tmp_pat
                      empty_roots=["/Volumes/Photos"])
     monkeypatch.setattr("yaffo.routes.utilities.index_photos.iter_media_scan", lambda *a, **k: iter([fake]))
 
-    records = [json.loads(line) for line in client.get("/utilities/index-photos/scan").get_data(as_text=True).splitlines()]
+    records = [json.loads(line) for line in client.get("/library/health/scan").get_data(as_text=True).splitlines()]
 
     assert records[-1]["empty_roots"] == ["/Volumes/Photos"]
     monkeypatch.setattr("yaffo.routes.utilities.index_photos.get_media_dirs", lambda *a: [tmp_path])
-    assert 'id="scan-warnings"' in client.get("/utilities/index-photos").get_data(as_text=True)
+    assert 'id="scan-warnings"' in client.get("/library/health").get_data(as_text=True)
 
 
 def test_only_file_sync_runs_that_need_attention_are_in_the_run_history(app, client):
@@ -137,7 +136,7 @@ def test_only_file_sync_runs_that_need_attention_are_in_the_run_history(app, cli
     _add_job(app, "quiet", "file_sync", "COMPLETED", 4, task_count=1, completed_count=1,
              message=None, job_data='{"outcome": "in_sync"}')
 
-    body = client.get("/utilities/index-photos").get_data(as_text=True)
+    body = client.get("/library/health").get_data(as_text=True)
     history = body.split('class="section index-run-history"')[1]
 
     assert "Completed with errors" in history
@@ -153,7 +152,7 @@ def test_scan_stream_reports_error_as_record(app, client, monkeypatch):
     monkeypatch.setattr("yaffo.routes.utilities.index_photos.iter_media_scan", boom)
     client.post("/settings/locale", data={"locale": "de"})
 
-    resp = client.get("/utilities/index-photos/scan")
+    resp = client.get("/library/health/scan")
     assert resp.status_code == 200
     records = [json.loads(line) for line in resp.get_data(as_text=True).splitlines() if line.strip()]
     assert records[-1] == {
@@ -170,7 +169,7 @@ def test_sync_validation_uses_saved_locale_and_error_code(client, monkeypatch):
     )
     client.post("/settings/locale", data={"locale": "de"})
 
-    response = client.post("/utilities/index-photos/sync", json={})
+    response = client.post("/library/health/sync", json={})
 
     assert response.status_code == 400
     assert response.get_json() == {
@@ -202,7 +201,7 @@ def test_reindex_library_forces_every_indexed_file(app, client, monkeypatch, tmp
         or SimpleNamespace(import_job_id="i1", index_job_id="x1"),
     )
 
-    response = client.post("/utilities/index-photos/reindex")
+    response = client.post("/library/health/reindex")
 
     assert response.status_code == 202
     assert response.get_json() == {"job_id": "x1", "media_item_count": 1}
@@ -214,7 +213,7 @@ def test_reindex_library_forces_every_indexed_file(app, client, monkeypatch, tmp
 def test_reindex_library_rejects_an_empty_library(app, client, monkeypatch, tmp_path):
     monkeypatch.setattr("yaffo.routes.utilities.index_photos.get_thumbnail_dir", lambda: tmp_path / "thumbs")
 
-    response = client.post("/utilities/index-photos/reindex")
+    response = client.post("/library/health/reindex")
 
     assert response.status_code == 400
     assert response.get_json()["code"] == "library_empty"
@@ -226,7 +225,7 @@ def test_page_offers_the_reindex_button(client, monkeypatch, tmp_path):
     monkeypatch.setattr("yaffo.routes.utilities.index_photos.get_media_dirs", lambda: [media])
     monkeypatch.setattr("yaffo.routes.utilities.index_photos.get_thumbnail_dir", lambda: tmp_path / "thumbs")
 
-    body = client.get("/utilities/index-photos").data.decode()
+    body = client.get("/library/health").data.decode()
 
     assert 'id="reindex-button"' in body
     assert "Reindex Library" in body
@@ -255,7 +254,7 @@ def test_page_shows_only_in_progress_latest_runs_as_cards(app, client):
              message="Imported {totalCount}/{taskCount} photos")
     _add_job(app, "dupes", "find_duplicates", "RUNNING", 1)
 
-    body = client.get("/utilities/index-photos").get_data(as_text=True)
+    body = client.get("/library/health").get_data(as_text=True)
     cards, history = body.split('class="section index-run-history"')
 
     # A card only for a kind whose latest run is still in progress.
@@ -275,7 +274,7 @@ def test_page_shows_only_in_progress_latest_runs_as_cards(app, client):
 
 def test_page_shows_no_cards_when_nothing_is_in_progress(app, client):
     _add_job(app, "index-done", "index_photos", "COMPLETED", 5)
-    body = client.get("/utilities/index-photos").get_data(as_text=True)
+    body = client.get("/library/health").get_data(as_text=True)
     assert 'id="job-progress-section"' not in body
     assert "Run history" in body
     assert "hasActiveJobs: false" in body
@@ -283,7 +282,7 @@ def test_page_shows_no_cards_when_nothing_is_in_progress(app, client):
 
 def test_page_reports_active_jobs_from_running_runs(app, client):
     _add_job(app, "index-running", "index_photos", "RUNNING", 1, completed_count=4)
-    body = client.get("/utilities/index-photos").get_data(as_text=True)
+    body = client.get("/library/health").get_data(as_text=True)
     assert 'id="job-index-running"' in body
     # Its polling asks for no Dismiss once it finishes, and so does Cancel.
     assert "/jobs/index-running/fragment?has_results=0&amp;dismiss=0" in body
@@ -295,7 +294,7 @@ def test_page_reports_active_jobs_from_running_runs(app, client):
 def test_job_card_shows_error_count_and_message(app, client):
     _add_job(app, "index-errors", "index_photos", "RUNNING", 1, error_count=7,
              error="Could not read IMG_0412.HEIC")
-    body = client.get("/utilities/index-photos").get_data(as_text=True)
+    body = client.get("/library/health").get_data(as_text=True)
     assert '<span class="job-error-count">7 errors</span>' in body
     # The English error isn't the card's message: it sits under Details.
     assert '<p class="job-error-message">' not in body
@@ -311,7 +310,7 @@ def test_job_fragment_omits_dismiss_when_asked(app, client):
 
 def test_job_card_status_reads_like_the_run_history(app, client):
     _add_job(app, "index-live", "index_photos", "RUNNING", 1, completed_count=4)
-    body = client.get("/utilities/index-photos").get_data(as_text=True)
+    body = client.get("/library/health").get_data(as_text=True)
     assert '<span class="chip chip-warning job-status">Running</span>' in body
     assert ">RUNNING<" not in body
 
@@ -355,7 +354,7 @@ def _add_failed(app, path, code="decode_error"):
 def test_page_lists_files_that_couldnt_be_indexed(app, client, tmp_path):
     item_id = _add_failed(app, tmp_path / "burst.jpg")
 
-    body = client.get("/utilities/index-photos").get_data(as_text=True)
+    body = client.get("/library/health").get_data(as_text=True)
 
     assert "1 file couldn't be indexed" in body
     assert f'href="/media/view/{item_id}"' in body and "burst.jpg" in body
@@ -364,7 +363,7 @@ def test_page_lists_files_that_couldnt_be_indexed(app, client, tmp_path):
 
 
 def test_page_has_no_failures_section_without_failures(app, client):
-    assert 'id="index-failures"' not in client.get("/utilities/index-photos").get_data(as_text=True)
+    assert 'id="index-failures"' not in client.get("/library/health").get_data(as_text=True)
 
 
 def test_retry_all_queues_the_failed_files_that_still_exist(app, client, tmp_path, monkeypatch):
@@ -378,7 +377,7 @@ def test_retry_all_queues_the_failed_files_that_still_exist(app, client, tmp_pat
     monkeypatch.setattr("yaffo.routes.utilities.index_photos.enqueue_index_jobs",
                         lambda session, paths: queued.append(paths) or IndexJobs("i", "x"))
 
-    resp = client.post("/utilities/index-photos/retry-failed")
+    resp = client.post("/library/health/retry-failed")
 
     assert resp.status_code == 202 and resp.get_json()["media_item_count"] == 1
     assert queued == [[str(present)]]
@@ -386,5 +385,133 @@ def test_retry_all_queues_the_failed_files_that_still_exist(app, client, tmp_pat
 
 def test_retry_all_with_nothing_failed_says_so(app, client, tmp_path, monkeypatch):
     monkeypatch.setattr("yaffo.routes.utilities.index_photos.get_thumbnail_dir", lambda: tmp_path / "thumbs")
-    resp = client.post("/utilities/index-photos/retry-failed")
+    resp = client.post("/library/health/retry-failed")
     assert resp.status_code == 400 and resp.get_json()["code"] == "nothing_failed"
+
+
+def test_scan_done_record_counts_missing_thumbnails(app, client, monkeypatch, tmp_path):
+    from yaffo.utils.thumbnail_repair import MissingThumbnails
+
+    fake = MediaScan(unindexed=[], orphaned=[], total_imported=1, total_indexed=1, total_filesystem=1)
+    monkeypatch.setattr("yaffo.routes.utilities.index_photos.iter_media_scan", lambda *a, **k: iter([fake]))
+    monkeypatch.setattr("yaffo.routes.utilities.index_photos.find_missing_thumbnails",
+                        lambda session, thumbnail_dir: MissingThumbnails(True, faces=3, posters=1,
+                                                                         media_item_ids=[1, 2]))
+
+    records = [json.loads(line) for line in client.get("/library/health/scan").get_data(as_text=True).splitlines()]
+
+    assert records[-1]["missing_thumbnails"] == 4
+
+
+def test_scan_done_record_says_when_thumbnails_cant_be_checked(app, client, monkeypatch, tmp_path):
+    fake = MediaScan(unindexed=[], orphaned=[], total_imported=1, total_indexed=1, total_filesystem=1)
+    monkeypatch.setattr("yaffo.routes.utilities.index_photos.iter_media_scan", lambda *a, **k: iter([fake]))
+    monkeypatch.setattr("yaffo.routes.utilities.index_photos.get_thumbnail_dir", lambda: tmp_path / "unplugged")
+
+    records = [json.loads(line) for line in client.get("/library/health/scan").get_data(as_text=True).splitlines()]
+
+    assert records[-1]["missing_thumbnails"] is None
+
+
+def test_regenerate_thumbnails_starts_one_job_for_the_missing_items(app, client, monkeypatch):
+    from yaffo.utils.thumbnail_repair import MissingThumbnails
+
+    monkeypatch.setattr("yaffo.routes.utilities.index_photos.find_missing_thumbnails",
+                        lambda session, thumbnail_dir: MissingThumbnails(True, faces=5, posters=1,
+                                                                         media_item_ids=[3, 7]))
+    started = {}
+    monkeypatch.setattr("yaffo.routes.utilities.index_photos.start_thumbnail_repair",
+                        lambda session, missing: started.update(ids=missing.media_item_ids) or "job-1")
+
+    response = client.post("/library/health/regenerate-thumbnails")
+
+    assert response.status_code == 202
+    assert response.get_json() == {"job_id": "job-1", "thumbnail_count": 6}
+    assert started["ids"] == [3, 7]
+
+
+@pytest.mark.parametrize("missing, code", [
+    (dict(available=False), "thumbnail_directory_unavailable"),
+    (dict(available=True), "nothing_missing"),
+])
+def test_regenerate_thumbnails_refuses_when_there_is_nothing_to_do(app, client, monkeypatch, missing, code):
+    from yaffo.utils.thumbnail_repair import MissingThumbnails
+
+    monkeypatch.setattr("yaffo.routes.utilities.index_photos.find_missing_thumbnails",
+                        lambda session, thumbnail_dir: MissingThumbnails(**missing))
+    monkeypatch.setattr("yaffo.routes.utilities.index_photos.start_thumbnail_repair",
+                        lambda *a: pytest.fail("must not start a job"))
+
+    response = client.post("/library/health/regenerate-thumbnails")
+
+    assert response.status_code == 400
+    assert response.get_json()["code"] == code
+
+
+def test_page_has_the_missing_thumbnails_stat_and_hidden_repair_section(client, monkeypatch, tmp_path):
+    media = tmp_path / "media"
+    media.mkdir()
+    monkeypatch.setattr("yaffo.routes.utilities.index_photos.get_media_dirs", lambda: [media])
+    monkeypatch.setattr("yaffo.routes.utilities.index_photos.get_thumbnail_dir", lambda: tmp_path / "thumbs")
+
+    body = client.get("/library/health").data.decode()
+
+    assert 'id="stat-missing-thumbnails"' in body
+    # One card per problem, each hidden until the scan finds it, with its own fix.
+    for key, action in (("unindexed", "index-new-button"), ("orphaned", "remove-orphaned-button"),
+                        ("missing-thumbnails", "regenerate-thumbnails-button")):
+        assert f'<div class="issue-card" id="issue-{key}" hidden>' in body
+        assert f'id="{action}"' in body
+    assert '<div class="status-all-clear" id="status-in-sync" hidden>' in body
+    assert 'id="sync-button"' not in body  # the fixes live on their cards now
+    assert 'id="issue-failed" hidden' in body  # nothing failed
+
+
+def test_a_thumbnail_repair_run_is_listed_with_its_own_label(app, client):
+    _add_job(app, "repair", "regenerate_thumbnails", "COMPLETED", 3, task_count=4, completed_count=3,
+             error_count=1, message=None)
+
+    body = client.get("/library/health").get_data(as_text=True)
+    history = body.split('class="section index-run-history"')[1]
+
+    assert '<span class="run-history-label">Regenerate thumbnails</span>' in history
+    assert "3 of 4 processed, 1 error" in history  # recorded no outcome
+
+
+@pytest.mark.parametrize("outcome, summary", [
+    ({"written": 3, "total": 3}, "Regenerated 3 thumbnails"),
+    ({"written": 1, "total": 1}, "Regenerated 1 thumbnail"),
+    ({"written": 2, "total": 3}, "Regenerated 2 of 3 thumbnails"),
+    ({"written": 0, "total": 0}, "No thumbnails were missing"),
+])
+def test_a_finished_thumbnail_repair_says_what_it_regenerated(app, client, outcome, summary):
+    _add_job(app, "repair", "regenerate_thumbnails", "COMPLETED", 3, task_count=outcome["total"],
+             completed_count=outcome["written"], error_count=outcome["total"] - outcome["written"],
+             message=None, job_data=json.dumps({"outcome": "regenerated", **outcome}))
+
+    history = client.get("/library/health").get_data(as_text=True).split(
+        'class="section index-run-history"')[1]
+
+    assert summary in history
+    # The sentence already says what ran, so the row doesn't repeat it as a label.
+    assert "run-history-label" not in history
+
+
+def test_files_that_couldnt_be_indexed_are_a_card_shown_up_front(app, client, monkeypatch, tmp_path):
+    from yaffo.db.models import MediaItem, MEDIA_STATUS_FAILED
+
+    media = tmp_path / "media"
+    media.mkdir()
+    monkeypatch.setattr("yaffo.routes.utilities.index_photos.get_media_dirs", lambda: [media])
+    monkeypatch.setattr("yaffo.routes.utilities.index_photos.get_thumbnail_dir", lambda: tmp_path / "thumbs")
+    with app.app_context():
+        db.session.add(MediaItem(full_file_path=str(media / "bad.jpg"), status=MEDIA_STATUS_FAILED,
+                                 index_error="unreadable"))
+        db.session.commit()
+
+    body = client.get("/library/health").get_data(as_text=True)
+
+    assert '<div class="issue-card" id="issue-failed" >' in body
+    assert "1 file couldn't be indexed" in body
+    assert 'id="retry-failed-button"' in body
+    assert "failedCount: 1" in body  # so the page never calls the library in sync

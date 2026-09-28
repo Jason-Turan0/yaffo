@@ -14,6 +14,9 @@ from yaffo.routes.utilities.run_history import run_view
 from yaffo.utils.file_sync import FILE_SYNC_JOB, MediaScan, iter_media_scan, perform_sync
 from yaffo.utils.index_jobs import enqueue_index_jobs, reindex_media_items
 from yaffo.utils.thumbnail_marker import ensure_thumbnail_dir
+from yaffo.utils.thumbnail_repair import (
+    THUMBNAIL_REPAIR_JOB, MissingThumbnails, find_missing_thumbnails, start_thumbnail_repair,
+)
 
 
 # NDJSON records the scan stream emits (one JSON object per line). Named so the page
@@ -33,10 +36,13 @@ class ScanComplete:
     orphaned: list[dict]
     # Media folders that exist but hold no media files (a drive that didn't mount).
     empty_roots: list[str]
+    # Face crops and posters whose files are gone; None when the thumbnail folder
+    # can't be checked (not configured, or its drive isn't connected).
+    missing_thumbnails: int | None
     type: str = "done"
 
     @classmethod
-    def from_scan(cls, scan: MediaScan) -> "ScanComplete":
+    def from_scan(cls, scan: MediaScan, missing: MissingThumbnails) -> "ScanComplete":
         return cls(
             total_filesystem=scan.total_filesystem,
             total_imported=scan.total_imported,
@@ -44,6 +50,7 @@ class ScanComplete:
             unindexed=scan.unindexed,
             orphaned=scan.orphaned,
             empty_roots=scan.empty_roots,
+            missing_thumbnails=missing.total if missing.available else None,
         )
 
 
@@ -65,8 +72,15 @@ class ReindexStarted:
     media_item_count: int
 
 
-# The page's job kinds, in pipeline order: import (new files) runs before index.
-INDEX_JOB_NAMES = ("import_photos", "index_photos")
+@dataclass
+class ThumbnailRepairStarted:
+    job_id: str
+    thumbnail_count: int
+
+
+# The page's job kinds: import (new files) runs before index; thumbnail repair
+# stands alone.
+INDEX_JOB_NAMES = ("import_photos", "index_photos", THUMBNAIL_REPAIR_JOB)
 # The run history also lists file-sync runs that need attention (skipped, failed, or
 # left items alone); its "Already in sync" runs stay on the automation's own page.
 # Runs listed in the run history.
@@ -97,7 +111,7 @@ def _in_progress_and_history() -> tuple[list[Job], list[Job]]:
 
 
 def init_index_photos_routes(app: Flask):
-    @app.route("/utilities/index-photos", methods=["GET"])
+    @app.route("/library/health", methods=["GET"])
     def utilities_index_photos():
         """Render the page shell immediately. The filesystem scan (slow on large
         libraries) runs in the streaming `scan` endpoint and fills the counters and
@@ -165,7 +179,7 @@ def init_index_photos_routes(app: Flask):
             has_active_jobs=has_active_jobs,
         )
 
-    @app.route("/utilities/index-photos/scan", methods=["GET"])
+    @app.route("/library/health/scan", methods=["GET"])
     def utilities_index_photos_scan():
         """Stream the media-dir scan as NDJSON: `progress` records with the running
         count while it walks, then one `done` record with the totals + the unindexed/
@@ -185,7 +199,8 @@ def init_index_photos_routes(app: Flask):
                 )
                 for event in iter_media_scan(db.session, media_dirs, thumbnail_dir, **limits):
                     if isinstance(event, MediaScan):
-                        yield json.dumps(asdict(ScanComplete.from_scan(event))) + "\n"
+                        missing = find_missing_thumbnails(db.session, thumbnail_dir)
+                        yield json.dumps(asdict(ScanComplete.from_scan(event, missing))) + "\n"
                     else:
                         yield json.dumps(asdict(ScanProgress(scanned=event))) + "\n"
             except Exception:
@@ -202,7 +217,7 @@ def init_index_photos_routes(app: Flask):
             headers={"Cache-Control": "no-store"},
         )
 
-    @app.route("/utilities/index-photos/sync", methods=["POST"])
+    @app.route("/library/health/sync", methods=["POST"])
     def utilities_sync_photos():
         data = request.get_json(silent=True) or {}
         files_to_index = data.get('files_to_index', [])
@@ -238,7 +253,7 @@ def init_index_photos_routes(app: Flask):
         jobs = perform_sync(db.session, files_to_index, files_to_delete, thumbnail_dir)
         return jsonify(asdict(SyncStarted(job_id=jobs.import_job_id))), 202
 
-    @app.route("/utilities/index-photos/retry-failed", methods=["POST"])
+    @app.route("/library/health/retry-failed", methods=["POST"])
     def utilities_retry_failed():
         """Index again every file that failed permanently (status FAILED) -- the "ask"
         that file sync otherwise waits for. Failed files have no faces, so nothing is
@@ -261,7 +276,7 @@ def init_index_photos_routes(app: Flask):
         jobs = enqueue_index_jobs(db.session, paths)
         return jsonify(asdict(ReindexStarted(job_id=jobs.index_job_id, media_item_count=len(paths)))), 202
 
-    @app.route("/utilities/index-photos/reindex", methods=["POST"])
+    @app.route("/library/health/reindex", methods=["POST"])
     def utilities_reindex_library():
         """Re-index every media item already in the library — a full rebuild of the
         derived data (faces, sizes, metadata) from the files on disk.
@@ -296,3 +311,20 @@ def init_index_photos_routes(app: Flask):
         return jsonify(asdict(
             ReindexStarted(job_id=jobs.index_job_id, media_item_count=len(media_items))
         )), 202
+
+
+    @app.route("/library/health/regenerate-thumbnails", methods=["POST"])
+    def utilities_regenerate_thumbnails():
+        """Rebuild the face crops and posters whose files are gone, at the paths the
+        index records. Faces keep their people and ignored status (unlike Reindex),
+        so no confirmation is needed."""
+        missing = find_missing_thumbnails(db.session, get_thumbnail_dir())
+        if not missing.available:
+            return jsonify({
+                "error": gettext("The thumbnail folder isn't available. Check its drive is connected."),
+                "code": "thumbnail_directory_unavailable",
+            }), 400
+        if not missing.media_item_ids:
+            return jsonify({"error": gettext("No thumbnails are missing"), "code": "nothing_missing"}), 400
+        job_id = start_thumbnail_repair(db.session, missing)
+        return jsonify(asdict(ThumbnailRepairStarted(job_id=job_id, thumbnail_count=missing.total))), 202

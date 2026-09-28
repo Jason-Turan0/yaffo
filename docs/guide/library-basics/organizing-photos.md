@@ -6,8 +6,8 @@ pages. This page explains how those pieces fit together.
 
 ## Start with Indexing
 
-Organization starts with an indexed library. If new photos do not appear, run
-**Utilities** → **Index Photos** or wait for Yaffo's watcher/hourly sync to pick
+Organization starts with an indexed library. If new photos do not appear, open
+**Library** → **Library Health** or wait for Yaffo's watcher/hourly sync to pick
 up changes.
 
 See [Indexing & Library Management](indexing-library.md) for the full indexing

@@ -424,7 +424,7 @@ test.describe('Photo Gallery Feature - Responsive', () => {
     await expect(menuToggle).toHaveAttribute('aria-expanded', 'true');
     await expect(primary).toBeVisible();
     await expect(page.locator('.navbar-nav .nav-link')).toHaveCount(9);
-    for (const name of ['Home', 'Albums', 'Faces', 'People', 'Locations', 'Utilities', 'Sharing', 'Themes', 'Settings']) {
+    for (const name of ['Home', 'Albums', 'Faces', 'People', 'Locations', 'Library', 'Sharing', 'Themes', 'Settings']) {
       await expect(page.locator('.navbar-nav').getByRole('link', { name, exact: true })).toBeVisible();
     }
 

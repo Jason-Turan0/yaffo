@@ -305,19 +305,34 @@
       "emptyFolders_one": "This media folder holds no media files, which usually means its drive isn't connected: {{folders}}. Its photos are listed as missing below, and Sync would remove them from the library. Check the drive before syncing.",
       "emptyFolders_other": "These media folders hold no media files, which usually means their drives aren't connected: {{folders}}. Their photos are listed as missing below, and Sync would remove them from the library. Check the drives before syncing.",
       "filename": "Filename",
-      "inSync": {
-        "description": "All photos on the filesystem are indexed, and all database entries have corresponding files.",
-        "title": "Everything is in sync"
+      "indexNew": {
+        "button": "Index them",
+        "error": "Error starting indexing: {{reason}}",
+        "startFailed": "Failed to start indexing",
+        "started": "Indexing the new files",
+        "starting": "Starting…"
+      },
+      "issues": {
+        "orphaned_one": "{{formattedCount}} library entry has no file",
+        "orphaned_other": "{{formattedCount}} library entries have no file",
+        "unindexed_one": "{{formattedCount}} photo isn't indexed",
+        "unindexed_other": "{{formattedCount}} photos aren't indexed"
       },
       "location": "Location",
       "mediaDirectories": "Media directories: ",
+      "missingThumbnails": {
+        "button": "Regenerate thumbnails",
+        "error": "Failed to start regenerating thumbnails: {{reason}}",
+        "startFailed": "Failed to start regenerating thumbnails",
+        "started_one": "Regenerating {{count}} thumbnail",
+        "started_other": "Regenerating {{count}} thumbnails",
+        "starting": "Starting…",
+        "title_one": "{{formattedCount}} thumbnail is missing",
+        "title_other": "{{formattedCount}} thumbnails are missing"
+      },
       "orphanReasons": {
         "missing": "File deleted from disk",
         "unconfigured": "Media directory no longer configured"
-      },
-      "orphaned": {
-        "description": "The following photos are in the database but no longer have a file under the configured media directories — either the file was deleted, or its media directory was removed from Settings. Syncing removes these entries.",
-        "title": "Orphaned Database Entries"
       },
       "photoId": "Photo ID",
       "reason": "Reason",
@@ -330,6 +345,13 @@
         "started": "Reindexing {{count}} item(s)",
         "starting": "Starting…",
         "title": "Reindex the whole library?"
+      },
+      "removeOrphaned": {
+        "button": "Remove them",
+        "error": "Error removing entries: {{reason}}",
+        "startFailed": "Failed to remove the entries",
+        "started": "Removing the entries",
+        "starting": "Starting…"
       },
       "retryFailed": {
         "button": "Retry all",
@@ -344,18 +366,8 @@
         "requestFailed": "Scan request failed",
         "scanning": "Scanning the filesystem…"
       },
-      "sync": {
-        "button": "Sync Database",
-        "error": "Error starting sync: {{reason}}",
-        "startFailed": "Failed to start sync job",
-        "started": "Sync job started",
-        "starting": "Starting sync…"
-      },
-      "truncation": "Showing the first {{shown}} of {{total}}. Sync processes all of them.",
-      "unindexed": {
-        "description": "The following photos exist in the configured media directories but are not in the database.",
-        "title": "Unindexed Photos"
-      }
+      "thumbnailFolderUnavailable": "The thumbnail folder isn't available, so thumbnails weren't checked. Check that its drive is connected.",
+      "truncation": "Showing the first {{shown}} of {{total}}. Sync processes all of them."
     }
   },
   "assistant": {
@@ -557,6 +569,8 @@
         "set_automation_enabled_off": "Turn off the “{{automation}}” automation",
         "reindex_media_one": "Re-index {{formattedCount}} item from its file (its faces are detected again, and people assigned to them are removed)",
         "reindex_media_other": "Re-index {{formattedCount}} items from their files (their faces are detected again, and people assigned to them are removed)",
+        "regenerate_thumbnails_one": "Regenerate {{formattedCount}} missing thumbnail (faces keep their people)",
+        "regenerate_thumbnails_other": "Regenerate {{formattedCount}} missing thumbnails (faces keep their people)",
         "run_automation": "Run the “{{automation}}” automation for {{scope}}",
         "cancel_job": "Cancel the “{{job}}” job (work already done stays done)",
         "set_person_birthdate": "Set the birthdate of “{{person}}” to {{date}}",
@@ -590,7 +604,7 @@
       },
       "readOnly": "Changes nothing",
       "background": "Runs in the background",
-      "jobProgress": "See its progress in Index Photos",
+      "jobProgress": "See its progress in Library Health",
       "runHistory": "See its Run history"
     },
     "deleteAll": {

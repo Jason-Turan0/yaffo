@@ -161,6 +161,9 @@ def switch_help() -> dict[str, str]:
         "cancel_job": gettext(
             "Stops a pending or running job, as its Cancel button does. Work already done stays done."),
         "reindex_media": gettext("Their faces are detected again, so people assigned to them are removed."),
+        "regenerate_thumbnails": gettext(
+            "Writes missing face crops and video posters again from your photos and videos. Faces keep "
+            "their people; nothing is re-detected."),
         "unassign_faces": gettext(
             "Takes a face off the person it's assigned to, e.g. a wrong match. The face goes back to "
             "Unassigned Faces; the photo and the person stay."),
@@ -235,6 +238,7 @@ def action_groups_layout() -> list[tuple[str, str, dict[str, str]]]:
         ("upkeep", gettext("Library upkeep"), {
             "run_automation": gettext("Run automation"),
             "reindex_media": gettext("Re-index items"),
+            "regenerate_thumbnails": gettext("Regenerate missing thumbnails"),
             "cancel_job": gettext("Cancel background jobs"),
             "set_automation_enabled": gettext("Turn automations on or off"),
         }),
@@ -248,7 +252,8 @@ def action_groups_layout() -> list[tuple[str, str, dict[str, str]]]:
 
 
 # Changes without an undo that still change nothing: no "can't be undone" tag.
-_READ_ONLY_ACTIONS = frozenset()
+# Regenerating thumbnails only writes back files the library already points at.
+_READ_ONLY_ACTIONS = frozenset({"regenerate_thumbnails"})
 
 
 def action_groups() -> list[ActionGroup]:

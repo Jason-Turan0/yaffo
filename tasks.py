@@ -343,17 +343,25 @@ def i18n_init(c, locale):
     c.run(f"python -m scripts.i18n_catalogs sync --locale {safe_locale}", pty=True)
 
 
-@task
-def i18n_update(c):
-    """Merge extracted gettext strings and synchronize browser catalog keys."""
-    c.run("pybabel update -N --ignore-obsolete -i messages.pot -d yaffo/translations", pty=True)
+def _sync_browser_catalogs(c, prune=False):
+    """Give every browser catalog the English keys; `prune` also drops keys English
+    no longer has (the sync refuses them otherwise, so a translation is never lost
+    to an accidental deletion from en.json)."""
+    flag = " --prune" if prune else ""
     for locale_path in sorted(Path("yaffo/static/locales").glob("*.json")):
         if locale_path.stem == "en" or locale_path.stem.endswith(".review"):
             continue
         c.run(
-            f"python -m scripts.i18n_catalogs sync --locale {locale_path.stem}",
+            f"python -m scripts.i18n_catalogs sync --locale {locale_path.stem}{flag}",
             pty=True,
         )
+
+
+@task(help={"prune": "Also remove browser catalog keys that en.json no longer has"})
+def i18n_update(c, prune=False):
+    """Merge extracted gettext strings and synchronize browser catalog keys."""
+    c.run("pybabel update -N --ignore-obsolete -i messages.pot -d yaffo/translations", pty=True)
+    _sync_browser_catalogs(c, prune)
 
 
 @task
@@ -381,18 +389,13 @@ def _translation_locales():
     ]
 
 
-@task
-def i18n_translate_all(c, dry_run=False, keys_only=False, overwrite=False, batch_size=20, engine="deep-translator"):
+@task(help={"prune": "Also remove browser catalog keys that en.json no longer has"})
+def i18n_translate_all(c, dry_run=False, keys_only=False, overwrite=False, batch_size=20, engine="deep-translator",
+                       prune=False):
     """Extract, update, translate all configured locales, then compile catalogs."""
     c.run("pybabel extract -F babel.cfg -o messages.pot .", pty=True)
     c.run("pybabel update -N --ignore-obsolete -i messages.pot -d yaffo/translations", pty=True)
-    for locale_path in sorted(Path("yaffo/static/locales").glob("*.json")):
-        if locale_path.stem == "en" or locale_path.stem.endswith(".review"):
-            continue
-        c.run(
-            f"python -m scripts.i18n_catalogs sync --locale {locale_path.stem}",
-            pty=True,
-        )
+    _sync_browser_catalogs(c, prune)
 
     for locale in _translation_locales():
         options = [

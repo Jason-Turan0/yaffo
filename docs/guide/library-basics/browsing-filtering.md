@@ -92,4 +92,4 @@ If expected photos are missing:
 - clear filters and try again;
 - check whether the filter is set to **all** instead of **any**;
 - make sure the relevant people, labels, tags, or locations have been assigned;
-- run **Utilities** → **Index Photos** if files were recently added or moved.
+- open **Library** → **Library Health** if files were recently added or moved.

@@ -20,6 +20,8 @@ OUTCOME_ASSIGNED = "assigned"          # auto_assign_faces: {faces, photos}
 OUTCOME_NAMED = "named"                # assign_location_name: {named, total}
 OUTCOME_GEOTAGGED = "geotagged"        # geotag_from_neighbors: {geotagged, total}
 OUTCOME_WRITTEN = "written"            # export_photo_tag: {written, total}
+# ---- outcomes of utility jobs
+OUTCOME_REGENERATED = "regenerated"    # regenerate_thumbnails: {written, total}
 
 # ---- problems: why a run needs attention
 PROBLEM_MEDIA_FOLDER_EMPTY = "media_folder_empty"  # file sync held items back: {roots, count}

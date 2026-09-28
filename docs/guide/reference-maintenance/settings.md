@@ -95,6 +95,6 @@ when reporting a problem.
 ## Automations
 
 Scheduled and event-driven behaviors are configured on their own screen, under
-**Utilities** → **Automations**, not on the Settings page. Their tunable defaults
+**Library** → **Automations**, not on the Settings page. Their tunable defaults
 are edited there through each automation's **Configure** panel. See
 [Automations](../create-customize/automations.md).

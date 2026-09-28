@@ -105,6 +105,22 @@ export function listSubdirectories(dir: string): string[] {
         .map((entry) => entry.name);
 }
 
+/**
+ * The file directly inside a readable directory whose bytes equal `content`, or
+ * null. Lets a spec find the file behind a URL it can fetch (e.g. the face crop
+ * served at /faces/<id>) when the page never shows the file name.
+ */
+export function findFileWithContentIn(dir: string, content: Uint8Array): string | null {
+    const resolved = assertReadable(dir);
+    const wanted = Buffer.from(content);
+    for (const entry of fs.readdirSync(resolved, {withFileTypes: true})) {
+        if (!entry.isFile()) continue;
+        const full = path.join(resolved, entry.name);
+        if (fs.statSync(full).size === wanted.length && fs.readFileSync(full).equals(wanted)) return full;
+    }
+    return null;
+}
+
 /** First photo file (jpg/png/heic) found under a readable directory. */
 export function findAnyPhotoIn(dir: string): string {
     for (const file of listFilesRecursive(dir)) {

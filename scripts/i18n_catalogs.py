@@ -92,7 +92,29 @@ def _set_json_path(value: dict, path: str, translated: str) -> None:
     node[parts[-1]] = translated
 
 
-def sync_browser_locale(locale: str) -> list[str]:
+def _delete_json_path(value: dict, path: str) -> None:
+    """Remove a flattened key, and any parent objects it leaves empty."""
+    parts = path.split(".")
+    parents = [value]
+    for part in parts[:-1]:
+        parents.append(parents[-1][part])
+    del parents[-1][parts[-1]]
+    for depth in range(len(parts) - 1, 0, -1):
+        if parents[depth]:
+            break
+        del parents[depth - 1][parts[depth - 1]]
+
+
+@dataclass(frozen=True)
+class BrowserSync:
+    added: list[str]
+    pruned: list[str]
+
+
+def sync_browser_locale(locale: str, prune: bool = False) -> BrowserSync:
+    """Give a locale's browser catalog every English key (empty until translated).
+    Keys English no longer has are an error unless `prune` removes them: dropping
+    translations is only safe when the English key was removed on purpose."""
     locale = _validate_locale(locale)
     english = _read_json(ENGLISH_BROWSER_PATH)
     english_flat = flatten_json(english)
@@ -101,12 +123,18 @@ def sync_browser_locale(locale: str) -> list[str]:
     target_flat = flatten_json(target)
     missing = sorted(set(english_flat) - set(target_flat))
     extra = sorted(set(target_flat) - set(english_flat))
-    if extra:
-        raise ValueError(f"{locale} has unexpected browser keys: {', '.join(extra)}")
+    if extra and not prune:
+        raise ValueError(
+            f"{locale} has browser keys that English no longer has: {', '.join(extra)}. "
+            "If they were removed from en.json on purpose, run the sync with --prune "
+            "(inv i18n-update --prune)."
+        )
+    for key in extra:
+        _delete_json_path(target, key)
     for key in missing:
         _set_json_path(target, key, "")
     _write_json(target_path, target)
-    return missing
+    return BrowserSync(added=missing, pruned=extra)
 
 
 def _placeholders(value: str, pattern: re.Pattern[str]) -> set[str]:
@@ -520,6 +548,8 @@ def main() -> None:
     subparsers = parser.add_subparsers(dest="command", required=True)
     sync_parser = subparsers.add_parser("sync")
     sync_parser.add_argument("--locale", required=True)
+    sync_parser.add_argument("--prune", action="store_true",
+                             help="remove keys that en.json no longer has")
     check_parser = subparsers.add_parser("check")
     check_parser.add_argument("--require-translated", action="store_true")
     translate_parser = subparsers.add_parser("translate")
@@ -536,8 +566,9 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.command == "sync":
-        missing = sync_browser_locale(args.locale)
-        print("\n".join(missing) if missing else "Browser catalog is up to date")
+        result = sync_browser_locale(args.locale, prune=args.prune)
+        lines = [f"+ {key}" for key in result.added] + [f"- {key}" for key in result.pruned]
+        print("\n".join(lines) if lines else "Browser catalog is up to date")
     elif args.command == "check":
         check_catalogs(args.require_translated, show_progress=True)
         print("Catalogs are valid")
