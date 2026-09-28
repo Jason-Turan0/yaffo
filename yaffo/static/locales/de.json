@@ -600,7 +600,7 @@
       "waitForReply": "Verfügbar, wenn die Antwort abgeschlossen ist.",
       "background": "Läuft im Hintergrund",
       "confirmRun": "Gib {{formattedCount}} ein, um den Start dieser Automatisierung zu bestätigen:",
-      "jobProgress": "Fortschritt in Index Photos anzeigen",
+      "jobProgress": "Fortschritt in Bibliothekszustand anzeigen",
       "readOnly": "Ändert nichts",
       "runHistory": "Ausführungsverlauf anzeigen"
     },

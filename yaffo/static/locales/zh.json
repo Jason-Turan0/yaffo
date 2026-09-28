@@ -600,7 +600,7 @@
       "waitForReply": "回复完成后可用。",
       "background": "在后台运行",
       "confirmRun": "输入 {{formattedCount}} 以确认开始此自动化：",
-      "jobProgress": "在索引照片中查看其进度",
+      "jobProgress": "在媒体库健康状况中查看其进度",
       "readOnly": "不做任何更改",
       "runHistory": "查看其运行历史记录"
     },

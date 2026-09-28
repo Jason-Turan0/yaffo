@@ -600,7 +600,7 @@
       "waitForReply": "Disponible lorsque la réponse sera terminée.",
       "background": "S'exécute en arrière-plan",
       "confirmRun": "Saisissez {{formattedCount}} pour confirmer le lancement de cette automatisation :",
-      "jobProgress": "Voir sa progression dans Index Photos",
+      "jobProgress": "Voir sa progression dans État de la bibliothèque",
       "readOnly": "Ne modifie rien",
       "runHistory": "Voir son historique d'exécution"
     },

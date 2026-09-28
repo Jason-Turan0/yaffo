@@ -75,7 +75,7 @@ def test_page_translates_duplicate_configuration(client):
 
     body = client.get("/utilities/remove-duplicates").get_data(as_text=True)
 
-    assert "<title>Duplikate entfernen - Werkzeuge - Yaffo</title>" in body
+    assert "<title>Duplikate entfernen - Bibliothek - Yaffo</title>" in body
     assert "Doppelte Fotos und Videos finden und entfernen" in body
     assert "Medien insgesamt" in body
     assert "Verzeichnisse" in body
@@ -126,7 +126,7 @@ def test_results_translate_duplicate_groups(app, client, tmp_path):
         "/utilities/remove-duplicates/results/duplicates-job",
     ).get_data(as_text=True)
 
-    assert "<title>Duplikatergebnisse - Werkzeuge - Yaffo</title>" in body
+    assert "<title>Duplikatergebnisse - Bibliothek - Yaffo</title>" in body
     assert "Doppelte Medien gefunden" in body
     assert "Doppelte Fotos und Videos prüfen und verwalten" in body
     assert "Medien insgesamt verarbeitet" in body

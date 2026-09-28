@@ -4664,7 +4664,7 @@ msgstr ""
 
 #: yaffo/templates/utilities/remove_duplicates.html:4
 msgid "Remove Duplicates - Library - Yaffo"
-msgstr "Duplikate entfernen – Bibliothek – Yaffo"
+msgstr "Duplikate entfernen - Bibliothek - Yaffo"
 
 #: yaffo/templates/utilities/remove_duplicates.html:10
 msgid "Find and remove duplicate photos and videos"
@@ -4724,7 +4724,7 @@ msgstr "Doppeltes Foto"
 
 #: yaffo/templates/utilities/remove_duplicates_results.html:4
 msgid "Duplicate Results - Library - Yaffo"
-msgstr "Duplikatergebnisse – Bibliothek – Yaffo"
+msgstr "Duplikatergebnisse - Bibliothek - Yaffo"
 
 #: yaffo/templates/utilities/remove_duplicates_results.html:14
 msgid "Duplicate Media Found"

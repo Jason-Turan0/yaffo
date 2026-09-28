@@ -600,7 +600,7 @@
       "waitForReply": "متاح عند اكتمال الرد.",
       "background": "يعمل في الخلفية",
       "confirmRun": "اكتب {{formattedCount}} لتأكيد بدء هذه الأتمتة:",
-      "jobProgress": "شاهد تقدمه في Index Photos",
+      "jobProgress": "شاهد تقدمه في سلامة المكتبة",
       "readOnly": "لا يغيّر شيئًا",
       "runHistory": "شاهد سجل التشغيل الخاص به"
     },

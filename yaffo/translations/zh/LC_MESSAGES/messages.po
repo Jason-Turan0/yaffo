@@ -1815,7 +1815,7 @@ msgstr "地点"
 #: yaffo/templates/base.html:145 yaffo/templates/utilities/_base.html:34
 #: yaffo/templates/utilities/_base.html:42
 msgid "Library"
-msgstr "库"
+msgstr "媒体库"
 
 #: yaffo/templates/base.html:147 yaffo/templates/sharing/_base.html:9
 #: yaffo/templates/sharing/_sidebar.html:8
@@ -4051,7 +4051,7 @@ msgstr "自动化"
 
 #: yaffo/templates/utilities/_base.html:47 yaffo/templates/utilities/index_photos.html:19
 msgid "Library Health"
-msgstr "库健康状况"
+msgstr "媒体库健康状况"
 
 #: yaffo/templates/utilities/_base.html:53 yaffo/templates/utilities/remove_duplicates.html:9
 msgid "Remove Duplicates"
@@ -4312,7 +4312,7 @@ msgstr "添加、编辑、启用或删除决定此自动化何时运行的触发
 
 #: yaffo/templates/utilities/index_photos.html:7
 msgid "Library Health - Library - Yaffo"
-msgstr "库健康状况 - 库 - Yaffo"
+msgstr "媒体库健康状况 - 媒体库 - Yaffo"
 
 #: yaffo/templates/utilities/index_photos.html:16
 msgid "Reindex Library"

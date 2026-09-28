@@ -51,8 +51,8 @@ def test_page_translates_shared_utilities_navigation(app, client):
     client.post("/settings/locale", data={"locale": "de"})
     body = client.get("/library/health").get_data(as_text=True)
 
-    assert "<h2>Werkzeuge</h2>" in body
-    assert "Fotos indizieren" in body
+    assert "<h2>Bibliothek</h2>" in body
+    assert "Bibliothekszustand" in body
     assert "Duplikate entfernen" in body
     assert "<h2>Automatisierungen</h2>" in body
     assert ">System</h3>" in body
@@ -80,7 +80,7 @@ def test_page_translates_indexing_content(client, monkeypatch, tmp_path):
 
     body = client.get("/library/health").get_data(as_text=True)
 
-    assert "<title>Fotos indizieren - Werkzeuge - Yaffo</title>" in body
+    assert "<title>Bibliothekszustand - Bibliothek - Yaffo</title>" in body
     assert "Fotos im Dateisystem mit der Datenbank vergleichen" in body
     assert "Gesamtzahl im Dateisystem" in body
     assert "In die Datenbank importiert" in body

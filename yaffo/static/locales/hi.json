@@ -600,7 +600,7 @@
       "waitForReply": "जवाब पूरा होने पर उपलब्ध।",
       "background": "पृष्ठभूमि में चलता है",
       "confirmRun": "इस ऑटोमेशन को शुरू करने की पुष्टि करने के लिए {{formattedCount}} टाइप करें:",
-      "jobProgress": "इसकी प्रगति Index Photos में देखें",
+      "jobProgress": "इसकी प्रगति लाइब्रेरी स्वास्थ्य में देखें",
       "readOnly": "कुछ नहीं बदलता",
       "runHistory": "इसका Run इतिहास देखें"
     },
