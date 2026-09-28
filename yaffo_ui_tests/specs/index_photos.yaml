@@ -11,7 +11,7 @@ preconditions:
 context:
   - tag: index-photos-template
     path: templates/utilities/index_photos.html
-    description: Index Photos page — live stats and the Library status cards (one per problem, each with its fix)
+    description: Library Health page — live stats and the Library status cards (one per problem, each with its fix)
   - tag: index-photos-routes
     path: routes/utilities/index_photos.py
     description: Routes for the streaming filesystem scan and the database sync
@@ -43,7 +43,7 @@ scenarios:
     goal: The page scans the filesystem and fills in the indexing statistics
     priority: high
     steps:
-      - Navigate to the Index Photos utility page
+      - Navigate to the Library Health page
       - Wait for the scan to stream and complete
     verify:
       # Per-tick live updates aren't observable on a small library (the stream
@@ -56,7 +56,7 @@ scenarios:
     goal: Each card's fix handles only its own problem
     priority: high
     steps:
-      - Navigate to the Index Photos utility page and let the scan complete
+      - Navigate to the Library Health page and let the scan complete
       - If photos aren't indexed, click "Index them" on that card and wait for the job
       - If entries have no file, click "Remove them" on that card and wait for the job
     verify:
@@ -70,7 +70,7 @@ scenarios:
     priority: high
     steps:
       - "Setup: pick a face assigned to a person and delete its crop file from the sandbox thumbnail folder"
-      - Navigate to the Index Photos utility page and let the scan complete
+      - Navigate to the Library Health page and let the scan complete
       - Click the "Regenerate thumbnails" button
       - Wait for the Regenerate thumbnails job to finish, then reload the page
     verify:
@@ -88,7 +88,7 @@ scenarios:
     priority: medium
     steps:
       - Ensure no media directories are configured
-      - Navigate to the Index Photos utility page
+      - Navigate to the Library Health page
     verify:
       - A "No Media Directories Configured" message is shown
       - A "Go to Settings" link/button is offered
@@ -102,10 +102,10 @@ scenarios:
     goal: The two utility navigation sections each get their own peer navbar button
     priority: high
     steps:
-      - Load the Index Photos page at 390x844
-      - Open the Utilities panel, then the Automations panel
+      - Load the Library Health page at 390x844
+      - Open the Library panel, then the Automations panel
     verify:
-      - Utilities and Automations are both peers of Menu and both closed on first paint
+      - Library and Automations are both peers of Menu and both closed on first paint
       - Opening one closes the other
       - Escape closes the open panel
       - Neither panel scrolls the page horizontally
@@ -113,7 +113,7 @@ scenarios:
     goal: The live stats grid and scan results stay contained at the minimum width
     priority: high
     steps:
-      - Load the Index Photos page at 320x568
+      - Load the Library Health page at 320x568
       - Run a scan and let the results render
     verify:
       - The page never scrolls horizontally
