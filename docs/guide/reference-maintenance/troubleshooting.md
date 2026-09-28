@@ -11,18 +11,19 @@ approve.
 
 ## Photos Do Not Appear
 
-![The Index Photos utility showing the diagnostic library counts](assets/troubleshooting/index-photos-status.webp)
+![The Library Health page showing the diagnostic library counts and status](assets/troubleshooting/library-health-status.webp)
 
 If photos are missing from the library:
 
 - **Check your media directories.** Open **Settings** and confirm the folder
   containing the photos is listed under **Media Directories**.
-- **Index the library.** New files only show up after indexing. Run
-  **Utilities** → **Index Photos** → **Sync Database**, or wait for Yaffo's
-  automatic sync to pick them up.
-- **Look for orphaned or not-indexed counts.** The Index Photos page reports how
-  many files are found on disk versus processed. A large **Not Indexed** count
-  means a sync is needed.
+- **Index the library.** New files only show up after indexing. Open
+  **Library** → **Library Health** and select **Index them** on the
+  **Photos aren't indexed** card, or wait for Yaffo's automatic sync to pick them
+  up.
+- **Check Library status.** Library Health reports how many files are found on
+  disk versus processed, and lists each problem as a card with its fix. A large
+  **Not Indexed** count means new files are waiting to be indexed.
 - **Confirm the file type is supported.** Unusual or non-media files are skipped.
 - **Check folder permissions.** Yaffo can only index files it is allowed to read.
 

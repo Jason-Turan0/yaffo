@@ -693,6 +693,23 @@ HOST_API: tuple[HostFunction, ...] = (
     ),
     HostFunction(
         description=(
+            "Write missing face crops and video posters again from the photos and videos (the "
+            "files the index points at in the thumbnail folder, shown as broken images). Faces keep "
+            "their people and ignored status; nothing is re-detected. Starts a background job."
+        ),
+        example="regenerate_thumbnails()",
+        impl=maintenance.regenerate_thumbnails,
+        profiles=frozenset({"assistant"}),
+        risk="low",
+        setting_key="assistant_action_regenerate_thumbnails",
+        precondition=maintenance.thumbnails_missing,
+        summarize=maintenance.summarize_regenerate_thumbnails,
+        mutating=True,
+        starts_job=True,
+        job_page="utilities_index_photos",
+    ),
+    HostFunction(
+        description=(
             "Fix faces in inconsistent states (see face_consistency): linked to a person but not "
             "assigned, stuck processing, or ignored but still linked (the link is removed)."
         ),

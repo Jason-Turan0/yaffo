@@ -78,9 +78,15 @@
     if (resetTime instanceof HTMLTimeElement) {
         const date = new Date(resetTime.dateTime);
         if (!Number.isNaN(date.getTime())) {
+            // Explicit fields, not dateStyle/timeStyle: Intl throws a TypeError
+            // ("Invalid option") when those are combined with timeZoneName, and
+            // the zone name matters here -- the reset follows the demo's clock.
             resetTime.textContent = new Intl.DateTimeFormat(window.APP_CONFIG.i18n.locale, {
-                dateStyle: 'medium',
-                timeStyle: 'short',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
                 timeZone: window.APP_CONFIG.demoTimezone,
                 timeZoneName: 'short',
             }).format(date);

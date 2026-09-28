@@ -31,9 +31,9 @@ export default defineWalkthrough({
         },
 
         // "Index Your First Photos"
-        "utilities-index-photos.webp": {
+        "library-health.webp": {
             viewport: {width: 1400, height: 1000},
-            goto: "/utilities/index-photos",
+            goto: "/library/health",
             clip: ".utility-page",
             setup: async (page) => {
                 // The scan streams after the initial page. Do not capture its em-dash

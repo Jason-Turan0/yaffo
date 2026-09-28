@@ -29,6 +29,7 @@ from yaffo.db.models import (
     JOB_STATUS_RUNNING,
 )
 from yaffo.utils import job_codes as codes
+from yaffo.utils.thumbnail_repair import THUMBNAIL_REPAIR_JOB
 from yaffo.utils.time import utcnow
 from yaffo.utils.file_sync import (
     FILE_SYNC_JOB,
@@ -70,6 +71,9 @@ class RunView:
     eta_note: str | None = None    # "about 12 minutes left", from estimated_completed_at
     repeat_count: int = 1          # quiet in-sync checks folded into this row
     repeat_since: datetime | None = None  # the oldest of those checks
+    # The summary already says what ran ("Regenerated 15 thumbnails"), so lists
+    # that label each row leave the label off rather than repeat it.
+    summary_names_run: bool = False
 
 
 def _field(job: Any, name: str) -> Any:
@@ -96,6 +100,7 @@ def _kind_labels() -> dict[str, str]:
         "find_duplicates": gettext("Find duplicates"),
         "remove_duplicates": gettext("Remove duplicates"),
         FILE_SYNC_JOB: gettext("File sync"),
+        THUMBNAIL_REPAIR_JOB: gettext("Regenerate thumbnails"),
     }
 
 
@@ -124,6 +129,8 @@ def job_progress_text(job: Any) -> str:
         return gettext("Indexed %(done)s/%(total)s photos", done=done, total=total)
     if name == "find_duplicates":
         return gettext("Processed %(done)s/%(total)s media items", done=done, total=total)
+    if name == THUMBNAIL_REPAIR_JOB:
+        return gettext("Regenerated %(done)s/%(total)s thumbnails", done=done, total=total)
     if name == "remove_duplicates":
         data = codes.load_job_data(_field(job, "job_data"))
         action = data.get("action_type")
@@ -198,6 +205,19 @@ def _automation_outcome(data: dict) -> str | None:
     return None
 
 
+def _thumbnail_repair_outcome(data: dict) -> str | None:
+    """A finished thumbnail repair's result sentence, from its outcome code."""
+    if data.get("outcome") != codes.OUTCOME_REGENERATED:
+        return None
+    written, total = _count(data, "written"), _count(data, "total")
+    if total == 0:
+        return gettext("No thumbnails were missing")
+    if written == total:
+        return ngettext("Regenerated %(num)d thumbnail", "Regenerated %(num)d thumbnails", total)
+    return ngettext("Regenerated %(written)s of %(num)d thumbnail", "Regenerated %(written)s of %(num)d thumbnails",
+                    total, written=written)
+
+
 def _output_lines(data: dict) -> list[str]:
     """A run's printed output as its non-blank lines (a list, or one string)."""
     output = data.get("output") or []
@@ -225,6 +245,10 @@ def _run_summary(job: Job, data: dict) -> str:
     outcome (or a custom script's output), else batch progress counts."""
     if job.name == FILE_SYNC_JOB:
         return _file_sync_summary(job, data)
+    if job.name == THUMBNAIL_REPAIR_JOB and job.status == JOB_STATUS_COMPLETED:
+        text = _thumbnail_repair_outcome(data)
+        if text:
+            return text
     if job.automation_id and job.status == JOB_STATUS_COMPLETED:
         text = _automation_outcome(data) or _script_output(job, data)
         if text:
@@ -393,6 +417,7 @@ def run_view(job: Job) -> RunView:
         details=job_details(job, data),
         assistant_error=_assistant_error(job, data, summary),
         automation_slug=job.automation.slug if job.automation is not None else None,
+        summary_names_run=job.name == THUMBNAIL_REPAIR_JOB and summary == _thumbnail_repair_outcome(data),
     )
 
 

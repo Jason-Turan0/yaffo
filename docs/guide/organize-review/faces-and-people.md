@@ -75,6 +75,6 @@ for you to review. You can instead enable **Assign when multiple people match**
 to choose the highest-scoring match. A higher threshold makes fewer, more
 confident assignments.
 
-Open **Utilities** → **Automations** → **Auto-assign faces** to enable or disable
+Open **Library** → **Automations** → **Auto-assign faces** to enable or disable
 the automation and change those settings. Review automatic results periodically,
 especially while each person has only a few examples.

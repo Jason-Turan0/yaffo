@@ -4,7 +4,7 @@ Indexing is how Yaffo learns what photos and videos are in your library. Yaffo
 does not move your originals into a special folder. Instead, you choose media
 folders, and Yaffo builds a local index from those files.
 
-![The Index Photos utility showing library counts and an in-sync result](assets/indexing-library/utilities-index-photos.webp)
+![The Library Health page showing library counts and an in-sync result](assets/indexing-library/library-health.webp)
 
 ## Add Media Folders
 
@@ -24,7 +24,7 @@ from future scans; it does not delete the folder from disk.
 
 ## Scan the Library
 
-Go to **Utilities** → **Index Photos**. Yaffo compares the configured media
+Go to **Library** → **Library Health**. Yaffo compares the configured media
 folders with the local database.
 
 The page shows several counts:
@@ -34,14 +34,34 @@ The page shows several counts:
 - **Indexed in Database:** files already processed for browsing and metadata.
 - **Not Indexed:** files found on disk but not yet indexed.
 - **Orphaned in DB:** database records whose files are no longer present.
+- **Missing Thumbnails:** face crops and video posters Yaffo made that are gone
+  from the thumbnail folder.
 
-Scanning is a read-only comparison step. It tells you what needs to be synced.
+Scanning is a read-only comparison step. Under **Library status**, the page lists
+what needs attention, one card per problem with its own fix, or says
+**Everything is in sync** when nothing does. Select **Show files** on a card to
+see the files it's about.
 
-## Sync New Files and Remove Orphans
+## Fix What the Scan Finds
 
-When the scan finds work to do, click **Sync Database**. Yaffo starts background
-jobs to import files at new paths, remove orphaned database records, and process
-media.
+Each card fixes only its own problem:
+
+- **Photos aren't indexed:** files in your media folders that Yaffo doesn't know
+  yet. Select **Index them** to import and process them in the background.
+- **Library entries have no file:** entries whose file was deleted, or whose media
+  folder was removed from Settings. Select **Remove them** to drop those entries.
+  Their faces go with them, including any person assignments.
+- **Thumbnails are missing:** face crops or video posters that show as broken
+  images. Select **Regenerate thumbnails** to write them again from your photos and
+  videos. Faces keep their people and ignored status; nothing is detected again.
+- **Files couldn't be indexed:** see
+  [Files That Couldn't Be Indexed](#files-that-couldnt-be-indexed).
+
+If a media folder holds no files at all, a warning above the cards says so. That
+usually means its drive isn't connected, and its photos are listed as having no
+file. Reconnect the drive before you select **Remove them**. A similar warning
+appears when the thumbnail folder isn't available; its count then shows a dash
+instead of a number.
 
 During indexing, Yaffo may:
 
@@ -57,12 +77,13 @@ run.
 
 ## Watch Background Jobs
 
-The **Index Photos** page shows the import or index run in progress as a job
-card, with its progress, any error count, and **Cancel** when cancellation is
+The **Library Health** page shows the import, index, or thumbnail run in
+progress as a job card, with its progress, any error count, and **Cancel** when cancellation is
 available. After you cancel, the run shows **Stopping** until it finishes the
 item it's working on, then **Cancelled**. Finished runs move to the page's
 **Run history**, each with a status chip: **Completed**, **Completed with
-errors** when some files failed, **Cancelled**, or **Failed**. A run that is
+errors** when some files failed, **Cancelled**, or **Failed**. A thumbnail
+run's row also says how many thumbnails it regenerated. A run that is
 still in progress has **Cancel** in the run history too, and a run's technical
 error, when it has one, is under **Details**.
 
@@ -81,30 +102,32 @@ Yaffo has two automatic ways to notice library changes while the app is running:
 - A watcher process monitors configured media directories and reacts when files
   are added, modified, moved, or removed.
 - The built-in **File sync** automation runs at the start of every hour. It finds
-  new paths and orphaned database records, like the scan on the indexing utility.
+  new paths and orphaned database records, like the scan on Library Health.
 
 These automatic checks are useful for normal day-to-day changes, such as copying
 new photos into a watched folder.
 
-You can still run the indexing utility manually whenever you want an immediate
-check. **Sync Database** is useful when you:
+You can still open **Library Health** whenever you want an immediate check. It's
+useful when you:
 
 - add new photos or videos to a configured folder;
 - remove files from a configured folder;
 - add another media directory;
 - move a library folder;
-- want Yaffo to clean up orphaned database records.
+- want Yaffo to clean up orphaned database records;
+- see broken face or poster images.
 
 Use **Reindex Library** when files were modified in place while Yaffo was not
 running, or when an indexing change requires Yaffo to rebuild derived data for
 items it already knows. Reindexing rereads every indexed file and rebuilds its
 metadata, thumbnails, labels, and detected faces. Because faces are detected
 again, all existing face-to-person assignments are removed. Yaffo asks you to
-confirm before starting the job.
+confirm before starting the job. If only thumbnails are broken, use
+**Regenerate thumbnails** instead: it keeps every assignment.
 
 Some operations, such as changing the automatic label vocabulary, have their own
-reprocessing controls. Use the indexing utility for file-system changes or when
-you do not want to wait for the watcher or hourly sync.
+reprocessing controls. Use Library Health for file-system changes or when you do
+not want to wait for the watcher or hourly sync.
 
 ## Files That Couldn't Be Indexed
 
@@ -116,15 +139,15 @@ items rather than near when they were taken.
 
 When this happens:
 
-- **Index Photos** lists the files that couldn't be indexed, with the reason for
-  each. Select a file name to open it.
+- **Library Health** shows a card listing the files that couldn't be indexed,
+  with the reason for each under **Show files**. Select a file name to open it.
 - The photo's details panel explains why, with the technical error under
   **Details**.
-- Sync leaves these files alone, so they aren't retried every hour. A file is
+- File sync leaves these files alone, so they aren't retried every hour. A file is
   tried again automatically only when it changes on disk, for example after you
   repair or replace it.
 
-To try again yourself, select **Retry all** on Index Photos, or **Reindex** in
+To try again yourself, select **Retry all** on Library Health, or **Reindex** in
 the photo's details panel. Retrying is also worthwhile after updating Yaffo, since
 a newer version may handle the file.
 

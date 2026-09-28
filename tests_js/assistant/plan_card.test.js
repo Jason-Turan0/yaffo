@@ -260,7 +260,7 @@ describe('plan card', () => {
 
   it('says background work runs on, and links to where its progress shows', async () => {
     const sync = { name: 'run_sync', count: 1, facts: {}, risk: 'medium', reversible: false, starts_job: true,
-      job_page: '/utilities/index-photos' };
+      job_page: '/library/health' };
     const pending = await render(plan({ reversible: false, steps: [step(sync)] }));
     expect(pending.card.querySelector('.assistant-plan-facts').textContent)
       .toBe('assistant:plan.irreversible · assistant:plan.background');
@@ -271,7 +271,7 @@ describe('plan card', () => {
       steps: [step({ ...sync, state: 'done', job_id: 'job-1' })],
     }));
     const link = card.querySelector('a.assistant-plan-job');
-    expect(link.getAttribute('href')).toBe('/utilities/index-photos');
+    expect(link.getAttribute('href')).toBe('/library/health');
     expect(link.textContent).toBe('assistant:plan.jobProgress');
   });
 

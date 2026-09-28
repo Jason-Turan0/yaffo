@@ -303,19 +303,11 @@
     },
     "indexPhotos": {
       "filename": "文件名",
-      "inSync": {
-        "description": "文件系统上的所有照片都有索引，所有数据库条目都有相应的文件。",
-        "title": "一切都同步进行"
-      },
       "location": "地点",
       "mediaDirectories": "媒体目录： ",
       "orphanReasons": {
         "missing": "文件从磁盘中删除",
         "unconfigured": "不再配置媒体目录"
-      },
-      "orphaned": {
-        "description": "以下照片位于数据库中，但在配置的媒体目录下不再有文件 - 文件已被删除，或其媒体目录已从“设置”中删除。同步会删除这些条目。",
-        "title": "孤立的数据库条目"
       },
       "photoId": "带照片的身份证件",
       "reason": "原因",
@@ -335,18 +327,7 @@
         "requestFailed": "扫描请求失败",
         "scanning": "扫描文件系统..."
       },
-      "sync": {
-        "button": "同步数据库",
-        "error": "启动同步时出错： {{reason}}",
-        "startFailed": "无法启动同步作业",
-        "started": "同步作业已开始",
-        "starting": "开始同步..."
-      },
       "truncation": "显示第一个 {{shown}} 的 {{total}}。同步处理所有这些。",
-      "unindexed": {
-        "description": "以下照片存在于配置的媒体目录中，但不在数据库中。",
-        "title": "未索引的照片"
-      },
       "emptyFolders_one": "此媒体文件夹中没有媒体文件，通常意味着其驱动器未连接：{{folders}}。其中的照片在下方列为缺失，同步会将其从图库中移除。同步前请检查驱动器。",
       "emptyFolders_other": "这些媒体文件夹中没有媒体文件，通常意味着其驱动器未连接：{{folders}}。其中的照片在下方列为缺失，同步会将其从图库中移除。同步前请检查驱动器。",
       "retryFailed": {
@@ -355,7 +336,38 @@
         "startFailed": "无法开始索引",
         "started": "再次索引 {{count}} 个文件",
         "starting": "正在开始…"
-      }
+      },
+      "indexNew": {
+        "button": "为其建立索引",
+        "error": "启动索引时出错：{{reason}}",
+        "startFailed": "无法启动索引",
+        "started": "正在为新文件建立索引",
+        "starting": "正在启动…"
+      },
+      "issues": {
+        "orphaned_one": "{{formattedCount}} 个库条目没有文件",
+        "orphaned_other": "{{formattedCount}} 个库条目没有文件",
+        "unindexed_one": "{{formattedCount}} 张照片未建立索引",
+        "unindexed_other": "{{formattedCount}} 张照片未建立索引"
+      },
+      "missingThumbnails": {
+        "button": "重新生成缩略图",
+        "error": "无法启动重新生成缩略图：{{reason}}",
+        "startFailed": "无法启动重新生成缩略图",
+        "started_one": "正在重新生成 {{count}} 个缩略图",
+        "started_other": "正在重新生成 {{count}} 个缩略图",
+        "starting": "正在启动…",
+        "title_one": "{{formattedCount}} 个缩略图缺失",
+        "title_other": "{{formattedCount}} 个缩略图缺失"
+      },
+      "removeOrphaned": {
+        "button": "移除它们",
+        "error": "删除条目时出错：{{reason}}",
+        "startFailed": "无法删除这些条目",
+        "started": "正在删除条目",
+        "starting": "正在启动…"
+      },
+      "thumbnailFolderUnavailable": "缩略图文件夹不可用，因此未检查缩略图。请检查其所在驱动器是否已连接。"
     }
   },
   "assistant": {
@@ -572,7 +584,9 @@
         "set_person_birthdate": "将“{{person}}”的出生日期设为 {{date}}",
         "set_person_birthdate_clear": "清除“{{person}}”的出生日期",
         "unignore_faces_one": "将 {{formattedCount}} 张已忽略的人脸退回“未分配的人脸”",
-        "unignore_faces_other": "将 {{formattedCount}} 张已忽略的人脸退回“未分配的人脸”"
+        "unignore_faces_other": "将 {{formattedCount}} 张已忽略的人脸退回“未分配的人脸”",
+        "regenerate_thumbnails_one": "重新生成 {{formattedCount}} 个缺失的缩略图（人脸会保留其人物关联）",
+        "regenerate_thumbnails_other": "重新生成 {{formattedCount}} 个缺失的缩略图（人脸会保留其人物关联）"
       },
       "undo": "撤销",
       "undoConfirm": {

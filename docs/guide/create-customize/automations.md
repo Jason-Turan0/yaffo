@@ -4,7 +4,7 @@ Automations are background behaviors that run on their own — either on a sched
 or in response to something happening, such as a photo being indexed. They are how
 Yaffo keeps a library tidy without you clicking through the same steps by hand.
 
-Open **Utilities** → **Automations**.
+Open **Library** → **Automations**.
 
 ![The Automations page with the system and custom list, and a selected automation's details and run history](assets/automations/automations-list.webp)
 

@@ -17,7 +17,7 @@ results before removing anything.
 
 ## Start a Duplicate Scan
 
-Go to **Utilities** → **Remove Duplicates**.
+Go to **Library** → **Remove Duplicates**.
 
 1. Click **+ Add Another Directory**.
 2. Type a directory path or click **Browse** to select one.

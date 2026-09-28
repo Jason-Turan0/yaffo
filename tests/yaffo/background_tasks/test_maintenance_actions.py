@@ -294,6 +294,30 @@ def test_a_file_sync_cancelled_during_its_scan_changes_nothing(session, library,
     assert session.query(MediaItem).count() == 1
 
 
+# ---- regenerate_thumbnails ----------------------------------------------------------------
+
+def test_regenerate_thumbnails_starts_a_repair_for_the_missing_items(session, library, tmp_path, monkeypatch):
+    thumbs = tmp_path / "thumbs"
+    assert maintenance.thumbnails_missing([], session) == "The thumbnail folder isn't available"
+    thumbs.mkdir()
+    (thumbs / "face_a_0_kept.jpg").write_bytes(b"jpg")
+    session.add(Face(media_item_id=1, full_file_path=str(thumbs / "face_a_0_kept.jpg")))
+    session.commit()
+    assert maintenance.thumbnails_missing([], session) == "No thumbnails are missing"
+    with pytest.raises(ValueError, match="No thumbnails are missing"):
+        maintenance.regenerate_thumbnails(session)
+
+    session.add(Face(media_item_id=1, full_file_path=str(thumbs / "face_a_1_gone.jpg")))
+    session.commit()
+    started = []
+    monkeypatch.setattr(maintenance, "start_thumbnail_repair", lambda s, missing: started.append(missing.media_item_ids) or "job-9")
+
+    assert maintenance.thumbnails_missing([], session) is None
+    assert maintenance.summarize_regenerate_thumbnails([], session) == "Regenerate 1 missing thumbnail(s)"
+    assert maintenance.regenerate_thumbnails(session) == "job-9"
+    assert started == [[1]]
+
+
 # ---- repair_face_statuses ------------------------------------------------------------------
 
 def test_repair_face_statuses(session, monkeypatch, emitted):

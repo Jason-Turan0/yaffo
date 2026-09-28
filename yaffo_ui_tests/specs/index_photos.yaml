@@ -11,13 +11,16 @@ preconditions:
 context:
   - tag: index-photos-template
     path: templates/utilities/index_photos.html
-    description: Index Photos page — live stats, scan results, and the Sync Database button
+    description: Index Photos page — live stats and the Library status cards (one per problem, each with its fix)
   - tag: index-photos-routes
     path: routes/utilities/index_photos.py
     description: Routes for the streaming filesystem scan and the database sync
   - tag: index-photos-js
     path: static/utilities/index_photos.js
-    description: Client wiring — NDJSON scan streaming and sync
+    description: Client wiring — NDJSON scan streaming, the status cards, and their fixes
+  - tag: issue-card-component
+    path: templates/components/issue_card.html
+    description: One Library status card — title with count, what it means, its fix button, files under Show files
   - tag: responsive-nav-js
     path: static/nav.js
     description: Narrow-screen Menu and the peer page-panel contract (moves/restores live panel DOM)
@@ -30,7 +33,10 @@ context:
 
 data:
   - The scan streams progress records then a final summary of counts and unindexed/orphaned lists
-  - Sync imports the unindexed photos and removes orphaned database rows
+  - Each problem is a card with its own fix — "Index them" imports the unindexed photos, "Remove them" removes orphaned database rows, "Regenerate thumbnails", "Retry all" for files that couldn't be indexed
+  - '"Everything is in sync" shows only when no card applies and no warning (empty media folder, unavailable thumbnail folder) is shown'
+  - The summary also counts face crops and video posters the index points at whose files are gone from the thumbnail folder (null when that folder can't be checked)
+  - Regenerate thumbnails writes those files again at their recorded paths in one background job; faces keep their people and ignored status
 
 scenarios:
   - name: index_photos_scan_shows_stats
@@ -42,20 +48,37 @@ scenarios:
     verify:
       # Per-tick live updates aren't observable on a small library (the stream
       # finishes in one beat); the populated end state is the asserted contract.
-      - After the scan, Total on Filesystem, Imported, Indexed, Not Indexed, and Orphaned counts are populated
-      - When there are unindexed or orphaned photos, their result tables are shown
+      - After the scan, Total on Filesystem, Imported, Indexed, Not Indexed, Orphaned, and Missing Thumbnails counts are populated
+      - Each problem found shows its Library status card with a count in the title; its files are listed under "Show files"
+      - With no problems, only "Everything is in sync" shows in Library status
 
-  - name: index_photos_sync_database
-    goal: Syncing imports unindexed photos and removes orphaned entries
+  - name: index_photos_fix_unindexed_and_orphaned
+    goal: Each card's fix handles only its own problem
     priority: high
     steps:
       - Navigate to the Index Photos utility page and let the scan complete
-      - If there is work to do, click the "Sync Database" button
-      - Wait for the sync to finish
+      - If photos aren't indexed, click "Index them" on that card and wait for the job
+      - If entries have no file, click "Remove them" on that card and wait for the job
     verify:
-      - The Sync button is visible/enabled only when there is unindexed or orphaned work
-      - After syncing, a success message is displayed
-      - Re-scanning shows the Not Indexed and Orphaned counts reduced toward zero
+      - A card and its button are visible only when the scan found that problem
+      - '"Index them" leaves the orphaned count unchanged; "Remove them" leaves the not-indexed count unchanged'
+      - Each fix shows a success message
+      - Re-scanning shows the fixed card gone and its count at zero
+
+  - name: index_photos_regenerate_missing_thumbnails
+    goal: A face crop whose file was deleted is counted and written again without losing its person
+    priority: high
+    steps:
+      - "Setup: pick a face assigned to a person and delete its crop file from the sandbox thumbnail folder"
+      - Navigate to the Index Photos utility page and let the scan complete
+      - Click the "Regenerate thumbnails" button
+      - Wait for the Regenerate thumbnails job to finish, then reload the page
+    verify:
+      - Before regenerating, Missing Thumbnails shows at least 1 and the missing-thumbnails section with its button is visible
+      - Clicking the button asks for no confirmation and shows a success message
+      - The run appears in the run history as "Regenerate thumbnails"
+      - After the job, Missing Thumbnails shows 0 and the section is hidden
+      - The face's crop file exists again and the face is still assigned to the same person
 
   # NOT EXERCISED: reaching this state means removing the seeded library
   # directory; if the hourly file_sync automation ticks in that window it deletes

@@ -21,7 +21,7 @@
 <li class="run-history-row{% if run.is_error %} is-error{% endif %}">
     <span class="chip {{ run.status_chip }}">{{ run.status_label }}</span>
     {% if not run.is_finished %}<span class="run-history-progress">{{ (run.progress / 100) | format_percent }}</span>{% endif %}
-    {% if show_label and run.label != run.summary %}<span class="run-history-label">{{ run.label }}</span>{% endif %}
+    {% if show_label and not run.summary_names_run and run.label != run.summary %}<span class="run-history-label">{{ run.label }}</span>{% endif %}
     <span class="run-history-summary">{{ run.summary }}</span>
     {% if run.stage_note %}<span class="run-history-note">{{ run.stage_note }}</span>{% endif %}
     {% if run.eta_note %}<span class="run-history-note">{{ run.eta_note }}</span>{% endif %}

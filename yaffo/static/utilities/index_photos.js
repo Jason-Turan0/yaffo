@@ -5,10 +5,11 @@
  * @property {boolean} canScan
  * @property {boolean} canSync
  * @property {boolean} hasActiveJobs
+ * @property {number} failedCount
  * @property {string[]} mediaDirs
  *
  * @typedef {Object} IndexPhotoConfig
- * @property {{ utilities_index_photos_scan: string, utilities_sync_photos: string, utilities_reindex_library: string, utilities_retry_failed: string }} urls
+ * @property {{ utilities_index_photos_scan: string, utilities_sync_photos: string, utilities_reindex_library: string, utilities_retry_failed: string, utilities_regenerate_thumbnails: string }} urls
  *
  * @typedef {Object} UnindexedPhoto
  * @property {string} filename
@@ -20,15 +21,17 @@
  * @property {string} full_path
  *
  * @typedef {{ type: 'progress', scanned: number }} ProgressRecord
- * @typedef {{ type: 'done', total_filesystem: number, total_imported: number, total_indexed: number, unindexed: UnindexedPhoto[], orphaned: OrphanedPhoto[], empty_roots: string[] }} DoneRecord
+ * @typedef {{ type: 'done', total_filesystem: number, total_imported: number, total_indexed: number, unindexed: UnindexedPhoto[], orphaned: OrphanedPhoto[], empty_roots: string[], missing_thumbnails: number | null }} DoneRecord
  * @typedef {{ type: 'error', message: string }} ErrorRecord
  * @typedef {ProgressRecord | DoneRecord | ErrorRecord} ScanRecord
  *
  * @typedef {Object} IndexPhotosApi
  * @property {() => Promise<void>} runScan
- * @property {() => Promise<void>} startSync
+ * @property {() => Promise<void>} startIndexNew
+ * @property {() => Promise<void>} startRemoveOrphaned
  * @property {() => Promise<void>} startReindex
  * @property {() => Promise<void>} startRetryFailed
+ * @property {() => Promise<void>} startRegenerateThumbnails
  */
 
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
@@ -37,10 +40,10 @@ const indexPhotosApi = window.PHOTO_ORGANIZER.indexPhotos =
 
 // The Index Photos page renders instantly, then streams the (slow) media-dir scan as
 // NDJSON: `progress` records drive the live "Total on Filesystem" counter; the final
-// `done` record fills the remaining stats + the unindexed/orphaned tables and reveals
-// the Sync button when there's work. Sync posts the lists held from that record.
-// Cap how many rows the unindexed/orphaned tables render — listing tens of thousands
-// of paths is slow and not useful. Sync still acts on the full lists held in memory.
+// `done` record fills the stats and the Library status cards. Each problem gets a
+// card with its own fix; "Everything is in sync" shows only when there are none.
+// Cap how many rows the file tables render — listing tens of thousands of paths is
+// slow and not useful. The fixes still act on the full lists held in memory.
 const MAX_DISPLAY_ROWS = 200;
 
 /**
@@ -50,7 +53,7 @@ const MAX_DISPLAY_ROWS = 200;
  * @returns {IndexPhotosApi}
  */
 const initIndexPhotos = (opts, i18n, config) => {
-    const { canScan, canSync, hasActiveJobs, mediaDirs } = opts;
+    const { canScan, canSync, hasActiveJobs, failedCount = 0, mediaDirs } = opts;
     /** @type {UnindexedPhoto[]} */
     let unindexed = [];
     /** @type {OrphanedPhoto[]} */
@@ -71,11 +74,17 @@ const initIndexPhotos = (opts, i18n, config) => {
 
     /**
      * @param {string} id
-     * @param {number} value
+     * @returns {HTMLButtonElement | null}
+     */
+    const button = (id) => /** @type {HTMLButtonElement | null} */ (document.getElementById(id));
+
+    /**
+     * @param {string} id
+     * @param {number | null} value  null: couldn't be checked
      */
     const setStat = (id, value) => {
         const node = document.getElementById(id);
-        if (node) node.textContent = i18n.number(Number(value));
+        if (node) node.textContent = value === null ? '—' : i18n.number(Number(value));
     };
 
     const statusEl = document.getElementById('scan-status');
@@ -134,29 +143,39 @@ const initIndexPhotos = (opts, i18n, config) => {
         })
     );
 
-    /** @returns {HTMLElement} */
-    const buildUnindexedSection = () => {
-        const section = el('div', 'section');
-        section.append(el('h2', null, i18n.t('utilities:indexPhotos.unindexed.title')));
-        const desc = el('p', 'section-description');
-        desc.append(document.createTextNode(
-            i18n.t('utilities:indexPhotos.unindexed.description')));
+    /**
+     * Show or hide one Library status card, with its count in the title.
+     * @param {string} key  the card's issue key (issue-<key>)
+     * @param {number} count
+     * @param {string} titleKey
+     * @returns {HTMLElement | null}  the card's file panel, when it has one
+     */
+    const showIssue = (key, count, titleKey) => {
+        const card = document.getElementById(`issue-${key}`);
+        if (card) card.hidden = !count;
+        const title = document.getElementById(`issue-${key}-title`);
+        if (title && count) title.textContent = i18n.t(titleKey, { count, formattedCount: i18n.number(count) });
+        return document.getElementById(`issue-${key}-files`);
+    };
+
+    const renderUnindexed = () => {
+        const files = showIssue('unindexed', unindexed.length, 'utilities:indexPhotos.issues.unindexed');
+        if (!files || !unindexed.length) return;
+        files.replaceChildren();
         if (mediaDirs.length > 0) {
-            desc.append(el('br'));
-            desc.append(document.createTextNode(i18n.t('utilities:indexPhotos.mediaDirectories')));
+            const dirs = el('p', 'section-description');
+            dirs.append(document.createTextNode(i18n.t('utilities:indexPhotos.mediaDirectories')));
             mediaDirs.forEach((dir, i) => {
-                desc.append(el('code', null, dir));
-                if (i < mediaDirs.length - 1) desc.append(document.createTextNode(', '));
+                if (i) dirs.append(document.createTextNode(', '));
+                dirs.append(el('code', null, dir));
             });
+            files.append(dirs);
         }
-        section.append(desc);
-        const rows = unindexed.slice(0, MAX_DISPLAY_ROWS).map((p) => [p.filename, p.full_path]);
-        section.append(buildTable([
+        files.append(buildTable([
             i18n.t('utilities:indexPhotos.filename'),
             i18n.t('utilities:indexPhotos.location'),
-        ], rows));
-        if (unindexed.length > MAX_DISPLAY_ROWS) section.append(truncationNote(unindexed.length));
-        return section;
+        ], unindexed.slice(0, MAX_DISPLAY_ROWS).map((p) => [p.filename, p.full_path])));
+        if (unindexed.length > MAX_DISPLAY_ROWS) files.append(truncationNote(unindexed.length));
     };
 
     // Keep these labels in sync with ORPHAN_* in yaffo/utils/file_sync.py.
@@ -166,120 +185,140 @@ const initIndexPhotos = (opts, i18n, config) => {
         unconfigured: 'utilities:indexPhotos.orphanReasons.unconfigured',
     };
 
-    /** @returns {HTMLElement} */
-    const buildOrphanedSection = () => {
-        const section = el('div', 'section');
-        section.append(el('h2', null, i18n.t('utilities:indexPhotos.orphaned.title')));
-        section.append(el('p', 'section-description',
-            i18n.t('utilities:indexPhotos.orphaned.description')));
-        const rows = orphaned.slice(0, MAX_DISPLAY_ROWS).map(
-            (p) => [
-                i18n.number(p.id),
-                p.reason && ORPHAN_REASON_LABELS[p.reason]
-                    ? i18n.t(ORPHAN_REASON_LABELS[p.reason])
-                    : p.reason || '—',
-                p.full_path,
-            ]);
-        section.append(buildTable([
+    const renderOrphaned = () => {
+        const files = showIssue('orphaned', orphaned.length, 'utilities:indexPhotos.issues.orphaned');
+        if (!files || !orphaned.length) return;
+        files.replaceChildren(buildTable([
             i18n.t('utilities:indexPhotos.photoId'),
             i18n.t('utilities:indexPhotos.reason'),
             i18n.t('utilities:indexPhotos.location'),
-        ], rows));
-        if (orphaned.length > MAX_DISPLAY_ROWS) section.append(truncationNote(orphaned.length));
-        return section;
+        ], orphaned.slice(0, MAX_DISPLAY_ROWS).map((p) => [
+            i18n.number(p.id),
+            p.reason && ORPHAN_REASON_LABELS[p.reason]
+                ? i18n.t(ORPHAN_REASON_LABELS[p.reason])
+                : p.reason || '—',
+            p.full_path,
+        ])));
+        if (orphaned.length > MAX_DISPLAY_ROWS) files.append(truncationNote(orphaned.length));
     };
 
     /**
-     * Warn about media folders that exist but hold no media files: usually a drive
-     * that didn't mount (an empty mount point). Their items are listed as missing,
-     * and Sync would remove them.
-     * @param {string[]} folders
+     * Warnings above the cards: media folders that hold no media files (usually a
+     * drive that didn't mount, whose items then read as orphaned), and a thumbnail
+     * folder that couldn't be checked.
+     * @param {string[]} emptyFolders
+     * @param {boolean} thumbnailsUnchecked
      */
-    const showEmptyFolders = (folders) => {
+    const showWarnings = (emptyFolders, thumbnailsUnchecked) => {
         const container = document.getElementById('scan-warnings');
         if (!container) return;
         container.replaceChildren();
-        container.hidden = folders.length === 0;
-        if (!folders.length) return;
-        container.append(el('div', 'alert alert-warning', i18n.t('utilities:indexPhotos.emptyFolders', {
-            count: folders.length,
-            folders: i18n.list(folders),
-        })));
-    };
-
-    const renderResults = () => {
-        const container = document.getElementById('scan-results');
-        if (!container) return;
-        container.replaceChildren();
-
-        if (unindexed.length === 0 && orphaned.length === 0) {
-            const empty = el('div', 'empty-state');
-            empty.append(el('h2', null, i18n.t('utilities:indexPhotos.inSync.title')));
-            empty.append(el('p', null,
-                i18n.t('utilities:indexPhotos.inSync.description')));
-            container.append(empty);
-            return;
+        if (emptyFolders.length) {
+            container.append(el('div', 'alert alert-warning', i18n.t('utilities:indexPhotos.emptyFolders', {
+                count: emptyFolders.length,
+                folders: i18n.list(emptyFolders),
+            })));
         }
-        if (unindexed.length > 0) container.append(buildUnindexedSection());
-        if (orphaned.length > 0) container.append(buildOrphanedSection());
+        if (thumbnailsUnchecked) {
+            container.append(el('div', 'alert alert-warning',
+                i18n.t('utilities:indexPhotos.thumbnailFolderUnavailable')));
+        }
+        container.hidden = container.childElementCount === 0;
     };
 
-    const syncButton = /** @type {HTMLButtonElement | null} */ (
-        document.getElementById('sync-button')
-    );
+    /**
+     * @param {DoneRecord} record
+     */
+    const renderStatus = (record) => {
+        const missing = record.missing_thumbnails ?? null;
+        const emptyFolders = record.empty_roots || [];
+        renderUnindexed();
+        renderOrphaned();
+        showIssue('missing-thumbnails', missing || 0, 'utilities:indexPhotos.missingThumbnails.title');
+        showWarnings(emptyFolders, missing === null);
 
-    const revealSyncIfWork = () => {
-        if (!syncButton) return;
-        if (unindexed.length > 0 || orphaned.length > 0) {
-            syncButton.hidden = false;
-            syncButton.disabled = !canSync || hasActiveJobs;
+        const indexNew = button('index-new-button');
+        if (indexNew) indexNew.disabled = !canSync || hasActiveJobs;
+        const removeOrphaned = button('remove-orphaned-button');
+        if (removeOrphaned) removeOrphaned.disabled = !canSync || hasActiveJobs;
+        const regenerate = button('regenerate-thumbnails-button');
+        if (regenerate) regenerate.disabled = hasActiveJobs;
+
+        const inSync = document.getElementById('status-in-sync');
+        if (inSync) {
+            inSync.hidden = Boolean(unindexed.length || orphaned.length || missing !== 0
+                || failedCount || emptyFolders.length);
         }
     };
 
-    const startSync = async () => {
-        if (!syncButton) return;
-        syncButton.disabled = true;
-        syncButton.textContent = i18n.t('utilities:indexPhotos.sync.starting');
+    /**
+     * Start one of the page's fixes: POST, announce, reload so its job card shows.
+     * `keys` names the i18n group holding its button/starting/started/startFailed/error
+     * strings; `countField` is the response field the "started" message counts.
+     * @param {HTMLButtonElement | null} trigger
+     * @param {string} url
+     * @param {string} keys
+     * @param {{ body?: object, countField?: string }} [options]
+     */
+    const startFix = async (trigger, url, keys, { body, countField } = {}) => {
+        if (!trigger) return;
+        trigger.disabled = true;
+        trigger.textContent = i18n.t(`${keys}.starting`);
+        const restore = () => {
+            trigger.disabled = false;
+            trigger.textContent = i18n.t(`${keys}.button`);
+        };
         try {
-            const response = await fetch(config.urls.utilities_sync_photos, {
+            const response = await fetch(url, body === undefined ? { method: 'POST' } : {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    files_to_index: unindexed.map((p) => p.full_path),
-                    files_to_delete: orphaned.map((p) => p.id),
-                }),
+                body: JSON.stringify(body),
             });
+            const data = /** @type {Record<string, unknown>} */ (
+                await response.json().catch(() => ({}))
+            );
             if (response.ok) {
-                window.notification.success(i18n.t('utilities:indexPhotos.sync.started'));
+                const count = countField ? data[countField] : undefined;
+                window.notification.success(i18n.t(`${keys}.started`, { count }));
                 window.location.reload();
             } else {
-                const data = /** @type {{ error?: string }} */ (
-                    await response.json().catch(() => ({}))
-                );
-                window.notification.failure(
-                    data.error || i18n.t('utilities:indexPhotos.sync.startFailed'));
-                syncButton.disabled = false;
-                syncButton.textContent = i18n.t('utilities:indexPhotos.sync.button');
+                const error = typeof data.error === 'string' ? data.error : '';
+                window.notification.failure(error || i18n.t(`${keys}.startFailed`));
+                restore();
             }
         } catch (error) {
             const reason = error instanceof Error ? error.message : String(error);
-            window.notification.failure(i18n.t('utilities:indexPhotos.sync.error', {
-                reason,
-            }));
-            syncButton.disabled = false;
-            syncButton.textContent = i18n.t('utilities:indexPhotos.sync.button');
+            window.notification.failure(i18n.t(`${keys}.error`, { reason }));
+            restore();
         }
     };
 
-    const reindexButton = /** @type {HTMLButtonElement | null} */ (
-        document.getElementById('reindex-button')
-    );
+    // Index the new files only; the orphaned entries are their own decision.
+    const startIndexNew = () => startFix(
+        button('index-new-button'), config.urls.utilities_sync_photos, 'utilities:indexPhotos.indexNew',
+        { body: { files_to_index: unindexed.map((p) => p.full_path), files_to_delete: [] } });
 
-    // Sync only picks up what's new. This re-indexes what's already there — the way to
-    // rebuild derived data (faces, sizes, metadata) after an indexing change. Every
-    // face is re-detected, so every person assignment goes: confirm, then fire.
+    const startRemoveOrphaned = () => startFix(
+        button('remove-orphaned-button'), config.urls.utilities_sync_photos, 'utilities:indexPhotos.removeOrphaned',
+        { body: { files_to_index: [], files_to_delete: orphaned.map((p) => p.id) } });
+
+    // Index the files that failed permanently again. File sync leaves them alone until
+    // they change, so this is how the user asks. They have no faces yet, so nothing is
+    // lost: no confirmation.
+    const startRetryFailed = () => startFix(
+        button('retry-failed-button'), config.urls.utilities_retry_failed, 'utilities:indexPhotos.retryFailed',
+        { countField: 'media_item_count' });
+
+    // Rebuild missing face crops and posters from the photos and videos. Faces keep
+    // their people and ignored status (Reindex would drop them), so no confirmation.
+    const startRegenerateThumbnails = () => startFix(
+        button('regenerate-thumbnails-button'), config.urls.utilities_regenerate_thumbnails,
+        'utilities:indexPhotos.missingThumbnails', { countField: 'thumbnail_count' });
+
+    // The status fixes only touch what's wrong. This re-indexes what's already there —
+    // the way to rebuild derived data (faces, sizes, metadata) after an indexing
+    // change. Every face is re-detected, so every person assignment goes: confirm.
     const startReindex = async () => {
-        if (!reindexButton) return;
         const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
             title: i18n.t('utilities:indexPhotos.reindex.title'),
             message: i18n.t('utilities:indexPhotos.reindex.confirm'),
@@ -287,70 +326,8 @@ const initIndexPhotos = (opts, i18n, config) => {
             confirmClass: 'btn-danger',
         });
         if (!confirmed) return;
-
-        reindexButton.disabled = true;
-        reindexButton.textContent = i18n.t('utilities:indexPhotos.reindex.starting');
-        const restore = () => {
-            reindexButton.disabled = false;
-            reindexButton.textContent = i18n.t('utilities:indexPhotos.reindex.button');
-        };
-        try {
-            const response = await fetch(config.urls.utilities_reindex_library, { method: 'POST' });
-            const data = /** @type {{ error?: string, media_item_count?: number }} */ (
-                await response.json().catch(() => ({}))
-            );
-            if (response.ok) {
-                window.notification.success(i18n.t('utilities:indexPhotos.reindex.started', {
-                    count: data.media_item_count,
-                }));
-                window.location.reload();
-            } else {
-                window.notification.failure(
-                    data.error || i18n.t('utilities:indexPhotos.reindex.startFailed'));
-                restore();
-            }
-        } catch (error) {
-            const reason = error instanceof Error ? error.message : String(error);
-            window.notification.failure(i18n.t('utilities:indexPhotos.reindex.error', { reason }));
-            restore();
-        }
-    };
-
-    const retryFailedButton = /** @type {HTMLButtonElement | null} */ (
-        document.getElementById('retry-failed-button')
-    );
-
-    // Index the files that failed permanently again. File sync leaves them alone until
-    // they change, so this is how the user asks. They have no faces yet, so nothing is
-    // lost: no confirmation.
-    const startRetryFailed = async () => {
-        if (!retryFailedButton) return;
-        retryFailedButton.disabled = true;
-        retryFailedButton.textContent = i18n.t('utilities:indexPhotos.retryFailed.starting');
-        const restore = () => {
-            retryFailedButton.disabled = false;
-            retryFailedButton.textContent = i18n.t('utilities:indexPhotos.retryFailed.button');
-        };
-        try {
-            const response = await fetch(config.urls.utilities_retry_failed, { method: 'POST' });
-            const data = /** @type {{ error?: string, media_item_count?: number }} */ (
-                await response.json().catch(() => ({}))
-            );
-            if (response.ok) {
-                window.notification.success(i18n.t('utilities:indexPhotos.retryFailed.started', {
-                    count: data.media_item_count,
-                }));
-                window.location.reload();
-            } else {
-                window.notification.failure(
-                    data.error || i18n.t('utilities:indexPhotos.retryFailed.startFailed'));
-                restore();
-            }
-        } catch (error) {
-            const reason = error instanceof Error ? error.message : String(error);
-            window.notification.failure(i18n.t('utilities:indexPhotos.retryFailed.error', { reason }));
-            restore();
-        }
+        await startFix(button('reindex-button'), config.urls.utilities_reindex_library,
+            'utilities:indexPhotos.reindex', { countField: 'media_item_count' });
     };
 
     /**
@@ -367,10 +344,9 @@ const initIndexPhotos = (opts, i18n, config) => {
             setStat('stat-total-indexed', record.total_indexed);
             setStat('stat-unindexed', record.unindexed.length);
             setStat('stat-orphaned', record.orphaned.length);
+            setStat('stat-missing-thumbnails', record.missing_thumbnails ?? null);
             setStatus('');
-            showEmptyFolders(record.empty_roots || []);
-            renderResults();
-            revealSyncIfWork();
+            renderStatus(record);
         } else if (record.type === 'error') {
             setStatus('');
             window.notification.failure(i18n.t('utilities:indexPhotos.scan.error', {
@@ -408,12 +384,18 @@ const initIndexPhotos = (opts, i18n, config) => {
         }
     };
 
-    if (syncButton) syncButton.addEventListener('click', startSync);
-    if (reindexButton) reindexButton.addEventListener('click', startReindex);
-    if (retryFailedButton) retryFailedButton.addEventListener('click', startRetryFailed);
+    /** @type {[string, () => Promise<void>][]} */
+    const actions = [
+        ['index-new-button', startIndexNew],
+        ['remove-orphaned-button', startRemoveOrphaned],
+        ['reindex-button', startReindex],
+        ['retry-failed-button', startRetryFailed],
+        ['regenerate-thumbnails-button', startRegenerateThumbnails],
+    ];
+    actions.forEach(([id, action]) => button(id)?.addEventListener('click', action));
     if (canScan) runScan();
 
-    return { runScan, startSync, startReindex, startRetryFailed };
+    return { runScan, startIndexNew, startRemoveOrphaned, startReindex, startRetryFailed, startRegenerateThumbnails };
 };
 
 indexPhotosApi.init = initIndexPhotos;

@@ -191,7 +191,7 @@ const SHOTS: Shot[] = [
     {
         name: "utilities-index-photos",
         dest: "assets",
-        url: "/utilities/index-photos",
+        url: "/library/health",
         viewport: {width: 1400, height: 1000},
         clip: ".utility-page",
         alt: "The Index Photos utility, showing library counts after a scan",

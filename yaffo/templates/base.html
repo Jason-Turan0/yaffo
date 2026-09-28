@@ -141,8 +141,8 @@
                    class="nav-link {% if request.endpoint and 'people' in request.endpoint %}active{% endif %}">{{ _("People") }}</a></li>
             <li><a href="{{ url_for('locations_list') }}" data-icon="locations"
                    class="nav-link {% if request.endpoint and 'locations' in request.endpoint %}active{% endif %}">{{ _("Locations") }}</a></li>
-            <li><a href="{{ url_for('utilities_index') }}" data-icon="utilities"
-                   class="nav-link {% if request.endpoint and (request.endpoint.startswith('utilities_') or request.endpoint.startswith('automations_')) %}active{% endif %}">{{ _("Utilities") }}</a></li>
+            <li><a href="{{ url_for('utilities_index') }}" data-icon="archive"
+                   class="nav-link {% if request.endpoint and (request.endpoint.startswith('utilities_') or request.endpoint.startswith('automations_')) %}active{% endif %}">{{ _("Library") }}</a></li>
             <li><a href="{{ url_for('sharing_index') }}" data-icon="sharing"
                    class="nav-link {% if request.endpoint and request.endpoint.startswith('sharing_') %}active{% endif %}">{{ _("Sharing") }}</a></li>
             <li><a href="{{ url_for('themes_index') }}" data-icon="themes"

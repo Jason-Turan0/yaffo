@@ -92,4 +92,14 @@ describe('demo-mode.js', () => {
     expect(detail.shouldSwap).toBe(false);
     expect(window.notification.warning).toHaveBeenCalledWith('Slow down', 5000);
   });
+
+  it('shows the reset time in the demo time zone, with its zone name', async () => {
+    document.body.innerHTML = '<time data-demo-reset-at datetime="2026-09-28T12:45:00Z">raw</time>';
+    window.APP_CONFIG.i18n = { ...window.APP_CONFIG.i18n, locale: 'en' };
+    window.APP_CONFIG.demoTimezone = 'America/Chicago';
+
+    await loadDemoMode();
+
+    expect(document.querySelector('time').textContent).toBe('Sep 28, 2026, 7:45 AM CDT');
+  });
 });

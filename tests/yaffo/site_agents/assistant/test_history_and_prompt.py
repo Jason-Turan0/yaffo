@@ -85,7 +85,7 @@ def _events(*rows):
 
 def test_follow_up_turns_keep_the_earlier_context_redacted_and_escaped():
     from yaffo.site_agents.assistant.history import transcript_turns
-    context = {"page": "/utilities/index-photos", "job_id": "job-7",
+    context = {"page": "/library/health", "job_id": "job-7",
                "error": "Could not read /Volumes/Photos/<a>.jpg"}
     events = _events(
         (0, "user", "What went wrong here?", {"context": context}),
@@ -97,7 +97,7 @@ def test_follow_up_turns_keep_the_earlier_context_redacted_and_escaped():
 
     first = turns[0][1]
     assert first.startswith("What went wrong here?\n\n<historical_context>")
-    assert "page: /utilities/index-photos; job_id: job-7; error: Could not read [media folder m1]/&lt;a&gt;.jpg" in first
+    assert "page: /library/health; job_id: job-7; error: Could not read [media folder m1]/&lt;a&gt;.jpg" in first
     assert turns[2] == ("user", "Can you retry them?")
 
 

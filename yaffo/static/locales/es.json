@@ -303,19 +303,11 @@
     },
     "indexPhotos": {
       "filename": "Nombre del archivo",
-      "inSync": {
-        "description": "Todas las fotografías del sistema de archivos están indexadas y todas las entradas de la base de datos tienen sus archivos correspondientes.",
-        "title": "Todo está sincronizado"
-      },
       "location": "Ubicación",
       "mediaDirectories": "Directorios de medios:",
       "orphanReasons": {
         "missing": "Archivo eliminado del disco",
         "unconfigured": "El directorio de medios ya no está configurado"
-      },
-      "orphaned": {
-        "description": "Las siguientes fotos están en la base de datos pero ya no tienen un archivo en los directorios de medios configurados; o el archivo se eliminó o su directorio de medios se eliminó de Configuración. La sincronización elimina estas entradas.",
-        "title": "Entradas de bases de datos huérfanas"
       },
       "photoId": "Identificación con foto",
       "reason": "Razón",
@@ -335,18 +327,7 @@
         "requestFailed": "La solicitud de escaneo falló",
         "scanning": "Escaneando el sistema de archivos..."
       },
-      "sync": {
-        "button": "Sincronizar base de datos",
-        "error": "Error al iniciar la sincronización: {{reason}}",
-        "startFailed": "No se pudo iniciar el trabajo de sincronización",
-        "started": "Trabajo de sincronización iniciado",
-        "starting": "Iniciando sincronización…"
-      },
       "truncation": "Mostrando el primer {{shown}} de {{total}}. La sincronización los procesa todos.",
-      "unindexed": {
-        "description": "Las siguientes fotografías existen en los directorios de medios configurados pero no están en la base de datos.",
-        "title": "Fotos no indexadas"
-      },
       "emptyFolders_one": "Esta carpeta de medios no contiene archivos multimedia, lo que suele significar que su unidad no está conectada: {{folders}}. Sus fotos aparecen como faltantes a continuación, y Sincronizar las eliminaría de la biblioteca. Comprueba la unidad antes de sincronizar.",
       "emptyFolders_other": "Estas carpetas de medios no contienen archivos multimedia, lo que suele significar que sus unidades no están conectadas: {{folders}}. Sus fotos aparecen como faltantes a continuación, y Sincronizar las eliminaría de la biblioteca. Comprueba las unidades antes de sincronizar.",
       "retryFailed": {
@@ -355,7 +336,38 @@
         "startFailed": "No se pudo iniciar la indexación",
         "started": "Indexando de nuevo {{count}} archivo(s)",
         "starting": "Iniciando…"
-      }
+      },
+      "indexNew": {
+        "button": "Indexarlos",
+        "error": "Error al iniciar la indexación: {{reason}}",
+        "startFailed": "No se pudo iniciar la indexación",
+        "started": "Indexando los archivos nuevos",
+        "starting": "Iniciando…"
+      },
+      "issues": {
+        "orphaned_one": "{{formattedCount}} entrada de la biblioteca no tiene archivo",
+        "orphaned_other": "{{formattedCount}} entradas de la biblioteca no tienen archivo",
+        "unindexed_one": "{{formattedCount}} foto no está indexada",
+        "unindexed_other": "{{formattedCount}} fotos no están indexadas"
+      },
+      "missingThumbnails": {
+        "button": "Regenerar miniaturas",
+        "error": "No se pudo iniciar la regeneración de miniaturas: {{reason}}",
+        "startFailed": "No se pudo iniciar la regeneración de miniaturas",
+        "started_one": "Regenerando {{count}} miniatura",
+        "started_other": "Regenerando {{count}} miniaturas",
+        "starting": "Iniciando…",
+        "title_one": "Falta {{formattedCount}} miniatura",
+        "title_other": "Faltan {{formattedCount}} miniaturas"
+      },
+      "removeOrphaned": {
+        "button": "Eliminarlos",
+        "error": "Error al eliminar las entradas: {{reason}}",
+        "startFailed": "No se pudieron eliminar las entradas",
+        "started": "Eliminando las entradas",
+        "starting": "Iniciando…"
+      },
+      "thumbnailFolderUnavailable": "La carpeta de miniaturas no está disponible, así que no se comprobaron las miniaturas. Comprueba que su unidad esté conectada."
     }
   },
   "assistant": {
@@ -572,7 +584,9 @@
         "set_person_birthdate": "Establecer la fecha de nacimiento de “{{person}}” a {{date}}",
         "set_person_birthdate_clear": "Borrar la fecha de nacimiento de “{{person}}”",
         "unignore_faces_one": "Devolver {{formattedCount}} rostro ignorado a Rostros sin asignar",
-        "unignore_faces_other": "Devolver {{formattedCount}} rostros ignorados a Rostros sin asignar"
+        "unignore_faces_other": "Devolver {{formattedCount}} rostros ignorados a Rostros sin asignar",
+        "regenerate_thumbnails_one": "Regenerar {{formattedCount}} miniatura faltante (las caras conservan sus personas)",
+        "regenerate_thumbnails_other": "Regenerar {{formattedCount}} miniaturas faltantes (las caras conservan sus personas)"
       },
       "undo": "Deshacer",
       "undoConfirm": {

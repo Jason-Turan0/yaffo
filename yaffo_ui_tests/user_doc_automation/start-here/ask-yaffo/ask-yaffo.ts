@@ -87,7 +87,7 @@ const HELP: Conversation = {
         ["assistant",
             "Open Settings and, under Media Directories, type the folder's path or click Browse… to "
             + "pick it, then click Add Directory. Yaffo reads your photos where they are; it doesn't "
-            + "move them. Then go to Utilities → Index Photos to index them.", null],
+            + "move them. Then go to Library → Library Health to index them.", null],
         ["user", "How many photos of Maya are from the beach trip?", null],
         ["tool", "", tool({
             tool: "run_script",
@@ -253,7 +253,7 @@ export default defineWalkthrough({
         // the chip names, and the crop's framing margin would show a sliver of it.
         "ask-yaffo-context.webp": {
             viewport: {width: 1440, height: 1000},
-            goto: "/utilities/index-photos",
+            goto: "/library/health",
             clip: "#assistant-panel",
             setup: async (page) => {
                 await serveConversations(page, () => []);
@@ -268,7 +268,7 @@ export default defineWalkthrough({
                     const assistant = app?.assistant?.instance;
                     if (!assistant) throw new Error("The assistant panel did not initialize");
                     assistant.openWithContext({
-                        page: "Utilities → Index Photos",
+                        page: "Library → Library Health",
                         error_code: "filesystem_scan_failed",
                         error: "Could not scan the filesystem.",
                     }, "What went wrong here, and how do I fix it?");
@@ -359,7 +359,7 @@ export default defineWalkthrough({
             await page.locator("#assistant-panel .assistant-plan").filter({hasText: "Undone."}).waitFor();
 
             // A contextual question opens the panel with its context attached.
-            await visit("/utilities/index-photos");
+            await visit("/library/health");
             await waitForAppReady(page);
             await page.evaluate(() => {
                 const app = (window as typeof window & {
@@ -368,7 +368,7 @@ export default defineWalkthrough({
                     }}};
                 }).PHOTO_ORGANIZER;
                 app?.assistant?.instance?.openWithContext(
-                    {page: "Utilities → Index Photos", error_code: "filesystem_scan_failed"},
+                    {page: "Library → Library Health", error_code: "filesystem_scan_failed"},
                     "What went wrong here, and how do I fix it?");
             });
             await page.locator("#assistant-context:not([hidden])").filter({hasText: "filesystem_scan_failed"})

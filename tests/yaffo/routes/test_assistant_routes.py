@@ -291,22 +291,22 @@ def test_job_help_attaches_the_page_the_card_is_on(client, with_key):
                        task_count=3, completed_count=1, error_count=1, cancelled_count=0, message="Indexing"))
     db.session.commit()
     # Refreshed or cancelled, the card keeps the page it was shown on...
-    body = client.get("/jobs/page-job/fragment?page=/utilities/index-photos").get_data(as_text=True)
-    assert 'data-page="/utilities/index-photos"' in body
-    assert "fragment?has_results=0&amp;page=/utilities/index-photos" in body
-    assert '"page": "/utilities/index-photos"' in body
+    body = client.get("/jobs/page-job/fragment?page=/library/health").get_data(as_text=True)
+    assert 'data-page="/library/health"' in body
+    assert "fragment?has_results=0&amp;page=/library/health" in body
+    assert '"page": "/library/health"' in body
     # ...and only takes an app path, never a full URL or anything else.
     for bad in ("//evil.example/x", "https://evil.example", "no-slash", "/with space"):
         body = client.get("/jobs/page-job/fragment", query_string={"page": bad}).get_data(as_text=True)
         assert 'data-page="/jobs/page-job/fragment"' in body
-    cancelled = client.post("/jobs/page-job/cancel", data={"page": "/utilities/index-photos"}).get_data(as_text=True)
-    assert 'data-page="/utilities/index-photos"' in cancelled
+    cancelled = client.post("/jobs/page-job/cancel", data={"page": "/library/health"}).get_data(as_text=True)
+    assert 'data-page="/library/health"' in cancelled
 
 
 def test_one_flag_switches_contextual_help_off_on_settings(client, with_key):
     settings = client.get("/settings").get_data(as_text=True)
     assert "<body data-assistant-help-disabled>" in settings
-    page = client.get("/utilities/index-photos").get_data(as_text=True)
+    page = client.get("/library/health").get_data(as_text=True)
     assert "data-assistant-help-disabled" not in page
 
 
@@ -526,5 +526,5 @@ def test_settings_labels_are_short_with_explanations_in_info_tips(app, client):
     assert not [label for label in labels if "(" in label]
 
     section = _settings_section(client)
-    assert section.count('class="help-tip"') == len(tips) + 1 == 15  # + the confirm-count threshold
+    assert section.count('class="help-tip"') == len(tips) + 1 == 16  # + the confirm-count threshold
     assert "Delete albums\n" in section and "The photos in the album stay in your library." in section

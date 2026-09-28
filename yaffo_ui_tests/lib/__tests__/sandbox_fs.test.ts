@@ -7,6 +7,7 @@ import {
     countEntriesIn,
     ensureTempDir,
     findAnyPhotoIn,
+    findFileWithContentIn,
     listFilesRecursive,
     listSubdirectories,
     removeTempDirs,
@@ -35,6 +36,7 @@ describe("sandbox-fs temp-root guard", () => {
     it("refuses reads outside temp root and test_data", () => {
         expect(() => listFilesRecursive(path.join(process.cwd(), "lib"))).toThrow(/Refusing to read/);
         expect(() => listSubdirectories("/etc")).toThrow(/Refusing to read/);
+        expect(() => findFileWithContentIn("/etc", Buffer.from("x"))).toThrow(/Refusing to read/);
     });
 });
 
@@ -79,5 +81,16 @@ describe("sandbox-fs operations", () => {
         expect(copied.subarray(-10).toString()).toContain("marker-123");
         removeTempFile(dest);
         expect(fs.existsSync(dest)).toBe(false);
+    });
+
+    it("finds the file whose bytes match, not one of the same size", () => {
+        const dir = path.join(scratch, "by-content");
+        ensureTempDir(dir);
+        fs.writeFileSync(path.join(dir, "face_a.jpg"), "crop-aaaa");
+        fs.writeFileSync(path.join(dir, "face_b.jpg"), "crop-bbbb");
+        fs.mkdirSync(path.join(dir, "nested"));
+
+        expect(findFileWithContentIn(dir, Buffer.from("crop-bbbb"))).toBe(path.join(fs.realpathSync(dir), "face_b.jpg"));
+        expect(findFileWithContentIn(dir, Buffer.from("crop-cccc"))).toBeNull();
     });
 });

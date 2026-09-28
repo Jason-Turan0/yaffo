@@ -295,6 +295,8 @@ def step_facts(call: HostCall, session: Session, mutations: list[HostCall]) -> t
         return 1, facts
     if name == "reindex_media":
         return len(set(_list_arg(args, 0))), facts
+    if name == "regenerate_thumbnails":
+        return maintenance.missing_thumbnail_count(session), facts
     if name == "repair_face_statuses":
         problems = maintenance.face_repair_counts(session)
         facts.update(linked=problems.linked_not_assigned,

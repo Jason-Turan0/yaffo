@@ -1,6 +1,6 @@
 # reference-maintenance/troubleshooting
 
-Shots: index-photos-status.webp (clip .utility-page on /utilities/index-photos),
+Shots: library-health-status.webp (clip .utility-page on /library/health),
 ai-generation-status.webp (clip #llm-section on /settings).
 
 Known-stable facts (checked 2026 run):

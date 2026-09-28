@@ -334,6 +334,11 @@ Task behavior:
 - `i18n-init` creates a gettext PO catalog and browser JSON catalog for a new
   locale.
 - `i18n-update` merges gettext changes and synchronizes browser catalog keys.
+  Gettext drops obsolete strings on its own, but the browser sync stops with an
+  error when a locale has keys `en.json` no longer has, so an accidental deletion
+  can't silently throw translations away. After removing browser strings on
+  purpose, run `inv i18n-update --prune` (or `inv i18n-translate-all --prune`) to
+  drop them from every locale.
 - `i18n-translate` fills missing entries from English source text using the
   configured translation engine, with `--dry-run`, `--keys-only`,
   `--overwrite`, `--batch-size`, and `--engine`.

@@ -71,15 +71,16 @@ from your photo folders. Your original photo folders remain where they are.
 
 ## Index Your First Photos
 
-Go to **Utilities** → **Index Photos**.
+Go to **Library** → **Library Health**.
 
-![The Index Photos utility, showing library counts after a scan](assets/getting-started/utilities-index-photos.webp)
+![The Library Health page, showing library counts after a scan](assets/getting-started/library-health.webp)
 
 Yaffo compares the files on disk with what is already in the database and
-reports five counts: total on the filesystem, imported, indexed, not yet indexed,
-and orphaned (rows whose file has gone). When those agree, the page says
-everything is in sync. When they do not, start the sync to import the new files
-and drop the orphaned rows.
+reports its counts: total on the filesystem, imported, indexed, not yet indexed,
+orphaned (rows whose file has gone), and missing thumbnails. When nothing needs
+attention, the page says everything is in sync. Otherwise it shows a card for
+each problem with its own fix: for a new library, select **Index them** to import
+your photos.
 
 Indexing may take a while for large libraries. During indexing, Yaffo creates
 thumbnails, reads metadata, detects faces, prepares labels, and records location

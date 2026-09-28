@@ -93,7 +93,7 @@ def test_install_roots_name_each_configured_folder(monkeypatch):
 def test_attached_context_is_redacted_like_tool_results():
     from yaffo.background_tasks.tasks.assistant_run import _redacted_context
     redact = Redactor(home=Path("/nowhere"), roots={"media folder m1": Path("/Volumes/Photos")})
-    context = {"page": "/utilities/index-photos", "error": "Could not read /Volumes/Photos/a.HEIC"}
+    context = {"page": "/library/health", "error": "Could not read /Volumes/Photos/a.HEIC"}
     assert _redacted_context(context, redact) == {
-        "page": "/utilities/index-photos", "error": "Could not read [media folder m1]/a.HEIC"}
+        "page": "/library/health", "error": "Could not read [media folder m1]/a.HEIC"}
     assert _redacted_context(None, redact) is None

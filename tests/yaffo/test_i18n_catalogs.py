@@ -507,3 +507,41 @@ def test_page_designer_uses_gettext_localized_javascript_and_named_payloads():
     assert 'gettext("Version is not ready to publish.")' in routes
     assert "RouteError" in routes
     assert "PageChatStarted" in routes
+
+
+def _browser_catalogs(monkeypatch, tmp_path, english: dict, german: dict) -> Path:
+    locales_dir = tmp_path / "locales"
+    locales_dir.mkdir()
+    (locales_dir / "en.json").write_text(json.dumps(english), encoding="utf-8")
+    (locales_dir / "de.json").write_text(json.dumps(german), encoding="utf-8")
+    monkeypatch.setattr(i18n_catalogs, "BROWSER_LOCALES_DIR", locales_dir)
+    monkeypatch.setattr(i18n_catalogs, "ENGLISH_BROWSER_PATH", locales_dir / "en.json")
+    return locales_dir / "de.json"
+
+
+def test_sync_adds_missing_browser_keys_empty(monkeypatch, tmp_path):
+    german = _browser_catalogs(monkeypatch, tmp_path, {"common": {"save": "Save", "open": "Open"}},
+                               {"common": {"save": "Speichern"}})
+
+    result = i18n_catalogs.sync_browser_locale("de")
+
+    assert result == i18n_catalogs.BrowserSync(added=["common.open"], pruned=[])
+    assert json.loads(german.read_text()) == {"common": {"save": "Speichern", "open": ""}}
+
+
+def test_sync_refuses_keys_english_no_longer_has_unless_pruning(monkeypatch, tmp_path):
+    german = _browser_catalogs(
+        monkeypatch, tmp_path,
+        {"page": {"title": "Title"}},
+        {"page": {"title": "Titel", "old": {"heading": "Alt", "body": "Text"}}, "gone": {"x": "y"}},
+    )
+
+    with pytest.raises(ValueError, match=r"page\.old\.heading.*--prune"):
+        i18n_catalogs.sync_browser_locale("de")
+    assert "old" in json.loads(german.read_text())["page"]  # nothing written
+
+    result = i18n_catalogs.sync_browser_locale("de", prune=True)
+
+    assert result.pruned == ["gone.x", "page.old.body", "page.old.heading"]
+    # Emptied parents go too, and the translations English still has are kept.
+    assert json.loads(german.read_text()) == {"page": {"title": "Titel"}}

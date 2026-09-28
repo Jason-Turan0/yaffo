@@ -2,22 +2,21 @@
 {% from "components/job_section.html" import job_section with context %}
 {% from "components/run_history.html" import run_history_list with context %}
 {% from "components/page_header.html" import page_header %}
+{% from "components/issue_card.html" import issue_card %}
 
-{% block title %}{{ _("Index Photos - Utilities - Yaffo") }}{% endblock %}
+{% block title %}{{ _("Library Health - Library - Yaffo") }}{% endblock %}
 
 {% block utility_content %}
 <div class="utility-page">
     {% set header_actions %}
-        {# Shown by JS once the scan finds work to do. #}
-        <button class="btn btn-primary" id="sync-button" data-icon="sync" hidden>{{ _("Sync Database") }}</button>
-        {# Always available: unlike Sync, this re-runs indexing on files already
+        {# Always available: unlike the status fixes, this re-runs indexing on files already
            indexed — a rebuild, not a reconcile. It re-detects faces, so it confirms
            the loss of person assignments first. #}
         <button class="btn btn-secondary" id="reindex-button" data-icon="sync"
                 {% if not can_sync %}disabled{% endif %}>{{ _("Reindex Library") }}</button>
     {% endset %}
     {{ page_header(
-        _('Index Photos'),
+        _('Library Health'),
         _('Compare photos on the file system with the database'),
         actions=header_actions,
     ) }}
@@ -62,16 +61,55 @@
             <div class="stat-label">{{ _("Orphaned in DB") }}</div>
             <div class="stat-value" id="stat-orphaned">—</div>
         </div>
+        <div class="stat-card">
+            <div class="stat-label">{{ _("Missing Thumbnails") }}</div>
+            <div class="stat-value" id="stat-missing-thumbnails">—</div>
+        </div>
     </div>
+    {% endif %}
 
-    <p class="scan-status" id="scan-status" hidden></p>
-
-    {# A warning the scan finds: media folders that hold no media files. #}
-    <div class="warnings-section" id="scan-warnings" hidden></div>
-
-    {# JS fills this with the unindexed / orphaned tables (or an "in sync" state)
-       once the scan stream completes. #}
-    <div id="scan-results"></div>
+    {# What needs attention, one card per problem with its own fix. The scan fills
+       the first three; files that couldn't be indexed are known up front. "Everything
+       is in sync" shows only once the scan found nothing and nothing failed. #}
+    {% if media_dirs|length > 0 or failed_count %}
+    <div class="section library-status" id="library-status">
+        <h2>{{ _("Library status") }}</h2>
+        <p class="scan-status" id="scan-status" hidden></p>
+        <div class="warnings-section" id="scan-warnings" hidden></div>
+        <div class="status-all-clear" id="status-in-sync" hidden>
+            <h3>{{ _("Everything is in sync") }}</h3>
+            <p>{{ _("Every photo on the filesystem is indexed, every database entry has its file, and every thumbnail is in place.") }}</p>
+        </div>
+        <div class="issue-list" id="scan-results">
+            {{ issue_card('unindexed',
+                description=_("New files in your media folders that aren't in the library yet."),
+                action_id='index-new-button', action_label=_("Index them"), has_files=true) }}
+            {{ issue_card('orphaned',
+                description=_("Library entries whose file was deleted, or whose media folder was removed from Settings. Removing them also removes their faces."),
+                action_id='remove-orphaned-button', action_label=_("Remove them"), has_files=true) }}
+            {{ issue_card('missing-thumbnails',
+                description=_("Face crops and video posters are gone from the thumbnail folder, so they show as broken images. Regenerating writes them again from your photos and videos; faces keep their people."),
+                action_id='regenerate-thumbnails-button', action_label=_("Regenerate thumbnails")) }}
+            {% call issue_card('failed',
+                title=ngettext("%(num)d file couldn't be indexed", "%(num)d files couldn't be indexed", failed_count),
+                description=_("They still show in your library, but without the date, location, faces or labels that indexing reads. Yaffo leaves them alone until a file changes; retry after fixing a file or updating Yaffo."),
+                action_id='retry-failed-button', action_label=_("Retry all"), has_files=true,
+                shown=failed_count > 0) %}
+                <ul class="index-failure-list">
+                    {% for item in failed_media %}
+                    <li>
+                        <a href="{{ url_for('media_view', media_item_id=item.id) }}">{{ item.file_name }}</a>
+                        <span class="index-failure-folder">{{ item.folder }}</span>
+                        <span class="index-failure-reason">{{ item.reason }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% if failed_count > failed_media|length %}
+                <p class="hint-text">{{ ngettext("and %(num)d more", "and %(num)d more", failed_count - failed_media|length) }}</p>
+                {% endif %}
+            {% endcall %}
+        </div>
+    </div>
     {% endif %}
 
     {% if media_dirs|length == 0 %}
@@ -82,26 +120,6 @@
                 Please configure media directories in <a href="{{ settings_url }}">Settings</a> to start indexing photos.
             {% endtrans %}
         </p>
-    </div>
-    {% endif %}
-
-    {% if failed_count %}
-    <div class="section index-failures" id="index-failures">
-        <h2>{{ ngettext("%(num)d file couldn't be indexed", "%(num)d files couldn't be indexed", failed_count) }}</h2>
-        <p class="hint-text">{{ _("They still show in your library, but without the date, location, faces or labels that indexing reads. Sync leaves them alone until a file changes; retry after fixing a file or updating Yaffo.") }}</p>
-        <ul class="index-failure-list">
-            {% for item in failed_media %}
-            <li>
-                <a href="{{ url_for('media_view', media_item_id=item.id) }}">{{ item.file_name }}</a>
-                <span class="index-failure-folder">{{ item.folder }}</span>
-                <span class="index-failure-reason">{{ item.reason }}</span>
-            </li>
-            {% endfor %}
-        </ul>
-        {% if failed_count > failed_media|length %}
-        <p class="hint-text">{{ ngettext("and %(num)d more", "and %(num)d more", failed_count - failed_media|length) }}</p>
-        {% endif %}
-        <button class="btn btn-secondary" id="retry-failed-button" data-icon="sync">{{ _("Retry all") }}</button>
     </div>
     {% endif %}
 
@@ -123,6 +141,7 @@ document.addEventListener('yaffo:app-init-complete', (event) => {
         canScan: {{ can_scan | tojson }},
         canSync: {{ can_sync | tojson }},
         hasActiveJobs: {{ has_active_jobs | tojson }},
+        failedCount: {{ failed_count | tojson }},
         mediaDirs: {{ media_dirs | tojson }},
     }, app.i18n, window.APP_CONFIG);
 });

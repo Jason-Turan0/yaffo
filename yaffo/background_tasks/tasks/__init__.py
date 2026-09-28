@@ -4,6 +4,7 @@ from yaffo.background_tasks.tasks.complete_job import (
     complete_job_task, complete_job_callback, finalize_job,
 )
 from yaffo.background_tasks.tasks.index_stage import start_index_stage
+from yaffo.background_tasks.tasks.regenerate_thumbnails import regenerate_thumbnails_task
 from yaffo.background_tasks.tasks.find_duplicates import find_duplicates_task
 from yaffo.background_tasks.tasks.remove_duplicates import remove_duplicates_task
 from yaffo.background_tasks.tasks.generate_page import generate_page_task
@@ -38,6 +39,7 @@ __all__ = [
     'complete_job_callback',
     'finalize_job',
     'start_index_stage',
+    'regenerate_thumbnails_task',
     'find_duplicates_task',
     'remove_duplicates_task',
     'generate_page_task',

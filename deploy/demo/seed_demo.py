@@ -150,6 +150,10 @@ def cmd_seed(role: str) -> None:
                 db.session.commit()
             print(f"  media_dirs=[{MEDIA_ROOT}] thumbnail_dir={thumbnail_dir}")
 
+            # Index videos in event folders too: Bennett's generated video lives in
+            # 2021_gulf_beach_trip/, not at the library root (index_media_library
+            # only looks at the root unless told otherwise).
+            os.environ["YAFFO_SEED_RECURSIVE_VIDEOS"] = "1"
             indexed = index_media_library(MEDIA_ROOT, thumbnail_dir)
             print(f"  Indexed {indexed} items")
 
