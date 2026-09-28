@@ -423,8 +423,11 @@ test.describe('Photo Gallery Feature - Responsive', () => {
     await menuToggle.click();
     await expect(menuToggle).toHaveAttribute('aria-expanded', 'true');
     await expect(primary).toBeVisible();
-    await expect(page.locator('.navbar-nav .nav-link')).toHaveCount(9);
-    for (const name of ['Home', 'Albums', 'Faces', 'People', 'Locations', 'Utilities', 'Sharing', 'Themes', 'Settings']) {
+    // Nine primary destination links. The collapsed Menu may also carry the
+    // assistant's "Ask Yaffo" entry point, which is a <button>, not a
+    // destination link — count the anchors so the check stays true to the spec.
+    await expect(page.locator('.navbar-nav a.nav-link')).toHaveCount(9);
+    for (const name of ['Home', 'Albums', 'Faces', 'People', 'Locations', 'Library', 'Sharing', 'Themes', 'Settings']) {
       await expect(page.locator('.navbar-nav').getByRole('link', { name, exact: true })).toBeVisible();
     }
 
