@@ -1,0 +1,1 @@
+Fix for gallery_menu_is_reachable_on_a_narrow_screen: scope count to a.nav-link (9 primary destinations are <a> links; assistant "Ask Yaffo" is a conditional <button class="nav-link nav-assistant-toggle">), and rename expected destination "Utilities" -> "Library" to match current template label.
