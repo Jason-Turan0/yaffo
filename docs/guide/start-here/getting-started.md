@@ -64,7 +64,7 @@ or quit the background app:
 Open **Settings** and add one or more media directories. These are the folders
 Yaffo scans for photos and videos.
 
-![The Settings page showing Language, Units, and Media Directories](assets/getting-started/settings-overview.webp)
+![The Settings page showing Media Directories, the Thumbnail Directory, and Language](assets/getting-started/settings-overview.webp)
 
 Yaffo stores its own database, thumbnails, logs, and temporary files separately
 from your photo folders. Your original photo folders remain where they are.

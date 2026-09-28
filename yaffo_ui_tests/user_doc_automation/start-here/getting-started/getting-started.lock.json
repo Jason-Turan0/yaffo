@@ -1,6 +1,6 @@
 {
     "page": "start-here/getting-started",
-    "lastVerifiedSha": "93c584332c09c47d86904ceb568cf13c2ea59e75",
+    "lastVerifiedSha": "e1d41fd9368a1cf54536d451c48302431ace7faa",
     "observed": {
         "page": "start-here/getting-started",
         "urls": [
@@ -307,7 +307,7 @@
         "start-here/assets/getting-started/settings-overview.webp": {
             "width": 1392,
             "height": 946,
-            "sha256": "f2efdceb44522fd4e1185371575b42b9f9535ff2f07b74464bcae4201ee49e23"
+            "sha256": "5c7c95d2dd01ab71f86ee2541a374a17a3a4f9910b46ce552f208fce65115a47"
         },
         "start-here/assets/getting-started/library-health.webp": {
             "width": 1122,
@@ -327,7 +327,7 @@
         "start-here/assets/getting-started/media-detail.webp": {
             "width": 1392,
             "height": 1122,
-            "sha256": "9b93c90eda445b1553c2bdee23f4ef5ba8953e86d9b3dde4cbe4de75f2920b4e"
+            "sha256": "5593a6fa6cc6a0ee45a0d60ac1cfe0309b8c53c59e67a4671d5cb388628023d7"
         }
     }
 }

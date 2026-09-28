@@ -71,6 +71,14 @@ export default defineWalkthrough({
             goto: ({mediaIdByFilename}) =>
                 mediaIdByFilename(DETAIL_IMAGE).then((id) => `/media/view/${id}`),
             clip: ".photo-viewer",
+            // Same host-spelling problem as .media-dir-path in the Settings shot:
+            // the File Information folder is /private/tmp/yaffo-docs/... on macOS and
+            // /tmp/yaffo-docs/... on Linux, so this one line re-diffs on every host
+            // switch. Keep the folder visible in the shot, exclude only its host
+            // prefix — the exclusion the photo-details walkthrough already applies.
+            ignoreRegions: [
+                ".detail-section:first-child .detail-item:nth-of-type(2) .detail-value",
+            ],
         },
     },
 });
