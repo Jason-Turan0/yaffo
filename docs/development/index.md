@@ -20,6 +20,12 @@ Reference material for contributors and agents working in the Yaffo codebase.
   the user confirms them.
 - [AI Page Builder](ai-page-builder.md)
 - [Automations](automations.md)
+- [Automation Web Calls](automation-web-calls.md) - design sketch (proposed):
+  authorized outbound HTTP for custom automations, detected from the script and
+  approved at publish; first use case is sharing photos to a Google Photos album.
+- [Sync Adapters](automation-sync-adapters.md) - alternative design sketch
+  (proposed): a host sync engine for import/export with small Starlark Source
+  and Target adapters per provider, and the host/adapter hook contract.
 - [Distribution](distribution.md)
 - [Frontend Testing and TypeScript](frontend-testing-and-typescript.md)
 - [Icons](icons.md)
