@@ -311,6 +311,14 @@ with `__args__` injected as an input. Consequences:
 - **Limits apply per hook call** (the 60 s / 1,000 host calls / 4 MiB message
   defaults, plus the web-specific caps). A 40,000-photo backfill is just many
   small calls; the host loops, not the script.
+- **Web time doesn't count against the 60 s.** `run_starlark`'s deadline
+  normally includes host-call time, which a batch of large uploads would blow
+  through. In the `adapter` profile the deadline is paused while a web host
+  function (`web_request`, `web_upload_media`) runs; each of those has its own
+  timeout (connect + idle-read, so a slow but progressing upload isn't
+  killed). The 60 s then bounds the script's own work. The host also chunks
+  target batches by total bytes (`capabilities.max_batch_bytes`) as well as by
+  count, so one hook call can't be handed hours of uploads.
 - **One process per hook call, and that's cheap enough.** `run_starlark`
   launches a disposable `yaffo.starlark_worker` subprocess for every call.
   Hooks run per **page or batch**, never per item, so this happens a few
@@ -505,8 +513,16 @@ and the UI translates it at render time (see the job status-codes convention):
 | `not_found` | targets: the remote item or album is gone → reconcile; sources: skip |
 | `rejected` | permanent per-item failure (bad format, too large); recorded, not retried |
 | `fatal` | stop the run; message goes to run history |
+| `cursor_invalid` | sources: the cursor or checkpoint has expired (e.g. OneDrive's 410 `resyncRequired`). Drop it and restart: from the checkpoint if only the page cursor failed, otherwise a full pass. Dedupe by `source_id` and sha1 makes the re-listing cheap |
 
 Hooks can return an error for the whole call or per item (in `results`).
+**A hook-level `error` may come with partial `results`.** The host first
+commits the results it got (and the `state_patch`), then applies the error by
+code. For target hooks, batch items with no result are put back as **unsent**,
+not left `pending`: the adapter is saying it never got to them, so they don't
+need crash recovery and are simply pushed again on the next attempt.
+`pending` is reserved for items whose outcome is genuinely unknown (the run
+died mid-call).
 
 ### Source hooks
 
@@ -533,7 +549,9 @@ def resolve_download(record, ctx):
 `ctx["state"]["checkpoint"]`, which the host maintains). The host persists
 `next_cursor` after **every** page, so an interrupted backfill resumes mid-pass.
 The `checkpoint` is promoted only after the final page, so a half-finished pass
-never advances the delta point.
+never advances the delta point. A provider that expires cursors returns
+`cursor_invalid` (see the error table), and the host restarts the pass rather
+than failing the sync.
 
 **Record schema** (validated by the host; invalid records fail the page):
 
@@ -578,19 +596,22 @@ def push(batch, ctx):
     ADAPTER.max_batch, and written an intent row for each item."""
     return {
         "results": [
-            {"media_item_id": 41, "remote_id": "AF1Qip…"},
-            {"media_item_id": 42, "error": {"code": "rejected", "message": "unsupported format"}},
+            {"key": "812", "remote_id": "AF1Qip…"},
+            {"key": "813", "error": {"code": "rejected", "message": "unsupported format"}},
         ],
         "state_patch": {"albums": {"For Mom": "ALB123"}},
     }
 
 def remove(items, ctx):
-    """Optional (capability `remove`). items: [{media_item_id, remote_id, target}]."""
-    return {"results": [{"media_item_id": 41}], "state_patch": {...}}
+    """Optional (capability `remove`). items: [{key, media_item_id, remote_id, target}];
+    media_item_id is None when the photo was deleted from Yaffo."""
+    return {"results": [{"key": "812"}], "state_patch": {...}}
 
 def update(items, ctx):
-    """Optional (capability `update`). Caption/target changes for items already pushed.
-    items: [{media_item_id, remote_id, target, caption, previous: {target, caption}}]."""
+    """Optional (capability `update`). Caption or routing-target changes for items
+    already pushed. items: [{key, media_item_id, remote_id, target, caption,
+    previous: {target, caption}}]. A routing change is a move: e.g. remove from
+    the old album and add to the new one, keeping remote_id where the provider can."""
     return {"results": [...]}
 
 def list_remote(cursor, ctx):
@@ -608,6 +629,7 @@ def list_remote(cursor, ctx):
 
 ```python
 {
+    "key": "812",                 # the item's ledger row id (sync_items.id); every result names it
     "media_item_id": 41,
     "target": "For Mom",          # routing key from the selection
     "caption": "Mom and Ava at the lake",
@@ -621,11 +643,22 @@ def list_remote(cursor, ctx):
 The adapter uploads with `web_upload_media(CONNECTION, …, item["media_item_id"])`.
 It never has the bytes or the path.
 
+**Results are matched on `key`.** Every item the host hands to `push`,
+`remove`, or `update` carries `key`, the id of the ledger row it came from
+(`sync_items.id`, as a string), and each result must copy it, so the host
+knows which row a result is about. The adapter treats it as an opaque label,
+like a request id. Results can come back in any order (adapters often group
+items by album). `media_item_id` can't serve, because it's `None` for a photo
+deleted from Yaffo (see *Photos deleted from Yaffo*); `remote_id` can't
+either, because one remote item can be in several targets; and the row id,
+unlike `item_key`, never changes, even when a photo moves between targets.
+
 **Target capabilities** in `ADAPTER`:
 
 ```python
 "capabilities": {
-    "max_batch": 50,          # host chunks to this
+    "max_batch": 50,          # host chunks to this many items…
+    "max_batch_bytes": 200000000,  # …and to this many bytes (default 200 MB)
     "remove": True,           # implements remove()
     "update": False,          # implements update(); otherwise caption changes are ignored
     "reconcile": True,        # implements list_remote()
@@ -802,6 +835,8 @@ This keeps the deferral off `automations.sync`, whose `runtime` part has a
 single writer (the engine), and reuses dispatcher bookkeeping that already
 exists. Only syncs opt in, via `config.settle_seconds`; other
 `album_changed` subscribers are dispatched immediately, like every event today.
+The same mechanism schedules the run that removes photos deleted from Yaffo
+(see *Photos deleted from Yaffo*).
 
 The run diffs the whole album, so it doesn't matter how many events were
 coalesced or what ids they carried. A deferred run starts with an empty causal
@@ -835,6 +870,7 @@ loop:
     validate records                              # schema, URL hosts, sizes
     for each record (bounded concurrency):
         skip if sync_items has (sync, source_id) with same updated_at
+        known source_id, changed updated_at and changed content → overwrite (see Edited at the source)
         skip + link if hash matches an existing media_items.sha1  (cross-library dedupe)
         tombstone → mark the sync_items row deleted_at_source (never delete the local file; see Source deletions)
         resolve_download if needed → download to temp in the import root
@@ -857,15 +893,29 @@ continues from the stored cursor.
 ```
 desired = selection()                            # [{media_item_id, target, caption}]
 current = sync_items for this sync
-to_push   = desired − current (by media_item_id, target)
-to_remove = current − desired                    (if capability remove)
-to_update = caption/target changed               (if capability update)
-for each chunk of to_push:
+pair up moves: a photo leaving target A and entering target B in the same run
+to_update = moves + caption changes              (if capability update; else moves
+                                                  become remove + push, captions ignored)
+to_push   = desired − current − moves
+to_remove = current − desired − moves            (if capability remove; includes rows
+            + rows marked removing                 marked by a delete, see Photos deleted from Yaffo)
+for each chunk (by count and by bytes) of to_push:
     write intent rows (status = pending, attempt n)      # commit
     res = call push(chunk, ctx)
-    commit results (status = sent | failed[code]) + state_patch in one transaction
+    commit results (sent | failed[code]) + state_patch in one transaction;
+    items with no result (hook-level error) go back to unsent
 same for remove / update
 ```
+
+**Items are keyed by photo, not by (photo, target), when the target has one
+destination.** With `targets: "one"` the ledger key is just the
+`media_item_id`, so a routing-key change is a no-op instead of a re-upload.
+With `targets: "many"` a photo can be in several targets at once, so the key
+is `media_item_id:target`, and a photo that leaves one target and enters
+another in the same run is treated as a **move** (`update`, or remove + push
+without it). Renaming a Yaffo album that's the routing key is therefore an
+`update` per photo (or, for adapters that can rename the remote album, one
+call), never a re-upload of every photo.
 
 **Crash recovery.** If a run dies after `push` sent data but before results
 commit, the next run finds `pending` intent rows. With `reconcile` capability
@@ -879,6 +929,64 @@ one tested host path.
 A periodic `reconcile` pass (e.g. weekly) also catches drift: items the user
 deleted remotely are marked `removed_remotely` and **not** re-pushed unless the
 user asks.
+
+### Photos deleted from Yaffo
+
+Deleting a photo removes it from every target it was sent to (see
+*Authorization and consent*), but the remote calls don't run inside the
+delete. A delete is a local action that must be instant and always succeed:
+it can't wait on, or fail because of, a slow or unreachable service; bulk
+deletes (the duplicate cleaner, an automation) would otherwise make hundreds
+of one-by-one calls; and a removal fired from the delete path would bypass
+the one-run-per-sync lock. So the work is **queued before the photo leaves the
+database, and performed by the sync run afterwards**:
+
+1. **In the delete's own transaction**, every target `sync_items` row for the
+   photo that was sent (or is `pending`) is set to `removing`. Then the
+   delete commits, and the rows' `media_item_id` becomes NULL; they keep
+   `remote_id` and `target`. This is done once, in the media repository's
+   delete function, so every delete path (the UI, the duplicate cleaner,
+   `delete_media_items` from automations and assistant plans) gets it.
+2. **After commit**, a `media_deleted` event is emitted with the photo ids and
+   the ids of the syncs that had rows marked (`sync_automation_ids`). Every
+   target sync owns an event trigger for it, created with the sync, whose
+   matcher only accepts events naming that sync; it goes through the settle
+   window like `album_changed` (see *Coalescing bursts*), so deleting 300
+   photos leads to one run per affected sync, not 300. `media_deleted` joins
+   the general event catalog, so other automations can subscribe too.
+3. **The sync run** treats `removing` rows as part of `to_remove`: it calls
+   `remove` in batches with their `remote_id`s, each item labelled with its
+   row id as `key`, and records each outcome. Removal is idempotent: a
+   `not_found` result counts as removed. A failure leaves the row `removing`,
+   and the next run retries it. Once removed, a row with no photo is
+   deleted from the ledger; it has nothing left to describe.
+
+If the target can't remove (`remove: False`), the rows are marked
+`cant_remove` and the run says so ("12 photos deleted from Yaffo are still in
+this target"). The Folder target deletes the copies it wrote, under its usual
+rule (only unchanged files Yaffo wrote, to the OS trash).
+
+### Edited at the source
+
+When a record Yaffo already imported comes back with a new `updated_at` and
+different content (hash, or size when there's no hash), the engine **replaces
+the library's copy** rather than importing a second file. To most people an
+edited photo (cropped, filtered, rotated in the provider's app) is the same
+photo, and a second copy would just be a duplicate to clean up.
+
+- The new file is downloaded to a temporary name and atomically replaces the
+  file at the media item's **current** path (the user may have moved or
+  renamed it since import). The previous version goes to the **OS trash**,
+  so a bad edit at the source is recoverable.
+- The media item keeps its id, so faces assignments, tags, labels, favorites,
+  and album membership stay. The item is re-indexed (sha1, dimensions,
+  embedded dates, thumbnails, face detection) and a `media_modified` event
+  fires, so *Export photo tag* writes Yaffo's people and location tags back
+  into the new file.
+- Same content with only a new `updated_at` (a metadata touch at the source)
+  just updates the ledger; nothing is downloaded.
+- The Folder source follows the same rule when a file's size or modification
+  time changes and its content hash differs.
 
 ### Source deletions
 
@@ -915,7 +1023,8 @@ The host treats adapter output as untrusted input:
 - unknown keys, wrong types, missing required fields → page or call fails with
   `fatal` (the adapter is buggy; don't half-apply it);
 - download URLs and follow-ups restricted to connection hosts;
-- `results` must reference only `media_item_id`s from the batch it was given;
+- `results` must reference only `key`s from the batch it was given, each at most
+  once;
 - `state_patch` size-capped (64 KiB per sync, JSON only).
 
 ## Test / preview
@@ -955,6 +1064,10 @@ Two layers, matching the two separate questions a user is asked:
      script. There's no attempt to work out whether a change widens or narrows
      the selection. Changes to the *members* of a selected album don't re-ask
      (the album is the user's consent, item by item).
+   - **Deleting a photo from Yaffo removes it from every target it was sent
+     to** (where the target supports removal), the same as removing it from
+     the selected album. The consent sentence says so: "Photos removed from
+     the album, or deleted from Yaffo, are removed from the Google album."
    - Endpoints marked `shares_externally` (OneDrive `createLink`, Immich shared
      links) keep their own separate confirmation, as in the web-calls doc.
 
@@ -1471,27 +1584,28 @@ def push(batch, ctx):
         elif target not in albums:
             r = web_request(CONNECTION, "POST", API + "/albums", json={"album": {"title": target}})
             if r["status"] != 200:
-                return {"error": {"code": "retry_later"}, "state_patch": {"albums": albums}}
+                # partial results are kept; this target's items come back as unsent
+                return {"results": results, "error": {"code": "retry_later"},
+                        "state_patch": {"albums": albums}}
             albums[target] = r["json"]["id"]
         new_items, pending = [], []
         for item in items:
             up = web_upload_media(CONNECTION, "POST", API + "/uploads", item["media_item_id"],
                                   headers={"X-Goog-Upload-Protocol": "raw"})
             if up["status"] != 200:
-                results.append({"media_item_id": item["media_item_id"],
-                                "error": {"code": "retry_later"}})
+                results.append({"key": item["key"], "error": {"code": "retry_later"}})
                 continue
             new_items.append({"description": item["caption"] or "",
                               "simpleMediaItem": {"uploadToken": up["text"],
                                                   "fileName": item["filename"]}})
-            pending.append(item["media_item_id"])
+            pending.append(item["key"])
         r = web_request(CONNECTION, "POST", API + "/mediaItems:batchCreate",
                         json={"albumId": albums[target], "newMediaItems": new_items})
-        for mid, res in zip(pending, r["json"].get("newMediaItemResults", [])):
+        for key, res in zip(pending, r["json"].get("newMediaItemResults", [])):
             if "mediaItem" in res:
-                results.append({"media_item_id": mid, "remote_id": res["mediaItem"]["id"]})
+                results.append({"key": key, "remote_id": res["mediaItem"]["id"]})
             else:
-                results.append({"media_item_id": mid, "error": {"code": "rejected",
+                results.append({"key": key, "error": {"code": "rejected",
                                 "message": res.get("status", {}).get("message", "")}})
     return {"results": results, "state_patch": {"albums": albums}}
 
@@ -1563,7 +1677,8 @@ as a media folder instead."
   videos / both.
 - **Records:** one per file. `source_id` is the path relative to the folder;
   size + modification time act as `updated_at`; the content sha1 is the
-  `hash`, so files already in the library are linked, not copied. No date or
+  `hash`, so files already in the library are linked, not copied, and an
+  edited file replaces the library's copy (see *Edited at the source*). No date or
   location hints: the file's own metadata is used.
 - **Originals are never touched,** and there's no "delete after import". The
   user can clear the card themselves once they've checked the import.
@@ -1652,7 +1767,8 @@ the same rule as for web targets.
 whether a desktop app uploaded it, so the run summary and Items list say
 "written to folder", never "sent". The consent sentence names the folder and
 the removal behavior: "Copy the photos in *For Mom* to *~/Amazon Photos
-Backup* as JPEG. Photos removed from the album are deleted from that folder."
+Backup* as JPEG. Photos removed from the album, or deleted from Yaffo, are
+deleted from that folder."
 The *Turn on* step adds what that means downstream when the user picks a known
 sync app's folder: Amazon's folder backup only uploads, so deleting a copy
 doesn't remove the photo from Amazon Photos, while a Dropbox folder would.
@@ -1903,10 +2019,13 @@ class SyncItem(db.Model):
     reconciled on the next run.
 
     item_key: sources → the provider's source_id;
-              targets → f"{media_item_id}:{target}".
+              targets with targets: "one" → f"{media_item_id}";
+              targets with targets: "many" → f"{media_item_id}:{target}".
     media_item_id goes NULL if the local photo is deleted. For a source that must
-    not cause a re-import; for a target the row has left the selection (remove,
-    if the adapter supports it)."""
+    not cause a re-import; for a target the row was set to 'removing' in the same
+    transaction, and the next sync run removes it remotely using remote_id (see
+    Photos deleted from Yaffo). Hook items and results identify the row by its
+    id (`key`), not by item_key or media_item_id."""
 
     __tablename__ = "sync_items"
 
@@ -1921,8 +2040,9 @@ class SyncItem(db.Model):
                                                                    # target: hash of caption → update()
     status = db.Column(db.String, nullable=False)                  # source: imported | linked_existing | skipped |
                                                                    #   failed | deleted_at_source
-                                                                   # target: pending | sent | failed | removing |
-                                                                   #   removed | removed_remotely | cant_remove
+                                                                   # target: pending | sent | failed |
+                                                                   #   removing (queued or in flight) | removed |
+                                                                   #   removed_remotely | cant_remove
     error_code = db.Column(db.String, nullable=True)
     attempts = db.Column(db.Integer, nullable=False, default=0)
     run_id = db.Column(db.String, db.ForeignKey("jobs.id", ondelete="SET NULL"), nullable=True)
@@ -2023,3 +2143,126 @@ check at run start is only a backstop.
 | Custom logic | anything | selection (query/script) + custom adapters |
 | New runtime machinery | web host functions, grants | same, **plus** hook invocation, the sync engine, and an `adapter` profile |
 | Escape hatch | n/a | fully custom web-calling automations (the web-calls doc) remain possible for odd cases |
+
+## Implementation phases
+
+Built-in and preset sources and targets come first, custom adapters last. Two
+sequencing choices inside that:
+
+- **Local before cloud.** The Folder source and target need no sign-in, no web
+  calls, and no Starlark hooks, but they exercise almost the whole engine:
+  sync automations, the item ledger, diffing, crash recovery, consent, the
+  `album_changed` trigger, `accepts` conversion, and the setup UI. Building
+  them first proves the engine and UI with no external dependencies, and
+  ships something useful on its own (Amazon Photos via folder backup, Dropbox
+  via its desktop folder, SD cards for frames and from cameras).
+- **Read-only cloud before writing to the cloud.** The first cloud preset is a
+  source (OneDrive): it can't damage anything remotely, and it exercises
+  sign-in, hooks, paging, delta cursors, resume, and downloads. Writing
+  (uploads, reconcile, the intent log against a real service) comes next.
+
+Presets are written as **Starlark adapters**, not Python, even though we
+write them: they're the first users of the hook contract, so the contract is
+proven by real providers before the builder starts generating adapters
+against it.
+
+Each phase ends with its user guide pages and translations (held until the
+phase's behavior settles), and its Playwright specs.
+
+### Phase 0: lead-time items (start now, in parallel)
+
+- **OAuth app registrations** for the presets: Microsoft Entra app (OneDrive)
+  and a Google Cloud project with the Photos Library API. Google's OAuth
+  verification for the Photos scopes can take weeks; until it passes, users
+  see an unverified-app warning and the app is capped at a small number of
+  test users. Both are desktop/public clients (PKCE, loopback return address).
+
+### Phase 1: sync engine + Folder target and source
+
+- Data model: `automations.sync`, `sync_items`, `sync_adapters` (built-in
+  rows with `handler`), `media_items.sha1` with its backfill task.
+- Engine: target run (diff, chunking, intent rows, crash recovery, removals
+  limited to Yaffo's own copies), source run (records, dedupe by sha1, atomic
+  writes into the import root, watcher suppression, indexing), per-sync run
+  lock, `accepts` JPEG conversion.
+- Triggers: `album_changed` event and emit sites, the per-trigger `album_id`
+  filter, and the settle window on the dispatcher tick; `media_deleted` with
+  the delete-transaction marking of ledger rows.
+- UI: *New automation* type choice (Import from… / Send to…), the sync detail
+  page (setup steps, status line, Items tab, run summaries), selection by
+  **album** and **filter** (`data_query`), consent sentence and hash, Test
+  preview.
+- **Exit:** "keep my *For Mom* album copied to a folder, as JPEG" and "copy
+  new photos from this SD card into Imports/Camera" work end to end and
+  survive a crash mid-run.
+
+### Phase 2: web foundations + OneDrive source
+
+- Connections: `sync_connection:` rows in `application_settings`, keychain
+  storage, the shared-account rules (scope union, shared status, refresh
+  lease, garbage collection), the *Account* step with an existing account
+  preselected.
+- Sign-in: `oauth2` with the loopback return address and PKCE; device code
+  as the fallback link.
+- Adapters: the `adapter` host profile, hook invocation (one evaluator per
+  call), contract validation, preset seeding with code hash and manifest,
+  the `web_request` host function with grant checks and the follow-up-URL
+  rule, the static endpoint detector, and the `adapter` time limits (web time
+  excluded from the deadline, byte-based batch chunking).
+- Options: `remote_folder` / `remote_collection` with the `choices` hook and
+  the picker UI.
+- Preset: **OneDrive source** (delta feed, backfill + incremental, resume,
+  tombstones as `deleted_at_source`, the *Deleted at source* filter).
+- **Exit:** a 10,000-photo OneDrive backfill completes across several runs and
+  restarts, and later runs import only new photos.
+
+### Phase 3: cloud targets
+
+- `web_upload_media` (raw, multipart, and chunked upload sessions).
+- Preset: **Google Photos target** (album per routing target, `list_remote`
+  reconcile, the album picker limited to Yaffo-created albums), then a
+  **OneDrive target** (folder per target, chunked uploads).
+- Reconcile pass: weekly drift check, `removed_remotely`.
+- Selection by **selector script** (`script` kind), reusing the existing
+  automation builder chat with the read-only profile.
+- **Exit:** adding photos to *For Mom* shows up in Google Photos within about a
+  minute; killing the worker mid-batch and restarting creates no duplicates.
+
+### Phase 4: custom adapters and self-hosted servers
+
+- The *Add a new service…* builder: `write_adapter_code`, `test_adapter`,
+  the Overview / Test account / Web access / Code / Test panel, the publish
+  modal and grants, republish and *Regenerate*.
+- The `connection` block and its sign-in methods: `oauth2`, `api_key` (header,
+  query, and path placements, the `check` call), and `basic` first;
+  `oauth1a`, `sigv4`, and `session` when real services need them (rule of
+  three). App credentials, return-address cases, `app_form_labels`.
+- Self-hosted `instance` handling (server address added to allowed hosts and
+  consent), including the http-on-LAN decision.
+- Preset: **Immich** source and target, the first `api_key` + self-hosted
+  preset, built alongside the builder because both need the same sign-in
+  pieces.
+- Builder web access: `fetch_docs` with the deterministic, per-domain batch
+  authorization (`doc_domains`, Public Suffix List snapshot), permission 3
+  (live reads with the test connection).
+- **Exit:** the builder produces a working Flickr target from a one-line
+  request, with the user approving only domains and the publish modal; two-way
+  Immich sync works against a local Immich in the UI test sandbox.
+
+### Phase 5: later
+
+- `web_search` with a configurable search backend.
+- The `volume_mounted` trigger for Folder sources (import when a card is
+  inserted).
+- The deferred email target, if users ask.
+
+### Contract decisions from the design review
+
+Folded into the sections above: partial results with a hook error (*Common
+return envelope*), web time excluded from the 60 s limit plus byte-based
+chunking (*Hooks are called by the host*), routing changes as moves (*Target
+run*), `cursor_invalid` (*Common return envelope*), overwrite on edit (*Edited
+at the source*), results matched on `key`, the ledger row id (*Target
+hooks*), and photos deleted from Yaffo removed from their targets, queued in
+the delete transaction and done by the next sync run (*Photos deleted from
+Yaffo*).
