@@ -237,25 +237,55 @@
                               is_open=not sync.where_done, done=sync.where_done,
                               value=sync.where_summary) %}
             <p class="section-description">{{ _("Photos added later are sent too; photos taken out are removed.") }}</p>
-            <form method="POST" action="{{ url_for('sync_update_selection', slug=selected.slug) }}" class="sync-form">
+            <form method="POST" action="{{ url_for('sync_update_selection', slug=selected.slug) }}" class="sync-form sync-selection-form" data-sync-selection>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <input type="hidden" name="kind" value="album">
-                <div class="form-group">
-                    <label for="sync-album">{{ _("Album") }}</label>
-                    {% if sync.albums %}
-                        <select id="sync-album" name="album_id" class="searchable-select">
-                            {% for album in sync.albums %}
-                                <option value="{{ album.id }}" {{ "selected" if sync.selection and sync.selection.kind == 'album' and sync.selection.album_id == album.id }}>{{ album.name }}</option>
-                            {% endfor %}
-                        </select>
-                    {% else %}
-                        <p class="no-data">{{ _("You have no albums yet.") }} <a href="{{ url_for('albums_index') }}">{{ _("Create one") }}</a></p>
-                    {% endif %}
-                </div>
+                <fieldset class="sync-selection-choices">
+                    <legend class="sr-only">{{ _("Choose what to send") }}</legend>
+                    <div class="sync-selection-choice" data-selection-choice="album">
+                        <label class="sync-selection-label" for="sync-selection-album">
+                            <input type="radio" id="sync-selection-album" name="kind" value="album"
+                                   {{ "checked" if sync.selection and sync.selection.kind == 'album' }}
+                                   {{ "disabled" if not sync.albums }} required>
+                            <span>{{ _("An album") }}</span>
+                        </label>
+                        <div class="sync-selection-detail" data-selection-detail="album" {{ "hidden" if not sync.selection or sync.selection.kind != 'album' }}>
+                            {% if sync.albums %}
+                                <label for="sync-album">{{ _("Album") }}</label>
+                                <select id="sync-album" name="album_id" class="searchable-select" {{ "disabled" if not sync.selection or sync.selection.kind != 'album' }}>
+                                    {% for album in sync.albums %}
+                                        <option value="{{ album.id }}" {{ "selected" if sync.selection and sync.selection.kind == 'album' and sync.selection.album_id == album.id }}>{{ album.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            {% else %}
+                                <p class="hint-text">{{ _("You have no albums yet.") }} <a href="{{ url_for('albums_index') }}">{{ _("Create one") }}</a></p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="sync-selection-choice" data-selection-choice="query">
+                        <label class="sync-selection-label" for="sync-selection-query">
+                            <input type="radio" id="sync-selection-query" name="kind" value="query"
+                                   {{ "checked" if sync.selection and sync.selection.kind == 'query' }} required>
+                            <span>{{ _("Photos matching a filter") }}</span>
+                        </label>
+                        <div class="sync-selection-detail" data-selection-detail="query" {{ "hidden" if not sync.selection or sync.selection.kind != 'query' }}>
+                            <p class="hint-text">{{ _("Choose filters on the next screen. New matching photos are sent too.") }}</p>
+                        </div>
+                    </div>
+                    <div class="sync-selection-choice" data-selection-choice="script">
+                        <label class="sync-selection-label" for="sync-selection-script">
+                            <input type="radio" id="sync-selection-script" name="kind" value="script"
+                                   {{ "checked" if sync.selection and sync.selection.kind == 'script' }} required>
+                            <span>{{ _("A custom rule") }}</span>
+                        </label>
+                        <div class="sync-selection-detail" data-selection-detail="script" {{ "hidden" if not sync.selection or sync.selection.kind != 'script' }}>
+                            <p class="hint-text">{{ _("Publish a rule to choose photos and route them to destinations.") }}</p>
+                        </div>
+                    </div>
+                </fieldset>
                 <div class="sync-form-actions">
-                    {% if sync.albums %}<button type="submit" class="btn-primary">{{ _("Send this album") }}</button>{% endif %}
-                    <a class="btn-secondary" href="{{ url_for('sync_filter', slug=selected.slug) }}" data-icon="filter">
-                        {{ _("Change the filter") if sync.selection and sync.selection.kind == 'query' else _("Send photos matching a filter instead") }}</a>
+                    <button type="submit" class="btn-primary" data-selection-submit
+                            data-save-label="{{ _('Save selection') }}" data-filter-label="{{ _('Choose filters') }}"
+                            data-rule-label="{{ _('Save and edit rule') }}">{{ _("Save selection") }}</button>
                 </div>
             </form>
     {% endcall %}

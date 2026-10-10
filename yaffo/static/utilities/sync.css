@@ -90,6 +90,64 @@
     margin: 0;
 }
 
+.sync-selection-choices {
+    display: grid;
+    gap: 8px;
+    margin: 0 0 16px;
+    padding: 0;
+    border: 0;
+}
+
+.sync-selection-choices legend {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.sync-selection-choice {
+    padding: 12px 14px;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.sync-selection-choice.is-selected {
+    border-color: var(--color-accent);
+    background: var(--color-bg);
+}
+
+.sync-selection-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.sync-selection-label input {
+    margin: 0;
+}
+
+.sync-selection-detail {
+    margin: 10px 0 0 26px;
+}
+
+.sync-selection-detail[hidden] {
+    display: none;
+}
+
+.sync-selection-detail .hint-text {
+    margin: 0 0 6px;
+}
+
+.sync-selection-detail select {
+    width: 100%;
+    margin-top: 5px;
+}
+
 .sync-folder-input {
     display: flex;
     gap: 8px;

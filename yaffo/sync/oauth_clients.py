@@ -14,6 +14,7 @@ import os
 
 MICROSOFT_CLIENT_ID = "de78c8bb-c682-4f8c-853c-979edc53a42c"
 GOOGLE_CLIENT_ID = "150163256384-1mduv8hmpulmc4tmu4nhquu19rcsp5ff.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET = ''
 
 
 def microsoft_client_id() -> str:
@@ -25,6 +26,5 @@ def google_client_id() -> str:
 
 
 def google_client_secret() -> str | None:
-    """Phase 3 (the Google Photos target) commits it; until then it comes from the
-    maintainer's environment."""
-    return os.environ.get("YAFFO_OAUTH_GOOGLE_CLIENT_SECRET")
+    """Desktop client secrets identify the app but are not confidential."""
+    return os.environ.get("YAFFO_OAUTH_GOOGLE_CLIENT_SECRET") or GOOGLE_CLIENT_SECRET

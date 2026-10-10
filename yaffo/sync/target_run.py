@@ -32,22 +32,25 @@ from yaffo.db.models import (
     SYNC_ITEM_REMOVING, SYNC_ITEM_SENT,
 )
 from yaffo.db.repositories import sync_repository
+from yaffo.sync import access, connections
 from yaffo.logging_config import get_logger
 from yaffo.sync.adapters import LoadedAdapter, target_handler
 from yaffo.sync.convert import UnsupportedFormat, convert_to_jpeg, mime_for, needs_conversion
 from yaffo.sync.files import sweep_temps
 from yaffo.sync.guards import folder_target_problem
 from yaffo.sync.handlers import (
-    ERROR_AUTH, ERROR_CHANGED, ERROR_FATAL, ERROR_NOT_FOUND, ERROR_RATE_LIMITED, ERROR_REJECTED,
+    ERROR_AUTH, ERROR_CHANGED, ERROR_FATAL, ERROR_NOT_FOUND, ERROR_RATE_LIMITED, ERROR_REJECTED, ERROR_RETRY_LATER,
     MISSING, PRESENT, TARGETS_MANY, HookContext, TargetCapabilities, TargetHandler,
 )
 from yaffo.sync.run_common import (
-    HookOutputError, RunContext, RunResult, check_results, merge_state, pause, set_runtime,
+    HookOutputError, RunContext, RunResult, check_results, merge_state, pause, set_runtime, stop,
+    schedule_continuation,
 )
 from yaffo.sync.schemas import (
-    CURSOR_RECONCILE, PASS_INCREMENTAL, PAUSE_SELECTION_MISSING, SyncColumn, SyncCursor,
+    CURSOR_RECONCILE, PASS_INCREMENTAL, PAUSE_SELECTION_MISSING, RUNTIME_NEEDS_SIGN_IN, SyncColumn, SyncCursor,
 )
 from yaffo.sync.selection import Desired, SelectionMissing, resolve_selection
+from yaffo.sync.starlark_adapter import HookFailed
 from yaffo.utils import job_codes as codes
 
 logger = get_logger(__name__, 'background_tasks')
@@ -60,10 +63,6 @@ ITEM_SOURCE_MISSING = "source_missing"
 ITEM_UNSUPPORTED_FORMAT = "unsupported_format"
 ITEM_CONVERSION_FAILED = "conversion_failed"
 PERMANENT_ITEM_ERRORS = (ERROR_REJECTED, ITEM_UNSUPPORTED_FORMAT, ITEM_CONVERSION_FAILED)
-
-# Hook-level errors that end the run (rate_limited, auth, fatal) vs. end the batch.
-STOPPING_ERRORS = (ERROR_RATE_LIMITED, ERROR_AUTH, ERROR_FATAL)
-
 
 class StopRun(Exception):
     def __init__(self, code: str, message: str | None = None):
@@ -112,6 +111,7 @@ class TargetRun:
         self.counters = Counters()
         self.started = time.monotonic()
         self.scratch = Path(tempfile.mkdtemp(prefix="yaffo-sync-", dir=run.scratch_dir))
+        self.client = None
 
     # ---- helpers ----------------------------------------------------------
 
@@ -128,13 +128,14 @@ class TargetRun:
         set_runtime(self.session, self.automation, self.runtime)
 
     def apply_hook_error(self, envelope: dict, unresolved: list[SyncItem]) -> None:
-        """Items the handler didn't report on were never attempted: back to unsent.
-        Then a stopping error ends the run."""
+        """An unreported item may have reached the remote before a response was
+        lost. Keep its intent for the next run's reconcile before retrying."""
         for row in unresolved:
-            row.status, row.error_code = SYNC_ITEM_FAILED, ITEM_NOT_SENT
+            row.status = SYNC_ITEM_PENDING if self.caps.reconcile else SYNC_ITEM_FAILED
+            row.error_code = ITEM_NOT_SENT
         error = envelope.get("error")
         self.commit_runtime(envelope.get("state_patch"))
-        if error and error["code"] in STOPPING_ERRORS:
+        if error:
             raise StopRun(error["code"], error.get("message"))
 
     # ---- crash recovery and drift ------------------------------------------
@@ -152,20 +153,27 @@ class TargetRun:
         if not checked:
             return
         found = self.handler.reconcile([self.row_item(row) for row in checked], self.ctx())
+        patch = found.pop("__state_patch__", None)
         for row in stale:
-            if found.get(str(row.id)) == PRESENT:
+            match = found.get(str(row.id))
+            if match == PRESENT or isinstance(match, dict) and match.get("status") == PRESENT:
                 row.status, row.error_code = SYNC_ITEM_SENT, None
+                if isinstance(match, dict) and match.get("remote_id"):
+                    row.remote_id = match["remote_id"]
+                if isinstance(match, dict) and match.get("details"):
+                    row.details = {**(row.details or {}), **match["details"]}
         for row in sent:
             if found.get(str(row.id)) == MISSING:
                 row.status = SYNC_ITEM_REMOVED_REMOTELY
                 self.counters.removed_remotely += 1
         if drift_due:
             self.runtime = self.runtime.with_cursor(CURSOR_RECONCILE, SyncCursor(last_completed_at=now.isoformat()))
-        self.commit_runtime()
+        self.commit_runtime(patch)
 
     def row_item(self, row: SyncItem) -> dict[str, Any]:
         return {"key": str(row.id), "media_item_id": row.media_item_id, "remote_id": row.remote_id,
-                "target": row.target, "details": row.details or {}}
+                "target": row.target, "filename": (row.details or {}).get("filename"),
+                "details": row.details or {}}
 
     # ---- removal -------------------------------------------------------------
 
@@ -205,7 +213,7 @@ class TargetRun:
         # Unattempted removals stay `removing`: the next run retries them.
         error = envelope.get("error")
         self.commit_runtime(envelope.get("state_patch"))
-        if error and error["code"] in STOPPING_ERRORS:
+        if error:
             raise StopRun(error["code"], error.get("message"))
 
     def finish_removed(self, row: SyncItem, kept: bool) -> None:
@@ -220,7 +228,7 @@ class TargetRun:
         row.details = None
 
     def check(self, envelope: Any, keys: set[str], extra_fields: set[str]) -> list[dict]:
-        allowed = extra_fields | ({"details"} if self.adapter.is_builtin else set())
+        allowed = extra_fields | {"details"}
         return check_or_fatal(envelope, keys, allowed)
 
     # ---- pushing ---------------------------------------------------------------
@@ -250,6 +258,12 @@ class TargetRun:
             row.status, row.error_code = SYNC_ITEM_FAILED, ITEM_CONVERSION_FAILED
             self.counters.failed += 1
             return None
+        if not self.adapter.is_builtin:
+            # Cloud APIs have no idempotency key for a completed upload whose
+            # response was lost. A stable name lets the next run find that exact
+            # item, even when two library photos share a filename.
+            name = Path(filename)
+            filename = f"{name.stem}__yaffo_{row.id}{name.suffix}"
         item = {
             "key": str(row.id), "media_item_id": media.id, "target": desired.target,
             "caption": desired.caption, "filename": filename, "mime": mime_for(path),
@@ -299,10 +313,21 @@ class TargetRun:
             row.status, row.error_code = SYNC_ITEM_PENDING, None
             row.attempts += 1
             row.run_id = self.run.job_id
+        for row, item in batch:
+            row.details = {**(row.details or {}), "filename": item["filename"]}
         self.commit_runtime()
         by_key = {item["key"]: (row, item) for row, item in batch}
         hook_batch = [{k: v for k, v in item.items() if k != "sent_as"} for _, item in batch]
-        envelope = self.handler.push(hook_batch, self.ctx())
+        if self.client is not None:
+            self.client.upload_paths = {item["media_item_id"]: (
+                self.scratch / f"{row.id}.jpg" if item.get("sent_as") else
+                Path(self.session.get(MediaItem, item["media_item_id"]).full_file_path))
+                for row, item in batch}
+        try:
+            envelope = self.handler.push(hook_batch, self.ctx())
+        finally:
+            if self.client is not None:
+                self.client.upload_paths = {}
         results = self.check(envelope, set(by_key), {"remote_id"})
         for result in results:
             row, item = by_key.pop(result["key"])
@@ -314,6 +339,8 @@ class TargetRun:
             if not isinstance(result.get("remote_id"), str):
                 raise_fatal(f"result for item {result['key']} has no remote_id")
             row.status, row.remote_id = SYNC_ITEM_SENT, result["remote_id"]
+            if result.get("details") is not None and not isinstance(result["details"], dict):
+                raise_fatal(f"result for item {result['key']} has invalid details")
             details = dict(result.get("details") or {})
             if item.get("sent_as"):
                 details["sent_as"] = item["sent_as"]
@@ -326,6 +353,8 @@ class TargetRun:
     # ---- the run -----------------------------------------------------------------
 
     def execute(self) -> RunResult:
+        self.client = access.attach(self.session, self.adapter, self.config, vouched=self.runtime.followups,
+                                    should_cancel=self.run.should_cancel)
         problem = self.handler.destination_problem(self.options)
         if problem:
             return pause(self.session, self.automation, self.runtime, problem)
@@ -336,9 +365,14 @@ class TargetRun:
                                  error=f"destination folder problem: {guard}")
             sweep_temps(Path(self.options["folder"]), str(self.automation.id))
         try:
-            desired = resolve_selection(self.session, self.config.selection, self.automation.name)
+            desired = resolve_selection(self.session, self.config.selection, self.automation.name,
+                                        self.automation.published_code)
         except SelectionMissing:
+            shutil.rmtree(self.scratch, ignore_errors=True)
             return pause(self.session, self.automation, self.runtime, PAUSE_SELECTION_MISSING)
+        except ValueError as e:
+            shutil.rmtree(self.scratch, ignore_errors=True)
+            return self.result(problem=codes.PROBLEM_SYNC_INVALID_CONFIG, error=str(e), failed=True)
 
         rows = sync_repository.rows(self.session, self.automation.id)
         try:
@@ -374,8 +408,24 @@ class TargetRun:
                     work.append((row, desired_item))
             self.session.flush()
             self.push_rows(work)
+        except HookFailed as e:
+            self.session.rollback()
+            if self.client is not None and self.client.auth_failed:
+                if self.config.connection_key:
+                    connections.mark_needs_sign_in(self.session.get_bind(), self.config.connection_key)
+                return stop_sync_for_sign_in(self.session, self.automation, self.runtime, str(e))
+            return self.result(problem=codes.PROBLEM_SYNC_STOPPED, problem_params={"code": ERROR_FATAL},
+                               error=str(e), failed=True)
         except StopRun as stop:
             self.commit_runtime()
+            if stop.code == ERROR_AUTH or self.client is not None and self.client.auth_failed:
+                if self.config.connection_key:
+                    connections.mark_needs_sign_in(self.session.get_bind(), self.config.connection_key)
+                result = stop_sync_for_sign_in(self.session, self.automation, self.runtime, str(stop))
+                result.params = self.counters.params()
+                return result
+            if stop.code in (ERROR_RATE_LIMITED, ERROR_RETRY_LATER, ERROR_NOT_FOUND):
+                schedule_continuation(self.session, self.automation, 60)
             return self.result(problem=codes.PROBLEM_SYNC_STOPPED, problem_params={"code": stop.code},
                                error=str(stop), failed=stop.code in (ERROR_FATAL, ERROR_AUTH))
         finally:
@@ -394,6 +444,14 @@ class TargetRun:
 
 def raise_fatal(message: str) -> None:
     raise StopRun(ERROR_FATAL, message)
+
+
+def stop_sync_for_sign_in(session: Session, automation: Automation, runtime, message: str) -> RunResult:
+    result = stop(session, automation, runtime, RUNTIME_NEEDS_SIGN_IN,
+                  codes.PROBLEM_SYNC_NEEDS_SIGN_IN, error=message)
+    result.outcome = codes.OUTCOME_SYNC_SENT
+    result.problem_params = {"reason": access.ACCOUNT_NEEDS_SIGN_IN}
+    return result
 
 
 def check_or_fatal(envelope: Any, keys: set[str], allowed: set[str]) -> list[dict]:

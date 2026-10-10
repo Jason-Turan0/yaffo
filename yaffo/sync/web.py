@@ -47,7 +47,7 @@ MAX_REDIRECTS = 5
 MAX_CALLS_PER_CLIENT = 5000
 MAX_DOWNLOAD_BYTES = 8 * 1024 * 1024 * 1024
 RESPONSE_HEADERS = ("content-type", "retry-after", "location", "etag", "link", "content-range")
-ALLOWED_REQUEST_HEADERS = re.compile(r"^(accept|accept-language|content-type|prefer|if-match|if-none-match|"
+ALLOWED_REQUEST_HEADERS = re.compile(r"^(accept|accept-language|content-type|content-range|prefer|if-match|if-none-match|"
                                      r"x-[a-z0-9-]+)$", re.IGNORECASE)
 _URL_IN_TEXT = re.compile(r"https://[^\s\"'<>\\]+")
 _REDIRECTS = (301, 302, 303, 307, 308)
@@ -117,6 +117,7 @@ class WebClient:
     # lock): tokens are then never refreshed, since the lease is a database write.
     mid_page: bool = False
     _seen: set[str] = field(default_factory=set)
+    upload_paths: dict[int, Path] = field(default_factory=dict)
 
     # ---- grants --------------------------------------------------------------
 
@@ -166,7 +167,7 @@ class WebClient:
             headers["Authorization"] = f"Bearer {token}"
         return headers
 
-    def _send(self, method: str, url: str, headers: dict, body: bytes | None, stream: bool) -> requests.Response:
+    def _send(self, method: str, url: str, headers: dict, body: Any, stream: bool) -> requests.Response:
         current, current_method, current_body = url, method, body
         for _ in range(MAX_REDIRECTS + 1):
             send_headers = dict(headers)
@@ -185,6 +186,8 @@ class WebClient:
             self._seen.add(target)
             if response.status_code == 303 or (response.status_code in (301, 302) and current_method == "POST"):
                 current_method, current_body = "GET", None
+            elif hasattr(current_body, "seek"):
+                current_body.seek(0)
             current = target
         raise PermissionError("too many redirects")
 
@@ -235,6 +238,59 @@ class WebClient:
             self.auth_failed = True
             return {"status": 0, "error": f"sign-in needed: {e}"}
         except (requests.RequestException, PermissionError, ValueError) as e:
+            return {"status": 0, "error": str(e)}
+
+    def web_upload_media(self, connection: Any, method: str, url: str, media_item_id: int,
+                         encoding: str = "raw", field: str | None = None, fields: dict | None = None,
+                         headers: dict | None = None, offset: int = 0, length: int | None = None) -> dict[str, Any]:
+        """Upload only a prepared batch item's bytes. A session upload may request
+        a bounded slice; adapters cannot name arbitrary local paths."""
+        if connection != CONNECTION_TOKEN or not isinstance(media_item_id, int) or isinstance(media_item_id, bool):
+            return {"status": 0, "error": "use CONNECTION and a batch media_item_id"}
+        path = self.upload_paths.get(media_item_id)
+        if path is None:
+            return {"status": 0, "error": "media item isn't in this upload batch"}
+        if not isinstance(method, str) or not isinstance(url, str) or encoding not in ("raw", "multipart"):
+            return {"status": 0, "error": "invalid upload request"}
+        method = method.upper()
+        problem = self.authorize(method, url)
+        if problem:
+            self.denied.append(f"{method} {url.split('?', 1)[0]}")
+            return {"status": 0, "error": f"denied: {problem}"}
+        self.calls += 1
+        if self.calls > self.limits.max_calls:
+            return {"status": 0, "error": "too many web calls in one run"}
+        try:
+            size = path.stat().st_size
+            if not isinstance(offset, int) or offset < 0 or offset > size or isinstance(offset, bool):
+                raise ValueError("invalid upload offset")
+            if length is not None and (not isinstance(length, int) or isinstance(length, bool)
+                                       or length <= 0 or length > 10 * 1024 * 1024 or offset + length > size):
+                raise ValueError("invalid upload length")
+            if offset and length is None:
+                raise ValueError("an upload offset needs a bounded length")
+            extra = dict(headers or {})
+            token = self._token()
+            if encoding == "multipart":
+                if length is not None or offset or not field or not isinstance(fields, dict):
+                    raise ValueError("multipart needs a field and fields, without a byte range")
+                with path.open("rb") as source:
+                    response = self.http.request(method, outgoing_url(url),
+                                                 headers=self._headers(url, extra, token), data=fields,
+                                                 files={field: (path.name, source)}, stream=True,
+                                                 allow_redirects=False,
+                                                 timeout=(CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS))
+            else:
+                with path.open("rb") as source:
+                    source.seek(offset)
+                    body = source.read(length) if length is not None else source
+                    extra.setdefault("Content-Type", "application/octet-stream")
+                    response = self._send(method, url, self._headers(url, extra, token), body, stream=True)
+            if response.status_code == 401 and is_base_url(self.provider, url):
+                self.needs_refresh = True
+                self.auth_failed = True
+            return self._result(response)
+        except (OSError, requests.RequestException, PermissionError, ValueError, TokenUnavailable) as e:
             return {"status": 0, "error": str(e)}
 
     def _result(self, response: requests.Response) -> dict[str, Any]:

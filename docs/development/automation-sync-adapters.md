@@ -1,8 +1,9 @@
 # Sync Adapters — Sources and Targets over a Host Sync Engine (Design Sketch)
 
-**Status: Phases 1 and 2 built (the engine, the Folder target and source, the
-triggers, the setup UI, connections and sign-in, Starlark adapters, and the OneDrive
-source); Phases 3–5 proposed. Alternative to [Automation Web Calls](automation-web-calls.md).**
+**Status: Phases 1 and 2 built; Phase 3 cloud target code, local tests, and a
+live Google Photos upload verified. Crash recovery and OAuth verification remain.
+Phases 4–5
+proposed. Alternative to [Automation Web Calls](automation-web-calls.md).**
 That doc has a custom automation do *everything* for an export (select, diff,
 upload, batch, record state) in one Starlark script. This sketch keeps its
 primitives (connections, stored as application settings and shared by syncs;
@@ -2378,6 +2379,40 @@ notes, where they settle what the doc left open:
     [OAuth App Registrations](oauth-app-registrations.md#verification).
   - The Google Photos target can't ship to more than test users until
     verification passes.
+
+**Implementation status (2026-10-10):** The host upload function accepts raw
+bytes, multipart form uploads, and bounded byte ranges for provider upload
+sessions. It reads only prepared batch items; an adapter cannot pass a local
+path. Google Photos and OneDrive target presets are seeded and pass static
+endpoint checks. The Google preset creates or reuses app-created albums,
+uploads bytes, creates media items, removes album membership, and lists its
+remote items. The OneDrive preset creates or reuses a child folder per target,
+uses chunked upload sessions, and deletes only with the copy's original eTag
+(`412` keeps a copy changed remotely). Both use the existing weekly reconcile
+path. Cloud filenames include a stable `__yaffo_<ledger id>` suffix before the
+extension so a pending intent can be matched to exactly one completed upload
+after a worker crash, even when local files share names. The host restores the
+remote id and adapter state from that match.
+
+The `script` selection runs the automation's published Starlark with the
+read-only host profile, validates up to 5,000 desired records, and offers the
+existing builder chat with a selector-specific prompt and Test tool. Its
+published code hash is part of the sync consent. Local tests cover the upload
+boundary, both target hooks, a simulated lost Google batch result, OneDrive
+chunk ranges and changed-copy protection, selector isolation, and the setup
+page. The existing sync regression suite passes. The **What to send** panel now
+uses one mutually exclusive choice for album, filter, or custom rule, with one
+primary action and details for only the selected choice.
+
+A live Google Photos test on 2026-10-10 sent three photos to an app-created
+album. The completed job reported `sent=3` and `failed=0`; all three ledger
+rows are `sent`, have distinct remote IDs, and have no error code. The user
+confirmed the photos appeared in Google Photos. This verifies the basic upload
+path, but not crash recovery or later removal and reconcile behavior.
+
+**Still required for the Phase 3 exit:** a worker-kill/restart check against
+the live service, the demo video, and Google's OAuth verification. The app remains
+limited to Google's configured test users until verification passes.
 
 ### Phase 4: custom adapters and self-hosted servers
 

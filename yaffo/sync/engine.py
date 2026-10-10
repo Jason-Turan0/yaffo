@@ -48,7 +48,7 @@ def run_sync(session: Session, automation_id: int, run: RunContext) -> RunResult
     except AdapterUnavailable as e:
         return stop(session, automation, runtime, RUNTIME_INVALID_CONFIG,
                      codes.PROBLEM_SYNC_INVALID_CONFIG, error=str(e))
-    if not has_consent(column.config, adapter):
+    if not has_consent(column.config, adapter, automation.published_code):
         return stop(session, automation, runtime, RUNTIME_NEEDS_CONSENT, codes.PROBLEM_SYNC_NEEDS_CONSENT)
     account = account_problem(session, adapter, column.config)
     if account:

@@ -256,6 +256,25 @@ def test_the_filter_screen_saves_the_filters_as_the_selection(client, mom, outbo
     assert (selection.kind, selection.query) == ("query", {"year": 2024})
 
 
+def test_what_to_send_uses_one_choice_and_opens_the_needed_editor(client, mom, outbox):
+    automation = _create(client, "send", "Choice test")
+    url = f"/utilities/automations/{automation.slug}"
+    body = client.get(url).get_data(as_text=True)
+    panel = body.split('data-sync-selection')[1].split('</form>')[0]
+
+    assert panel.count('name="kind"') == 3
+    assert all(f'value="{kind}"' in panel for kind in ("album", "query", "script"))
+    assert panel.count('type="submit"') == 1
+
+    filter_response = client.post(f"{url}/sync/selection", data={"kind": "query"})
+    assert filter_response.status_code == 302 and filter_response.location.endswith("/sync/filter")
+    assert sync_repository.load_sync(automation).config.selection is None
+
+    rule_response = client.post(f"{url}/sync/selection", data={"kind": "script"})
+    assert rule_response.status_code == 302 and rule_response.location.endswith("/edit")
+    assert sync_repository.load_sync(automation).config.selection.kind == "script"
+
+
 def test_an_unfiltered_selection_is_refused(client, mom, outbox):
     automation = _create(client, "send", "Everything")
 

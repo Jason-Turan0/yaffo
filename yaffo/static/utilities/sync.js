@@ -10,6 +10,30 @@
 
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 
+/** @param {HTMLFormElement} form */
+const initSyncSelection = (form) => {
+    const choices = Array.from(form.querySelectorAll('input[name="kind"]'));
+    const album = /** @type {HTMLSelectElement | null} */ (form.querySelector('#sync-album'));
+    const submit = /** @type {HTMLButtonElement | null} */ (form.querySelector('[data-selection-submit]'));
+    const render = () => {
+        const selected = choices.find((choice) => choice instanceof HTMLInputElement && choice.checked);
+        const kind = selected instanceof HTMLInputElement ? selected.value : '';
+        form.querySelectorAll('[data-selection-choice]').forEach((choice) => {
+            const active = choice.getAttribute('data-selection-choice') === kind;
+            choice.classList.toggle('is-selected', active);
+            const detail = /** @type {HTMLElement | null} */ (choice.querySelector('[data-selection-detail]'));
+            if (detail) detail.hidden = !active;
+        });
+        if (album) album.disabled = kind !== 'album';
+        if (submit) {
+            submit.textContent = kind === 'query' ? submit.dataset.filterLabel || ''
+                : kind === 'script' ? submit.dataset.ruleLabel || '' : submit.dataset.saveLabel || '';
+        }
+    };
+    choices.forEach((choice) => choice.addEventListener('change', render));
+    render();
+};
+
 /** @param {number | null} bytes */
 const syncFormatSize = (bytes) => {
     if (bytes === null || bytes === undefined) return '';
@@ -323,6 +347,8 @@ const syncNamespace = {
     initDeviceCode,
 
     initSyncPage: (i18n, config) => {
+        const selection = document.querySelector('[data-sync-selection]');
+        if (selection instanceof HTMLFormElement) initSyncSelection(selection);
         document.querySelectorAll('[data-remote-option]').forEach((element) => {
             initRemoteOption(/** @type {HTMLElement} */ (element), i18n);
         });

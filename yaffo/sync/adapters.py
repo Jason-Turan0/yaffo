@@ -23,7 +23,7 @@ from yaffo.sync.adapter_static import CURRENT_CONTRACT
 from yaffo.sync.handlers import SourceHandler, TargetHandler
 from yaffo.sync.providers import ProviderPreset, get_provider
 from yaffo.sync.schemas import AdapterVersion, SyncSchemaError, WebGrant
-from yaffo.sync.starlark_adapter import StarlarkSourceHandler
+from yaffo.sync.starlark_adapter import StarlarkSourceHandler, StarlarkTargetHandler
 
 
 @dataclass(frozen=True)
@@ -112,9 +112,12 @@ def _starlark(row: SyncAdapter) -> LoadedAdapter:
     preset = get_provider(row.provider)
     if preset is None:
         raise AdapterUnavailable(f"adapter {row.slug!r} needs provider {row.provider!r}, which this build lacks")
-    if row.role != SYNC_ROLE_SOURCE:
+    if row.role == SYNC_ROLE_SOURCE:
+        handler = StarlarkSourceHandler(row.published_code, version.metadata, preset.label)
+    elif row.role == SYNC_ROLE_TARGET:
+        handler = StarlarkTargetHandler(row.published_code, version.metadata, preset.label)
+    else:
         raise AdapterUnavailable(f"Starlark {row.role} adapters can't run in this version")
-    handler = StarlarkSourceHandler(row.published_code, version.metadata, preset.label)
     scopes = list(version.metadata.get("scopes") or [])
     return LoadedAdapter(id=row.id, slug=row.slug, name=row.name, role=row.role, provider=row.provider,
                          handler_key=None, code_hash=grants_hash(grants, row.provider, scopes),

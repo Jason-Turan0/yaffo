@@ -49,6 +49,7 @@ from yaffo.routes.utilities.common import automations_sidebar_context
 from yaffo.routes.utilities.run_history import RunView, run_views
 from yaffo.routes.utilities import sync_views
 from yaffo.sync import connections
+from yaffo.sync.schemas import SELECTION_SCRIPT
 
 
 # Rows in an automation's run history.
@@ -288,12 +289,15 @@ def init_automations_routes(app: Flask):
         if automation is None or automation.is_system:
             abort(404)
         media_dirs = media_dir_repository.list_media_dirs(db.session)
+        selection = ((automation.sync or {}).get("config") or {}).get("selection") or {}
+        selector_mode = selection.get("kind") == SELECTION_SCRIPT
         return render_template(
             "utilities/automations_edit.html",
             selected=automation,
             selected_slug=slug,
             default_media_dir=(media_dirs[0]["path"] if media_dirs else None),
             selected_status=automation.status,
+            selector_mode=selector_mode,
             selected_has_draft=(
                 automation.status == AUTOMATION_STATUS_READY
                 and automation.working_code is not None

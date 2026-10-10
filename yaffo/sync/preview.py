@@ -74,9 +74,13 @@ def _target(session: Session, automation: Automation, column: SyncColumn, adapte
     result.problem = handler.destination_problem(options)
     caps = handler.capabilities(options)
     try:
-        desired = resolve_selection(session, column.config.selection, automation.name)
+        desired = resolve_selection(session, column.config.selection, automation.name,
+                                    automation.published_code)
     except SelectionMissing:
         result.problem = PAUSE_SELECTION_MISSING
+        return result
+    except ValueError as e:
+        result.problem, result.detail = PAUSE_SELECTION_MISSING, str(e)
         return result
     rows = {row.item_key: row for row in sync_repository.rows(session, automation.id)}
     wanted = {item_key(d.media_item_id, d.target, caps): d for d in desired}

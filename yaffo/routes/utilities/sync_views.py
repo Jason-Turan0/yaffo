@@ -45,6 +45,7 @@ from yaffo.sync.options import (
 from yaffo.sync.preview import PROBLEM_SERVICE_ERROR, PROBLEM_SIGN_IN, preview_sync
 from yaffo.sync.schemas import (
     DEFAULT_IMPORT_LAYOUT, IMPORT_LAYOUTS, RUNTIME_NEEDS_CONSENT, RUNTIME_READY, SELECTION_ALBUM, SELECTION_QUERY,
+    SELECTION_SCRIPT,
     Selection, SyncColumn, SyncSchemaError,
 )
 from yaffo.sync.target_run import ITEM_NOT_SENT
@@ -236,6 +237,8 @@ def consent_terms(session: Session, page_column: SyncColumn, adapter: LoadedAdap
     options = config.options
     if config.role == SYNC_ROLE_SOURCE and adapter.needs_connection:
         return _web_source_terms(session, config, adapter)
+    if config.role == SYNC_ROLE_TARGET and adapter.needs_connection:
+        return _web_target_terms(session, config, adapter)
     if config.role == SYNC_ROLE_SOURCE:
         root = _import_root_path(session, config.import_root)
         if not options.get("folder") or not root:
@@ -252,6 +255,8 @@ def consent_terms(session: Session, page_column: SyncColumn, adapter: LoadedAdap
     if config.selection.kind == SELECTION_ALBUM:
         album = session.get(Album, config.selection.album_id)
         what = gettext("The photos in the album %(album)s", album=album.name if album else "?")
+    elif config.selection.kind == SELECTION_SCRIPT:
+        what = gettext("The photos selected by your custom rule")
     else:
         what = gettext("The photos matching your filter")
     convert = options.get("convert", CONVERT_OFF)
@@ -289,6 +294,36 @@ def _web_source_terms(session: Session, config, adapter: LoadedAdapter) -> list[
     ]
 
 
+def _web_target_terms(session: Session, config, adapter: LoadedAdapter) -> list[ConsentTerm]:
+    if config.selection is None:
+        return []
+    connection = connections.get(session, config.connection_key)
+    if connection is None:
+        return []
+    if config.selection.kind == SELECTION_ALBUM:
+        album = session.get(Album, config.selection.album_id)
+        what = gettext("The photos in the album %(album)s", album=album.name if album else "?")
+    elif config.selection.kind == SELECTION_SCRIPT:
+        what = gettext("The photos selected by your custom rule")
+    else:
+        what = gettext("The photos matching your filter")
+    terms = [
+        ConsentTerm(gettext("Sends"), what),
+        ConsentTerm(gettext("To"), adapter.handler.describe_destination(config.options)),
+        ConsentTerm(gettext("Signed in as"), connection.account_label or connection.account_id),
+        ConsentTerm(gettext("Yaffo talks to"), ", ".join(adapter.hosts)),
+    ]
+    if adapter.provider == "google_photos":
+        terms.append(ConsentTerm(gettext("If a photo leaves the selection"),
+                                 gettext("Removed from Yaffo's album; the upload stays in your Google Photos library")))
+    elif adapter.provider == "onedrive":
+        terms.append(ConsentTerm(gettext("If a photo leaves the selection"),
+                                 gettext("Yaffo deletes its unchanged copy from OneDrive")))
+    terms.append(ConsentTerm(gettext("Cloud filenames"),
+                             gettext("Include a Yaffo id so an interrupted upload is not duplicated")))
+    return terms
+
+
 def missing_labels(page_missing: list[str], role: str, web: bool = False) -> list[str]:
     """What still has to be done before the sync can be turned on, in words."""
     labels = []
@@ -300,8 +335,11 @@ def missing_labels(page_missing: list[str], role: str, web: bool = False) -> lis
             text = gettext("Choose where in your library the photos go")
         elif code == "selection":
             text = gettext("Choose what to send")
+        elif code == "selector_code":
+            text = gettext("Publish the custom rule")
         elif code in ("option:folder", "folder") and web:
-            text = gettext("Choose a folder to import from")
+            text = (gettext("Choose a folder to import from") if role == SYNC_ROLE_SOURCE
+                    else gettext("Choose a destination folder"))
         elif code in ("option:folder", "folder"):
             text = (gettext("Choose a folder to copy from") if role == SYNC_ROLE_SOURCE
                     else gettext("Choose a folder outside your library"))
@@ -325,7 +363,7 @@ def build_page(session: Session, automation: Automation) -> SyncPage | None:
     account = account_view(session, automation, adapter, config)
     if account is not None and not account.done:
         options_done = False
-    consented = has_consent(config, adapter)
+    consented = has_consent(config, adapter, automation.published_code)
     status = runtime.status if consented or runtime.status != RUNTIME_READY else RUNTIME_NEEDS_CONSENT
     chip = ("chip-success" if automation.enabled and status == RUNTIME_READY else
             "chip-warning" if status != RUNTIME_READY else "")
@@ -389,6 +427,8 @@ def _where_summary(session: Session, page: SyncPage) -> str | None:
     if config.selection.kind == SELECTION_ALBUM:
         album = session.get(Album, config.selection.album_id)
         return gettext("The album %(album)s", album=album.name) if album else gettext("A deleted album")
+    if config.selection.kind == SELECTION_SCRIPT:
+        return gettext("Custom rule")
     return ngettext("Photos matching a filter (%(num)d now)", "Photos matching a filter (%(num)d now)",
                     page.filter_match_count or 0)
 
@@ -402,6 +442,10 @@ def _summary(page: SyncPage) -> str | None:
                            source=page.adapter.handler.describe_source(options))
         return gettext("Imports new photos from %(service)s into your library.",
                        service=page.account.provider_label)
+    if page.is_web and page.role == SYNC_ROLE_TARGET:
+        destination = page.adapter.handler.describe_destination(page.column.config.options)
+        return gettext("%(what)s → %(destination)s", what=page.where_summary or gettext("Selected photos"),
+                       destination=destination)
     folder = display_path(next((o.value for o in page.options if o.type == OPTION_LOCAL_FOLDER), None))
     if page.role == SYNC_ROLE_SOURCE:
         if folder:
@@ -569,7 +613,12 @@ def init_sync_routes(app: Flask) -> None:
             if album_id is None or db.session.get(Album, album_id) is None:
                 return _back(automation, error="album_required")
             setup.set_selection(db.session, automation, Selection(kind=SELECTION_ALBUM, album_id=album_id))
+        elif kind == SELECTION_SCRIPT:
+            setup.set_selection(db.session, automation, Selection(kind=SELECTION_SCRIPT))
+            return redirect(url_for("automations_edit", slug=automation.slug))
         elif kind == SELECTION_QUERY:
+            if not request.args:
+                return redirect(url_for("sync_filter", slug=automation.slug))
             filters = build_filters_context(db.session, request.args)
             wire = to_wire_filters(filters)
             if not wire:

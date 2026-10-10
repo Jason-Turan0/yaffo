@@ -28,7 +28,7 @@ from yaffo.sync import access, connections, oauth, setup
 from yaffo.sync.adapters import LoadedAdapter
 from yaffo.sync.handlers import HookContext
 from yaffo.sync.schemas import PASS_INCREMENTAL, SyncConfig
-from yaffo.sync.starlark_adapter import HookFailed, StarlarkSourceHandler
+from yaffo.sync.starlark_adapter import HookFailed, StarlarkSourceHandler, StarlarkTargetHandler
 
 logger = get_logger(__name__, 'webapp')
 
@@ -231,7 +231,7 @@ def init_sync_account_routes(app: Flask) -> None:
             return jsonify({"error": gettext("Sign in first.")}), 409
         client = access.attach(db.session, adapter, config, read_only=True)
         handler = adapter.handler
-        assert isinstance(handler, StarlarkSourceHandler) and client is not None
+        assert isinstance(handler, (StarlarkSourceHandler, StarlarkTargetHandler)) and client is not None
         try:
             envelope = handler.choices(option, request.args.get("parent") or None, request.args.get("cursor") or None,
                                        _hook_ctx(config, automation))

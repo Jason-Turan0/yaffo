@@ -65,7 +65,8 @@ def test_album_is_copied_into_a_subfolder_named_after_it(session, add_photo, alb
         (f"{b.id}:For Mom", SYNC_ITEM_SENT, "For Mom/b.jpg"),
     }
     copy = destination / "For Mom" / "a.jpg"
-    assert rows[0].details == {"size": copy.stat().st_size, "mtime_ns": copy.stat().st_mtime_ns}
+    assert rows[0].details == {"size": copy.stat().st_size, "mtime_ns": copy.stat().st_mtime_ns,
+                               "folder": str(destination)}
     # The copy's modification time is the capture date (what frames and sync apps sort by).
     assert int(copy.stat().st_mtime) == int(__import__("datetime").datetime(2024, 7, 4, 18, 22, 10).timestamp())
     assert runtime(target).status == RUNTIME_READY
@@ -289,6 +290,23 @@ def test_changing_the_folder_needs_consent_again(session, add_photo, album, make
     assert result.problem == codes.PROBLEM_SYNC_NEEDS_CONSENT
     assert runtime(target).status == RUNTIME_NEEDS_CONSENT
     assert files_in(elsewhere) == []
+
+
+def test_changing_target_folder_moves_an_existing_copy_after_consent(
+        session, add_photo, album, make_target, destination, tmp_path, trash, run_context):
+    target = make_target(album("For Mom", [add_photo("a.jpg")]))
+    run_sync(session, target.id, run_context)
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+
+    setup.set_options(session, target, {"folder": str(elsewhere)})
+    assert sync_repository.rows(session, target.id)[0].status == SYNC_ITEM_REMOVING
+    setup.turn_on(session, target)
+    moved = run_sync(session, target.id, run_context)
+
+    assert (moved.params["removed"], moved.params["sent"]) == (1, 1)
+    assert files_in(destination) == []
+    assert files_in(elsewhere) == ["For Mom/a.jpg"]
 
 
 def test_an_unplugged_drive_pauses_until_it_is_back(session, add_photo, album, make_target, destination,

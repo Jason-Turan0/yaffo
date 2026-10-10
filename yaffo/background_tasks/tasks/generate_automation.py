@@ -30,6 +30,8 @@ from yaffo.db.models import (
     CONVERSATION_TYPE_STATUS,
 )
 from yaffo.db.repositories import automation_repository as repo
+from yaffo.db.repositories import sync_repository
+from yaffo.sync.schemas import SELECTION_SCRIPT
 from yaffo.i18n import DEFAULT_LOCALE, get_saved_locale
 from yaffo.logging_config import get_logger
 from yaffo.site_agents import llm_config
@@ -88,7 +90,12 @@ def run_automation_generation(
     )
 
     try:
-        agent = create_automation_builder_agent(slug, model=model, api_key=api_key, session=session)
+        selector_mode = False
+        if automation.sync:
+            column = sync_repository.load_sync(automation)
+            selector_mode = bool(column.config.selection and column.config.selection.kind == SELECTION_SCRIPT)
+        agent = create_automation_builder_agent(slug, model=model, api_key=api_key, session=session,
+                                                selector_mode=selector_mode)
         for event in agent.run_events(user_message, should_cancel=should_cancel):
             if event.type == "assistant":
                 repo.add_message(session, automation_id, CONVERSATION_TYPE_ASSISTANT, event.text)

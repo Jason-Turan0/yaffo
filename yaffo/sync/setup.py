@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from yaffo.db.models import (
     Automation, AutomationTrigger, SyncAdapter,
     AUTOMATION_STATUS_ACCEPTED, EVENT_ALBUM_CHANGED, EVENT_MEDIA_DELETED, SYNC_ROLE_SOURCE, SYNC_ROLE_TARGET,
+    SYNC_HANDLER_FOLDER_TARGET, SYNC_ITEM_PENDING, SYNC_ITEM_REMOVING, SYNC_ITEM_SENT,
     TRIGGER_TYPE_EVENT, TRIGGER_TYPE_SCHEDULE,
 )
 from yaffo.db.repositories import automation_repository, sync_repository
@@ -28,7 +29,8 @@ from yaffo.sync.adapters import LoadedAdapter, load_adapter
 from yaffo.sync.consent import consent_hash
 from yaffo.sync.options import option_defaults, validate_options
 from yaffo.sync.schemas import (
-    DEFAULT_IMPORT_LAYOUT, IMPORT_LAYOUTS, RUNTIME_NEEDS_CONSENT, RUNTIME_READY, SELECTION_ALBUM, Selection,
+    DEFAULT_IMPORT_LAYOUT, IMPORT_LAYOUTS, RUNTIME_NEEDS_CONSENT, RUNTIME_READY, SELECTION_ALBUM, SELECTION_SCRIPT,
+    Selection,
     SyncConfig, SyncRuntime,
 )
 
@@ -79,7 +81,8 @@ def _store(session: Session, automation: Automation, config: SyncConfig) -> None
     """Save a config change. Anything the consent covers turns the sync off until
     it's approved again."""
     adapter = load_adapter(session, config.adapter_id)
-    changed = config.consent_hash is not None and config.consent_hash != consent_hash(config, adapter)
+    changed = config.consent_hash is not None and config.consent_hash != consent_hash(
+        config, adapter, automation.published_code)
     if changed:
         config = replace(config, consent_hash=None, consented_at=None)
     sync_repository.save_config(automation, config)
@@ -94,7 +97,16 @@ def set_options(session: Session, automation: Automation, values: dict) -> None:
     """Validate and store the adapter options. Raises OptionError."""
     config = _config(automation)
     adapter = load_adapter(session, config.adapter_id)
-    _store(session, automation, replace(config, options=validate_options(adapter.options, values)))
+    options = validate_options(adapter.options, values)
+    if config.role == SYNC_ROLE_TARGET and options != config.options:
+        # A new destination or output format needs a fresh copy. Keep the old
+        # remote id so the next enabled run can remove it before sending again.
+        for row in sync_repository.rows(session, automation.id):
+            if row.remote_id and row.status in (SYNC_ITEM_SENT, SYNC_ITEM_PENDING):
+                if adapter.handler_key == SYNC_HANDLER_FOLDER_TARGET:
+                    row.details = {**(row.details or {}), "folder": config.options["folder"]}
+                row.status = SYNC_ITEM_REMOVING
+    _store(session, automation, replace(config, options=options))
 
 
 def set_connection(session: Session, automation: Automation, connection_key: str) -> None:
@@ -111,6 +123,13 @@ def set_connection(session: Session, automation: Automation, connection_key: str
     if previous and previous != connection_key:
         options = {key: (None if spec["type"].startswith("remote_") else options.get(key))
                    for key, spec in adapter.options.items()}
+        # Remote ids, adapter state and cursors all belong to the old account.
+        # Start a fresh sync against the new account; already imported library
+        # files remain, and already exported remote copies remain in the old one.
+        for row in sync_repository.rows(session, automation.id):
+            session.delete(row)
+        runtime = sync_repository.load_sync(automation).runtime
+        sync_repository.save_runtime(automation, replace(runtime, state={}, cursors={}, followups=[]))
     _store(session, automation, replace(config, connection_key=connection_key, scopes_needed=adapter.scopes,
                                         options=options))
     if previous and previous != connection_key:
@@ -164,6 +183,8 @@ def missing_setup(session: Session, automation: Automation) -> list[str]:
         missing.append("import_root")
     if config.role == SYNC_ROLE_TARGET and config.selection is None:
         missing.append("selection")
+    if config.selection is not None and config.selection.kind == SELECTION_SCRIPT and not automation.published_code:
+        missing.append("selector_code")
     if adapter.needs_connection and access.account_problem(session, adapter, config):
         missing.append("account")
     return missing
@@ -175,7 +196,8 @@ def turn_on(session: Session, automation: Automation) -> None:
     adapter = load_adapter(session, config.adapter_id)
     if missing_setup(session, automation):
         raise ValueError("the setup isn't complete")
-    config = replace(config, consent_hash=consent_hash(config, adapter), consented_at=_now_iso())
+    config = replace(config, consent_hash=consent_hash(config, adapter, automation.published_code),
+                     consented_at=_now_iso())
     sync_repository.save_config(automation, config)
     runtime = sync_repository.load_sync(automation).runtime
     sync_repository.save_runtime(automation, replace(runtime, status=RUNTIME_READY, pause_code=None))

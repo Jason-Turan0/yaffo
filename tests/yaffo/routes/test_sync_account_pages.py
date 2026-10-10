@@ -11,7 +11,7 @@ import requests
 from yaffo.db import db
 from yaffo.db.models import ApplicationSettings, Automation, SyncAdapter
 from yaffo.db.repositories import sync_repository
-from yaffo.sync import connections, oauth, pending_sign_ins
+from yaffo.sync import connections, pending_sign_ins
 
 pytestmark = pytest.mark.unit
 
@@ -85,6 +85,44 @@ def test_a_new_onedrive_sync_starts_at_the_account_step(client, library, fake):
     assert "Sign in to OneDrive" in html
     assert "Sign in first: the folder is chosen from your account." in html
     assert "Signing in on another device?" in html
+
+
+def test_google_target_can_be_reviewed_without_choosing_an_existing_album(client, library, monkeypatch):
+    from yaffo.sync import setup
+    from yaffo.sync.adapters import load_adapter
+    from yaffo.db.models import Album
+    from yaffo.sync.schemas import Selection
+
+    assert client.get("/utilities/automations").status_code == 200
+    adapter_row = db.session.query(SyncAdapter).filter_by(slug="preset.google_photos_target").one()
+    target = setup.create_sync(db.session, "Family to Google", adapter_id=adapter_row.id)
+    album = Album(name="Family")
+    db.session.add(album)
+    db.session.commit()
+    setup.set_selection(db.session, target, Selection(kind="album", album_id=album.id))
+    adapter = load_adapter(db.session, adapter_row.id)
+    key = connections.upsert_after_sign_in(db.session, "google_photos", "google-user-1", "me@example.com",
+                                           adapter.scopes + ["openid", "email"],
+                                           {"access_token": "test", "refresh_token": "test"})
+    setup.set_connection(db.session, target, key)
+
+    from yaffo.sync.web import WebClient
+
+    def fake_request(_self, _connection, method, url, **_kwargs):
+        assert method == "GET" and url.endswith("/albums")
+        return {"status": 200, "json": {"albums": [{"id": "album-1", "title": "Family"}]}}
+
+    monkeypatch.setattr(WebClient, "web_request", fake_request)
+    choices = client.get(f"/utilities/automations/{target.slug}/sync/choices?option=album").get_json()
+    assert choices["items"] == [{"id": "album-1", "label": "Family", "has_children": False,
+                                  "suggested": False}]
+
+    html = client.get(f"/utilities/automations/{target.slug}").get_data(as_text=True)
+    assert "Google Photos" in html
+    assert "Family" in html
+    assert "photoslibrary.googleapis.com" in html
+    assert 'id="sync-enable-review"' in html
+    assert not setup.missing_setup(db.session, target)
 
 
 def test_sign_in_then_pick_a_folder_then_review_and_enable(client, library, fake):
@@ -165,8 +203,8 @@ def test_device_code_sign_in(client, library, fake):
 def test_a_second_sync_reuses_the_account_and_deleting_releases_it_last(client, library, fake, secrets_file):
     first = create(client)
     sign_in(client, first)
-    resp = client.post("/utilities/automations/create",
-                       data={"name": "Second", "kind": "import", "adapter_id": onedrive_id()})
+    client.post("/utilities/automations/create",
+                data={"name": "Second", "kind": "import", "adapter_id": onedrive_id()})
     second = db.session.query(Automation).filter_by(name="Second").one()
     assert sync_repository.load_sync(second).config.connection_key == "sync_connection:onedrive:fake-user-1"
     html = client.get(f"/utilities/automations/{second.slug}").get_data(as_text=True)

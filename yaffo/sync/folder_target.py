@@ -131,7 +131,7 @@ class FolderTarget(TargetHandler):
             results.append({
                 "key": item["key"],
                 "remote_id": written.relative_to(folder).as_posix(),
-                "details": {"size": stat.size, "mtime_ns": stat.mtime_ns},
+                "details": {"size": stat.size, "mtime_ns": stat.mtime_ns, "folder": str(folder)},
             })
         return {"results": results}
 
@@ -142,10 +142,10 @@ class FolderTarget(TargetHandler):
         return path if is_within(path, folder) and path != folder else None
 
     def remove(self, items: list[dict[str, Any]], ctx: HookContext) -> dict[str, Any]:
-        folder = Path(ctx.options["folder"])
         keep = ctx.options.get("on_leave") == ON_LEAVE_KEEP
         results = []
         for item in items:
+            folder = Path((item.get("details") or {}).get("folder") or ctx.options["folder"])
             if keep:
                 results.append({"key": item["key"], "kept": True})
                 continue
@@ -168,9 +168,9 @@ class FolderTarget(TargetHandler):
         return {"results": results}
 
     def reconcile(self, items: list[dict[str, Any]], ctx: HookContext) -> dict[str, str]:
-        folder = Path(ctx.options["folder"])
         found: dict[str, str] = {}
         for item in items:
+            folder = Path((item.get("details") or {}).get("folder") or ctx.options["folder"])
             # A copy the user edited is still there; whether Yaffo may delete it is
             # decided at removal time, not here.
             path = self._path_for(folder, item.get("remote_id"))

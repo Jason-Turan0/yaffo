@@ -24,6 +24,7 @@ from yaffo.site_agents.model_clients import (
 from yaffo.site_agents.page.prompt_generator import build_system_prompt
 from yaffo.site_agents.theme.prompt_generator.theme_system_prompt import build_template_builder_system_prompt
 from yaffo.site_agents.automation.prompt_generator.automation_system_prompt import build_automation_builder_system_prompt
+from yaffo.background_tasks.automation_sandbox.automation_host import render_host_api
 from yaffo.site_agents.assistant.prompt_generator.prompt import build_assistant_system_prompt
 from yaffo.site_agents.assistant.tool_providers.diagnostics.diagnostics import DiagnosticsToolProvider
 from yaffo.site_agents.assistant.tool_providers.links import LinkToolProvider
@@ -257,6 +258,7 @@ def create_automation_builder_agent(
     api_key: str,
     session: Session,
     max_iterations: int = _MAX_ITERATIONS,
+    selector_mode: bool = False,
 ) -> Agent:
     """Wire the agent for a custom automation: the write_automation_code tool (scoped
     to `slug`, which persists the working draft via `session`) plus the data-query
@@ -266,12 +268,20 @@ def create_automation_builder_agent(
     this nor the client falls through to db.session or a global key lookup."""
     providers: list[ToolProvider] = [
         DataQueryToolProvider(session=session),
-        AutomationToolProvider(slug, session=session),
-        AutomationTriggerToolProvider(slug, session=session),
+        AutomationToolProvider(slug, session=session, selector_mode=selector_mode),
     ]
+    if not selector_mode:
+        providers.append(AutomationTriggerToolProvider(slug, session=session))
+    prompt = ("You write a Starlark custom selection rule for a photo sync. "
+              "It runs across the library on each sync, without an event scope. "
+              "Use only the read-only host functions below. The trailing expression must be a list "
+              "of {media_item_id: integer, target: nonempty string, caption: optional string} records, "
+              "at most 5,000. Call write_automation_code to save it. "
+              "Do not add triggers or mutate the library.\n\n"
+              + render_host_api(include_mutating=False)) if selector_mode else build_automation_builder_system_prompt()
     client = create_model_client(
         model=model,
-        system_prompt=build_automation_builder_system_prompt(),
+        system_prompt=prompt,
         log_feature="automation",
         providers=providers,
         api_key=api_key,

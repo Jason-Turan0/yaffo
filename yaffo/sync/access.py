@@ -14,7 +14,7 @@ from yaffo.sync import connections
 from yaffo.sync.adapters import LoadedAdapter
 from yaffo.sync.oauth import TokenSource
 from yaffo.sync.schemas import CONNECTION_NEEDS_SIGN_IN, SyncConfig
-from yaffo.sync.starlark_adapter import StarlarkSourceHandler
+from yaffo.sync.starlark_adapter import StarlarkSourceHandler, StarlarkTargetHandler
 from yaffo.sync.web import WebClient
 
 make_http: Callable[[], requests.Session] = requests.Session
@@ -50,7 +50,7 @@ def web_client(session: Session, adapter: LoadedAdapter, connection_key: str, *,
 def attach(session: Session, adapter: LoadedAdapter, config: SyncConfig, *, read_only: bool = False,
            vouched: list[str] | None = None, should_cancel: Callable[[], bool] | None = None) -> WebClient | None:
     """Bind the adapter's handler to the sync's account. None for built-ins."""
-    if not isinstance(adapter.handler, StarlarkSourceHandler) or not config.connection_key:
+    if not isinstance(adapter.handler, (StarlarkSourceHandler, StarlarkTargetHandler)) or not config.connection_key:
         return None
     client = web_client(session, adapter, config.connection_key, read_only=read_only, vouched=vouched)
     adapter.handler.attach(client, should_cancel)

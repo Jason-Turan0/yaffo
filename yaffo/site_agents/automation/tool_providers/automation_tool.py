@@ -26,6 +26,8 @@ from yaffo.background_tasks.automation_sandbox.executor import run_automation_co
 from yaffo.background_tasks.automation_sandbox.starlark_runner import validate_starlark
 from yaffo.background_tasks.events import EventContext
 from yaffo.db.models import TRIGGER_TYPE_EVENT
+from yaffo.sync.schemas import SELECTION_SCRIPT, Selection
+from yaffo.sync.selection import resolve_selection
 from yaffo.db.repositories import automation_repository as repo
 from yaffo.db.repositories import data_query_repository
 from yaffo.site_agents.common.tool_providers.tool_provider_types import (
@@ -40,11 +42,20 @@ class AutomationToolProvider(ToolProvider):
     WRITE = "write_automation_code"
     TEST = "test_automation_code"
 
-    def __init__(self, slug: str, session: Session):
+    def __init__(self, slug: str, session: Session, selector_mode: bool = False):
         self.slug = slug
         self.session = session
+        self.selector_mode = selector_mode
 
     def get_tools(self) -> list[RawToolDefinition]:
+        if self.selector_mode:
+            schema = {"type": "object", "properties": {"code": {"type": "string",
+                      "description": "Read-only Starlark rule; its final expression is a list of desired photo records."}},
+                      "required": ["code"], "additionalProperties": False}
+            return [RawToolDefinition(name=self.WRITE, description="Save a custom sync selection rule draft.",
+                                      input_schema=schema),
+                    RawToolDefinition(name=self.TEST, description="Run the rule read-only and report selected items.",
+                                      input_schema=schema)]
         return [
             RawToolDefinition(
                 name=self.WRITE,
@@ -128,6 +139,11 @@ class AutomationToolProvider(ToolProvider):
                 "Automation not saved — the code did not parse. Fix this and call "
                 f"write_automation_code again:\n{error}"
             )
+        if self.selector_mode:
+            try:
+                resolve_selection(self.session, Selection(kind=SELECTION_SCRIPT), self.slug, code)
+            except Exception as exc:
+                return f"Custom rule not saved — {exc}"
 
         if not repo.write_working_code(self.session, self.slug, code):
             return f"Automation {self.slug!r} not found."
@@ -139,6 +155,14 @@ class AutomationToolProvider(ToolProvider):
 
     def _test(self, args: dict) -> CallToolReturn:
         code = (args.get("code") or "").strip()
+        if self.selector_mode:
+            try:
+                items = resolve_selection(self.session, Selection(kind=SELECTION_SCRIPT), self.slug, code)
+            except Exception as exc:
+                return f"Custom rule failed: {exc}"
+            return ToolResult(model_text=f"Custom rule selected {len(items)} item(s); "
+                              f"first targets: {[item.target for item in items[:8]]}",
+                              host_data={"slug": self.slug, "success": True, "count": len(items)})
         media_dir_id = (args.get("media_dir_id") or "").strip()
         path = (args.get("path") or "").strip().strip("/")
         if not code:

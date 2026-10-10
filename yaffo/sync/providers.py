@@ -90,7 +90,25 @@ ONEDRIVE = ProviderPreset(
     implicit_scopes=("offline_access",),
 )
 
-PROVIDERS: dict[str, ProviderPreset] = {ONEDRIVE.key: ONEDRIVE}
+GOOGLE_PHOTOS = ProviderPreset(
+    key="google_photos",
+    label="Google Photos",
+    auth_kind=AUTH_OAUTH2,
+    authorize_url="https://accounts.google.com/o/oauth2/v2/auth",
+    token_url="https://oauth2.googleapis.com/token",
+    client_id=oauth_clients.google_client_id,
+    client_secret=oauth_clients.google_client_secret,
+    base_urls=("https://photoslibrary.googleapis.com",),
+    followup_hosts=(),
+    base_scopes=("openid", "email"),
+    whoami_url="https://openidconnect.googleapis.com/v1/userinfo",
+    account_id_field="sub",
+    account_label_fields=("email", "name"),
+    loopback_host="127.0.0.1",
+    extra_authorize_params=(("access_type", "offline"), ("prompt", "consent")),
+)
+
+PROVIDERS: dict[str, ProviderPreset] = {p.key: p for p in (ONEDRIVE, GOOGLE_PHOTOS)}
 
 
 def get_provider(key: str) -> ProviderPreset | None:

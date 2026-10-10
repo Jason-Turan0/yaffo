@@ -197,9 +197,9 @@ The submission needs:
   - then the feature using each scope: creating the album, uploading,
     adding to and removing from the album.
   
-  This can only be recorded once Phase 3's Google Photos target works.
-  Until then, submit with the justification and update the video when Google
-  asks. Reviewers routinely request one.
+  Record this after Phase 3's Google Photos target works, before submitting
+  the verification request. [Google's verification requirements](https://support.google.com/cloud/answer/13464321)
+  require a demo video with the end-to-end OAuth grant and scope use.
 
 Suggested scope justifications:
 
@@ -241,7 +241,7 @@ Registered values:
 |---|---|
 | `YAFFO_OAUTH_MICROSOFT_CLIENT_ID` | `de78c8bb-c682-4f8c-853c-979edc53a42c` |
 | `YAFFO_OAUTH_GOOGLE_CLIENT_ID` | `150163256384-1mduv8hmpulmc4tmu4nhquu19rcsp5ff.apps.googleusercontent.com` (project `yaffo-511203`, client *Yaffo desktop*) |
-| `YAFFO_OAUTH_GOOGLE_CLIENT_SECRET` | not written here; it's in the maintainer's shell profile until Phase 2 commits it alongside the ID |
+| `YAFFO_OAUTH_GOOGLE_CLIENT_SECRET` | shipped with the desktop client in `yaffo/sync/oauth_clients.py`; this variable overrides it for development |
 
 `scripts/oauth_probe.py` reads the same variables. Until Phase 2 adds the
 module, the variables are the record.
