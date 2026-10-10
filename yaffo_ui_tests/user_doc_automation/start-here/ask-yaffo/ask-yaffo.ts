@@ -11,7 +11,7 @@
 import type {Page, Route} from "@playwright/test";
 import {defineWalkthrough} from "../../_support";
 
-const DOCS_URL = "https://jason-turan0.github.io/yaffo/guide";
+const DOCS_URL = "https://yaffo.app/guide";
 const UPDATED = "2026-09-26T09:12:00+00:00";
 
 // Keys the client reads on load (static/assistant/assistant.js).

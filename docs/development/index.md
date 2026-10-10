@@ -26,6 +26,9 @@ Reference material for contributors and agents working in the Yaffo codebase.
 - [Sync Adapters](automation-sync-adapters.md) - alternative design sketch
   (proposed): a host sync engine for import/export with small Starlark Source
   and Target adapters per provider, and the host/adapter hook contract.
+- [OAuth App Registrations](oauth-app-registrations.md) - Phase 0 runbook for the
+  Microsoft Entra and Google Cloud desktop clients the sync presets sign in with,
+  and the probe that checks them.
 - [Distribution](distribution.md)
 - [Frontend Testing and TypeScript](frontend-testing-and-typescript.md)
 - [Icons](icons.md)

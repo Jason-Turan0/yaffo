@@ -2172,10 +2172,16 @@ phase's behavior settles), and its Playwright specs.
 ### Phase 0: lead-time items (start now, in parallel)
 
 - **OAuth app registrations** for the presets: Microsoft Entra app (OneDrive)
-  and a Google Cloud project with the Photos Library API. Google's OAuth
-  verification for the Photos scopes can take weeks; until it passes, users
-  see an unverified-app warning and the app is capped at a small number of
-  test users. Both are desktop/public clients (PKCE, loopback return address).
+  and a Google Cloud project with the Photos Library API. Both are
+  desktop/public clients (PKCE, loopback return address on the bare root
+  path).
+  - **Done 2026-10-09.** Both pass a live sign-in check, and the docs moved
+    to `yaffo.app` (home page, privacy policy, and Microsoft's
+    publisher-domain file).
+  - Google stays in Testing (listed test users, 7-day tokens) until the
+    verification submission, which moved to Phase 3's exit.
+  Steps, acceptance criteria, and the `scripts/oauth_probe.py` check are in
+  [OAuth App Registrations](oauth-app-registrations.md).
 
 ### Phase 1: sync engine + Folder target and source
 
@@ -2227,6 +2233,13 @@ phase's behavior settles), and its Playwright specs.
   automation builder chat with the read-only profile.
 - **Exit:** adding photos to *For Mom* shows up in Google Photos within about a
   minute; killing the worker mid-batch and restarting creates no duplicates.
+- **Release gate:** Google OAuth verification.
+  - Record the demo video (consent screen, then album creation, upload, and
+    add/remove).
+  - Publish the consent screen, and submit with the scope justifications in
+    [OAuth App Registrations](oauth-app-registrations.md#verification).
+  - The Google Photos target can't ship to more than test users until
+    verification passes.
 
 ### Phase 4: custom adapters and self-hosted servers
 
