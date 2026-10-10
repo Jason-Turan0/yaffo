@@ -1,0 +1,128 @@
+feature: sync_automations
+description: User can set up sync automations — "Send to… › Folder" keeps an album (or the photos matching a filter) copied to a folder outside the library, and "Import from… › Folder" copies new photos from a folder or SD card into the library — through setup sections, Enable/Disable, Test, Items, and run history
+
+tags:
+  - core
+
+preconditions:
+  - Application is running
+  - The task-queue host is running, so Run now completes
+
+context:
+  - tag: sync-detail-template
+    path: templates/utilities/sync_detail.html
+    description: The sync page — Folder and options, What to send / Where to put them, When, Enable/Disable and Test in the header, Items, Run history
+  - tag: sync-items-template
+    path: templates/utilities/sync_items.html
+    description: The Items ledger fragment, filterable by status, with Retry failed
+  - tag: sync-filter-template
+    path: templates/utilities/sync_filter.html
+    description: The "photos matching a filter" screen for a Send to… sync
+  - tag: utilities-base-template
+    path: templates/utilities/_base.html
+    description: The New automation dialog with the Custom / Import from… / Send to… type choice, and the Syncs sidebar group
+  - tag: sync-routes
+    path: routes/utilities/sync_views.py
+    description: Routes for options, selection, import folder, turn on/off, Items, retry, and Test
+  - tag: sync-js
+    path: static/utilities/sync.js
+    description: Folder pickers, Run now, and rendering the Test preview
+  - tag: sync-design
+    path: ../docs/development/automation-sync-adapters.md
+    description: The design (Phase 1 is the Folder target and source)
+
+data:
+  - The Folder target and Folder source are built-in services; no account or sign-in is needed
+  - A Folder target's folder must be outside the library's media folders; one inside is refused with an explanation
+  - Enabling a sync records consent to its current setup; changing the folder, options, album, or filter disables it until it is enabled again
+  - Test shows what a run would do and changes nothing
+  - Create the destination folder with the folder picker's New folder action, somewhere outside the library (e.g. under the home folder)
+
+scenarios:
+  - name: new_automation_offers_import_and_send
+    goal: The New automation dialog offers Custom, Import from…, and Send to…, and a service for the last two
+    priority: high
+    steps:
+      - Navigate to the automations page and click New automation
+      - Choose Send to…
+    verify:
+      - The Service list appears and offers Folder
+      - Choosing Custom hides the Service list again
+    cleanup:
+      - Close the dialog without creating anything
+
+  - name: send_album_to_folder_end_to_end
+    goal: An album is kept copied to a folder, as JPEG, after the user sets it up and turns it on
+    priority: high
+    steps:
+      - Create an album named 'For Mom' with two photos from the gallery
+      - Open New automation, choose Send to…, Folder, name it 'For Mom backup', and Create
+      - In Folder and options, choose a new empty folder outside the library with Choose…, set Convert to JPEG to Yes, and Save
+      - In What to send, choose the album 'For Mom' and click Send this album
+      - Click Test
+      - Click Enable
+      - Click Run now and wait for the run to appear as completed in Run history
+    verify:
+      - Test reports it would copy 2 photos, lists sample files with their planned action in a table, and says nothing was changed
+      - After enabling, the header shows Disable and the sidebar lists the sync under Syncs with an On chip
+      - The Review and turn on panel and an Off chip are absent
+      - Run history reads "Wrote 2 photos to the folder"
+      - Items lists both photos as "Written to folder"
+    cleanup:
+      - Delete the 'For Mom backup' automation and the 'For Mom' album
+
+  - name: changing_the_folder_needs_consent_again
+    goal: A change the consent covers turns the sync off until the user approves it again
+    priority: high
+    steps:
+      - Set up and turn on a Send to… Folder sync for an album (as above)
+      - In Folder and options, choose a different folder and Save
+    verify:
+      - The page shows Enable again without a badge beside the title
+      - The sidebar no longer shows the On chip for this sync
+    cleanup:
+      - Delete the automation and the album
+
+  - name: folder_inside_library_is_refused
+    goal: A folder inside the library can't be used as a Send to… destination
+    priority: medium
+    steps:
+      - Create a Send to… Folder sync
+      - In Folder and options, choose a folder inside one of the library's media folders and Save
+    verify:
+      - The option shows "That folder is inside your library. Choose one outside it."
+      - Enable and Test are disabled
+    cleanup:
+      - Delete the automation
+
+  - name: send_photos_matching_a_filter
+    goal: A Send to… sync can send the photos matching filters instead of an album
+    priority: medium
+    steps:
+      - Create a Send to… Folder sync
+      - In What to send, click "Send photos matching a filter instead"
+      - Set a year filter in the filter panel
+      - Click Send these photos
+    verify:
+      - The filter screen shows how many photos match and a preview of them
+      - Send these photos is disabled until at least one filter is set
+      - Back on the sync page, What to send says it's sending the photos matching a filter, with the count
+    cleanup:
+      - Delete the automation
+
+  - name: import_from_folder_end_to_end
+    goal: New photos are copied from a folder into the library's import folder
+    priority: high
+    steps:
+      - Open New automation, choose Import from…, Folder, name it 'Camera card', and Create
+      - In Folder and options, choose a folder outside the library that holds a few photos, and Save
+      - Check that Where to put them shows a media folder and the subfolder Imports/Camera card
+      - Click Test, then Enable, then Run now, and wait for the run in Run history
+    verify:
+      - Test lists the folder's files and marks them New (or Already in your library)
+      - The header shows Disable and the sidebar shows an On chip after enabling
+      - Run history reads "Imported N new photos"
+      - Items lists the files as Imported
+      - The photos appear in the gallery
+    cleanup:
+      - Delete the 'Camera card' automation (the imported photos stay in the library)

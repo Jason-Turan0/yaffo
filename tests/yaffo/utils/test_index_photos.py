@@ -500,7 +500,11 @@ class TestRealFileHemispheres:
 
 
 class TestDeleteOrphanedPhotos:
-    def test_delete_orphaned_photos_success(self, mock_db_session):
+    # Queuing removal from sync targets has its own tests (tests/yaffo/sync); here the
+    # mocked session only answers the delete's own queries.
+    @patch('yaffo.utils.index_photos.announce_deleted')
+    @patch('yaffo.utils.index_photos.queue_target_removals', return_value=[])
+    def test_delete_orphaned_photos_success(self, mock_queue, mock_announce, mock_db_session):
         media_item_ids = [1, 2, 3]
 
         # Mock the query chains
@@ -530,6 +534,8 @@ class TestDeleteOrphanedPhotos:
 
         assert deleted == 3
         mock_db_session.commit.assert_called_once()
+        mock_queue.assert_called_once_with(mock_db_session, media_item_ids)
+        mock_announce.assert_called_once_with(media_item_ids, [])
 
     def test_delete_orphaned_photos_empty_list(self, mock_db_session):
         deleted = delete_orphaned_media_items(mock_db_session, [])

@@ -7,6 +7,7 @@ unlinked. Face thumbnail paths carry a uuid, so the Face.full_file_path unique
 constraint can't catch a re-insert -- without the clear-then-insert guard a replay
 would silently double every face.
 """
+import hashlib
 import uuid
 from pathlib import Path
 
@@ -196,3 +197,14 @@ def test_a_file_that_couldnt_be_reached_stays_imported_for_the_next_sync(db_for_
     with Session(engine) as s:
         item = s.query(MediaItem).one()
         assert item.status == "IMPORTED" and item.index_error is None
+
+
+def test_indexing_records_the_files_sha1(db_for_index, tmp_path):
+    """Sync imports match files already in the library by content hash."""
+    engine, _ = db_for_index
+    files = _batch(engine, tmp_path, 1)
+
+    index_photo_task("job-1", files)
+
+    with Session(engine) as s:
+        assert s.query(MediaItem).one().sha1 == hashlib.sha1(Path(files[0]).read_bytes()).hexdigest()

@@ -49,6 +49,27 @@
     margin: 0 0 8px;
 }
 
+/* Run history panel (utilities/automations_runs.html). It's a `settings-section`
+   so themes frame it like their other panels; the base card is restated here
+   because settings/index.css, which owns that class, isn't loaded on these pages. */
+.automation-runs.settings-section {
+    margin: 0;
+    padding: 20px;
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.automation-configure-form .form-group {
+    max-width: 560px;
+}
+
+.automation-runs-title {
+    margin: 0 0 12px;
+    font-size: var(--font-size-lg);
+    color: var(--color-text);
+}
+
 .automation-triggers {
     list-style: none;
     margin: 0 0 12px;

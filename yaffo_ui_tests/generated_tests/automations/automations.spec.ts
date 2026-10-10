@@ -81,26 +81,24 @@ async function ensureCustomAutomation(page: Page): Promise<string> {
 
 async function readAssignFacesThreshold(page: Page): Promise<string> {
   await openAutomation(page, 'auto_assign_faces');
-  await page.locator('#configure-automation-button').click();
-  const modal = page.locator('#configureAutomationModal');
-  await expect(modal).toHaveClass(/active/);
-  const value = await modal.locator('#config-threshold').inputValue();
-  await modal.locator('.modal-actions [name="cancel"]').click();
-  await expect(modal).not.toHaveClass(/active/);
+  const panel = page.locator('#automation-configure-panel');
+  await panel.locator('summary').click();
+  await expect(panel).toHaveAttribute('open', '');
+  const value = await panel.locator('#config-threshold').inputValue();
+  await panel.locator('summary').click();
   return value;
 }
 
 async function saveAssignFacesThreshold(page: Page, threshold: string): Promise<void> {
   await openAutomation(page, 'auto_assign_faces');
-  await page.locator('#configure-automation-button').click();
-  const modal = page.locator('#configureAutomationModal');
-  await expect(modal).toHaveClass(/active/);
-  await modal.locator('#config-threshold').fill(threshold);
+  const panel = page.locator('#automation-configure-panel');
+  await panel.locator('summary').click();
+  await panel.locator('#config-threshold').fill(threshold);
   await Promise.all([
     page.waitForResponse(response =>
       response.url().includes('/utilities/automations/auto_assign_faces/config')
       && response.request().method() === 'POST'),
-    modal.locator('button[type="submit"]').click(),
+    panel.locator('button[type="submit"]').click(),
   ]);
   await expect(page).toHaveURL(/\/utilities\/automations\/auto_assign_faces$/);
 }
@@ -144,7 +142,7 @@ test.describe('Automations', () => {
     await expect(page.getByRole('link', { name: 'Edit', exact: true })).toBeVisible();
     await expect(page.locator('#edit-automation-button')).toBeVisible();
     await expect(page.locator('#delete-automation-button')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Edit triggers' })).toBeVisible();
+    await expect(page.locator('#automation-trigger-panel summary')).toBeVisible();
 
     // A system automation shows its description but no Edit/Delete controls.
     await openAutomation(page, 'file_sync');
@@ -153,7 +151,7 @@ test.describe('Automations', () => {
     await expect(page.getByRole('link', { name: 'Edit', exact: true })).toHaveCount(0);
     await expect(page.locator('#edit-automation-button')).toHaveCount(0);
     await expect(page.locator('#delete-automation-button')).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'Edit triggers' })).toBeVisible();
+    await expect(page.locator('#automation-trigger-panel summary')).toBeVisible();
 
     // Note: the "No automation selected" empty state only renders when the database
     // holds zero automations; the seeded system automations make it unreachable here.
@@ -173,7 +171,8 @@ test.describe('Automations', () => {
 
   test('automations_edit_schedule_trigger', async ({ page }) => {
     const slug = await ensureCustomAutomation(page);
-    await page.goto(`/utilities/automations/${slug}/triggers/edit`);
+    await openAutomation(page, slug);
+    await page.locator('#automation-trigger-panel summary').click();
     await expect(page.locator('#automation-triggers')).toBeVisible();
 
     const area = triggerAddArea(page);
@@ -211,7 +210,8 @@ test.describe('Automations', () => {
 
   test('automations_add_event_trigger', async ({ page }) => {
     const slug = await ensureCustomAutomation(page);
-    await page.goto(`/utilities/automations/${slug}/triggers/edit`);
+    await openAutomation(page, slug);
+    await page.locator('#automation-trigger-panel summary').click();
     await expect(page.locator('#automation-triggers')).toBeVisible();
 
     // Only one trigger panel is open at a time: an open panel replaces the add
@@ -252,7 +252,8 @@ test.describe('Automations', () => {
     await expect(picker).not.toHaveClass(/active/);
     await expect(page.locator('#automation-runs .run-history-row')).toHaveCount(0);
 
-    await page.goto('/utilities/automations/file-favorite-kid-photos/triggers/edit');
+    await openAutomation(page, 'file-favorite-kid-photos');
+    await page.locator('#automation-trigger-panel summary').click();
     await expect(page.locator('#automation-triggers .automation-trigger-row')).toHaveCount(0);
     await expect(page.locator('#automation-triggers .no-data')).toBeVisible();
   });
@@ -334,18 +335,18 @@ test.describe('Automations', () => {
     const updated = original === '50' ? '55' : '50';
 
     try {
-      // The configure modal opens with the automation's declared config fields.
+      // The configuration panel opens with the automation's declared fields.
       await openAutomation(page, 'auto_assign_faces');
-      await page.locator('#configure-automation-button').click();
-      const modal = page.locator('#configureAutomationModal');
-      await expect(modal).toHaveClass(/active/);
-      await expect(modal).toContainText('Match threshold');
-      await expect(modal.locator('#config-threshold')).toBeVisible();
-      await expect(modal.locator('#config-assign_multiple_matches')).toBeAttached();
-      await modal.locator('.modal-actions [name="cancel"]').click();
-      await expect(modal).not.toHaveClass(/active/);
+      const panel = page.locator('#automation-configure-panel');
+      await panel.locator('summary').click();
+      await expect(panel).toHaveAttribute('open', '');
+      await expect(panel).toContainText('Match threshold');
+      await expect(panel.locator('#config-threshold')).toBeVisible();
+      await expect(panel.locator('#config-assign_multiple_matches')).toBeAttached();
+      await panel.locator('summary').click();
+      await expect(panel).not.toHaveAttribute('open', '');
 
-      // Saving persists the new value; reopening the modal reflects it.
+      // Saving persists the new value; reopening the panel reflects it.
       await saveAssignFacesThreshold(page, updated);
       expect(await readAssignFacesThreshold(page)).toBe(updated);
     } finally {
@@ -419,7 +420,7 @@ test.describe('Automations', () => {
     page.on('pageerror', error => errors.push(error.message));
     for (const viewport of Object.values(VIEWPORTS)) {
       await page.setViewportSize(viewport);
-      for (const suffix of ['', '/edit', '/triggers/edit']) {
+      for (const suffix of ['', '/edit']) {
         const response = await page.goto(`/utilities/automations/${slug}${suffix}`);
         expect(response?.ok()).toBe(true);
         await expectNoPageOverflow(page);
@@ -454,7 +455,8 @@ test.describe('Automations', () => {
   test('automation_trigger_input_survives_rotation_and_touch_save', async ({ browser, page }) => {
     const slug = await ensureCustomAutomation(page);
     await withTouchContext(browser, VIEWPORTS.minimum, async phone => {
-      await phone.goto(`/utilities/automations/${slug}/triggers/edit`);
+      await phone.goto(`/utilities/automations/${slug}`);
+      await phone.locator('#automation-trigger-panel summary').tap();
       await phone.locator('.js-add-schedule').tap();
       await phone.locator('.cron-mode').selectOption('custom');
       await phone.locator('.cron-cadence').selectOption('advanced');

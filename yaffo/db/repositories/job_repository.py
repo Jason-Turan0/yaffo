@@ -74,6 +74,14 @@ def open_run_job(session: Session, job_id: str, **fields: Any) -> Job | None:
     return job
 
 
+def has_running_run(session: Session, automation_id: int) -> bool:
+    """Whether a run of the automation is in progress (a RUNNING run Job). A worker
+    that crashes has its Job failed by the queue's failure hook, so this can't stick."""
+    return session.query(Job.id).filter(
+        Job.automation_id == automation_id, Job.status == JOB_STATUS_RUNNING, Job.completed_at.is_(None),
+    ).first() is not None
+
+
 def fail_run_job(session: Session, job_id: str, error: str, problem: str) -> bool:
     """Finish the Job keyed by a task's queue id when that task ended in error
     without finishing it -- its worker crashed, or it raised outside its own

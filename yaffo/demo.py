@@ -33,6 +33,8 @@ DEMO_PUBLIC_READ_ENDPOINTS = frozenset(
         "automations_show",
         "automations_status",
         "automations_validate_cron",
+        "sync_filter",
+        "sync_items",
         "face_thumbnail",
         "faces_index",
         "favicon",

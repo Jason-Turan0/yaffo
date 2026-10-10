@@ -1,49 +1,88 @@
-.collapsible-panel {
-    border: var(--border-width) solid var(--color-border);
-    border-radius: var(--radius-md);
-    margin-bottom: 15px;
+.collapsible-panel.settings-section {
+    margin: 0;
+    padding: 20px;
     background: var(--color-surface);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
 }
 
-.panel-header {
-    width: 100%;
+.collapsible-panel .sync-step-head h2 {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    color: var(--color-text);
+}
+
+.sync-step-head {
     display: flex;
-    justify-content: space-between;
+    flex-wrap: wrap;
     align-items: center;
-    padding: 12px 15px;
-    background: var(--color-bg);
-    border: none;
-    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    justify-content: space-between;
+    gap: 6px 16px;
+}
+
+summary.sync-step-head {
     cursor: pointer;
-    transition: background-color 0.2s;
-    font-family: inherit;
+    list-style: none;
 }
 
-.panel-header:hover {
-    background: color-mix(in srgb, var(--color-text) 5%, transparent);
+summary.sync-step-head::-webkit-details-marker {
+    display: none;
 }
 
-.panel-title {
-    font-size: var(--font-size-base);
-    font-weight: 600;
-    color: var(--color-text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+.sync-step-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
 }
 
-.panel-icon {
-    transition: transform 0.2s;
+summary.sync-step-head .sync-step-title::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
     color: var(--color-text-muted);
+    flex-shrink: 0;
+    transform: rotate(-45deg);
+    transition: transform 0.15s;
 }
 
-.panel-header[aria-expanded="true"] .panel-icon {
-    transform: rotate(180deg);
+details[open] > summary.sync-step-head .sync-step-title::before {
+    transform: rotate(45deg);
 }
 
-.panel-content {
-    border-top: var(--border-width) solid var(--color-border);
+.sync-step-head:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 4px;
 }
 
-.panel-body {
-    padding: 15px;
+.sync-step-value {
+    flex: 1 1 260px;
+    min-width: 0;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+details[open] > summary .sync-step-value {
+    display: none;
+}
+
+.sync-step-body {
+    margin-top: 16px;
+}
+
+.sync-step-head-static {
+    margin-bottom: 12px;
+}
+
+@media (max-width: 640px) {
+    .sync-step-value {
+        flex-basis: 100%;
+        text-align: left;
+    }
 }

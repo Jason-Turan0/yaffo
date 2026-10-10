@@ -1,19 +1,9 @@
 {% extends "utilities/_base.html" %}
 {% from "components/distance_input.html" import distance_input %}
 {% from "components/page_header.html" import page_header %}
+{% from "components/collapsible_panel.html" import collapsible_panel %}
 {% from "components/modal.html" import render_modal with context %}
-
-{% macro render_edit_automation_form() %}
-    <div class="form-group">
-        <label for="edit-automation-name">{{ _("Name") }}</label>
-        <input type="text" id="edit-automation-name" name="name" required value="{{ selected.name }}">
-    </div>
-    <div class="form-group">
-        <label for="edit-automation-description">{{ _("Description") }}</label>
-        <textarea id="edit-automation-description" name="description" rows="3"
-                  placeholder="{{ _('What does this automation do?') }}">{{ selected.description or '' }}</textarea>
-    </div>
-{% endmacro %}
+{% from "macros/automation_forms.html" import render_edit_automation_form with context %}
 
 {% macro render_configure_form() %}
     {% for field in config_fields %}
@@ -70,6 +60,7 @@
 
 {% block utility_styles %}
     <link rel="stylesheet" href="{{ url_for('static', filename='components/cron_builder.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='components/collapsible_panel.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='utilities/automations.css') }}">
 {% endblock %}
 
@@ -91,12 +82,6 @@
         <a href="{{ url_for('automations_edit', slug=selected.slug) }}"
            class="btn-secondary" data-icon="edit">{{ _("Edit") }}</a>
     {% endif %}
-    <a href="{{ url_for('automations_edit_triggers', slug=selected.slug) }}"
-       class="btn-secondary" data-icon="edit">{{ _("Edit triggers") }}</a>
-    {% if config_fields %}
-        <button type="button" id="configure-automation-button" class="btn-secondary">{{ _("Configure") }}
-        </button>
-    {% endif %}
     {% if not selected.is_system %}
         <button type="button" id="edit-automation-button" class="btn-secondary">{{ _("Edit details") }}
         </button>
@@ -115,6 +100,17 @@
 {% endcall %}
 
 <div class="automation-detail">
+    {% include "utilities/automations_trigger_panel.html" %}
+    {% if config_fields %}
+    {% call collapsible_panel('automation-configure-panel', _('Configuration')) %}
+        <form class="automation-configure-form" method="POST"
+              action="{{ url_for('automations_update_config', slug=selected.slug) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            {{ render_configure_form() }}
+            <button type="submit" class="btn-primary">{{ _("Save") }}</button>
+        </form>
+    {% endcall %}
+    {% endif %}
     {% include "utilities/automations_runs.html" %}
 </div>
 
@@ -127,16 +123,12 @@
                         url_for('automations_update_details', slug=selected.slug),
                         render_edit_automation_form, _('Save')) }}
 {% endif %}
-{% if config_fields %}
-    {{ render_modal('configureAutomationModal', _('Configure automation'),
-                        url_for('automations_update_config', slug=selected.slug),
-                        render_configure_form, _('Save')) }}
-{% endif %}
 {% endif %}
 {% endblock %}
 
 {% block scripts %}
     {% if selected %}
+        <script src="{{ url_for('static', filename='components/cron_builder.js') }}"></script>
         <script src="{{ url_for('static', filename='utilities/automations.js') }}"></script>
         <script>
             document.addEventListener('yaffo:app-init-complete', (event) => {
@@ -148,7 +140,8 @@
                     {{ default_media_dir | tojson }},
                     app.i18n
                 );
-                {% if config_fields %}app.automations.initAutomationConfigure();{% endif %}
+                const cronBuilder = app.COMPONENTS.initCronBuilder({i18n: app.i18n, document});
+                app.automations.initTriggerEditor(app.i18n, cronBuilder);
                 {% if not selected.is_system %}
                 app.automations.initAutomationDetails();
                 {% endif %}

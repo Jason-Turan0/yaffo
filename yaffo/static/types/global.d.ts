@@ -535,6 +535,35 @@ type IndexPhotosNamespace = {
 type UtilitiesNamespace = {
     initBase?: () => void;
     initRemoveDuplicates?: () => void;
+    initNewAutomationKinds?: (modalElement: HTMLElement) => { update: () => void };
+};
+
+/** One file a source sync's Test would bring in (yaffo/sync/preview.py RecordPreview). */
+type SyncTestRecord = {
+    filename: string;
+    size: number | null;
+    state: 'new' | 'imported' | 'in_library' | 'changed';
+};
+
+/** The sync Test payload (yaffo/sync/preview.py SyncTestResult + problem_text). */
+type SyncTestResult = {
+    role: string;
+    problem: string | null;
+    problem_text: string | null;
+    would_add: number;
+    would_remove: number;
+    unchanged: number;
+    convert: number;
+    unsupported: number;
+    add_samples: string[];
+    remove_samples: string[];
+    records: SyncTestRecord[];
+    more: boolean;
+};
+
+type SyncNamespace = {
+    initSyncPage: (i18n: I18nService, config: AppConfig) => void;
+    renderTestResult: (container: HTMLElement, result: SyncTestResult, i18n: Pick<I18nService, 't'>) => void;
 };
 
 type SettingsNamespace = {
@@ -828,6 +857,7 @@ type PhotoOrganizerApp = {
     automations?: AutomationsNamespace;
     themes?: ThemesNamespace;
     utilities?: UtilitiesNamespace;
+    sync?: SyncNamespace;
     assistant?: AssistantNamespace;
     confirmDialog: ConfirmDialogApi;
     pickFolder: PickFolderApi;

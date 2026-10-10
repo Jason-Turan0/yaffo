@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from yaffo.db.models import (
     Job, MediaItem,
-    EVENT_MEDIA_IMPORTED, EVENT_MEDIA_INDEXED,
+    EVENT_ALBUM_CHANGED, EVENT_MEDIA_IMPORTED, EVENT_MEDIA_INDEXED,
 )
 from yaffo.logging_config import get_logger
 
@@ -34,6 +34,11 @@ class EventContext:
     groups: list[list[int]] = field(default_factory=list)
     origin_automation_ids: list[int] = field(default_factory=list)
     scope_paths: list[str] = field(default_factory=list)
+    # album_changed only: which album, and how it changed (added | removed | renamed | deleted).
+    album_id: int | None = None
+    change: str | None = None
+    # media_deleted only: the sync automations that had the photos' copies queued for removal.
+    sync_automation_ids: list[int] = field(default_factory=list)
 
 
 # The causal chain in force for the current automation run, set by event_chain_scope.
@@ -86,6 +91,21 @@ def emit_event(event_type: str, payload: dict) -> None:
     from yaffo.background_tasks.tasks.dispatch_event import dispatch_event_task
     payload = {**payload, "origin_automation_ids": list(_event_chain.get())}
     dispatch_event_task(event_type, payload)
+
+
+# An album_changed payload names at most this many photos (the data_query cap);
+# beyond it, or when a bulk operation didn't list them, it says `truncated`.
+ALBUM_EVENT_ID_CAP = 5000
+
+
+def emit_album_changed(album_id: int, change: str, media_item_ids: list[int] | None = None) -> None:
+    """album_changed for one operation on an album (not one per photo). Call after
+    the change committed. `media_item_ids` None means "not listed" (a bulk add or
+    remove by filter): subscribers that need exactness re-read the album."""
+    ids = list(media_item_ids or [])
+    truncated = media_item_ids is None or len(ids) > ALBUM_EVENT_ID_CAP
+    emit_event(EVENT_ALBUM_CHANGED, {"album_id": album_id, "change": change,
+                                     "media_item_ids": ids[:ALBUM_EVENT_ID_CAP], "truncated": truncated})
 
 
 def _resolve_media_item_ids(session: Session, job: Job) -> list[int]:

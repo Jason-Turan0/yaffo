@@ -19,6 +19,7 @@ from yaffo.background_tasks.tasks.classify_labels_automation import classify_lab
 from yaffo.background_tasks.tasks.dispatcher import dispatch_scheduled_tasks
 from yaffo.background_tasks.tasks.dispatch_event import dispatch_event_task
 from yaffo.background_tasks.tasks.run_automation import run_automation_code_task
+from yaffo.background_tasks.tasks.sync_run import sync_run_task
 from yaffo.background_tasks.tasks.generate_automation import generate_automation_task
 from yaffo.background_tasks.tasks.assign_faces_to_person import assign_faces_to_person
 from yaffo.background_tasks.tasks.assistant_run import assistant_run_task
@@ -54,6 +55,7 @@ __all__ = [
     'dispatch_scheduled_tasks',
     'dispatch_event_task',
     'run_automation_code_task',
+    'sync_run_task',
     'generate_automation_task',
     'assign_faces_to_person',
     'assistant_run_task',

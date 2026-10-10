@@ -181,7 +181,33 @@ the Starlark `ctx` (so a script reads `ctx["groups"]`) via `dispatch_event_task`
 `invoke_automation`'s serialized payload → `executor.context_globals`.
 
 Event catalog (fixed, in `models.py`): `media_imported`, `media_indexed`,
-`duplicates_found`, `media_modified`, `media_labeled` (`EVENTS`).
+`duplicates_found`, `media_modified`, `media_labeled`, `album_changed`,
+`media_deleted` (`EVENTS`).
+
+**`album_changed`** is emitted after an album's membership or name changes
+(routes in `routes/albums.py`, and the album host actions):
+- `change`: `added`, `removed`, `renamed`, or `deleted`;
+- one event per operation, never one per photo;
+- bulk operations set `truncated` instead of listing ids.
+
+`EventContext.album_id` / `.change` reach scripts as `ctx["album_id"]` /
+`ctx["change"]`.
+
+**`media_deleted`** is emitted after photos are removed from the index. It
+names the sync automations that had copies queued for removal
+(`sync_automation_ids`).
+
+**Trigger filters and the settle window** (`background_tasks/event_filters.py`):
+- **Filters:** an event trigger's `config` can narrow what wakes it.
+  - `album_changed`: `album_id`, and `changes` (a list).
+  - `media_deleted`: `sync_automation_id`.
+- **Settle window:** `settle_seconds` defers the run instead of starting it.
+  - Dispatch sets the trigger's `next_run_at`, with one conditional UPDATE and
+    only if it's unset.
+  - The schedule dispatcher's tick starts due event triggers, unless that
+    automation has a RUNNING run Job.
+  - A burst of album edits is therefore one run. Sync automations use this; see
+    [Sync Adapters](automation-sync-adapters.md).
 
 **`media_labeled` is emitted from `classify_labels_automation_task`** after a batch
 is labelled — for the photos that received at least one label. Like
@@ -208,6 +234,10 @@ are UI edits, not bulk jobs, so per-edit granularity is fine (no fan-out storm).
 ## Tier routing (`background_tasks/automation_dispatch.py`)
 
 Both dispatchers funnel through `invoke_automation(automation, context) -> bool`:
+
+- **sync**: `automation.sync` is set → enqueue `sync_run_task` under a lock named
+  for the automation, so one sync never runs twice at once
+  (`tasks/sync_run.py`, engine in `yaffo/sync/`).
 
 - **system** — `automation.handler` is in `HANDLERS` → call the registered handler
   (which enqueues the concrete task, e.g. `file_sync_task`).
@@ -896,6 +926,8 @@ accepts optional per-item positions for restoring removed membership.
 | Tag inspector (debug) | `scripts/print_photo_tags.py` (`inv tags <path>`) |
 | System-automation config schema | `yaffo/background_tasks/automation_config.py` |
 | Seed examples | `yaffo/scripts/seed_automations.py` |
+| Sync automations (engine, built-in Folder source/target, setup, preview) | `yaffo/sync/`, `background_tasks/tasks/sync_run.py`, `routes/utilities/sync_views.py` (see [Sync Adapters](automation-sync-adapters.md)) |
+| Event trigger filters + settle window | `yaffo/background_tasks/event_filters.py` |
 | Builder persistence (publish/chat) | `yaffo/db/repositories/automation_repository.py` |
 | Builder tools (write-code + add-trigger) | `yaffo/site_agents/automation/tool_providers/{automation_tool,automation_trigger_tool}.py` |
 | Builder prompts | `yaffo/site_agents/automation/prompt_generator/automation_{system,user}_prompt.py` |

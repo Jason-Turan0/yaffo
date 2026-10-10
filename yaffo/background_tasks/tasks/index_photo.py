@@ -5,6 +5,7 @@ from yaffo.db.models import Job, MediaItem, Face, JOB_STATUS_CANCELLED, FACE_STA
     JOB_STATUS_RUNNING, JOB_STATUS_PENDING, MEDIA_STATUS_FAILED, MEDIA_STATUS_INDEXED
 from yaffo.utils.index_photos import index_photo, clear_faces_for_media_items, unlink_face_thumbnails
 from yaffo.utils.index_errors import IndexFailure, file_signature
+from yaffo.sync.files import file_sha1
 from yaffo.utils.index_video import index_video
 from yaffo.domain.compare_utils import serialize_embedding
 from yaffo.logging_config import get_logger
@@ -52,6 +53,10 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
             error_count += 1
             continue
 
+        try:
+            index_results["sha1"] = file_sha1(path)
+        except OSError:
+            index_results["sha1"] = None
         processed_results.append({
             'full_file_path': file_path,
             'index_results': index_results,
@@ -99,6 +104,7 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
             media_item.month = index_results["month"]
             media_item.device = index_results["device"]
             media_item.orientation = index_results.get("orientation")
+            media_item.sha1 = index_results.get("sha1")
             # Both media types carry dimensions now (photos report theirs upright, so
             # the shape filter sees what the browser draws); the rest is video-only.
             media_item.width = index_results.get("width")

@@ -12,8 +12,8 @@ context:
     path: templates/utilities/automations.html
     description: Automations page — sidebar list, details, run/configure, and delete controls
   - tag: automations-triggers-template
-    path: templates/utilities/automations_triggers_edit.html
-    description: Trigger editor — schedule (cron builder) and event triggers
+    path: templates/utilities/automations_trigger_panel.html
+    description: Collapsible detail panel with the schedule (cron builder) and event trigger editor
   - tag: automations-edit-template
     path: templates/utilities/automations_edit.html
     description: Custom automation editor with the AI chat assistant and dry-run test
@@ -36,6 +36,7 @@ context:
 data:
   - System automations ship built-in and cannot be edited or deleted; custom ones can
   - The automation detail screen runs automations scoped to a picked file/folder
+  - Trigger and configuration editors are collapsible panels above Run history on the detail page
   - Sandbox Environment does not have API Keys setup so use client side interception to simulate agent interactions
   - The Bennett sandbox seeds one disabled custom automation, file-favorite-kid-photos, using the reviewed _FILE_KIDS_CODE example with no trigger and a two-round assistant conversation
 
@@ -82,7 +83,7 @@ scenarios:
     goal: The user can add or edit a schedule (cron) trigger with the cron builder
     priority: high
     steps:
-      - Select an automation and open "Edit triggers"
+      - Select an automation and expand its When panel
       - Click "Add a schedule"
       - Build a schedule with the cron builder (or an advanced cron expression)
       - Save the schedule
@@ -97,7 +98,7 @@ scenarios:
     goal: The user can add an event trigger to an automation
     priority: medium
     steps:
-      - Select an automation and open "Edit triggers"
+      - Select an automation and expand its When panel
       - Click "Add an event" and choose an event
       - Save the event trigger
     verify:
@@ -112,7 +113,7 @@ scenarios:
     steps:
       - Select the seeded file-favorite-kid-photos automation
       - Confirm it starts disabled and open then cancel the Run scope picker
-      - Open "Edit triggers"
+      - Expand the When panel
     verify:
       - The automation has no configured triggers
       - No run is added to history
@@ -134,10 +135,10 @@ scenarios:
     priority: medium
     steps:
       - Select a system automation that exposes configuration (e.g. a match threshold)
-      - Click "Configure" and change a config value
+      - Expand the Configuration panel and change a config value
       - Save the configuration
     verify:
-      - The configure modal opens with the automation's config fields
+      - The Configuration panel opens above Run history with the automation's config fields
       - After saving, the page reflects the new configuration value
 
   - name: automations_create_custom_automation
@@ -177,7 +178,7 @@ scenarios:
     priority: medium
     steps:
       - Open a custom automation's edit screen at 390x844
-      - Open its trigger editor
+      - Expand its trigger editor panel
     verify:
       - Neither screen scrolls the page horizontally
       - The conversation and code sections take the full width once stacked
@@ -188,7 +189,7 @@ scenarios:
     goal: Routes return successfully with no uncaught errors or page overflow; Automations consumes the panel contract
     priority: high
     steps:
-      - Open detail, editor, and triggers at all six contract viewports
+      - Open detail and editor at all six contract viewports, expanding the trigger panel on detail
     verify:
       - Routes return successfully with no uncaught errors or page overflow; Automations consumes the panel contract
 

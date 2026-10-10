@@ -6,6 +6,8 @@ JSON blob): the chat lives in `conversations` rows keyed by `automation_id`, the
 draft the agent writes is `working_code`, and publishing copies it into
 `published_code` (the only code the dispatchers run). Callers pass the session
 (a request's db.session or a worker's SessionFactory session)."""
+import re
+
 from sqlalchemy.orm import Session
 
 from yaffo.db.models import (
@@ -19,8 +21,28 @@ from yaffo.db.models import (
 )
 
 
+_MAX_BASE_SLUG_LENGTH = 30
+
+
 def get_by_slug(session: Session, slug: str) -> Automation | None:
     return session.query(Automation).filter_by(slug=slug).first()
+
+
+def slugify(name: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    if not re.match(r"^[a-z]", slug):
+        slug = f"automation-{slug}" if slug else "automation"
+    return slug[:_MAX_BASE_SLUG_LENGTH].rstrip("-")
+
+
+def unique_slug(session: Session, name: str) -> str:
+    """A slug for a new automation named `name`, numbered if taken."""
+    base = slugify(name)
+    slug, counter = base, 2
+    while get_by_slug(session, slug) is not None:
+        slug = f"{base}-{counter}"
+        counter += 1
+    return slug
 
 
 def get_by_handler(session: Session, handler: str) -> Automation | None:

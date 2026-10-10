@@ -2,7 +2,8 @@ import yaffo.db.repositories.media_dir_repository
 from yaffo.db import db
 from pathlib import Path
 
-from yaffo.db.models import Automation
+from yaffo.db.models import Automation, SyncAdapter, SYNC_ROLE_SOURCE
+from yaffo.sync.adapters import BUILTINS
 from yaffo.utils import settings
 from yaffo.utils.index_photos import is_system_file  # re-exported for route modules
 
@@ -26,5 +27,18 @@ def automations_sidebar_context() -> dict:
     automations = db.session.query(Automation).order_by(Automation.name).all()
     return {
         "system_automations": [a for a in automations if a.is_system],
-        "custom_automations": [a for a in automations if not a.is_system],
+        "custom_automations": [a for a in automations if not a.is_system and not a.is_sync],
+        "sync_automations": [a for a in automations if a.is_sync],
+        "sync_services": _sync_services(),
     }
+
+
+def _sync_services() -> dict[str, list[dict]]:
+    """The services the New automation dialog offers for Import from… / Send to…."""
+    rows = db.session.query(SyncAdapter).order_by(SyncAdapter.is_preset.desc(), SyncAdapter.name).all()
+    services: dict[str, list[dict]] = {"import": [], "send": []}
+    for row in rows:
+        if row.handler not in BUILTINS:
+            continue
+        services["import" if row.role == SYNC_ROLE_SOURCE else "send"].append({"id": row.id, "name": row.name})
+    return services

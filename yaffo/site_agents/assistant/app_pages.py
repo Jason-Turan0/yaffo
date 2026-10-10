@@ -69,6 +69,8 @@ NOT_PAGES: frozenset[str] = frozenset({
     "sharing_device_files",
     "themes_status", "theme_css", "theme_preview_css", "theme_tokens_css",
     "automations_status", "automations_runs", "automations_validate_cron",
+    # A sync's Items fragment, and its filter screen (needs a sync to send to).
+    "sync_items", "sync_filter",
     "utilities_index_photos_scan",
 })
 

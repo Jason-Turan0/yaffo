@@ -1,0 +1,6 @@
+{# Shared by ordinary and sync automation detail pages. The trigger fragment can
+   refresh itself after an edit without replacing the open details element. #}
+{% from "components/collapsible_panel.html" import collapsible_panel %}
+{% call collapsible_panel('automation-trigger-panel', _('When')) %}
+    {% include "utilities/automations_triggers.html" %}
+{% endcall %}

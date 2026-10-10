@@ -21,6 +21,8 @@ def context_globals(context) -> dict:
         "media_item_ids": list(context.media_item_ids) if context else [],
         "groups": [list(g) for g in context.groups] if context else [],
         "scope_paths": list(context.scope_paths) if context else [],
+        "album_id": context.album_id if context else None,
+        "change": context.change if context else None,
     }
 
 

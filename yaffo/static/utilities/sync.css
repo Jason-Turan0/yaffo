@@ -1,0 +1,207 @@
+/* The sync automation page (templates/utilities/sync_detail.html) and its filter
+   screen. The steps are `settings-section` cards, so every theme skins them the way it
+   skins Settings; the card base is restated here because settings/index.css, which
+   owns it, isn't loaded on this page. */
+
+.sync-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.sync-detail .settings-section {
+    margin: 0;
+    padding: 20px;
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.sync-detail .settings-section h2 {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    color: var(--color-text);
+}
+
+.sync-detail .section-description {
+    margin: 0 0 16px;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-base);
+}
+
+/* ---- header ---- */
+
+.sync-header-status {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.sync-header-summary {
+    color: var(--color-text-secondary);
+    overflow-wrap: anywhere;
+}
+
+/* ---- forms ---- */
+
+.sync-form {
+    max-width: 720px;
+}
+
+.sync-form .form-group {
+    margin-bottom: 16px;
+}
+
+.sync-option-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 5px;
+}
+
+.sync-form .sync-option-label label {
+    margin-bottom: 0;
+}
+
+.sync-detail .help-tip[data-icon]::before {
+    display: block;
+}
+
+@media (hover: none), (pointer: coarse) {
+    .sync-detail .help-tip {
+        min-width: 44px;
+    }
+
+    .sync-detail .help-tip[data-tooltip]:focus::after,
+    .sync-detail .help-tip[data-tooltip]:active::after {
+        opacity: 1;
+    }
+}
+
+.sync-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.sync-form-actions form {
+    margin: 0;
+}
+
+.sync-folder-input {
+    display: flex;
+    gap: 8px;
+}
+
+.sync-folder-input input {
+    flex: 1;
+    min-width: 0;
+}
+
+.sync-folder-input .btn-secondary {
+    flex-shrink: 0;
+}
+
+/* ---- When ---- */
+
+.sync-step .automation-triggers {
+    margin: 0;
+}
+
+.sync-inline-action {
+    display: contents;
+}
+
+.sync-header-since {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+}
+
+/* ---- Test result ---- */
+
+.sync-test-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0;
+}
+
+.sync-test-stat {
+    padding: 6px 10px;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-pill);
+    background: var(--color-bg);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+}
+
+.sync-test-table th:last-child,
+.sync-test-table td:last-child {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.sync-test-sample-note {
+    margin: 8px 0;
+}
+
+/* ---- Items ---- */
+
+.sync-items-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.sync-items-filters .chip {
+    cursor: pointer;
+    border: none;
+    font: inherit;
+    font-size: var(--font-size-xs);
+}
+
+.sync-retry {
+    margin: 0 0 0 auto;
+}
+
+.sync-items-where {
+    overflow-wrap: anywhere;
+}
+
+.sync-items-pages {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+/* ---- filter screen ---- */
+
+.sync-filter-save {
+    margin: 0;
+}
+
+.sync-filter-hint {
+    margin: 0 0 16px;
+}
+
+@media (max-width: 640px) {
+    .sync-detail .settings-section {
+        padding: 16px;
+    }
+
+    .sync-folder-input {
+        flex-direction: column;
+    }
+
+    .sync-term {
+        grid-template-columns: 1fr;
+    }
+
+    .sync-retry {
+        margin-left: 0;
+    }
+}

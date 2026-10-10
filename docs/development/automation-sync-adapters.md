@@ -1,6 +1,7 @@
 # Sync Adapters — Sources and Targets over a Host Sync Engine (Design Sketch)
 
-**Status: proposed, not built. Alternative to [Automation Web Calls](automation-web-calls.md).**
+**Status: Phase 1 built (the engine, the Folder target and source, the triggers, and
+the setup UI); Phases 2–5 proposed. Alternative to [Automation Web Calls](automation-web-calls.md).**
 That doc has a custom automation do *everything* for an export (select, diff,
 upload, batch, record state) in one Starlark script. This sketch keeps its
 primitives (connections, stored as application settings and shared by syncs;
@@ -216,7 +217,7 @@ What leaves Yaffo, and where it goes. One of:
 | kind | definition | when |
 |---|---|---|
 | `album` | a Yaffo album id; membership mirrors to the target | simplest; the user curates by hand |
-| `query` | a `data_query` dict (validated, stored as data) | "faces include Mom, last 30 days, no screenshots" |
+| `query` | the filter panel's selections, stored in the sharing wire format (`media_filter_params.wire_filters`: only the filters that are set, distances in km), re-evaluated each run | "Mom, 2024, favorites" |
 | `script` | a selector Starlark script (read-only automation profile) | routing to several albums, computed captions |
 
 All three produce the same thing: the **desired set**, a list of
@@ -978,11 +979,14 @@ photo, and a second copy would just be a duplicate to clean up.
   file at the media item's **current** path (the user may have moved or
   renamed it since import). The previous version goes to the **OS trash**,
   so a bad edit at the source is recoverable.
-- The media item keeps its id, so faces assignments, tags, labels, favorites,
-  and album membership stay. The item is re-indexed (sha1, dimensions,
-  embedded dates, thumbnails, face detection) and a `media_modified` event
-  fires, so *Export photo tag* writes Yaffo's people and location tags back
-  into the new file.
+- The media item keeps its id, so tags, labels, favorites, and album
+  membership stay.
+- The item is re-indexed (sha1, dimensions, embedded dates, thumbnails, face
+  detection), and a `media_modified` event fires, so *Export photo tag* writes
+  Yaffo's people and location tags back into the new file.
+- Re-indexing re-detects the faces (the edit may have cropped them), so face
+  assignments on that photo are made again: by *Auto-assign faces* if it's
+  on, otherwise by hand.
 - Same content with only a new `updated_at` (a metadata touch at the source)
   just updates the ledger; nothing is downloaded.
 - The Folder source follows the same rule when a file's size or modification
@@ -1725,7 +1729,7 @@ library. Whatever watches that folder takes it from there:
 | Folder | a folder picker; must exist and be writable | none |
 | Layout | flat · one subfolder per routing target (album) · by year/month of capture | one subfolder per target |
 | Convert to JPEG | off · on (sets `accepts` to JPEG/PNG) · on, sized for a photo frame (also caps pixels and bytes) | off |
-| When a photo leaves the selection | delete Yaffo's copy · keep it | delete Yaffo's copy |
+| When a photo leaves the selection | remove from destination · keep at destination | remove from destination |
 
 **Capabilities:** `kind: collection`, `targets: many`, `remove` and `reconcile`
 supported, `update: false` (captions aren't written; the copy keeps the
@@ -1943,7 +1947,8 @@ class WebGrant:                       # sync_adapters.grants[]
 class Selection:
     kind: str                         # album | query | script
     album_id: int | None = None
-    query: dict | None = None         # a data_query dict, validated by data_query's own schema
+    query: dict | None = None         # filter selections in the sharing wire format,
+                                      # validated by media_filter_params.validate_wire_filters
 
 @dataclass(frozen=True)
 class SyncConfig:                     # automations.sync["config"]
@@ -1969,6 +1974,9 @@ class SyncCursor:
 @dataclass(frozen=True)
 class SyncRuntime:                    # automations.sync["runtime"]
     status: str                       # ready | needs_consent | needs_sign_in | paused | invalid_config
+    pause_code: str | None            # why it's paused: selection_missing | destination_missing |
+                                      # option_missing
+    last_run_at: str | None
     state: dict                       # the adapter's state_patch store; 64 KiB cap
     cursors: dict[str, SyncCursor]    # "list" (sources) | "reconcile" (targets with list_remote)
 ```
@@ -2201,6 +2209,55 @@ phase's behavior settles), and its Playwright specs.
 - **Exit:** "keep my *For Mom* album copied to a folder, as JPEG" and "copy
   new photos from this SD card into Imports/Camera" work end to end and
   survive a crash mid-run.
+
+**Status: built (2026-10-10).** The exit criteria pass end to end: the real app,
+queue host and watcher, driven over HTTP, with the queue host and its workers
+SIGKILLed mid-batch and restarted. Implementation notes, where it settled
+details this doc left open:
+
+- **Code:**
+  - `yaffo/sync/`: schemas, setup, engine with `target_run` and `source_run`,
+    built-in handlers, conversion, guards, preview, deletes;
+  - `background_tasks/tasks/sync_run.py`: the run task;
+  - `background_tasks/event_filters.py`: trigger filters and the settle window;
+  - `routes/utilities/sync_views.py` and `sync_text.py`: pages and codes → words;
+  - migration `016`.
+- **Handlers:** the engine talks to `SourceHandler` / `TargetHandler`
+  (`yaffo/sync/handlers.py`), with dict envelopes shaped like the hook
+  contract. Built-ins implement them in Python. Phase 2 wraps Starlark hooks in
+  the same interfaces.
+  - Built-in batch items also carry the file's `path`, and built-in results may
+    carry `details`.
+  - A built-in target answers `reconcile(items)` with present or missing per
+    ledger row, instead of `list_remote`.
+- **Run lock:**
+  - One run per sync, via a queue lock named per automation
+    (`Task.enqueue_locked`).
+  - The scheduler tick leaves a due deferred trigger alone while that sync has
+    a RUNNING run Job.
+- **Crash safety:**
+  - Temporary files are named per sync (`.yaffo-<sync id>-….part`), and each
+    run sweeps its own sync's leftovers first.
+  - Copies reuse an identical file already at the destination name, so a
+    retried batch never makes `IMG (2).jpg`.
+- **Deletes:** both row-deleting paths (`media_repository.delete_media_items`
+  and `index_photos.delete_orphaned_media_items`, used by the watcher, file
+  sync and the duplicate cleaner) mark rows `removing` and announce
+  `media_deleted`. SQLite foreign keys are off, so the ledger's
+  `media_item_id` is cleared explicitly.
+- **`album_changed`:** bulk operations (add all matching, remove all) don't
+  list ids; they set `truncated: true`.
+- **Options:** built-ins use a host-native `local_folder` option type (the
+  in-app folder picker; the value is an absolute path).
+- **Folder target `keep` option:** removals succeed without deleting (`kept`),
+  so the copy stays and the run doesn't nag.
+- **Hashes:** `media_items.sha1` is computed at index time. A source run
+  hashes un-hashed library photos first, within a third of its time budget.
+- **Still to do for this phase:**
+  - generate the Playwright tests from `yaffo_ui_tests/specs/sync_automations.yaml`
+    (the generator calls an LLM);
+  - the user guide page and translations, held until the UI is reviewed.
+
 
 ### Phase 2: web foundations + OneDrive source
 

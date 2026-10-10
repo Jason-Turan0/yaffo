@@ -368,6 +368,44 @@
       },
       "thumbnailFolderUnavailable": "The thumbnail folder isn't available, so thumbnails weren't checked. Check that its drive is connected.",
       "truncation": "Showing the first {{shown}} of {{total}}. Sync processes all of them."
+    },
+    "sync": {
+      "test": {
+        "running": "Checking…",
+        "failed": "Could not run the test.",
+        "nothingToDo": "Nothing to do: the target already matches.",
+        "wouldAdd_one": "Would copy {{count}} photo",
+        "wouldAdd_other": "Would copy {{count}} photos",
+        "wouldRemove_one": "Would remove {{count}}",
+        "wouldRemove_other": "Would remove {{count}}",
+        "unchanged_one": "{{count}} already there",
+        "unchanged_other": "{{count}} already there",
+        "convert_one": "{{count}} would be converted to JPEG",
+        "convert_other": "{{count}} would be converted to JPEG",
+        "unsupported_one": "{{count}} can't be sent (this target doesn't take that kind of file)",
+        "unsupported_other": "{{count}} can't be sent (this target doesn't take that kind of file)",
+        "newFiles_one": "{{count}} new file would be copied in",
+        "newFiles_other": "{{count}} new files would be copied in",
+        "more": "Showing the first page only.",
+        "state": {
+          "new": "New",
+          "imported": "Already imported",
+          "in_library": "Already in your library",
+          "changed": "Edited since the last import"
+        },
+        "columns": {
+          "file": "File",
+          "size": "Size",
+          "state": "What happens",
+          "action": "Action"
+        },
+        "preview": {
+          "copy": "Copy",
+          "remove": "Remove",
+          "showing": "Showing {{shown}} of {{total}}"
+        },
+        "nothingChanged": "Nothing was copied or changed."
+      }
     }
   },
   "assistant": {
