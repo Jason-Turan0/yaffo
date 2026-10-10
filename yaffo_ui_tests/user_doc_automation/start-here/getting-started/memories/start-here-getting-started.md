@@ -22,6 +22,17 @@
 - Prose unaffected: the section text lists preview / file info / capture date+device /
   location / people / faces / labels, all still visible; nothing describes the tags
   section.
+- 2026 run: 2453 px (0.0418%), one 365x27 box at (120,435) = the FILE INFORMATION
+  "Folder" row only: baseline /private/tmp/yaffo-docs/Family Photos/2017_third_birthday
+  vs new /tmp/yaffo-docs/Family Photos/2017_third_birthday. Same /tmp canonicalization
+  that settings-overview already ignores via `.media-dir-path`; the detail page's Folder
+  row has no such class, so the host-dependent path leaks into this shot too
+  (environment_instability, not product/capture error).
+- Fix applied in getting-started.ts: `setup` tags the detail-item whose <label> reads
+  "Folder:" with `.media-dir-path` and the shot ignores that class, mirroring
+  settings-overview. The path stays visible in the image; only the diff is masked, so
+  mac/Linux captures no longer flag each other. If this jitters again, the ignore region
+  is not what broke — look elsewhere (frame/dvh band, view-toggle).
 
 
 ## gallery-home.webp

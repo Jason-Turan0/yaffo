@@ -1,6 +1,6 @@
 {
     "page": "start-here/getting-started",
-    "lastVerifiedSha": "93c584332c09c47d86904ceb568cf13c2ea59e75",
+    "lastVerifiedSha": "7d409e4437f6486727d504a2f6bf7063ae5f5df2",
     "observed": {
         "page": "start-here/getting-started",
         "urls": [
@@ -162,7 +162,7 @@
         "serverObserver": "recorded"
     },
     "dependencyHashes": {
-        "pyproject.toml": "5050dbd07553f0d992f9486f6e86d471375c316ae1df02a39fa5449a372d07c0",
+        "pyproject.toml": "046bf3db2bfa4c29e2ab81e46bb5eafa9c351e578b9d12df57b138679c4910db",
         "yaffo/launcher.py": "4e93fb2e329c9231b8f06697c2a86b8d24695960987cbe4b26e1e238d4b71be7",
         "yaffo/routes/assistant.py": "93b4347b3b4da2c5f9dadf4a4f8dc20f906514f1c35aaec9e470d387f9a1f1f7",
         "yaffo/routes/base.py": "877715be2bf8c86be81310e332cab934a3f2fccc7812314e786eb6665b62c02b",
@@ -307,7 +307,7 @@
         "start-here/assets/getting-started/settings-overview.webp": {
             "width": 1392,
             "height": 946,
-            "sha256": "f2efdceb44522fd4e1185371575b42b9f9535ff2f07b74464bcae4201ee49e23"
+            "sha256": "5c7c95d2dd01ab71f86ee2541a374a17a3a4f9910b46ce552f208fce65115a47"
         },
         "start-here/assets/getting-started/library-health.webp": {
             "width": 1122,
@@ -327,7 +327,7 @@
         "start-here/assets/getting-started/media-detail.webp": {
             "width": 1392,
             "height": 1122,
-            "sha256": "9b93c90eda445b1553c2bdee23f4ef5ba8953e86d9b3dde4cbe4de75f2920b4e"
+            "sha256": "5593a6fa6cc6a0ee45a0d60ac1cfe0309b8c53c59e67a4671d5cb388628023d7"
         }
     }
 }

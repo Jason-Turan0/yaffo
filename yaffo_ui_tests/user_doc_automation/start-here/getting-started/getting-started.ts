@@ -71,6 +71,21 @@ export default defineWalkthrough({
             goto: ({mediaIdByFilename}) =>
                 mediaIdByFilename(DETAIL_IMAGE).then((id) => `/media/view/${id}`),
             clip: ".photo-viewer",
+            // The File Information "Folder" row prints the sandbox media path
+            // verbatim, so it carries the same macOS-vs-Linux /tmp canonicalization
+            // as settings-overview above (/private/tmp/... versus /tmp/...). The
+            // detail page has no `.media-dir-path` hook of its own, so tag the row
+            // and ignore it: the path stays visible, but the host it was captured on
+            // no longer churns the diff.
+            ignoreRegions: [".media-dir-path"],
+            setup: async (page) => {
+                await page.evaluate(() => {
+                    const folderItem = Array.from(document.querySelectorAll(".detail-item"))
+                        .find((item) => item.querySelector("label")
+                            ?.textContent?.trim().replace(/:$/, "").toLowerCase() === "folder");
+                    folderItem?.classList.add("media-dir-path");
+                });
+            },
         },
     },
 });
