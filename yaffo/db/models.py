@@ -642,6 +642,7 @@ class SyncItem(db.Model):
         db.UniqueConstraint("automation_id", "item_key", name="uq_sync_items_automation_key"),
         db.Index("ix_sync_items_status", "automation_id", "status"),
         db.Index("ix_sync_items_media_item", "media_item_id"),
+        db.Index("ix_sync_items_updated", "automation_id", "updated_at"),
     )
 
 

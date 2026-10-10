@@ -1,7 +1,8 @@
 """Built-in source: copy new photos from a folder (an SD card, a camera, a desktop
 sync app's upload folder) into the import root.
 
-One record per file: `source_id` is the path relative to the folder, `updated_at` is
+One record per file: `source_id` is the path relative to the folder (its folder part is
+the record's `folder`, for the keep-the-source's-folders layout), `updated_at` is
 size:mtime, and there's no hash in the record; the engine hashes a file only when it
 hasn't seen that version before. Originals are never touched, and files disappearing
 from the folder is normal, so no tombstones are ever emitted. See
@@ -86,6 +87,7 @@ class FolderSource(SourceHandler):
             records.append({
                 "source_id": source_id,
                 "filename": path.name,
+                "folder": PurePosixPath(source_id).parent.as_posix() if "/" in source_id else "",
                 "size": stat.size,
                 "updated_at": stat.signature,
                 "local_path": str(path),

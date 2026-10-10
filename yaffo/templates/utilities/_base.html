@@ -22,7 +22,7 @@
         <div class="choice-cards">
             {{ kind_option("custom", _("Custom"), _("Describe what it should do, and Yaffo writes it."), checked=True) }}
             {% if sync_services.import %}
-                {{ kind_option("import", _("Import from…"), _("Bring new photos into your library from a folder or an SD card.")) }}
+                {{ kind_option("import", _("Import from…"), _("Bring new photos into your library from a folder, an SD card, or OneDrive.")) }}
             {% endif %}
             {% if sync_services.send %}
                 {{ kind_option("send", _("Send to…"), _("Keep an album, or the photos matching a filter, copied to a folder.")) }}
@@ -40,10 +40,7 @@
                         <input type="radio" name="adapter_id" value="{{ service.id }}" {{ "checked" if loop.first }} disabled>
                         <span class="choice-card-text">
                             <span class="choice-card-title">{{ _(service.name) }}</span>
-                            <span class="choice-card-description">
-                                {{ _("A folder on this computer, a drive, or a card.") if kind == "import"
-                                   else _("A folder a desktop app syncs, a drive, a network share, or a card for a photo frame.") }}
-                            </span>
+                            <span class="choice-card-description">{{ service.description }}</span>
                         </span>
                     </label>
                 {% endfor %}

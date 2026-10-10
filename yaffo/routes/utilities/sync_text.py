@@ -14,9 +14,11 @@ from yaffo.db.models import (
     SYNC_ITEM_SENT, SYNC_ITEM_SKIPPED,
 )
 from yaffo.sync import guards
-from yaffo.sync.handlers import ERROR_AUTH, ERROR_CHANGED, ERROR_FATAL, ERROR_RATE_LIMITED, ERROR_REJECTED
+from yaffo.sync.handlers import (
+    ERROR_AUTH, ERROR_CHANGED, ERROR_FATAL, ERROR_NOT_FOUND, ERROR_RATE_LIMITED, ERROR_REJECTED,
+)
 from yaffo.sync.schemas import (
-    PAUSE_DESTINATION_MISSING, PAUSE_OPTION_MISSING, PAUSE_SELECTION_MISSING, RUNTIME_INVALID_CONFIG,
+    LAYOUT_FLAT, LAYOUT_SOURCE_FOLDERS, LAYOUT_YEAR, LAYOUT_YEAR_MONTH, PAUSE_DESTINATION_MISSING, PAUSE_OPTION_MISSING, PAUSE_SELECTION_MISSING, RUNTIME_INVALID_CONFIG,
     RUNTIME_NEEDS_CONSENT, RUNTIME_NEEDS_SIGN_IN, RUNTIME_PAUSED, RUNTIME_READY,
 )
 from yaffo.sync.source_run import ITEM_IMPORT_FAILED
@@ -102,7 +104,7 @@ def pause_text(pause_code: str | None) -> str:
         return gettext("The destination isn't available (an unplugged drive or a removed folder?). "
                        "The sync carries on when it's back.")
     if pause_code == PAUSE_OPTION_MISSING:
-        return gettext("A chosen folder or album no longer exists. Choose another.")
+        return gettext("The chosen folder or album no longer exists at the service. Choose another.")
     return gettext("Paused.")
 
 
@@ -125,7 +127,15 @@ def problem_sentence(code: str | None, params: dict[str, Any]) -> str | None:
             return gettext("The account needs to sign in again.")
         if stop == ERROR_FATAL:
             return gettext("The run stopped because of an error in the service's code.")
+        if stop == ERROR_NOT_FOUND:
+            return gettext("Something the sync reads from is gone at the service. It tries again later.")
         return gettext("The run stopped early. The next run carries on.")
+    if code == codes.PROBLEM_SYNC_NEEDS_SIGN_IN:
+        if params.get("reason") == "needs_scopes":
+            return gettext("The account needs to allow more access. Open the sync and sign in again.")
+        if params.get("reason") == "account_missing":
+            return gettext("The sync has no account. Open it and sign in.")
+        return gettext("The account needs to sign in again. Open the sync and sign in.")
     if code == codes.PROBLEM_SYNC_DISK_FULL:
         return gettext("There isn't enough free space left to keep copying.")
     return None
@@ -187,3 +197,28 @@ def guard_text(problem: str | None) -> str | None:
         guards.PROBLEM_UNKNOWN_MEDIA_DIR: gettext("Choose one of your media folders."),
         guards.PROBLEM_MEDIA_DIR_MISSING: gettext("That media folder isn't connected."),
     }.get(problem, problem)
+
+
+def import_layout_choices() -> list[dict[str, str]]:
+    """The "Arrange by" choices for an import's new files, in the order offered."""
+    return [
+        {"value": LAYOUT_SOURCE_FOLDERS, "label": gettext("Keep the source's folders")},
+        {"value": LAYOUT_YEAR_MONTH, "label": gettext("By year and month taken")},
+        {"value": LAYOUT_YEAR, "label": gettext("By year taken")},
+        {"value": LAYOUT_FLAT, "label": gettext("All in one folder")},
+    ]
+
+
+def import_layout_label(layout: str | None) -> str:
+    return next((c["label"] for c in import_layout_choices() if c["value"] == layout), layout or "")
+
+
+def import_into_text(root: str, layout: str | None) -> str:
+    """The review's "Into" line: the folder, and how new files are arranged in it."""
+    if layout == LAYOUT_SOURCE_FOLDERS:
+        return gettext("%(root)s, in the same folders as at the source", root=root)
+    if layout == LAYOUT_YEAR:
+        return gettext("%(root)s, in a folder per year taken", root=root)
+    if layout == LAYOUT_FLAT:
+        return gettext("%(root)s, all in one folder", root=root)
+    return gettext("%(root)s, in a folder per year and month taken", root=root)

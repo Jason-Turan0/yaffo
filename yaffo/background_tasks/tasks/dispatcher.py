@@ -84,6 +84,11 @@ def dispatch_scheduled_tasks():
                     continue
                 if trigger.next_run_at > now:
                     continue
+                # A sync still running keeps its due slot for the next tick: the
+                # queue lock would drop this run, and a continuation the running
+                # sync just scheduled (see sync/run_common.py) would be lost.
+                if trigger.automation.sync is not None and has_running_run(session, trigger.automation_id):
+                    continue
 
                 paths = selected_paths(session, trigger.config)
                 context = EventContext(

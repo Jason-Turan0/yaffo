@@ -542,7 +542,34 @@ type UtilitiesNamespace = {
 type SyncTestRecord = {
     filename: string;
     size: number | null;
-    state: 'new' | 'imported' | 'in_library' | 'changed';
+    state: 'new' | 'imported' | 'in_library' | 'changed' | 'deleted_at_source';
+};
+
+/** One folder or album a remote option's picker lists (routes/utilities/sync_account.py). */
+type SyncChoice = {
+    id: string;
+    label: string;
+    has_children?: boolean;
+    suggested?: boolean;
+};
+
+type SyncChoicesResponse = {
+    items?: SyncChoice[];
+    next_cursor?: string | null;
+    error?: string;
+};
+
+type SyncDeviceStart = {
+    handle?: string;
+    user_code: string;
+    verification_uri: string;
+    interval: number;
+    error?: string;
+};
+
+type SyncDevicePoll = {
+    status: 'pending' | 'done' | 'failed';
+    error?: string;
 };
 
 /** The sync Test payload (yaffo/sync/preview.py SyncTestResult + problem_text). */
@@ -559,10 +586,13 @@ type SyncTestResult = {
     remove_samples: string[];
     records: SyncTestRecord[];
     more: boolean;
+    detail: string | null;
 };
 
 type SyncNamespace = {
     initSyncPage: (i18n: I18nService, config: AppConfig) => void;
+    initRemoteOption: (root: HTMLElement, i18n: Pick<I18nService, 't'>) => void;
+    initDeviceCode: (root: HTMLElement, i18n: Pick<I18nService, 't'>) => void;
     renderTestResult: (container: HTMLElement, result: SyncTestResult, i18n: Pick<I18nService, 't'>) => void;
 };
 

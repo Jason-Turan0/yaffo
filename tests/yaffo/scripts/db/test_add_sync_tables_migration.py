@@ -85,3 +85,33 @@ def test_sync_items_are_unique_per_automation_and_key(fresh_db):
     fresh_db.execute(insert)
     with pytest.raises(sqlite3.IntegrityError):
         fresh_db.execute(insert)
+
+
+def test_018_gives_existing_imports_the_year_and_month_layout_and_keeps_them_on():
+    connection = sqlite3.connect(":memory:")
+    _apply(connection, up_to=17)
+    migration = _load(next(path for number, path in _discover() if number == 18))
+    root = {"media_dir_id": "md1", "subpath": "Imports/Card"}
+
+    def sync(role, root, valid):
+        config = {"role": role, "adapter_id": 1, "connection_key": None, "scopes_needed": [],
+                  "options": {"folder": "/card"}, "import_root": root, "selection": None,
+                  "consent_hash": None, "consented_at": None}
+        adapter = migration._adapter_part(connection, 1)
+        config["consent_hash"] = migration._consent_hash(config, adapter) if valid else "stale"
+        return json.dumps({"config": config, "runtime": {}})
+
+    for slug, raw in (("on", sync("source", dict(root), True)), ("off", sync("source", dict(root), False)),
+                      ("target", sync("target", None, True))):
+        connection.execute("INSERT INTO automations (slug, name, is_system, enabled, status, sync) "
+                           "VALUES (?, ?, 0, 1, 'ACCEPTED', ?)", (slug, slug, raw))
+    migration.migrate(connection)
+    migration.migrate(connection)  # idempotent
+
+    configs = {slug: json.loads(raw)["config"]
+               for slug, raw in connection.execute("SELECT slug, sync FROM automations WHERE sync IS NOT NULL")}
+    adapter = migration._adapter_part(connection, 1)
+    assert configs["on"]["import_root"]["layout"] == "year_month"
+    assert configs["on"]["consent_hash"] == migration._consent_hash(configs["on"], adapter)
+    assert configs["off"]["import_root"]["layout"] == "year_month" and configs["off"]["consent_hash"] == "stale"
+    assert configs["target"]["import_root"] is None

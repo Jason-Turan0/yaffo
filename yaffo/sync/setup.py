@@ -1,7 +1,8 @@
 """Creating and configuring sync automations: what the setup page (and tests) call.
 
-A new sync starts disabled with `needs_consent`, its options at their defaults, and
-the default triggers:
+A new sync starts disabled with `needs_consent`, its options at their defaults, an
+existing account for its provider preselected (connections are shared), and the
+default triggers:
 - sources: a nightly schedule;
 - targets: a nightly schedule, `media_deleted` filtered to this sync, and, for an
   album selection, `album_changed` filtered to the album. The event triggers carry
@@ -22,11 +23,13 @@ from yaffo.db.models import (
     TRIGGER_TYPE_EVENT, TRIGGER_TYPE_SCHEDULE,
 )
 from yaffo.db.repositories import automation_repository, sync_repository
+from yaffo.sync import access, connections
 from yaffo.sync.adapters import LoadedAdapter, load_adapter
 from yaffo.sync.consent import consent_hash
 from yaffo.sync.options import option_defaults, validate_options
 from yaffo.sync.schemas import (
-    RUNTIME_NEEDS_CONSENT, RUNTIME_READY, SELECTION_ALBUM, Selection, SyncConfig, SyncRuntime,
+    DEFAULT_IMPORT_LAYOUT, IMPORT_LAYOUTS, RUNTIME_NEEDS_CONSENT, RUNTIME_READY, SELECTION_ALBUM, Selection,
+    SyncConfig, SyncRuntime,
 )
 
 NIGHTLY_CRON = "0 2 * * *"
@@ -48,7 +51,9 @@ def default_import_subpath(name: str) -> str:
 
 def create_sync(session: Session, name: str, adapter_id: int) -> Automation:
     adapter = load_adapter(session, adapter_id)
-    config = SyncConfig(role=adapter.role, adapter_id=adapter.id, connection_key=None, scopes_needed=[],
+    existing = connections.find_for_provider(session, adapter.provider) if adapter.needs_connection else []
+    config = SyncConfig(role=adapter.role, adapter_id=adapter.id,
+                        connection_key=existing[0][0] if existing else None, scopes_needed=adapter.scopes,
                         options=option_defaults(adapter.options), import_root=None, selection=None,
                         consent_hash=None, consented_at=None)
     automation = Automation(slug=automation_repository.unique_slug(session, name), name=name, is_system=False,
@@ -92,10 +97,37 @@ def set_options(session: Session, automation: Automation, values: dict) -> None:
     _store(session, automation, replace(config, options=validate_options(adapter.options, values)))
 
 
-def set_import_root(session: Session, automation: Automation, media_dir_id: str, subpath: str) -> None:
+def set_connection(session: Session, automation: Automation, connection_key: str) -> None:
+    """Use this account for the sync. Switching accounts re-asks consent, clears the
+    remote options (folder ids belong to an account), and releases the old
+    connection if nothing else uses it."""
+    config = _config(automation)
+    adapter = load_adapter(session, config.adapter_id)
+    connection = connections.get(session, connection_key)
+    if connection is None or connection.provider != adapter.provider:
+        raise ValueError("that account isn't for this service")
+    previous = config.connection_key
+    options = config.options
+    if previous and previous != connection_key:
+        options = {key: (None if spec["type"].startswith("remote_") else options.get(key))
+                   for key, spec in adapter.options.items()}
+    _store(session, automation, replace(config, connection_key=connection_key, scopes_needed=adapter.scopes,
+                                        options=options))
+    if previous and previous != connection_key:
+        connections.release_if_unreferenced(session, previous)
+
+
+def set_import_root(session: Session, automation: Automation, media_dir_id: str, subpath: str,
+                    layout: str = DEFAULT_IMPORT_LAYOUT) -> None:
+    """Where a source's new files go: a subfolder of a media folder, arranged by
+    `layout`. Changing any of it re-asks consent. Raises ValueError for an unknown
+    layout."""
+    if layout not in IMPORT_LAYOUTS:
+        raise ValueError(f"unknown layout {layout!r}")
     config = _config(automation)
     cleaned = "/".join(part for part in subpath.replace("\\", "/").split("/") if part.strip())
-    _store(session, automation, replace(config, import_root={"media_dir_id": media_dir_id, "subpath": cleaned}))
+    _store(session, automation, replace(config, import_root={"media_dir_id": media_dir_id, "subpath": cleaned,
+                                                             "layout": layout}))
 
 
 def _album_trigger(automation: Automation) -> AutomationTrigger | None:
@@ -132,7 +164,7 @@ def missing_setup(session: Session, automation: Automation) -> list[str]:
         missing.append("import_root")
     if config.role == SYNC_ROLE_TARGET and config.selection is None:
         missing.append("selection")
-    if adapter.needs_connection and not config.connection_key:
+    if adapter.needs_connection and access.account_problem(session, adapter, config):
         missing.append("account")
     return missing
 

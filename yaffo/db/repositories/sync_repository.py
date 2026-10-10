@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
 from yaffo.db.models import (
-    Automation, SyncItem,
+    Automation, MediaItem, SyncItem,
     SYNC_ITEM_FAILED, SYNC_ITEM_PENDING, SYNC_ITEM_REMOVING, SYNC_ITEM_SENT,
 )
 from yaffo.sync.schemas import SyncColumn, SyncConfig, SyncRuntime
@@ -61,17 +61,51 @@ def rows_by_key(session: Session, automation_id: int, item_keys: list[str]) -> d
     return found
 
 
-def status_counts(session: Session, automation_id: int) -> dict[str, int]:
-    return dict(session.query(SyncItem.status, func.count(SyncItem.id))
-                .filter(SyncItem.automation_id == automation_id)
-                .group_by(SyncItem.status).all())
+def _basename(path):
+    """A path's last segment in SQL (SQLite has no basename): trim the trailing
+    non-separator characters to get the folder, then cut it off."""
+    normal = func.replace(path, "\\", "/")
+    return func.replace(normal, func.rtrim(normal, func.replace(normal, "/", "")), "")
 
 
-def items_page(session: Session, automation_id: int, status: str | None, offset: int, limit: int) -> list[SyncItem]:
-    query = session.query(SyncItem).filter(SyncItem.automation_id == automation_id)
+def _escape_like(text: str) -> str:
+    return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def _ledger_query(session: Session, automation_id: int, search: str | None):
+    """The sync's rows, narrowed to those whose file name contains `search`: the
+    library file's name, or (for rows with no library photo: failed imports,
+    deletions at the source) the name the source gave, or the item's key or
+    remote id (a Folder target's path)."""
+    query = (session.query(SyncItem)
+             .outerjoin(MediaItem, MediaItem.id == SyncItem.media_item_id)
+             .filter(SyncItem.automation_id == automation_id))
+    search = (search or "").strip()
+    if search:
+        pattern = f"%{_escape_like(search)}%"
+        query = query.filter(or_(
+            _basename(MediaItem.full_file_path).ilike(pattern, escape="\\"),
+            func.json_extract(SyncItem.details, "$.filename").ilike(pattern, escape="\\"),
+            SyncItem.remote_id.ilike(pattern, escape="\\"),
+            SyncItem.item_key.ilike(pattern, escape="\\"),
+        ))
+    return query
+
+
+def status_counts(session: Session, automation_id: int, search: str | None = None) -> dict[str, int]:
+    query = _ledger_query(session, automation_id, search)
+    return dict(query.with_entities(SyncItem.status, func.count(SyncItem.id)).group_by(SyncItem.status).all())
+
+
+def items_page(session: Session, automation_id: int, status: str | None, offset: int, limit: int,
+               search: str | None = None) -> list[tuple[SyncItem, MediaItem | None]]:
+    """One page of the ledger, newest first, with each row's library photo."""
+    query = _ledger_query(session, automation_id, search)
     if status:
         query = query.filter(SyncItem.status == status)
-    return query.order_by(SyncItem.updated_at.desc(), SyncItem.id.desc()).offset(offset).limit(limit).all()
+    return (query.add_entity(MediaItem)
+            .order_by(SyncItem.updated_at.desc(), SyncItem.id.desc())
+            .offset(offset).limit(limit).all())
 
 
 def mark_removing_for_deleted_media(session: Session, media_item_ids: list[int]) -> list[int]:

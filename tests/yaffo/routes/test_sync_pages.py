@@ -59,7 +59,7 @@ def outbox(tmp_path) -> Path:
 
 
 def _adapter_id(role: str) -> int:
-    return db.session.query(SyncAdapter.id).filter_by(role=role).scalar()
+    return db.session.query(SyncAdapter.id).filter(SyncAdapter.role == role, SyncAdapter.handler.isnot(None)).scalar()
 
 
 def _create(client, kind: str, name: str) -> Automation:
@@ -83,7 +83,8 @@ def test_sync_detail_embeds_trigger_panel_above_run_history(client, library):
     automation = _create(client, "import", "Camera card")
     body = client.get(f"/utilities/automations/{automation.slug}").get_data(as_text=True)
     assert 'id="automation-trigger-panel"' in body
-    assert body.count('class="settings-section sync-step collapsible-panel"') == 3
+    # Folder and options, Where to put them, When, and Items.
+    assert body.count('class="settings-section sync-step collapsible-panel"') == 4
     assert "data-cron-builder" in body
     assert body.index('id="automation-trigger-panel"') < body.index('id="automation-runs"')
     assert 'btn-secondary btn-sm">Edit triggers</span>' not in body
@@ -117,7 +118,8 @@ def test_an_import_sync_starts_with_an_import_folder(client, library):
     automation = _create(client, "import", "Camera card")
 
     config = sync_repository.load_sync(automation).config
-    assert config.import_root == {"media_dir_id": MEDIA_DIR_ID, "subpath": "Imports/Camera card"}
+    assert config.import_root == {"media_dir_id": MEDIA_DIR_ID, "subpath": "Imports/Camera card",
+                                  "layout": "source_folders"}
 
 
 def test_import_folder_help_is_an_info_hover(client, library):
@@ -133,9 +135,11 @@ def test_import_destination_help_is_an_info_hover(client, library):
     automation = _create(client, "import", "Camera card")
     body = client.get(f"/utilities/automations/{automation.slug}").get_data(as_text=True)
 
-    help_text = "New photos go into this folder of your library, in a folder per year and month taken."
+    help_text = "New photos go into this folder of your library."
     assert f'data-tooltip="{help_text}"' in body
     assert f'<p class="section-description">{help_text}</p>' not in body
+    # How they're arranged is its own choice, keeping the source's folders by default.
+    assert '<option value="source_folders" selected>Keep the source&#39;s folders</option>' in body
 
 
 def test_import_subtitle_names_the_source_without_repeating_the_destination(client, library):
@@ -233,8 +237,11 @@ def test_items_and_run_history_after_a_run(client, mom, outbox):
     page = client.get(f"/utilities/automations/{automation.slug}").get_data(as_text=True)
 
     assert "Written to folder" in items and "For Mom/a.jpg" in items
-    assert '<div class="table-container">' in items and '<table class="data-table">' in items
+    assert '<div class="table-container">' in items and '<table class="data-table sync-items-table">' in items
+    assert "Sent to" in items and "Showing 1–1 of 1 results" in items
     assert "Wrote 1 photo to the folder" in page
+    # The Items panel folds to its counts.
+    assert 'id="sync-items"' in page and "1 written to folder" in page
 
 
 def test_the_filter_screen_saves_the_filters_as_the_selection(client, mom, outbox):
@@ -265,3 +272,75 @@ def test_deleting_a_sync_removes_its_ledger_but_not_the_copies(client, mom, outb
 
     assert db.session.query(SyncItem).count() == 0
     assert [p.name for p in (outbox / "For Mom").iterdir()] == ["a.jpg"]
+
+
+def test_items_search_status_and_paging(client, library, monkeypatch):
+    from yaffo.routes.utilities import sync_views
+
+    monkeypatch.setattr(sync_views, "ITEMS_PAGE_SIZE", 2)
+    monkeypatch.setattr(sync_views, "ITEMS_PAGE_SIZES", (2, 25))
+    automation = _create(client, "import", "Card")
+    photos = []
+    for name in ("beach_1.jpg", "beach_2.jpg", "beach_3.jpg", "party.jpg"):
+        path = library / "Imports" / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        Image.new("RGB", (4, 4)).save(path)
+        photos.append(MediaItem(full_file_path=str(path), status=MEDIA_STATUS_INDEXED))
+    db.session.add_all(photos)
+    db.session.flush()
+    for index, photo in enumerate(photos):
+        db.session.add(SyncItem(automation_id=automation.id, item_key=f"k{index}", media_item_id=photo.id,
+                                remote_id=f"k{index}", status="imported", attempts=1))
+    db.session.add(SyncItem(automation_id=automation.id, item_key="gone", remote_id="gone",
+                            status="failed", error_code="import_failed", details={"filename": "beach_lost.heic"}))
+    db.session.commit()
+    url = f"/utilities/automations/{automation.slug}/sync/items"
+
+    first = client.get(url).get_data(as_text=True)
+    assert "Showing 1–2 of 5 results" in first and "All · 5" in first and "Page 1 of 3" in first
+
+    beach = client.get(f"{url}?q=BEACH").get_data(as_text=True)
+    assert "All · 4" in beach and "party.jpg" not in beach
+    assert "Failed · 1" in beach and "Imported · 3" in beach
+
+    failed = client.get(f"{url}?q=beach&status=failed").get_data(as_text=True)
+    assert "beach_lost.heic" in failed and "Showing 1–1 of 1 results" in failed and "Retry failed" in failed
+
+    page2 = client.get(f"{url}?q=beach&status=imported&page=1").get_data(as_text=True)
+    assert "Showing 3–3 of 3 results" in page2 and "Page 2 of 2" in page2
+    bigger = client.get(f"{url}?page-size=25").get_data(as_text=True)
+    assert "Showing 1–5 of 5 results" in bigger
+    # A page size the panel doesn't offer falls back to the default.
+    assert "Showing 1–2 of 5 results" in client.get(f"{url}?page-size=7").get_data(as_text=True)
+
+    # Folder names in the path don't match: only the file name is searched.
+    assert "No items match" in client.get(f"{url}?q=Imports").get_data(as_text=True)
+    # LIKE wildcards are taken literally.
+    assert "No items match" in client.get(f"{url}?q=%25").get_data(as_text=True)
+
+    page = client.get(f"/utilities/automations/{automation.slug}").get_data(as_text=True)
+    assert "1 failed · 4 imported" in page
+    assert '<details class="settings-section sync-step collapsible-panel" id="sync-items" open>' in page
+
+
+def test_status_chips_keep_a_fixed_order_and_the_selected_one(client, library):
+    automation = _create(client, "import", "Ordered")
+    for index, status in enumerate(["linked_existing", "imported", "deleted_at_source", "failed", "imported"]):
+        db.session.add(SyncItem(automation_id=automation.id, item_key=f"k{index}", remote_id=f"k{index}",
+                                status=status, attempts=1, details={"filename": f"photo_{index}.jpg"}))
+    db.session.commit()
+    url = f"/utilities/automations/{automation.slug}/sync/items"
+
+    body = client.get(url).get_data(as_text=True)
+    labels = ["Failed · 1", "Imported · 2", "Already in library · 1", "Deleted at source · 1"]
+    positions = [body.index(label) for label in labels]
+    assert positions == sorted(positions)
+    page = client.get(f"/utilities/automations/{automation.slug}").get_data(as_text=True)
+    assert "1 failed · 2 imported · 1 already in library · 1 deleted at source" in page
+
+    # Filtered to Failed, then a search with no failed matches: the Failed chip stays,
+    # selected, at 0, and the empty result says why.
+    narrowed = client.get(f"{url}?status=failed&q=photo_1").get_data(as_text=True)
+    assert 'aria-pressed="true"' in narrowed and "Failed · 0" in narrowed
+    assert narrowed.index("Failed · 0") < narrowed.index("Imported · 1")
+    assert "No items match" in narrowed

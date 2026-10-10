@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field, replace
+from datetime import timedelta
 from pathlib import Path
 from typing import Any, Callable
 
 from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_runs import RunOutcome
-from yaffo.db.models import Automation
+from yaffo.db.models import Automation, AutomationTrigger, TRIGGER_TYPE_SCHEDULE
 from yaffo.db.repositories import sync_repository
 from yaffo.logging_config import get_logger
 from yaffo.sync.handlers import ERROR_CODES, ERROR_CHANGED
@@ -127,3 +128,21 @@ def stop(session: Session, automation: Automation, runtime: SyncRuntime, status:
 
 def pause(session: Session, automation: Automation, runtime: SyncRuntime, pause_code: str) -> RunResult:
     return stop(session, automation, runtime, RUNTIME_PAUSED, codes.PROBLEM_SYNC_PAUSED, pause_code=pause_code)
+
+
+def schedule_continuation(session: Session, automation: Automation, seconds: float) -> None:
+    """Have the scheduler start this sync again in `seconds` (a backfill that ran
+    out of time, or a service that asked Yaffo to wait), by pulling its schedule
+    trigger's next slot forward. The tick skips a sync that's still running and
+    the queue lock drops an overlapping run, so this can't double up. Commits."""
+    due = utcnow() + timedelta(seconds=max(60.0, seconds))
+    triggers = (session.query(AutomationTrigger)
+                .filter(AutomationTrigger.automation_id == automation.id,
+                        AutomationTrigger.trigger_type == TRIGGER_TYPE_SCHEDULE,
+                        AutomationTrigger.enabled.is_(True)).all())
+    if not triggers:
+        return
+    trigger = min(triggers, key=lambda t: t.next_run_at or due)
+    if trigger.next_run_at is None or trigger.next_run_at > due:
+        trigger.next_run_at = due
+        session.commit()

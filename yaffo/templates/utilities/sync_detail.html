@@ -42,6 +42,35 @@
                     <option value="{{ choice.value }}" {{ "selected" if choice.value == field.value }}>{{ choice.label }}</option>
                 {% endfor %}
             </select>
+        {% elif field.type in ('remote_folder', 'remote_collection') %}
+            <div class="sync-option-label">
+                <label for="sync-option-{{ field.key }}">{{ field.label }}</label>
+                {% if field.help %}
+                    <button type="button" class="help-tip" data-icon="info"
+                            aria-label="{{ field.help }}" data-tooltip="{{ field.help }}"></button>
+                {% endif %}
+            </div>
+            <div class="sync-remote-option" data-remote-option="{{ field.key }}"
+                 data-choices-url="{{ url_for('sync_choices', slug=selected.slug, option=field.key) }}">
+                <input type="hidden" name="{{ field.key }}" value="{{ field.value | tojson if field.value else '' }}">
+                <div class="sync-folder-input">
+                    <input type="text" id="sync-option-{{ field.key }}" class="sync-remote-value" readonly
+                           value="{{ field.value.label if field.value else '' }}"
+                           placeholder="{{ _('Nothing chosen yet') }}" data-remote-open>
+                    <button type="button" class="btn-secondary" data-icon="folder" data-remote-open>{{ _("Choose…") }}</button>
+                </div>
+                <div class="sync-picker" data-remote-picker hidden>
+                    <nav class="sync-picker-crumbs" aria-label="{{ _('Folder path') }}" data-remote-crumbs></nav>
+                    <ul class="sync-picker-list" data-remote-list></ul>
+                    <p class="hint-text sync-picker-status" data-remote-status aria-live="polite"></p>
+                    <div class="sync-picker-actions">
+                        <button type="button" class="btn-secondary" data-remote-more hidden>{{ _("Load more") }}</button>
+                        <span class="sync-picker-spacer"></span>
+                        <button type="button" class="btn-secondary" data-remote-close>{{ _("Cancel") }}</button>
+                        <button type="button" class="btn-primary" data-remote-choose-here hidden>{{ _("Choose this folder") }}</button>
+                    </div>
+                </div>
+            </div>
         {% elif field.type == 'bool' %}
             <label class="checkbox-label" for="sync-option-{{ field.key }}">
                 <input type="checkbox" id="sync-option-{{ field.key }}" name="{{ field.key }}" {{ "checked" if field.value }}>
@@ -53,7 +82,7 @@
                    name="{{ field.key }}" value="{{ field.value if field.value is not none else '' }}"
                    {{ "required" if field.required }}>
         {% endif %}
-        {% if field.help and field.type not in ('local_folder', 'select') %}<p class="hint-text">{{ field.help }}</p>{% endif %}
+        {% if field.help and field.type not in ('local_folder', 'select', 'remote_folder', 'remote_collection') %}<p class="hint-text">{{ field.help }}</p>{% endif %}
     </div>
 {% endmacro %}
 
@@ -64,6 +93,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='components/collapsible_panel.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='utilities/automations.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='utilities/sync.css') }}">
+    {# The pager's styles stay loaded while it's swapped (its macro links them too). #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='components/pagination.css') }}">
 {% endblock %}
 
 {% block utility_content %}
@@ -72,11 +103,16 @@
 {% set setup_done = sync.options_done and sync.where_done and sync.consented %}
 {% set header_actions %}
 <div class="automation-actions">
+    {% if sync.is_web and not is_on %}
+        <button type="button" class="btn-primary" id="sync-enable-review"
+                {{ 'disabled' if sync.missing }}>{{ _("Enable") }}</button>
+    {% else %}
     <form method="POST" action="{{ url_for('sync_turn_off' if is_on else 'sync_turn_on', slug=selected.slug) }}" class="sync-inline-action">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <button type="submit" class="{{ 'btn-secondary' if is_on else 'btn-primary' }}"
                 {{ 'disabled' if not is_on and sync.missing }}>{{ _("Disable") if is_on else _("Enable") }}</button>
     </form>
+    {% endif %}
     {% if is_on %}
         <button type="button" class="btn-primary" id="sync-run-now"
                 data-run-url="{{ url_for('automations_run_now', slug=selected.slug) }}">{{ _("Run now") }}</button>
@@ -106,17 +142,94 @@
 {% endif %}
 
 <div class="sync-detail">
+    {% if sync.account %}
+    {% set account = sync.account %}
+    {% call collapsible_panel('sync-step-account', _('Account'),
+                              is_open=not account.done, done=account.done,
+                              value=(account.provider_label ~ ' · ' ~ account.label) if account.label else none) %}
+            {% if account.connection_key %}
+                <div class="sync-account-card">
+                    <div class="sync-account-who">
+                        <span class="sync-account-name">{{ account.label }}</span>
+                        <span class="sync-account-meta">
+                            {{ account.provider_label }}
+                            {% if account.done %}<span class="chip chip-success">{{ _("Signed in") }}</span>
+                            {% else %}<span class="chip chip-warning">{{ _("Needs sign-in") }}</span>{% endif %}
+                            {% if account.shared_with %}<span class="sync-account-shared">· {{ ngettext("Also used by %(num)d other sync", "Also used by %(num)d other syncs", account.shared_with) }}</span>{% endif %}
+                        </span>
+                    </div>
+                    <div class="sync-account-actions">
+                        <form method="POST" action="{{ url_for('sync_sign_in', slug=selected.slug) }}" class="sync-inline-action">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <button type="submit" class="{{ 'btn-secondary' if account.done else 'btn-primary' }}" id="sync-sign-in">{{ _("Sign in again") }}</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('sync_sign_in', slug=selected.slug) }}" class="sync-inline-action">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <input type="hidden" name="fresh" value="1">
+                            <button type="submit" class="btn-secondary">{{ _("Use a different account") }}</button>
+                        </form>
+                    </div>
+                </div>
+                {% if account.problem_text %}<p class="form-error" role="alert">{{ account.problem_text }}</p>{% endif %}
+            {% else %}
+                <p class="section-description">{{ _("Sign in to %(service)s in your browser. Yaffo only reads from it; your password never reaches Yaffo.", service=account.provider_label) }}</p>
+                <div class="sync-account-actions">
+                    <form method="POST" action="{{ url_for('sync_sign_in', slug=selected.slug) }}" class="sync-inline-action">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="btn-primary" id="sync-sign-in">{{ _("Sign in to %(service)s", service=account.provider_label) }}</button>
+                    </form>
+                </div>
+            {% endif %}
+            {% if account.others %}
+                <form method="POST" action="{{ url_for('sync_use_account', slug=selected.slug) }}" class="sync-form sync-account-others">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <label for="sync-account-choice">{{ _("Or use an account Yaffo already has") }}</label>
+                    <div class="sync-folder-input">
+                        <select id="sync-account-choice" name="connection_key" class="searchable-select" data-search-disabled>
+                            {% for other in account.others %}<option value="{{ other.key }}">{{ other.label }}</option>{% endfor %}
+                        </select>
+                        <button type="submit" class="btn-secondary">{{ _("Use this account") }}</button>
+                    </div>
+                </form>
+            {% endif %}
+            {% if account.device_code %}
+                <details class="sync-device-code" id="sync-device-code"
+                         data-start-url="{{ url_for('sync_device_code', slug=selected.slug) }}"
+                         data-poll-url="{{ url_for('sync_device_code_poll', slug=selected.slug) }}">
+                    <summary>{{ _("Signing in on another device?") }}</summary>
+                    <div class="sync-device-code-body">
+                        <p class="hint-text">{{ _("Use this when this browser can't reach Yaffo directly, such as when Yaffo runs on another computer.") }}</p>
+                        <button type="button" class="btn-secondary" data-device-start>{{ _("Get a code") }}</button>
+                        <div class="sync-device-code-box" data-device-box hidden>
+                            <p>{{ _("Open this page and enter the code:") }}
+                                <a href="#" target="_blank" rel="noopener" data-device-link></a></p>
+                            <p class="sync-device-code-value" data-device-code></p>
+                        </div>
+                        <p class="hint-text" data-device-status aria-live="polite"></p>
+                    </div>
+                </details>
+            {% endif %}
+    {% endcall %}
+    {% endif %}
+
     {% call collapsible_panel('sync-step-options', _('Folder and options'),
-                              is_open=not sync.options_done, done=sync.options_done,
+                              is_open=not sync.options_done and not sync.options_locked, done=sync.options_done,
                               value=sync.options_summary) %}
+            {% if sync.options_locked %}
+                <p class="section-description">{{ _("Sign in first: the folder is chosen from your account.") }}</p>
+            {% else %}
             {% if sync.role != 'source' %}
                 <p class="section-description">{{ _("Where the copies go, and in what form.") }}</p>
             {% endif %}
             <form method="POST" action="{{ url_for('sync_update_options', slug=selected.slug) }}" class="sync-form">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 {% for field in sync.options %}{{ option_field(field) }}{% endfor %}
-                <div class="sync-form-actions"><button type="submit" class="btn-primary">{{ _("Save") }}</button></div>
+                {# Choosing a remote folder saves at once; Save is for the other fields. #}
+                {% if sync.options | rejectattr('type', 'in', ['remote_folder', 'remote_collection']) | list %}
+                    <div class="sync-form-actions"><button type="submit" class="btn-primary">{{ _("Save") }}</button></div>
+                {% endif %}
             </form>
+            {% endif %}
     {% endcall %}
 
     {% if sync.role == 'target' %}
@@ -164,10 +277,24 @@
                     <div class="sync-option-label">
                         <label for="sync-subpath">{{ _("Subfolder") }}</label>
                         <button type="button" class="help-tip" data-icon="info"
-                                aria-label="{{ _("New photos go into this folder of your library, in a folder per year and month taken.") }}"
-                                data-tooltip="{{ _("New photos go into this folder of your library, in a folder per year and month taken.") }}"></button>
+                                aria-label="{{ _("New photos go into this folder of your library.") }}"
+                                data-tooltip="{{ _("New photos go into this folder of your library.") }}"></button>
                     </div>
                     <input type="text" id="sync-subpath" name="subpath" value="{{ config.import_root.subpath if config.import_root else '' }}">
+                </div>
+                <div class="form-group">
+                    {% set layout_help = _("How new photos are arranged in that folder. Keep the source's folders mirrors the folders inside the one you import from; the others go by each photo's capture date. Photos already imported stay where they are.") %}
+                    <div class="sync-option-label">
+                        <label for="sync-layout">{{ _("Arrange by") }}</label>
+                        <button type="button" class="help-tip" data-icon="info"
+                                aria-label="{{ layout_help }}" data-tooltip="{{ layout_help }}"></button>
+                    </div>
+                    {% set current_layout = config.import_root.layout if config.import_root else 'source_folders' %}
+                    <select id="sync-layout" name="layout" class="searchable-select" data-search-disabled>
+                        {% for choice in sync.layout_choices %}
+                            <option value="{{ choice.value }}" {{ "selected" if choice.value == current_layout }}>{{ choice.label }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="sync-form-actions"><button type="submit" class="btn-primary">{{ _("Save") }}</button></div>
             </form>
@@ -176,26 +303,66 @@
 
     {% include "utilities/automations_trigger_panel.html" %}
 
-    <section class="settings-section sync-test-card" id="sync-test-card" hidden aria-live="polite">
-        <div class="sync-step-head sync-step-head-static">
-            <span class="sync-step-title"><h2>{{ _("What a run would do now") }}</h2></span>
+    {# Test's result: what a run would do, computed without doing it (sync.js renders it). #}
+    <section class="settings-section sync-test-card" id="sync-test-card" hidden aria-labelledby="sync-test-title">
+        <div class="sync-test-head">
+            <div>
+                <h2 id="sync-test-title">{{ _("What a run would do now") }}</h2>
+                <p class="hint-text sync-test-meta" id="sync-test-meta"></p>
+            </div>
+            <button type="button" class="btn-secondary btn-sm" id="sync-test-close">{{ _("Close") }}</button>
         </div>
-        <div id="sync-test-result"></div>
+        <div id="sync-test-result" aria-live="polite"></div>
     </section>
 
     {% include "utilities/automations_runs.html" %}
 
-    <section class="settings-section sync-items" id="sync-items"
-             hx-get="{{ url_for('sync_items', slug=selected.slug) }}" hx-trigger="load" hx-swap="outerHTML">
-        <div class="sync-step-head sync-step-head-static">
-            <span class="sync-step-title"><h2>{{ _("Items") }}</h2></span>
-        </div>
-    </section>
+    {# The ledger: what this sync imported or sent. Folded to its counts unless
+       something failed; the body pages, filters, and searches on the server. #}
+    {% call collapsible_panel('sync-items', _('Items'), is_open=sync.counts.get('failed', 0) > 0,
+                              value=sync.items_summary) %}
+        {# One form carries the search, the status, and the page size, so the chips,
+           the search box, and the pagination component all send the current view. #}
+        <form id="sync-items-form" class="sync-items-form" hx-get="{{ url_for('sync_items', slug=selected.slug) }}"
+              hx-target="#sync-items-body" hx-swap="innerHTML" hx-trigger="submit">
+            {% if sync.counts %}
+                <div class="sync-items-toolbar form-group">
+                    <input type="text" id="sync-items-search" name="q" class="sync-items-search" autocomplete="off"
+                           placeholder="{{ _('Search by file name') }}" aria-label="{{ _('Search items by file name') }}"
+                           hx-get="{{ url_for('sync_items', slug=selected.slug) }}"
+                           hx-trigger="input changed delay:300ms" hx-target="#sync-items-body"
+                           hx-swap="innerHTML" hx-include="closest form" hx-vals='{"page": 0}'>
+                </div>
+            {% endif %}
+            <div id="sync-items-body" hx-get="{{ url_for('sync_items', slug=selected.slug) }}" hx-trigger="load"
+                 hx-swap="innerHTML" aria-live="polite">
+                <p class="hint-text">{{ _("Loading…") }}</p>
+            </div>
+            {# Outside the swapped body: each items response updates it out of band. #}
+            <div id="sync-items-pager"></div>
+        </form>
+        <form id="sync-retry-form" method="POST" action="{{ url_for('sync_retry_failed', slug=selected.slug) }}" hidden>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        </form>
+    {% endcall %}
 </div>
 
 <form id="delete-automation-form" method="POST" action="{{ url_for('automations_delete', slug=selected.slug) }}" hidden>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 </form>
+{% if sync.is_web and not is_on %}
+{% macro render_enable_review() %}
+    <p class="section-description">{{ _("Turning this sync on lets Yaffo do this, on its schedule, until you turn it off:") }}</p>
+    <dl class="sync-review-terms">
+        {% for term in sync.consent_terms %}
+            <div class="sync-review-term"><dt>{{ term.label }}</dt><dd>{{ term.value }}</dd></div>
+        {% endfor %}
+    </dl>
+    <p class="hint-text">{{ _("Changing the account, folder, or where photos go turns the sync off until you review it again.") }}</p>
+{% endmacro %}
+{{ render_modal('syncEnableModal', _('Turn on this sync?'), url_for('sync_turn_on', slug=selected.slug),
+                render_enable_review, _('Enable')) }}
+{% endif %}
 {{ render_modal('editAutomationModal', _('Edit automation'),
                 url_for('automations_update_details', slug=selected.slug),
                 render_edit_automation_form, _('Save')) }}

@@ -48,6 +48,7 @@ from yaffo.site_agents import llm_config
 from yaffo.routes.utilities.common import automations_sidebar_context
 from yaffo.routes.utilities.run_history import RunView, run_views
 from yaffo.routes.utilities import sync_views
+from yaffo.sync import connections
 
 
 # Rows in an automation's run history.
@@ -425,11 +426,14 @@ def init_automations_routes(app: Flask):
         if automation.is_system:
             return _error(gettext("System automations cannot be deleted"), "system_automation_locked", 400)
         # SQLite doesn't enforce the cascade, so a sync's ledger goes explicitly. Nothing
-        # is removed remotely and no imported file is deleted.
+        # is removed remotely and no imported file is deleted. Its account is released
+        # (row and keychain entry) once no other sync uses it.
+        connection_key = sync_views.connection_key_of(automation)
         db.session.query(SyncItem).filter(SyncItem.automation_id == automation.id).delete(
             synchronize_session=False)
         db.session.delete(automation)
         db.session.commit()
+        connections.release_if_unreferenced(db.session, connection_key)
         return redirect(url_for("automations_index"))
 
     @app.route("/utilities/automations/<slug>/enabled", methods=["POST"])

@@ -18,12 +18,16 @@ from yaffo.db.models import (
     SYNC_ITEM_REMOVED_REMOTELY, SYNC_ITEM_REMOVING, SYNC_ITEM_SENT, SYNC_ROLE_SOURCE,
 )
 from yaffo.db.repositories import sync_repository
+from yaffo.sync import access, setup
 from yaffo.sync.adapters import AdapterUnavailable, LoadedAdapter, load_adapter, source_handler, target_handler
 from yaffo.sync.convert import UnsupportedFormat, needs_conversion
 from yaffo.sync.files import file_sha1
-from yaffo.sync.handlers import HookContext
-from yaffo.sync.schemas import PASS_INCREMENTAL, PAUSE_SELECTION_MISSING, SyncColumn, SyncSchemaError
+from yaffo.sync.handlers import ERROR_AUTH, ERROR_NOT_FOUND, HookContext
+from yaffo.sync.schemas import (
+    PASS_INCREMENTAL, PAUSE_OPTION_MISSING, PAUSE_SELECTION_MISSING, SyncColumn, SyncSchemaError,
+)
 from yaffo.sync.selection import SelectionMissing, resolve_selection
+from yaffo.sync.starlark_adapter import HookFailed
 from yaffo.sync.target_run import PERMANENT_ITEM_ERRORS, item_key
 
 SAMPLE_SIZE = 8
@@ -34,6 +38,10 @@ RECORD_NEW = "new"
 RECORD_IMPORTED = "imported"
 RECORD_IN_LIBRARY = "in_library"
 RECORD_CHANGED = "changed"
+RECORD_DELETED = "deleted_at_source"
+
+PROBLEM_SERVICE_ERROR = "service_error"
+PROBLEM_SIGN_IN = "needs_sign_in"
 
 
 @dataclass(frozen=True)
@@ -56,6 +64,7 @@ class SyncTestResult:
     remove_samples: list[str] = field(default_factory=list)
     records: list[RecordPreview] = field(default_factory=list)
     more: bool = False
+    detail: str | None = None
 
 
 def _target(session: Session, automation: Automation, column: SyncColumn, adapter: LoadedAdapter) -> SyncTestResult:
@@ -103,33 +112,54 @@ def _target(session: Session, automation: Automation, column: SyncColumn, adapte
 
 
 def _source(session: Session, automation: Automation, column: SyncColumn, adapter: LoadedAdapter) -> SyncTestResult:
+    """The first page, live. A web source reads through the sync's account with read
+    grants only; nothing is downloaded."""
     handler = source_handler(adapter)
     options = column.config.options
     result = SyncTestResult(role=column.config.role)
     result.problem = handler.source_problem(options)
     if result.problem:
         return result
-    ctx = HookContext(options=options, state=column.runtime.state, run_id=None, pass_kind=PASS_INCREMENTAL,
-                      preview=True, automation_id=automation.id)
-    page = handler.list_page(None, ctx)
-    records = page.get("records") or []
+    cursor = column.runtime.cursor("list")
+    client = access.attach(session, adapter, column.config, read_only=True, vouched=column.runtime.followups)
+    ctx = HookContext(options=options, state={**column.runtime.state, "checkpoint": cursor.checkpoint},
+                      run_id=None, pass_kind=PASS_INCREMENTAL, preview=True, automation_id=automation.id)
+    try:
+        page = handler.list_page(None, ctx)
+    except HookFailed as e:
+        result.problem, result.detail = PROBLEM_SERVICE_ERROR, str(e)
+        return result
+    error = page.get("error")
+    if (client is not None and client.auth_failed) or (error and error.get("code") == ERROR_AUTH):
+        result.problem = PROBLEM_SIGN_IN
+        return result
+    if error:
+        result.problem = PAUSE_OPTION_MISSING if error.get("code") == ERROR_NOT_FOUND else PROBLEM_SERVICE_ERROR
+        result.detail = error.get("message") or error.get("code")
+        return result
+    records = [r for r in page.get("records") or [] if isinstance(r, dict) and r.get("source_id")]
     known = sync_repository.rows_by_key(session, automation.id, [r["source_id"] for r in records])
     for index, record in enumerate(records):
         row = known.get(record["source_id"])
-        if row is not None and row.status != SYNC_ITEM_FAILED:
+        if record.get("deleted"):
+            state = RECORD_DELETED
+        elif row is not None and row.status != SYNC_ITEM_FAILED:
             state = (RECORD_IMPORTED if row.fingerprint == record.get("updated_at")
                      or row.status == SYNC_ITEM_DELETED_AT_SOURCE else RECORD_CHANGED)
         else:
             state = RECORD_NEW
-            if index < HASH_CHECK_LIMIT and record.get("local_path"):
+            digest = record.get("hash") or {}
+            sha1 = digest.get("value") if digest.get("algo") == "sha1" else None
+            if sha1 is None and index < HASH_CHECK_LIMIT and record.get("local_path"):
                 try:
-                    digest = file_sha1(Path(record["local_path"]))
+                    sha1 = file_sha1(Path(record["local_path"]))
                 except OSError:
-                    digest = None
-                if digest and session.query(MediaItem.id).filter(MediaItem.sha1 == digest).first():
-                    state = RECORD_IN_LIBRARY
+                    sha1 = None
+            if sha1 and session.query(MediaItem.id).filter(MediaItem.sha1 == sha1).first():
+                state = RECORD_IN_LIBRARY
         result.records.append(RecordPreview(filename=record.get("filename") or record["source_id"],
-                                            size=record.get("size"), state=state))
+                                            size=None if record.get("deleted") else record.get("size"),
+                                            state=state))
     result.would_add = sum(1 for r in result.records if r.state == RECORD_NEW)
     result.more = page.get("next_cursor") is not None
     return result
@@ -141,10 +171,13 @@ def preview_sync(session: Session, automation: Automation) -> SyncTestResult:
         adapter = load_adapter(session, column.config.adapter_id)
     except (SyncSchemaError, AdapterUnavailable):
         return SyncTestResult(role="", problem="invalid_config")
+    missing = setup.missing_setup(session, automation)
+    if "account" in missing:
+        return SyncTestResult(role=column.config.role, problem=PROBLEM_SIGN_IN)
+    if any(code.startswith("option:") for code in missing):
+        return SyncTestResult(role=column.config.role, problem="setup_incomplete")
     if column.config.role == SYNC_ROLE_SOURCE:
-        if not column.config.options.get("folder"):
-            return SyncTestResult(role=column.config.role, problem="setup_incomplete")
         return _source(session, automation, column, adapter)
-    if not column.config.options.get("folder") or column.config.selection is None:
+    if column.config.selection is None:
         return SyncTestResult(role=column.config.role, problem="setup_incomplete")
     return _target(session, automation, column, adapter)

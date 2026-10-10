@@ -374,24 +374,13 @@
         "running": "Checking…",
         "failed": "Could not run the test.",
         "nothingToDo": "Nothing to do: the target already matches.",
-        "wouldAdd_one": "Would copy {{count}} photo",
-        "wouldAdd_other": "Would copy {{count}} photos",
-        "wouldRemove_one": "Would remove {{count}}",
-        "wouldRemove_other": "Would remove {{count}}",
-        "unchanged_one": "{{count}} already there",
-        "unchanged_other": "{{count}} already there",
-        "convert_one": "{{count}} would be converted to JPEG",
-        "convert_other": "{{count}} would be converted to JPEG",
-        "unsupported_one": "{{count}} can't be sent (this target doesn't take that kind of file)",
-        "unsupported_other": "{{count}} can't be sent (this target doesn't take that kind of file)",
-        "newFiles_one": "{{count}} new file would be copied in",
-        "newFiles_other": "{{count}} new files would be copied in",
         "more": "Showing the first page only.",
         "state": {
           "new": "New",
           "imported": "Already imported",
           "in_library": "Already in your library",
-          "changed": "Edited since the last import"
+          "changed": "Edited since the last import",
+          "deleted_at_source": "Deleted at the source"
         },
         "columns": {
           "file": "File",
@@ -404,7 +393,29 @@
           "remove": "Remove",
           "showing": "Showing {{shown}} of {{total}}"
         },
-        "nothingChanged": "Nothing was copied or changed."
+        "nothingNew": "Nothing new to import.",
+        "checked": "Checked at {{time}} · a preview; nothing was copied or changed",
+        "stat": {
+          "copy": "to copy",
+          "remove": "to remove",
+          "unchanged": "already there",
+          "convert": "converted to JPEG",
+          "unsupported": "can't be sent (this target doesn't take that kind of file)"
+        }
+      },
+      "picker": {
+        "top": "Top",
+        "open": "Open",
+        "choose": "Choose",
+        "suggested": "Suggested",
+        "loading": "Loading…",
+        "failed": "Couldn't load the folders.",
+        "empty": "No folders here."
+      },
+      "device": {
+        "waiting": "Waiting for you to enter the code…",
+        "done": "Signed in.",
+        "failed": "Couldn't start the sign-in. Try again."
       }
     }
   },

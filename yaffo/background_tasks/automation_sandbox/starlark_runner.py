@@ -85,6 +85,7 @@ def run_starlark(
     limits: RunLimits = DEFAULT_LIMITS,
     should_cancel: Callable[[], bool] | None = None,
     cancel_poll_seconds: float = 1.0,
+    untimed_functions: frozenset[str] = frozenset(),
 ) -> StarlarkResult:
     """Kill runaway evaluation; return failures and partial output as data.
 
@@ -92,6 +93,10 @@ def run_starlark(
     to finish on the owning thread; no further calls run after the deadline. Host
     I/O therefore still needs its own timeouts (killing a DB write mid-commit is
     unsafe). The evaluator itself is always killed at the deadline.
+
+    Calls to `untimed_functions` (the sync adapters' web calls, which carry their own
+    timeouts) don't count: the deadline is paused while one runs, so the limit bounds
+    the script's own work.
 
     `should_cancel` is polled on the owning thread at most every
     `cancel_poll_seconds`, between messages, so a cancel never interrupts a host
@@ -137,12 +142,16 @@ def run_starlark(
         except OSError:
             pass
 
+    def start_timer() -> threading.Timer:
+        started = threading.Timer(max(0, deadline - time.monotonic()), timeout)
+        started.daemon = True
+        started.start()
+        return started
+
     try:
         proc = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                 stderr=subprocess.DEVNULL, env=env)
-        timer = threading.Timer(max(0, deadline - time.monotonic()), timeout)
-        timer.daemon = True
-        timer.start()
+        timer = start_timer()
         messages = queue.Queue()
         reader = threading.Thread(target=_read_messages,
                                   args=(proc.stdout, messages, limits.max_message_bytes), daemon=True)
@@ -176,10 +185,21 @@ def run_starlark(
                 name = message["name"]
                 if name not in functions:
                     raise ValueError("Unknown sandbox host function")
+                untimed = name in untimed_functions
+                if untimed:
+                    timer.cancel()
+                    call_started = time.monotonic()
                 try:
-                    value = functions[name](*message["args"])
+                    value = functions[name](*message["args"], **message.get("kwargs", {}))
                 except Exception as exc:
-                    send({"error": str(exc)})
+                    value, failure = None, exc
+                else:
+                    failure = None
+                if untimed and not expired.is_set():
+                    deadline += time.monotonic() - call_started
+                    timer = start_timer()
+                if failure is not None:
+                    send({"error": str(failure)})
                 else:
                     if expired.is_set() or time.monotonic() >= deadline:
                         raise TimeoutError(TIMEOUT_ERROR)

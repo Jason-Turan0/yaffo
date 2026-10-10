@@ -68,13 +68,22 @@ SELECTION_SCHEMA: dict[str, Any] = {
     ],
 }
 
+# How a source sync arranges new files under its import root.
+LAYOUT_SOURCE_FOLDERS = "source_folders"   # mirror the folders under the chosen source folder
+LAYOUT_YEAR_MONTH = "year_month"           # YYYY/MM of the capture date
+LAYOUT_YEAR = "year"                       # YYYY of the capture date
+LAYOUT_FLAT = "flat"                       # all in the import root
+IMPORT_LAYOUTS = (LAYOUT_SOURCE_FOLDERS, LAYOUT_YEAR_MONTH, LAYOUT_YEAR, LAYOUT_FLAT)
+DEFAULT_IMPORT_LAYOUT = LAYOUT_SOURCE_FOLDERS
+
 IMPORT_ROOT_SCHEMA: dict[str, Any] = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["media_dir_id", "subpath"],
+    "required": ["media_dir_id", "subpath", "layout"],
     "properties": {
         "media_dir_id": {"type": "string", "minLength": 1},
         "subpath": {"type": "string"},
+        "layout": {"enum": list(IMPORT_LAYOUTS)},
     },
 }
 
@@ -119,6 +128,7 @@ RUNTIME_SCHEMA: dict[str, Any] = {
         "state": {"type": "object"},
         "cursors": {"type": "object", "additionalProperties": CURSOR_SCHEMA},
         "last_run_at": _NULLABLE_STRING,
+        "followups": {"type": "array", "items": {"type": "string"}, "maxItems": 4},
     },
 }
 
@@ -226,6 +236,9 @@ class SyncRuntime:
     state: dict = field(default_factory=dict)
     cursors: dict[str, SyncCursor] = field(default_factory=dict)
     last_run_at: str | None = None
+    # sha256 of the stored cursor and checkpoint when they're URLs a granted call
+    # returned, so the next run may fetch them (the follow-up URL rule, see web.py).
+    followups: list[str] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, data: dict) -> SyncRuntime:
@@ -236,6 +249,7 @@ class SyncRuntime:
             state=dict(data["state"]),
             cursors={name: SyncCursor.from_dict(c) for name, c in data["cursors"].items()},
             last_run_at=data["last_run_at"],
+            followups=list(data.get("followups") or []),
         )
 
     def to_dict(self) -> dict:
@@ -245,6 +259,7 @@ class SyncRuntime:
             "state": dict(self.state),
             "cursors": {name: c.to_dict() for name, c in self.cursors.items()},
             "last_run_at": self.last_run_at,
+            "followups": list(self.followups),
         }
         validate(RUNTIME_SCHEMA, data, "sync runtime")
         return data
@@ -272,3 +287,149 @@ class SyncColumn:
 
     def to_dict(self) -> dict:
         return {"config": self.config.to_dict(), "runtime": self.runtime.to_dict()}
+
+
+# ---- connections and adapters ------------------------------------------------
+
+CONNECTION_READY = "ready"
+CONNECTION_NEEDS_SIGN_IN = "needs_sign_in"
+
+GRANT_ENDPOINT = "endpoint"
+GRANT_FOLLOWUP = "followup"
+RISK_READ = "read"
+RISK_WRITE = "write"
+RISK_SHARES_EXTERNALLY = "shares_externally"
+
+CONNECTION_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["provider", "account_id", "account_label", "scopes", "status", "secret_ref", "instance",
+                 "refreshing_until"],
+    "properties": {
+        "provider": {"type": "string", "minLength": 1},
+        "account_id": {"type": "string", "minLength": 1},
+        "account_label": _NULLABLE_STRING,
+        "scopes": {"type": "array", "items": {"type": "string"}},
+        "status": {"enum": [CONNECTION_READY, CONNECTION_NEEDS_SIGN_IN]},
+        "secret_ref": {"type": "string", "minLength": 1},
+        "instance": {"type": "object"},
+        "refreshing_until": _NULLABLE_STRING,
+    },
+}
+
+GRANT_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["method", "url_pattern", "grant_kind", "followup_of", "risk", "granted_code_hash", "granted_at"],
+    "properties": {
+        "method": {"type": "string", "minLength": 1},
+        "url_pattern": _NULLABLE_STRING,
+        "grant_kind": {"enum": [GRANT_ENDPOINT, GRANT_FOLLOWUP]},
+        "followup_of": _NULLABLE_STRING,
+        "risk": {"enum": [RISK_READ, RISK_WRITE, RISK_SHARES_EXTERNALLY]},
+        "granted_code_hash": {"type": "string"},
+        "granted_at": {"type": "string"},
+    },
+}
+
+MANIFEST_ENTRY_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["method", "url_pattern", "grant_kind", "risk", "line"],
+    "properties": {
+        "method": {"type": "string"},
+        "url_pattern": _NULLABLE_STRING,
+        "grant_kind": {"enum": [GRANT_ENDPOINT, GRANT_FOLLOWUP]},
+        "risk": {"enum": [RISK_READ, RISK_WRITE, RISK_SHARES_EXTERNALLY]},
+        "line": {"type": "integer"},
+    },
+}
+
+ADAPTER_VERSION_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["code_hash", "contract", "metadata", "manifest"],
+    "properties": {
+        "code_hash": {"type": "string", "minLength": 1},
+        "contract": {"type": "integer"},
+        "metadata": {"type": "object"},
+        "manifest": {"type": "array", "items": MANIFEST_ENTRY_SCHEMA},
+    },
+}
+
+for _schema in (CONNECTION_SCHEMA, GRANT_SCHEMA, ADAPTER_VERSION_SCHEMA):
+    _VALIDATORS[id(_schema)] = Draft202012Validator(_schema)
+
+
+@dataclass(frozen=True)
+class SyncConnection:
+    """An `application_settings` value for a `sync_connection:…` row: a signed-in
+    account at a provider, shared by every sync that uses that account. The secret
+    itself is in the keychain, named by `secret_ref`."""
+    provider: str
+    account_id: str
+    account_label: str | None
+    scopes: list[str]
+    status: str
+    secret_ref: str
+    instance: dict = field(default_factory=dict)
+    refreshing_until: str | None = None
+
+    @classmethod
+    def from_dict(cls, data: Any) -> SyncConnection:
+        validate(CONNECTION_SCHEMA, data, "sync connection")
+        return cls(provider=data["provider"], account_id=data["account_id"], account_label=data["account_label"],
+                   scopes=list(data["scopes"]), status=data["status"], secret_ref=data["secret_ref"],
+                   instance=dict(data["instance"]), refreshing_until=data["refreshing_until"])
+
+    def to_dict(self) -> dict:
+        data = {f.name: getattr(self, f.name) for f in fields(self)}
+        data["scopes"] = list(self.scopes)
+        data["instance"] = dict(self.instance)
+        validate(CONNECTION_SCHEMA, data, "sync connection")
+        return data
+
+
+@dataclass(frozen=True)
+class WebGrant:
+    """One authorized endpoint (or follow-up URL kind) of an adapter, pinned to the
+    code it was approved for."""
+    method: str
+    url_pattern: str | None
+    grant_kind: str
+    followup_of: str | None
+    risk: str
+    granted_code_hash: str
+    granted_at: str
+
+    @classmethod
+    def from_dict(cls, data: Any) -> WebGrant:
+        validate(GRANT_SCHEMA, data, "web grant")
+        return cls(**data)
+
+    def to_dict(self) -> dict:
+        data = {f.name: getattr(self, f.name) for f in fields(self)}
+        validate(GRANT_SCHEMA, data, "web grant")
+        return data
+
+
+@dataclass(frozen=True)
+class AdapterVersion:
+    """`sync_adapters.working` / `.published`: what the static check extracted from
+    the matching code column."""
+    code_hash: str
+    contract: int
+    metadata: dict
+    manifest: list[dict]
+
+    @classmethod
+    def from_dict(cls, data: Any) -> AdapterVersion:
+        validate(ADAPTER_VERSION_SCHEMA, data, "adapter version")
+        return cls(code_hash=data["code_hash"], contract=data["contract"], metadata=dict(data["metadata"]),
+                   manifest=[dict(entry) for entry in data["manifest"]])
+
+    def to_dict(self) -> dict:
+        data = {"code_hash": self.code_hash, "contract": self.contract, "metadata": dict(self.metadata),
+                "manifest": [dict(entry) for entry in self.manifest]}
+        validate(ADAPTER_VERSION_SCHEMA, data, "adapter version")
+        return data

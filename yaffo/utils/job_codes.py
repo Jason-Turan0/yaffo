@@ -43,6 +43,7 @@ PROBLEM_SYNC_PAUSED = "sync_paused"                # {pause_code}: selection/des
 PROBLEM_SYNC_ITEMS_FAILED = "sync_items_failed"    # {count}: some items failed this run
 PROBLEM_SYNC_STOPPED = "sync_stopped"              # {code}: the service stopped the run (rate limit, ...)
 PROBLEM_SYNC_DISK_FULL = "sync_disk_full"          # not enough free space to keep copying
+PROBLEM_SYNC_NEEDS_SIGN_IN = "sync_needs_sign_in"  # {reason}: the account must sign in (again)
 # Dispatch failures keep their original key, job_data["dispatch_error_code"].
 PROBLEM_INVALID_SCOPE = "invalid_scope"
 PROBLEM_DISPATCH_FAILED = "dispatch_failed"

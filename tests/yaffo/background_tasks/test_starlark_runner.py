@@ -5,9 +5,13 @@ pin the two things the automation executor relies on: the happy-path contract
 (value/output/inputs/host functions) and the sandbox guarantees (failures come
 back as data, and host state is unreachable except via injected callables).
 """
+import time
+
 import pytest
 
-from yaffo.background_tasks.automation_sandbox.starlark_runner import run_starlark, StarlarkResult
+from yaffo.background_tasks.automation_sandbox.starlark_runner import (
+    TIMEOUT_ERROR, RunLimits, StarlarkResult, run_starlark,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -170,3 +174,27 @@ def test_a_cancel_during_a_host_call_lets_the_call_finish_then_stops_the_script(
 
     assert calls == ["slow_write finished"]
     assert result.cancelled is True
+
+
+def test_host_functions_receive_keyword_arguments():
+    seen = []
+
+    def record(*args, **kwargs):
+        seen.append((list(args), kwargs))
+        return "ok"
+    result = run_starlark('record(1, "a", json={"k": [1]}, headers=None)', functions={"record": record})
+    assert result.success, result.error
+    assert seen == [([1, "a"], {"json": {"k": [1]}, "headers": None})]
+
+
+def test_untimed_host_calls_do_not_count_against_the_deadline():
+    def slow():
+        time.sleep(0.4)
+        return 1
+
+    code = "total = 0\nfor _ in range(3):\n    total += slow()\ntotal"
+    limits = RunLimits(timeout_seconds=0.9)
+    timed = run_starlark(code, functions={"slow": slow}, limits=limits)
+    assert not timed.success and timed.error == TIMEOUT_ERROR
+    untimed = run_starlark(code, functions={"slow": slow}, limits=limits, untimed_functions=frozenset({"slow"}))
+    assert untimed.success and untimed.value == 3

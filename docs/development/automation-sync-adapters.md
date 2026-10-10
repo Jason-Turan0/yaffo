@@ -1,7 +1,8 @@
 # Sync Adapters — Sources and Targets over a Host Sync Engine (Design Sketch)
 
-**Status: Phase 1 built (the engine, the Folder target and source, the triggers, and
-the setup UI); Phases 2–5 proposed. Alternative to [Automation Web Calls](automation-web-calls.md).**
+**Status: Phases 1 and 2 built (the engine, the Folder target and source, the
+triggers, the setup UI, connections and sign-in, Starlark adapters, and the OneDrive
+source); Phases 3–5 proposed. Alternative to [Automation Web Calls](automation-web-calls.md).**
 That doc has a custom automation do *everything* for an export (select, diff,
 upload, batch, record state) in one Starlark script. This sketch keeps its
 primitives (connections, stored as application settings and shared by syncs;
@@ -283,7 +284,7 @@ Static rules (checked when the builder writes code, and again at publish):
   and a `remove` hook without the capability is an error.
 
 The host stores the extracted metadata as JSON (hook values become their
-function names), so the UI, the builder prompt, and the consent screen never run
+function names), so the UI, the builder prompt, and the future enable review never run
 code to learn what an adapter does.
 
 **The selector is a separate script, on purpose.** An adapter is
@@ -332,9 +333,6 @@ with `__args__` injected as an input. Consequences:
   magnitude. Keeping a long-lived evaluator would save little and lose the
   per-call guarantees: kill-on-timeout, fresh limits, and no state leaking
   between calls (the reason `state_patch` is the only way to keep state).
-  Re-measure on the frozen PyInstaller build, where `sys.executable` is the
-  whole app and startup may be slower. Only if that's well above about 100 ms,
-  consider a pooled worker that resets its module between calls.
 - Module top level may define constants and helpers only. The static checker
   rejects top-level host calls in adapters.
 
@@ -379,7 +377,7 @@ ADAPTER = {
 ```
 
 `ADAPTER` is a literal apart from `hooks` (checked statically, like endpoint
-URLs), so the UI, the builder, and the consent screen can read it without
+URLs), so the UI, the builder, and the future enable review can read it without
 running code.
 
 ### Options
@@ -398,7 +396,7 @@ Each option has a `type`, a `label`, and optionally `help`, `default`, and
 | `string`, `int`, `bool` | the existing fields (`render_configure_form`, as system automations' `config_fields` use) | the value |
 | `select` | a dropdown of fixed `choices: [{value, label}]` declared in the option | the chosen `value` |
 | `remote_folder` | a **folder browser** on the service: breadcrumb, subfolder list, *Open*, *Choose* | `{"id": "01ABC…", "label": "Pictures › Camera Roll"}` |
-| `remote_collection` | a **list of the service's albums, sets, or buckets**, plus *Create new* when the option sets `allow_create: True` | `{"id": …, "label": …}` or `{"create": "For Mom"}` |
+| `remote_collection` | a **list of the service's albums, sets, or buckets** | `{"id": …, "label": …}` |
 
 **The `choices` hook** feeds both remote types:
 
@@ -560,6 +558,8 @@ than failing the sync.
 {
     "source_id": "A1B2C3",                  # required; stable provider id
     "filename": "IMG_1234.HEIC",            # required; sanitized by the host
+    "folder": "2024/July",                  # optional; the file's folder under the chosen source
+                                            #   folder, for the keep-the-source's-folders layout
     "download": {"url": "https://...", "headers": {}},  # or omit and implement resolve_download
     "size": 2311042,                        # optional; enables pre-download caps
     "mime": "image/heic",                   # optional; the host still sniffs the bytes
@@ -876,7 +876,7 @@ loop:
         tombstone → mark the sync_items row deleted_at_source (never delete the local file; see Source deletions)
         resolve_download if needed → download to temp in the import root
         sniff type (images/videos only), enforce size caps, check free space
-        atomic rename to Imports/<sync>/<YYYY>/<MM>/<sanitized name>
+        atomic rename to <import root>/<folder by layout>/<sanitized name>
         record watcher suppression (Mechanism 2 in Automations) so file_sync doesn't double-index
     index the page's new files (existing indexer), passing taken_at/location hints
     commit sync_items + runtime (state_patch, next_cursor) in one transaction (chunked)
@@ -1009,9 +1009,9 @@ labels, and album membership are untouched. Reasons:
 
 What the user gets instead:
 
-- A "Deleted at source" filter (from `sync_items.status`), so they can
-  review those photos and delete them in Yaffo with the normal delete
-  (which sends files to the OS trash) if they want to.
+- The sync's Items panel lists them under the *Deleted at source* status, so
+  they can review those photos and delete them in Yaffo with the normal
+  delete (which sends files to the OS trash) if they want to.
 - A count on the sync's run summary ("12 photos deleted in OneDrive; kept in
   your library").
 
@@ -1040,6 +1040,15 @@ The host treats adapter output as untrusted input:
 | Shows | the first page as a table of records (filename, taken, size, hash, "already in library?") plus validation errors | the diff ("would add 12 to *For Mom*, remove 3"), then the adapter's recorded web calls per batch |
 | Library writes | none, no downloads | none |
 
+As built, the result appears in a *What a run would do now* panel: when it was
+checked ("a preview; nothing was copied or changed"), number tiles for what would
+happen (to copy, to remove, already there, converted, can't be sent; for sources,
+new, edited, already in the library, already imported, deleted at the source), a
+sentence when there's nothing to do, and a sample table with each file's planned
+action. When the diff is larger than the sample, it says how many are listed. A web
+source's Test reads the first page live with read grants only; nothing is
+downloaded.
+
 **Which account Test uses.** A sync's Test uses that sync's connection. The
 builder's Test (`test_adapter`) uses the custom adapter's test connection
 (`sync_adapters.test_connection_key`); with none signed in, its reads return
@@ -1058,7 +1067,13 @@ Two layers, matching the two separate questions a user is asked:
    template), approved at publish, re-opened when code widens. **Presets** ship
    with their manifests and a pinned code hash; installing one shows the manifest
    once.
-2. **Sync consent**: what the engine will do with it.
+2. **Sync approval**: what the engine will do with it. For the built-in Folder
+   adapters, the user reviews the folder, selection, import root, and removal
+   setting in the setup panels, then clicks **Enable**. That action stores the
+   consent hash; there is no separate review panel. A web adapter's **Enable**
+   opens a review first: where from, which account, into where and how arranged,
+   what happens to deletions, and the hosts Yaffo talks to; confirming stores the
+   same hash.
    - Source: "Import new photos from *OneDrive › Camera Roll* into
      *Pictures › Imports › OneDrive*." The import root is part of the consent;
      changing it re-asks.
@@ -1070,8 +1085,10 @@ Two layers, matching the two separate questions a user is asked:
      (the album is the user's consent, item by item).
    - **Deleting a photo from Yaffo removes it from every target it was sent
      to** (where the target supports removal), the same as removing it from
-     the selected album. The consent sentence says so: "Photos removed from
-     the album, or deleted from Yaffo, are removed from the Google album."
+     the selected album. A web target's enable review should say so: "Photos
+     removed from the album, or deleted from Yaffo, are removed from the Google
+     album." For the Folder target, the removal option says whether to remove
+     an unchanged copy from the destination or keep it there.
    - Endpoints marked `shares_externally` (OneDrive `createLink`, Immich shared
      links) keep their own separate confirmation, as in the web-calls doc.
 
@@ -1079,7 +1096,7 @@ Two layers, matching the two separate questions a user is asked:
 
 A sync is a **type of automation**, next to system automations and custom
 (script) automations. It lives in the existing Utilities › Automations list,
-uses the existing detail page, triggers pages, and run history, and adds no
+uses the existing detail page, trigger editor, and run history, and adds no
 new top-level pages. There is no Connections page and no Adapters page.
 
 Mockup: [sync automation pages](assets/automation-sync-adapters/sync-automation-mockup.html)
@@ -1098,9 +1115,10 @@ mid-setup, a OneDrive target that needs more access on a shared account, and the
 | **Send to…** | pick a service: target adapters, presets first, then custom ones |
 | **Add a new service…** | builder chat for a custom adapter (see *Custom adapters*) |
 
-After the service, setup is one page, filled top to bottom. Every step is a
-section of the detail page, so an unfinished setup is just an automation whose
-status says what's missing (`needs_sign_in`, `needs_consent`):
+After the service, setup is one page, filled top to bottom. The Folder steps
+are collapsible panels; completed steps fold to their headings and summaries.
+An unfinished sync cannot be enabled until its required setup is complete.
+The later account step will also surface `needs_sign_in`:
 
 1. **Account.** If a connection for this provider exists, it's preselected
    ("OneDrive · jason@outlook.com ✓ · Use a different account"), and if this
@@ -1109,42 +1127,54 @@ status says what's missing (`needs_sign_in`, `needs_consent`):
    key field, Immich also asks for its server URL). Afterwards the section
    shows the account label, "also used by 2 other syncs" when shared, and a
    *Sign in again* link.
-2. **Options.** A form generated from `ADAPTER["options"]` (see *Options*):
+2. **Folder and options** for the built-in Folder adapters; other adapters use
+   their own option labels. A form generated from `ADAPTER["options"]` (see *Options*):
    plain fields use the macro system automations use for `config_fields` today
    (`render_configure_form`); `remote_folder` / `remote_collection` options
    open a folder browser or an album list on the signed-in account. Locked
    until the *Account* step is done.
-3. **Where.**
+3. **What to send / Where to put them.**
    - Source: the import root, using the existing media-dir picker plus a
-     subfolder (default `Imports/<provider>`).
+     subfolder (default `Imports/<sync name>`), and **Arrange by**: keep the
+     source's folders (the default), by year and month taken, by year taken, or
+     all in one folder. Changing it re-asks; photos already imported stay put.
    - Target: the selection: *Album* (album picker), *Photos matching a filter*
      (the existing filter UI, saved as the `data_query`), or *Custom rule*
      (opens the builder chat on this automation for a selector script).
-4. **When.** Defaults filled in, editable on the existing triggers page:
+4. **When.** Defaults filled in, editable in the collapsible trigger panel:
    nightly for sources; for album targets, *when the album changes* plus
    nightly.
-5. **Turn on.** Shows the consent sentence ("Send the photos in *For Mom* to
-   Google Photos › *For Mom* as jason@gmail.com") and the endpoint list for
-   custom adapters. Confirming stores the consent hash and enables the
-   automation. *Test* sits next to it and shows the preview described in
-   *Test / preview*.
+
+**Enable / Disable** is a header action, like on other automation pages. For
+the built-in Folder adapters, enabling the completed setup stores the consent
+hash; web adapters show the review described under *Authorization and consent*
+first. Changing the account, folder, options, import root, or selection disables
+the sync until it is enabled again. The header also has **Test**, whose result
+appears in a *What a run would do now* panel above Run history.
 
 ### The detail page of a sync
 
 Same layout as other automations, with the code section replaced by:
 
-- **Header:** "OneDrive › Camera Roll → Pictures/Imports/OneDrive", status chip,
-  on/off toggle.
-- **Status line** from `runtime`: "Importing your existing photos: 8,200 so
-  far" during a backfill, "Up to date · checked 06:00" afterwards, or the
-  action needed ("Sign in again", "Review changes to turn back on", "The album
-  *For Mom* was deleted").
-- **Setup sections** (above), collapsed once complete.
-- **Items:** the `sync_items` ledger for this automation, filterable by status
-  (sent, failed, can't remove, deleted at source), with *Retry failed*.
+- **Header:** the automation name and a short description of the source or
+  selection. Enable / Disable, Test, and Run now are header actions. The On
+  badge is in the automation sidebar, not beside the page title.
+- **Attention message:** shown below the header when the sync needs action,
+  such as reconnecting a missing folder or account.
+- **Setup sections:** Folder and options, What to send / Where to put them,
+  and When use the same collapsible panel with a left-side caret. Options
+  explanations appear in info hovers beside their labels.
 - **Run history:** the existing component; each run's summary carries the
   engine's counts ("+34 imported, 2 skipped as duplicates, 12 deleted in
   OneDrive and kept").
+- **Items:** a collapsible panel below Run history, folded to its counts ("1
+  failed · 2 imported") unless something failed. It holds a search box (file
+  names only), a chip per status that occurs (in a fixed order per direction,
+  problems first; the selected one stays, even at 0), the ledger as a table
+  (photo, status and why, where it is in the library or where it was sent,
+  updated), *Retry failed*, and the shared pagination component, updated out of
+  band so it isn't redrawn with the table. Paging, search, and counts are
+  queries; only one page is ever rendered.
 
 ### Custom adapters
 
@@ -1164,8 +1194,7 @@ updating" with *Regenerate*. Presets never show code.
   pre-filled.
 - **Photo details:** "Imported from OneDrive" / "Sent to *For Mom*", from
   `sync_items`.
-- **Filters:** *Imported by* (a sync automation), *Deleted at source*, *Sync
-  failed*.
+- **Filters:** *Imported by* (a sync automation), *Sync failed*.
 
 ## Building a custom adapter
 
@@ -1186,7 +1215,7 @@ publish).
 
 Presets get their connection definition from host code. A custom adapter
 declares it in `ADAPTER`, as a literal like the rest of the metadata, so it's
-validated statically and shown at *Turn on* without running code:
+validated statically and shown in the future enable review without running code:
 
 ```python
 ADAPTER = {
@@ -1473,7 +1502,7 @@ checks that already exist:
 
 - endpoints are detected statically and must be under the connection block's
   hosts;
-- the hosts are listed in plain words at *Turn on* ("This service talks to
+- the hosts are listed in plain words in the enable review ("This service talks to
   api.flickr.com and up.flickr.com") and changing them re-asks consent;
 - endpoints marked `shares_externally` keep their separate confirmation;
 - the adapter can't read files or Yaffo data except what the engine hands each
@@ -1625,8 +1654,7 @@ def choices(option, parent_id, cursor, ctx):
 ADAPTER = {"contract": 1, "role": "target", "provider": "google_photos",
            "title": "Google Photos album",
            "options": {"album": {"type": "remote_collection", "label": "Google Photos album",
-                                 "help": "Leave empty to use the Yaffo album's name.",
-                                 "allow_create": True}},
+                                 "help": "Leave empty to use the Yaffo album's name."}},
            "capabilities": {"max_batch": 50, "remove": True, "update": False,
                             "reconcile": True, "targets": "many"},
            "hooks": {"push": push, "remove": remove, "list_remote": list_remote,
@@ -1769,13 +1797,14 @@ the same rule as for web targets.
 
 **What the user is told.** Yaffo knows only that a copy was **written**, not
 whether a desktop app uploaded it, so the run summary and Items list say
-"written to folder", never "sent". The consent sentence names the folder and
-the removal behavior: "Copy the photos in *For Mom* to *~/Amazon Photos
-Backup* as JPEG. Photos removed from the album, or deleted from Yaffo, are
-deleted from that folder."
-The *Turn on* step adds what that means downstream when the user picks a known
-sync app's folder: Amazon's folder backup only uploads, so deleting a copy
-doesn't remove the photo from Amazon Photos, while a Dropbox folder would.
+"written to folder", never "sent". The setup shows the destination and a
+*When a photo leaves the selection* choice: **Remove from destination** or
+**Keep at destination**. Its info hover explains that Remove sends only an
+unchanged copy Yaffo made to the system Trash. The original in the library is
+not removed. Clicking Enable records the current setup's consent hash.
+Yaffo does not promise what a desktop app does downstream: Amazon's folder
+backup only uploads, while deleting from a Dropbox folder may propagate to
+Dropbox.
 
 ## Targets considered and not planned
 
@@ -1958,7 +1987,8 @@ class SyncConfig:                     # automations.sync["config"]
                                       # built-ins with no account (Folder source/target)
     scopes_needed: list[str]          # what this sync needs; must be ⊆ the connection's scopes
     options: dict                     # validated against the adapter's ADAPTER["options"]
-    import_root: dict | None          # sources: {"media_dir_id": uuid, "subpath": "Imports/OneDrive"}
+    import_root: dict | None          # sources: {"media_dir_id": uuid, "subpath": "Imports/OneDrive",
+                                      #           "layout": "source_folders"}
     selection: Selection | None       # targets
     consent_hash: str | None          # hash of everything the user approved (see below)
     consented_at: str | None
@@ -2113,8 +2143,8 @@ file write. Because the selection's query and the selector's code hash are
 part of the hash, every new version of the selection needs re-authorization
 by construction. Options are included because several decide where photos go
 or who sees them (the Folder target's path and removal setting, a remote
-album title, Flickr's "make public"). The UI asks at publish time, so this
-check at run start is only a backstop.
+album title, Flickr's "make public"). Adapter grants are approved at publish;
+the sync setup is approved at Enable. This check at run start is a backstop.
 
 ### Lifecycle rules
 
@@ -2174,8 +2204,8 @@ write them: they're the first users of the hook contract, so the contract is
 proven by real providers before the builder starts generating adapters
 against it.
 
-Each phase ends with its user guide pages and translations (held until the
-phase's behavior settles), and its Playwright specs.
+Phase 4 includes the user guide, translations, and generated Playwright tests
+for the sync flows built in Phases 1–4, after those flows settle.
 
 ### Phase 0: lead-time items (start now, in parallel)
 
@@ -2203,9 +2233,9 @@ phase's behavior settles), and its Playwright specs.
   filter, and the settle window on the dispatcher tick; `media_deleted` with
   the delete-transaction marking of ledger rows.
 - UI: *New automation* type choice (Import from… / Send to…), the sync detail
-  page (setup steps, status line, Items tab, run summaries), selection by
-  **album** and **filter** (`data_query`), consent sentence and hash, Test
-  preview.
+  page (collapsible setup panels, Enable / Disable header action, Run history,
+  Items panel), selection by **album** and **filter** (`data_query`), consent
+  hash stored on Enable, and a Test preview table.
 - **Exit:** "keep my *For Mom* album copied to a folder, as JPEG" and "copy
   new photos from this SD card into Imports/Camera" work end to end and
   survive a crash mid-run.
@@ -2253,10 +2283,6 @@ details this doc left open:
   so the copy stays and the run doesn't nag.
 - **Hashes:** `media_items.sha1` is computed at index time. A source run
   hashes un-hashed library photos first, within a third of its time budget.
-- **Still to do for this phase:**
-  - generate the Playwright tests from `yaffo_ui_tests/specs/sync_automations.yaml`
-    (the generator calls an LLM);
-  - the user guide page and translations, held until the UI is reviewed.
 
 
 ### Phase 2: web foundations + OneDrive source
@@ -2275,9 +2301,64 @@ details this doc left open:
 - Options: `remote_folder` / `remote_collection` with the `choices` hook and
   the picker UI.
 - Preset: **OneDrive source** (delta feed, backfill + incremental, resume,
-  tombstones as `deleted_at_source`, the *Deleted at source* filter).
+  tombstones as `deleted_at_source`).
 - **Exit:** a 10,000-photo OneDrive backfill completes across several runs and
   restarts, and later runs import only new photos.
+
+**Status: built (2026-10-10).** The exit criterion passes against a fake
+Microsoft identity platform and Graph (`scripts/fake_onedrive.py`, also usable as
+the UI sandbox's OneDrive): 10,000 photos import across several runs, each in a
+fresh session, and a later run imports only the new ones. Against a real personal
+OneDrive: browser and device-code sign-in, the folder picker, a backfill with
+folder layout, retries of failed downloads, and an incremental run. Implementation
+notes, where they settle what the doc left open:
+
+- **Code:** in `yaffo/sync/`:
+  - `connections.py`, `secrets_store.py`, `oauth.py`, `pending_sign_ins.py`:
+    accounts, keychain, sign-in;
+  - `providers.py`, `oauth_clients.py`: provider presets and Yaffo's app ids;
+  - `adapter_static.py`: the static check and endpoint detector;
+  - `web.py`: `web_request`, `url_template`, downloads;
+  - `starlark_adapter.py`, `access.py`: hooks and the adapter profile;
+  - `preset_seed.py`, `presets/onedrive_source.star`: presets.
+  
+  Routes: `routes/utilities/sync_account.py`. Migrations `017` (ledger sort
+  index) and `018` (import layout).
+- **Consent covers the grant set, not every byte of code.** A Starlark adapter's
+  part of the consent hash is a hash of its provider, scopes, and grants, so a
+  preset fix that doesn't widen what it may call leaves syncs on; the grants
+  themselves stay pinned to the code hash.
+- **Grants match method, scheme, host, and path**; query strings aren't part of a
+  grant.
+- **Follow-up URLs** (nextLink, deltaLink) are allowed only when a granted call
+  returned them in this run, or when the engine stored them as the cursor or
+  checkpoint after vouching for them (`runtime.followups`, hashes of at most the
+  two). Credentials go only to `base_urls`; download hosts never get them.
+  OneDrive personal downloads redirect to `my.microsoftpersonalcontent.com`.
+- **Scopes** an adapter needs are declared in `ADAPTER["scopes"]`; the provider
+  adds its base scopes (`offline_access`, `User.Read`).
+- **Account lookup after sign-in** (`whoami`) retries server errors: Graph's
+  `/me` sometimes answers 504 right after a good sign-in.
+- **Pending sign-ins** survive a web-app restart: a short-lived
+  `sync_pending_sign_in:` row in `application_settings`, its secret half (PKCE
+  verifier, device code) in the keychain, claimed once, purged when expired.
+- **Tokens are refreshed only at a page boundary**, because the refresh lease is
+  a database write and a page may hold the write lock; a mid-page 401 fails that
+  item and refreshes at the next boundary.
+- **Failed downloads are retried** at the start of later runs (up to 5
+  attempts) from the record kept on the ledger row, since a delta feed won't
+  list them again.
+- **Capture hints** (`taken_at`, `location`) apply on a photo's first index only,
+  when the file has none of its own.
+- **Import layout:** `import_root.layout` (keep the source's folders, by year and
+  month, by year, flat). Records carry `folder`; the OneDrive preset derives it
+  from parent folder ids (delta responses carry no paths), looking each folder up
+  once and caching paths in its state. Syncs created before the choice keep year
+  and month (migration `018`, which re-stamps valid consents).
+- **The `adapter` profile** is its own small registry (`ADAPTER_HOST_API`), not
+  `HOST_API`: its functions are bound to a sync's web access, not a session.
+- **Remote options** store exactly `{id, label}`; the label is the picker's
+  breadcrumb path.
 
 ### Phase 3: cloud targets
 
@@ -2315,9 +2396,13 @@ details this doc left open:
 - Builder web access: `fetch_docs` with the deterministic, per-domain batch
   authorization (`doc_domains`, Public Suffix List snapshot), permission 3
   (live reads with the test connection).
+- Finalize the sync UI: write the user guide, translate the UI text, and
+  generate and run Playwright tests from
+  `yaffo_ui_tests/specs/sync_automations.yaml` and the later-phase UI specs.
 - **Exit:** the builder produces a working Flickr target from a one-line
   request, with the user approving only domains and the publish modal; two-way
-  Immich sync works against a local Immich in the UI test sandbox.
+  Immich sync works against a local Immich in the UI test sandbox; the sync
+  guide, translations, and generated Playwright tests are complete.
 
 ### Phase 5: later
 
@@ -2325,6 +2410,13 @@ details this doc left open:
 - The `volume_mounted` trigger for Folder sources (import when a card is
   inserted).
 - The deferred email target, if users ask.
+
+### Not planned
+
+- **Two-way sync.** An *Import from* and a *Send to* on the same place don't make
+  a mirror, by design: the library is the master copy, so deletions at the source
+  never delete local photos, edits made in Yaffo aren't sent back, and imports
+  carry no albums. Pairing them is allowed but not a supported scenario.
 
 ### Contract decisions from the design review
 

@@ -62,10 +62,8 @@ def _coerce(key: str, spec: dict, value: Any) -> Any:
             raise OptionError(key, "not_absolute", f"{key} must be an absolute folder path")
         return str(path)
     if kind in (OPTION_REMOTE_FOLDER, OPTION_REMOTE_COLLECTION):
-        if isinstance(value, dict) and (
-            (isinstance(value.get("id"), str) and isinstance(value.get("label"), str))
-            or (kind == OPTION_REMOTE_COLLECTION and isinstance(value.get("create"), str))
-        ):
+        if isinstance(value, dict) and set(value) == {"id", "label"} \
+                and isinstance(value["id"], str) and isinstance(value["label"], str):
             return dict(value)
         raise OptionError(key, "not_remote_value", f"{key} must be picked from the service")
     raise OptionError(key, "unknown_type", f"{key} has an unknown option type {kind!r}")

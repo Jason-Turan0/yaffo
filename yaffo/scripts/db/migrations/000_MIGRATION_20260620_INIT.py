@@ -540,6 +540,8 @@ def migrate(conn: sqlite3.Connection) -> None:
     for statement in sync.SYNC_ITEMS_INDEXES:
         cursor.execute(statement)
     cursor.execute(sync.SEED_BUILTIN_ADAPTERS)
+    items_index = _load_sibling("017_MIGRATION_20261010_sync_items_updated_index.py")
+    cursor.execute(items_index.SYNC_ITEMS_UPDATED_INDEX)
 
 
 def _load_sibling(filename: str):

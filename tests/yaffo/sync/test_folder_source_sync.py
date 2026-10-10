@@ -32,10 +32,12 @@ def card(tmp_path) -> Path:
 
 @pytest.fixture
 def make_source(session, library, card):
-    def make(**options):
+    """A Folder source. These tests check dated placement, so it arranges by year and
+    month; the layouts have their own tests (test_import_layouts.py)."""
+    def make(layout: str = "year_month", **options):
         automation = setup.create_sync(session, "Camera card", adapter_id=1)
         setup.set_options(session, automation, {"folder": str(card), **options})
-        setup.set_import_root(session, automation, MEDIA_DIR_ID, "Imports/Camera")
+        setup.set_import_root(session, automation, MEDIA_DIR_ID, "Imports/Camera", layout)
         setup.turn_on(session, automation)
         return automation
     return make
@@ -204,7 +206,7 @@ def test_a_source_folder_overlapping_the_library_is_refused(session, library, ru
     write_jpeg(folder / "x.jpg")
     source = setup.create_sync(session, "Loop", adapter_id=1)
     setup.set_options(session, source, {"folder": str(folder)})
-    setup.set_import_root(session, source, MEDIA_DIR_ID, "Imports/Camera")
+    setup.set_import_root(session, source, MEDIA_DIR_ID, "Imports/Camera", "year_month")
     setup.turn_on(session, source)
 
     result = run_sync(session, source.id, run_context)

@@ -121,20 +121,55 @@
 
 /* ---- Test result ---- */
 
-.sync-test-summary {
+/* What a run would do now: a title with when it was checked, number tiles for what
+   would happen, then a sample of the files. */
+.sync-test-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.sync-test-meta {
+    margin: 4px 0 0;
+}
+
+.sync-test-nothing {
+    margin: 0 0 12px;
+    color: var(--color-text);
+}
+
+.sync-test-stats {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin: 12px 0;
+    margin: 0 0 16px;
 }
 
 .sync-test-stat {
-    padding: 6px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 96px;
+    padding: 8px 12px;
     border: var(--border-width) solid var(--color-border);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-md);
     background: var(--color-bg);
+}
+
+/* The label comes first in the markup (dt before dd); the number shows on top. */
+.sync-test-stat-value {
+    order: -1;
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.sync-test-stat-label {
+    color: var(--color-text-muted);
     font-size: var(--font-size-sm);
-    font-weight: 500;
 }
 
 .sync-test-table th:last-child,
@@ -143,8 +178,8 @@
     white-space: nowrap;
 }
 
-.sync-test-sample-note {
-    margin: 8px 0;
+.sync-test-note {
+    margin: 8px 0 0;
 }
 
 /* ---- Items ---- */
@@ -165,17 +200,32 @@
 }
 
 .sync-retry {
-    margin: 0 0 0 auto;
+    margin-left: auto;
 }
 
+.sync-items-toolbar {
+    max-width: 720px;
+    margin-bottom: 12px;
+}
+
+.sync-items-search {
+    width: 100%;
+}
+
+.sync-items-name,
 .sync-items-where {
     overflow-wrap: anywhere;
 }
 
-.sync-items-pages {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
+.sync-items-where {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.sync-items-when {
+    white-space: nowrap;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
 }
 
 /* ---- filter screen ---- */
@@ -203,5 +253,260 @@
 
     .sync-retry {
         margin-left: 0;
+    }
+}
+
+/* ---- account (web syncs) ---- */
+
+/* The signed-in account as one row: who and its status on the left, the sign-in
+   actions on the right; they wrap under each other on narrow screens. */
+.sync-account-card {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 16px;
+    max-width: 720px;
+    padding: 12px 16px;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.sync-account-who {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.sync-account-name {
+    font-weight: 600;
+    color: var(--color-text);
+    overflow-wrap: anywhere;
+}
+
+.sync-account-meta {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+}
+
+.sync-account-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.sync-account-others {
+    margin-top: 16px;
+}
+
+.sync-account-others label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+/* "Signing in on another device?" reads as a link, not a disclosure widget. */
+.sync-device-code {
+    margin-top: 12px;
+    max-width: 720px;
+}
+
+.sync-device-code summary {
+    display: inline-block;
+    cursor: pointer;
+    list-style: none;
+    color: var(--color-accent);
+    font-size: var(--font-size-sm);
+}
+
+.sync-device-code summary::-webkit-details-marker {
+    display: none;
+}
+
+.sync-device-code summary:hover {
+    text-decoration: underline;
+}
+
+.sync-device-code-body {
+    margin-top: 8px;
+}
+
+.sync-device-code-body .hint-text {
+    margin: 0 0 8px;
+}
+
+.sync-device-code-value {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-lg);
+    letter-spacing: 0.15em;
+    color: var(--color-text);
+}
+
+/* ---- picker for a folder in the account ---- */
+
+.sync-remote-value[readonly] {
+    cursor: pointer;
+}
+
+.sync-picker {
+    margin-top: 8px;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    overflow: hidden;
+}
+
+.sync-picker-crumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px;
+    border-bottom: var(--border-width) solid var(--color-border);
+    background: var(--color-bg);
+    font-size: var(--font-size-sm);
+    overflow-wrap: anywhere;
+}
+
+.sync-picker-crumb {
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--color-accent);
+    font: inherit;
+    cursor: pointer;
+}
+
+.sync-picker-crumb:hover {
+    text-decoration: underline;
+}
+
+.sync-picker-sep {
+    color: var(--color-text-muted);
+}
+
+.sync-picker-here {
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.sync-picker-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.sync-picker-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.sync-picker-item:last-child {
+    border-bottom: none;
+}
+
+.sync-picker-name {
+    display: inline-flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--color-text);
+    font: inherit;
+    text-align: start;
+    overflow-wrap: anywhere;
+}
+
+.sync-picker-open {
+    cursor: pointer;
+}
+
+.sync-picker-open:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
+}
+
+.sync-picker-name[data-icon] {
+    justify-content: flex-start;
+}
+
+/* One icon size for openable (button) and plain (span) rows. */
+.sync-picker-name[data-icon]::before {
+    width: 16px;
+    height: 16px;
+}
+
+/* Folders that can't be opened are plain text, not buttons, so they don't get the
+   icon base from components/icons.css; restate it (the per-icon mask still applies). */
+span.sync-picker-name[data-icon]::before {
+    content: "";
+    flex: none;
+    background-color: currentColor;
+    -webkit-mask-position: center;
+    -webkit-mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+    mask-repeat: no-repeat;
+}
+
+.sync-picker-status:not(:empty) {
+    margin: 0;
+    padding: 10px 12px;
+}
+
+.sync-picker-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: var(--border-width) solid var(--color-border);
+}
+
+.sync-picker-spacer {
+    flex: 1;
+}
+
+/* ---- review before enabling a web sync ---- */
+
+.sync-review-terms {
+    margin: 0 0 12px;
+}
+
+.sync-review-term {
+    display: grid;
+    grid-template-columns: minmax(120px, 1fr) 2fr;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.sync-review-term dt {
+    color: var(--color-text-muted);
+}
+
+.sync-review-term dd {
+    margin: 0;
+    color: var(--color-text);
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+    .sync-review-term {
+        grid-template-columns: 1fr;
+        gap: 2px;
     }
 }

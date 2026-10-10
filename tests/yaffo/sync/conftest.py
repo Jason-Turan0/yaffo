@@ -131,3 +131,42 @@ def run_context(tmp_path):
     context.indexed = indexed
     context.reindexed = reindexed
     return context
+
+
+@pytest.fixture(autouse=True)
+def secrets_file(tmp_path, monkeypatch) -> Path:
+    """Connection secrets go to a file in the test's folder, never the keychain."""
+    path = tmp_path / "secrets.json"
+    monkeypatch.setenv("YAFFO_SYNC_SECRETS_FILE", str(path))
+    return path
+
+
+@pytest.fixture
+def fake_onedrive(monkeypatch):
+    """A fake Microsoft sign-in + Graph on a local port, with Yaffo pointed at it."""
+    from scripts.fake_onedrive import FakeOneDrive
+
+    with FakeOneDrive(photos=0, page_size=10) as fake:
+        monkeypatch.setenv("YAFFO_SYNC_ORIGIN_OVERRIDES", fake.overrides)
+        yield fake
+
+
+@pytest.fixture
+def onedrive_sync(session, library, fake_onedrive):
+    """A OneDrive source sync, signed in, importing Camera Roll into Imports/OneDrive,
+    turned on. Returns a function so tests can adjust the fake first."""
+    from yaffo.db.models import SyncAdapter
+    from yaffo.sync import connections, setup
+    from yaffo.sync.preset_seed import ensure_presets
+
+    def make(folder: str = "CAMROLL", label: str = "Camera Roll"):
+        ensure_presets(session)
+        adapter = session.query(SyncAdapter).filter_by(slug="preset.onedrive_source").one()
+        connections.upsert_after_sign_in(session, "onedrive", "fake-user-1", "jason@example.com",
+                                         ["Files.Read", "User.Read"], fake_onedrive.grant_token())
+        automation = setup.create_sync(session, "OneDrive", adapter.id)
+        setup.set_import_root(session, automation, MEDIA_DIR_ID, "Imports/OneDrive")
+        setup.set_options(session, automation, {"folder": {"id": folder, "label": label}})
+        setup.turn_on(session, automation)
+        return automation
+    return make
