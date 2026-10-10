@@ -3,8 +3,10 @@
 **Status: proposed, not built. Alternative to [Automation Web Calls](automation-web-calls.md).**
 That doc has a custom automation do *everything* for an export (select, diff,
 upload, batch, record state) in one Starlark script. This sketch keeps its
-primitives (Connections, endpoint grants, `web_request`, `web_upload_media`,
-follow-up hosts, the static endpoint detector) and changes who owns what:
+primitives (connections, stored as application settings and shared by syncs;
+endpoint grants,
+`web_request`, `web_upload_media`, follow-up hosts, the static endpoint
+detector) and changes who owns what:
 
 - **Yaffo's host owns the sync engine**: diffing, state, batching, retries, rate
   limits, resume, crash recovery, downloads, file writes, and indexing.
@@ -46,9 +48,9 @@ Starlark per provider, and lets the host make everything else correct once.
 ## Architecture
 
 ```
-                 ┌──────────────── Connection (preset: auth, base_urls, followup_hosts)
+                 ┌──────────────── Connection (account at a provider: auth, base_urls, followup_hosts)
                  │
- Source binding  ▼                         Host sync engine                      Library
+ Source sync     ▼                         Host sync engine                      Library
  ┌─────────────────────┐  list_page()   ┌──────────────────────────────┐  write  ┌──────────┐
  │ Source adapter      │ ─────────────► │ validate records             │ ──────► │ Imports/ │
  │ (preset or custom)  │ ◄───────────── │ dedupe (state map + sha1)    │         │  <src>/  │
@@ -56,7 +58,7 @@ Starlark per provider, and lets the host make everything else correct once.
                                         │ metadata hints → indexer     │              │ index
                                         └──────────────────────────────┘              ▼
                                                                                  media_items
- Target binding
+ Target sync
  ┌─────────────────────┐  select       ┌──────────────────────────────┐  push()   ┌──────────────┐
  │ Selection           │ ────────────► │ diff vs remote map           │ ────────► │ Target       │
  │ album | query |     │  (ids,        │ batch, retry, backoff        │ ◄──────── │ adapter      │
@@ -68,7 +70,7 @@ Starlark per provider, and lets the host make everything else correct once.
                                                                                      provider API
 ```
 
-A **binding** is an automation with a `sync` configuration (a JSON column on
+A **sync automation** is an automation with a `sync` configuration (a JSON column on
 `automations`; see *Data model*). It reuses everything
 automations already have: triggers (schedule, events), runs recorded as `Job`s,
 run history, enable/disable, and Test. Album-selected targets also react to a
@@ -76,13 +78,116 @@ new `album_changed` event (see *Triggers and the `album_changed` event*).
 
 ## Concepts
 
+### Object model
+
+One meaning per word. In this doc **provider** always means an external
+service as Yaffo knows it; the AI models behind the builder are **LLM
+providers**, written out in full. The UI says **service** where this doc says
+*adapter* (see *UI*), since that's what a user picks: "Google Photos album",
+"Flickr sets · custom".
+
+| object | what it is | where it lives | examples |
+|---|---|---|---|
+| **Provider** | an external service: how to sign in, which hosts may be called, default scopes. No sync logic | preset: host code; custom: the `connection` block of a custom adapter | `onedrive`, `google_photos`, `immich` |
+| **Adapter** | the code for **one direction** against **one provider**: hooks, options, capabilities | a `sync_adapters` row (preset or custom) | "OneDrive folder" (source), "OneDrive folder" (target), "Google Photos album" (target) |
+| **Sync automation** (a *sync*) | one running use of an adapter: which account, which options, what goes where, when, and its progress | an `automations` row with a non-NULL `sync` JSON column | "OneDrive camera roll", "For Mom → Google" |
+| **Connection** | a signed-in account at a provider, shared by every sync (and builder test) that uses that account | one `application_settings` row per account; the token in the keychain | jason@outlook.com on OneDrive |
+| **Selection** (targets) | what leaves Yaffo: an album, a filter, or a selector script | inside the sync's JSON; a script in the automation's code columns | album *For Mom* |
+| **Import root** (sources) | where imported files land | inside the sync's JSON | `Pictures/Imports/OneDrive` |
+| **Sync items** | the per-item record of what was imported or sent | `sync_items` rows | IMG_1234 → remote id AF1Q… |
+| **App credentials** (custom OAuth adapters) | the user's own developer-app registration with the service (client id + secret); identifies the *app*, not an account | keychain, referenced by `sync_adapters.app_secret_ref` | a Flickr non-commercial API key |
+
+```
+Provider ──1:many──► Adapter ──1:many──► Sync automation ──1:many──► sync_items
+ (onedrive)           (role: source        │  uses 1 Connection   (an account at the adapter's provider; shared)
+                       or target)          │  owns 1 Selection    (targets) or 1 Import root (sources)
+                                           │  has many Triggers   (existing automation_triggers)
+                                           └  has many Runs       (existing Jobs)
+```
+
+- **A provider has at most one preset adapter per direction**, plus any
+  custom adapters. OneDrive has a source and a target; Google Photos has only
+  a target (importing from it goes through the Picker, see *Sources that aren't
+  adapters*).
+- **An adapter is exactly one direction.** Import from and export to the same
+  service are two adapters sharing a provider, never one adapter doing both.
+- **An adapter serves many syncs.** Two OneDrive folders imported separately
+  are two syncs on the same preset adapter.
+- **A sync has exactly one adapter and one connection**, and the connection's
+  provider must equal the adapter's. The exception is a built-in source or
+  target with no account (the Folder source and target, see *Sources that
+  aren't adapters* and *Targets that aren't adapters*), whose syncs have no
+  connection.
+- **One connection per account, shared.** Whichever sign-in happens first
+  creates it (a sync's *Account* step, or the builder's *Test account* tab);
+  later syncs on the same provider default to it. It's deleted, and its token
+  revoked, when nothing refers to it any more.
+- **A custom adapter may point at a test connection**, the account the
+  builder's Test (`test_adapter`) uses. It's an ordinary shared connection, so
+  the account signed in while building is the one the first sync offers.
+- **A custom OAuth adapter owns its app credentials**, entered once while
+  building. Every sign-in for its provider runs the OAuth flow with them.
+  Presets need none: Yaffo ships their app registration.
+- **A custom adapter is its own provider.** It carries a `connection` block, so
+  its provider is `custom:<adapter slug>`. A custom Flickr import and a custom
+  Flickr export are two adapters declaring two identical providers; that
+  duplication is accepted rather than adding a way for one custom adapter to
+  borrow another's sign-in setup (see *Building a custom adapter*).
+
+### Provider
+
+The provider key (`"onedrive"`) names a **provider preset** in host code: auth
+kind and endpoints, Yaffo's OAuth client id, `base_urls`, `followup_hosts`,
+default scopes, and the token revoke endpoint if any. Adapters name the
+provider they need in `ADAPTER["provider"]`; custom adapters say `"custom"` and
+declare the same fields in their `connection` block.
+
 ### Connection
 
-Unchanged from [Automation Web Calls](automation-web-calls.md#connection): a named
-credential plus `base_urls`, `followup_hosts`, and scopes, with a provider preset.
-Adding OAuth 1.0a (Flickr, SmugMug) and AWS SigV4 (S3, R2, B2) means the
-connection signs the **whole request**, not just a header. That happens in the
-host's request pipeline, so adapters don't notice.
+A signed-in account at a provider (as in [Automation Web
+Calls](automation-web-calls.md#connection)). The provider supplies how to sign
+in and which hosts may be called; the connection holds whose account it is. Adding OAuth 1.0a (Flickr, SmugMug)
+and AWS SigV4 (S3, R2, B2) means the connection signs the **whole request**, not
+just a header. That happens in the host's request pipeline, so adapters don't
+notice.
+
+**One connection per account, stored as an application setting.** There is no
+Connections page and no `connections` table. Each connection is one row in the
+existing `application_settings` table (see *Data model*), keyed by provider and
+account, so signing in to the same Flickr or Google account twice finds the
+existing row instead of creating another. Syncs and custom adapters refer to it
+by that key.
+
+Why shared rather than one per sync: many OAuth 2 services **rotate refresh
+tokens** (each refresh returns a new refresh token and invalidates the old
+one), so two copies of the same sign-in would sign each other out. One stored
+token per account, refreshed in one place, avoids that, and means one sign-in
+covers an import and an export from the same account.
+
+- **Scopes are the union** of what the syncs using it need. A sync that needs
+  more than the connection has (an export added to an account first signed in
+  for import) asks in its *Account* step ("Also allow Yaffo to add photos to
+  jason@gmail.com") and re-runs the sign-in for the union; the row's `scopes`
+  is updated in place.
+- **Status is shared.** When a call fails with `auth`, the engine marks the
+  connection `needs_sign_in`, and every sync using it shows "Sign in again".
+  One re-sign-in fixes them all.
+- **Token refresh is serialized per connection** without holding a write lock
+  across the network call: a short conditional `UPDATE` takes a refresh lease
+  (`refreshing_until`); the holder refreshes, writes the keychain, and clears
+  the lease; a concurrent run that finds the lease waits briefly and re-reads
+  the keychain.
+- **Garbage collection.** When a sync is deleted or switched to another
+  account, or a custom adapter is deleted, a connection that no sync and no
+  adapter refers to is deleted and its token revoked where the provider has a
+  revoke endpoint.
+
+Most of a connection comes from its provider (OAuth client id, auth
+endpoints, `base_urls`, `followup_hosts`, default scopes). The row stores only
+what differs: the provider's stable id for the account, the label shown in the
+UI (e.g. the email the provider returns), granted scopes, status, the keychain
+`secret_ref`, and instance fields for self-hosted providers (Immich's server
+URL).
 
 ### Adapter
 
@@ -91,14 +196,18 @@ A Starlark module with a literal `ADAPTER` metadata dict and a fixed set of
 **preset** (shipped with Yaffo, code-hash pinned, read-only) or **custom**
 (written in the builder, owned by the user).
 
-### Binding
+### Sync automation
 
-Which adapter, through which connection, with what options, on what trigger:
+An automation whose `sync` column is set. It names an adapter and a
+connection, and adds options, a destination, and triggers:
 
-- **Source binding**: adapter + connection + options (e.g. folder, album) +
-  **import root** (a media dir and subfolder the host may write into).
-- **Target binding**: adapter + connection + options (e.g. album title) +
+- **Source sync**: adapter + connection + options (e.g. folder) + **import
+  root** (a media dir and subfolder the host may write into).
+- **Target sync**: adapter + connection + options (e.g. album title) +
   **selection**.
+
+Everything else is ordinary automation machinery: triggers, runs as `Job`s, run
+history, enable/disable, Test.
 
 ### Selection (targets only)
 
@@ -116,7 +225,7 @@ adapter (e.g. an album title); `caption` is optional text.
 
 ### Sync state
 
-Owned by the host and keyed by binding. Neither adapters nor selectors write it
+Owned by the host and keyed by sync automation. Neither adapters nor selectors write it
 directly:
 
 - **Item ledger** (the `sync_items` table): the mapping between Yaffo and the
@@ -165,7 +274,10 @@ Static rules (checked when the builder writes code, and again at publish):
   except for `hooks` values, which must be **bare names of top-level `def`s**.
 - `hooks` keys must be known for the role. Required: `list_page` (source);
   `push` (target). Optional: `resolve_download` (source); `remove`, `update`,
-  `list_remote` (target).
+  `list_remote` (target); `choices` (either).
+- Options and hooks must agree: a `remote_folder` or `remote_collection`
+  option requires a `choices` hook, and a `choices` hook with no such option
+  is an error.
 - Capabilities and hooks must agree: `"remove": True` requires a `remove` hook,
   and a `remove` hook without the capability is an error.
 
@@ -174,10 +286,10 @@ function names), so the UI, the builder prompt, and the consent screen never run
 code to learn what an adapter does.
 
 **The selector is a separate script, on purpose.** An adapter is
-provider-specific and reusable (presets are shared by every binding); a
+provider-specific and reusable (presets are shared by every sync that uses them); a
 selection is user-specific. Keeping them apart means one Google Photos preset
 serves every user's "For Mom" rule, and changing the rule never touches (or
-re-consents) the adapter's web grants. The selector lives on the binding's
+re-consents) the adapter's web grants. The selector lives on the sync's own
 `Automation` row (its `working_code` / `published_code`), which also gives it
 the existing builder chat, Test, and publish flow unchanged.
 
@@ -234,7 +346,7 @@ progress). An adapter's only effect on the world is the web calls it is granted;
 its only effect on Yaffo is the data it returns to the host.
 
 `connection` in adapters is always the literal `CONNECTION` (bound by the host
-to the binding's actual connection), so one adapter works with any connection
+to the sync's connection), so one adapter works with any connection
 of the right preset.
 
 ## Host ↔ Starlark contract
@@ -245,19 +357,73 @@ of the right preset.
 ADAPTER = {
     "contract": 1,                      # host/adapter contract version
     "role": "source",                   # "source" | "target"
-    "provider": "onedrive",             # connection preset this adapter needs
+    "provider": "onedrive",             # connection preset this adapter needs, or "custom"
     "title": "OneDrive camera roll",
-    "options": {                        # shown as a form on the binding; validated by the host
-        "folder": {"type": "string", "default": "special/cameraroll"},
+    "options": {                        # the sync's Options form; see Options below
+        "folder": {"type": "remote_folder", "label": "OneDrive folder", "required": True},
+        "include_videos": {"type": "bool", "label": "Include videos", "default": True},
     },
-    "hooks": {"list_page": list_page},  # name → top-level def (see Code layout)
+    "hooks": {"list_page": list_page, "choices": choices},  # name → top-level def
     # target-only: "capabilities", see below
+    # custom-only: "connection", see Building a custom adapter
 }
 ```
 
 `ADAPTER` is a literal apart from `hooks` (checked statically, like endpoint
 URLs), so the UI, the builder, and the consent screen can read it without
 running code.
+
+### Options
+
+Options are **per adapter**: each adapter declares what a sync using it must
+be told (which OneDrive folder, which Google album, whether photos are
+public), and the host renders that as the sync's *Options* step, validates
+the values, and passes them to every hook as `ctx["options"]`. A OneDrive
+source and a OneDrive target share a provider but declare their own options.
+
+Each option has a `type`, a `label`, and optionally `help`, `default`, and
+`required`:
+
+| type | rendered as | value in `ctx["options"]` |
+|---|---|---|
+| `string`, `int`, `bool` | the existing fields (`render_configure_form`, as system automations' `config_fields` use) | the value |
+| `select` | a dropdown of fixed `choices: [{value, label}]` declared in the option | the chosen `value` |
+| `remote_folder` | a **folder browser** on the service: breadcrumb, subfolder list, *Open*, *Choose* | `{"id": "01ABC…", "label": "Pictures › Camera Roll"}` |
+| `remote_collection` | a **list of the service's albums, sets, or buckets**, plus *Create new* when the option sets `allow_create: True` | `{"id": …, "label": …}` or `{"create": "For Mom"}` |
+
+**The `choices` hook** feeds both remote types:
+
+```python
+def choices(option, parent_id, cursor, ctx):
+    """Called by the host when the user opens a picker (parent_id None) or a
+    folder inside it. `option` is the option's key."""
+    return {
+        "items": [{"id": "01ABC…", "label": "Camera Roll",
+                   "has_children": True,      # remote_folder: can be opened
+                   "suggested": True}],       # preselected when the option has no value yet
+        "next_cursor": None,                  # more items; the picker shows "Load more"
+    }
+```
+
+- It's a **live, read-only** call through the sync's own connection: only
+  endpoints granted with `read` risk, the same rule as live reads in Test.
+  So the *Options* step stays locked ("Sign in first") until the *Account*
+  step is done. Writes made from `choices` are an error.
+- A remote value stores the **id and the label**. The id keeps working when
+  the folder or album is renamed; the label is what the form and the consent
+  sentence show ("Import new photos from *OneDrive › Pictures › Camera
+  Roll*"). The label is refreshed when the picker is next opened.
+- A remote default can't be a literal (ids differ per account), so adapters
+  mark a sensible choice `suggested` instead (OneDrive's *Camera Roll*).
+- **At run time** the adapter uses the id. If the service says it no longer
+  exists (`not_found` on the first call), the run pauses with
+  `option_missing` ("The OneDrive folder *Camera Roll* is gone. Choose
+  another."), the same pattern as `selection_missing`. It never falls back to
+  a default silently.
+- Values are part of the consent hash (see *Consent hash*), so choosing a
+  different folder or album re-asks.
+- **Labels and help text** of presets go through gettext, keyed by adapter slug
+  and option key; custom adapters' labels are whatever the builder wrote.
 
 ### Contract changes: no old versions, regenerate instead
 
@@ -277,7 +443,7 @@ carrying old contracts would be permanent code in an open-source side project.
   == CURRENT_CONTRACT`, the static rules in *Code layout*, and the metadata
   schema.
 - **A failure marks the adapter `invalid`** (`status`, with an error code such
-  as `contract_outdated`). Bindings using it pause with `runtime.status =
+  as `contract_outdated`). Syncs using it pause with `runtime.status =
   "invalid_config"` and run history says why. Nothing runs on an adapter that
   doesn't validate.
 - **The fix is regeneration.** The adapter page shows *Regenerate*, which opens
@@ -288,20 +454,20 @@ carrying old contracts would be permanent code in an open-source side project.
   Upgrading the app re-seeds them (the `preset_version` rule).
 
 **Stored data is different: it's migrated, not invalidated.** The JSON in
-`automations.sync`, `sync_adapters.working`/`published`/`grants`, and
-`connections.config` is Yaffo's own data, not generated code. When its schema
+`automations.sync` and `sync_adapters.working`/`published`/`grants` is Yaffo's
+own data, not generated code. When its schema
 actually changes, the change ships with a data migration (a numbered migration
 under `yaffo/scripts/db/migrations/`, per [Project Context](project-context.md))
 that rewrites the stored JSON to the new shape. Between schema changes the JSON
 is simply validated against the current schema on load. Anything that still
-fails (a bug, a hand edit) marks that binding `invalid_config` rather than
+fails (a bug, a hand edit) marks that sync `invalid_config` rather than
 being guessed at.
 
 ### `ctx` (passed to every hook)
 
 ```python
 ctx = {
-    "options": {...},          # the binding's validated options
+    "options": {...},          # the sync's validated options
     "state": {...},            # runtime.state + "checkpoint" (read-only)
     "run": {
         "preview": False,      # True in Test
@@ -335,7 +501,7 @@ and the UI translates it at render time (see the job status-codes convention):
 |---|---|
 | `rate_limited` | stop this run, keep the cursor, reschedule after `retry_after_s` |
 | `retry_later` | transient (5xx, timeout): retry with backoff, then fail the item or page |
-| `auth` | stop, mark the connection "needs sign-in", don't retry |
+| `auth` | stop, set the automation to `needs_sign_in`, don't retry |
 | `not_found` | targets: the remote item or album is gone → reconcile; sources: skip |
 | `rejected` | permanent per-item failure (bad format, too large); recorded, not retried |
 | `fatal` | stop the run; message goes to run history |
@@ -464,15 +630,48 @@ It never has the bytes or the path.
     "update": False,          # implements update(); otherwise caption changes are ignored
     "reconcile": True,        # implements list_remote()
     "targets": "many",        # "one" (ignores routing) | "many" (routes by target key)
-    "kind": "collection",     # "collection" (album/folder; items persist) |
-                              # "stream" (chat/email/webhook; send-only, no remove)
+    "accepts": {              # optional; omitted = the original file, whatever it is
+        "types": ["image/jpeg", "image/png"],
+        "max_bytes": 20000000,
+        "max_pixels": 16000000,   # width × height
+    },
 }
 ```
 
-The engine adapts its behavior to these: for `stream` targets the diff is only
-"not yet sent". When a selection change implies removals the target can't do,
-the run reports them ("3 photos left the selection but can't be removed from
-Telegram") instead of silently dropping them.
+**Formats: `accepts` and automatic conversion.** Many targets reject HEIC or
+large files (many custom targets, and anything a photo frame reads through the
+Folder target).
+When a target declares `accepts`, the engine prepares each batch item before
+calling `push`:
+
+- an image whose type isn't in `types`, or that's over `max_bytes` /
+  `max_pixels`, is converted to a **JPEG copy** (downscaled to fit, quality
+  stepped down until it fits `max_bytes`), using the same HEIC support the
+  indexer and thumbnailer already use (`yaffo/utils/image.py`);
+- the copy keeps the original's capture date, orientation, and location
+  metadata, so the target gets the same information the original would have
+  carried;
+- the batch item describes the copy (`filename: "IMG_1234.jpg"`, its `mime`
+  and `size`), and `web_upload_media` sends the copy's bytes. The adapter
+  can't tell the difference and never has to convert anything itself;
+- **videos aren't transcoded.** A video the target doesn't accept is recorded
+  as failed with `rejected` / `unsupported_format` and listed on the run
+  ("2 videos weren't sent: this target only accepts images"), rather than spending minutes of CPU
+  per clip;
+- copies are made lock-free before `push`, kept in a temporary folder for the
+  run, and deleted afterwards; the library's original is never modified.
+  `sync_items.details` records `sent_as` (type and size) so the Items list can
+  show "sent as JPEG".
+
+`accepts` is metadata like the rest of `capabilities`, so the builder declares
+it from the service's docs and Test shows the conversions it would do.
+
+Every target is a **collection**: an album, set, or folder whose items persist
+and can, in principle, be listed and removed. Send-only destinations (chat
+messages, webhooks, email) are out of scope. The engine adapts to the rest of
+these capabilities: when a selection change implies removals the target can't
+do (`remove: False`), the run reports them ("3 photos left the selection but can't be removed from
+this target") instead of silently dropping them.
 
 ### Selector script (target selection `script`)
 
@@ -492,7 +691,7 @@ targets are non-empty strings) and caps it (desired-set size limit, initially
 
 ## Triggers and the `album_changed` event
 
-Bindings use the ordinary automation triggers: a schedule (`AutomationTrigger`
+Syncs use the ordinary automation triggers: a schedule (`AutomationTrigger`
 with `cron`) or events. Sources are schedule-driven: there's nothing local to
 react to. Targets whose selection is an **album** should also react when the
 album changes, so a photo added to *For Mom* appears for Mom within a minute,
@@ -569,11 +768,11 @@ few, so there's no need to index into the JSON. This is the first event filter
 the dispatcher honors. It's written as a small per-event matcher function so
 later filters (e.g. `media_labeled` by label) follow the same shape.
 
-### Sync bindings subscribe automatically
+### Album-selected syncs subscribe automatically
 
-When a target binding's selection is `album`, the binding owns an event trigger
+When a target sync's selection is `album`, the sync owns an event trigger
 `album_changed` with `config={"album_id": <selected album>}`. It's created with
-the binding and updated in the same transaction when the selected album changes
+the sync and updated in the same transaction when the selected album changes
 (which also re-asks consent). The user can still add a schedule as a safety net;
 the default is both: the event for promptness, a nightly schedule to catch
 anything missed (e.g. a run that was paused for sign-in).
@@ -585,10 +784,10 @@ the events their rule depends on (`media_indexed`, `media_modified`,
 ### Coalescing bursts
 
 A user curating an album clicks *add* many times in a few minutes. One sync run
-per click would mean many small runs racing the per-binding run lock. Instead,
-for sync bindings, an event doesn't start a run directly:
+per click would mean many small runs racing the per-sync run lock. Instead,
+for syncs, an event doesn't start a run directly:
 
-1. Dispatch doesn't invoke the binding. It sets the event trigger's existing
+1. Dispatch doesn't invoke the sync. It sets the event trigger's existing
    `next_run_at` column to now + the **settle window** (default 60 s,
    `config.settle_seconds` on the trigger), and only if `next_run_at` is
    currently NULL. That's one conditional `UPDATE`, so concurrent events
@@ -601,21 +800,21 @@ for sync bindings, an event doesn't start a run directly:
 
 This keeps the deferral off `automations.sync`, whose `runtime` part has a
 single writer (the engine), and reuses dispatcher bookkeeping that already
-exists. Only sync bindings opt in, via `config.settle_seconds`; other
+exists. Only syncs opt in, via `config.settle_seconds`; other
 `album_changed` subscribers are dispatched immediately, like every event today.
 
 The run diffs the whole album, so it doesn't matter how many events were
 coalesced or what ids they carried. A deferred run starts with an empty causal
 chain (it's started by the tick, not the event). That's safe for targets,
-which never write Yaffo albums. If a tick finds the binding's previous run
+which never write Yaffo albums. If a tick finds the sync's previous run
 still holding the run lock, it leaves `next_run_at` set and tries again on the
 next tick. `deleted` skips the settle window: the
-binding pauses with `selection_missing` right away (see *What we give up by
+sync pauses with `selection_missing` right away (see *What we give up by
 using JSON*).
 
 ### Interaction with the loop guard
 
-Sync bindings never write Yaffo albums: a target writes only to the remote
+Syncs never write Yaffo albums: a target writes only to the remote
 provider, and a source imports files only. So a sync can't re-trigger itself
 through `album_changed`. A custom script can still create a deliberate chain
 (e.g. "add newly imported OneDrive photos of Mom to *For Mom*", which then
@@ -635,12 +834,12 @@ loop:
     on page.error → handle by code; stop
     validate records                              # schema, URL hosts, sizes
     for each record (bounded concurrency):
-        skip if sync_items has (binding, source_id) with same updated_at
+        skip if sync_items has (sync, source_id) with same updated_at
         skip + link if hash matches an existing media_items.sha1  (cross-library dedupe)
         tombstone → mark the sync_items row deleted_at_source (never delete the local file; see Source deletions)
         resolve_download if needed → download to temp in the import root
         sniff type (images/videos only), enforce size caps, check free space
-        atomic rename to Imports/<binding>/<YYYY>/<MM>/<sanitized name>
+        atomic rename to Imports/<sync>/<YYYY>/<MM>/<sanitized name>
         record watcher suppression (Mechanism 2 in Automations) so file_sync doesn't double-index
     index the page's new files (existing indexer), passing taken_at/location hints
     commit sync_items + runtime (state_patch, next_cursor) in one transaction (chunked)
@@ -657,7 +856,7 @@ continues from the stored cursor.
 
 ```
 desired = selection()                            # [{media_item_id, target, caption}]
-current = sync_items for this binding
+current = sync_items for this sync
 to_push   = desired − current (by media_item_id, target)
 to_remove = current − desired                    (if capability remove)
 to_update = caption/target changed               (if capability update)
@@ -701,7 +900,7 @@ What the user gets instead:
 - A "Deleted at source" filter (from `sync_items.status`), so they can
   review those photos and delete them in Yaffo with the normal delete
   (which sends files to the OS trash) if they want to.
-- A count on the binding's run summary ("12 photos deleted in OneDrive; kept in
+- A count on the sync's run summary ("12 photos deleted in OneDrive; kept in
   your library").
 
 A tombstone for an item Yaffo never imported is recorded as `deleted_at_source`
@@ -717,7 +916,7 @@ The host treats adapter output as untrusted input:
   `fatal` (the adapter is buggy; don't half-apply it);
 - download URLs and follow-ups restricted to connection hosts;
 - `results` must reference only `media_item_id`s from the batch it was given;
-- `state_patch` size-capped (64 KiB per binding, JSON only).
+- `state_patch` size-capped (64 KiB per sync, JSON only).
 
 ## Test / preview
 
@@ -727,6 +926,11 @@ The host treats adapter output as untrusted input:
 | Web writes | n/a | recorded, not sent (`$ref:N` tokens for returned ids, as today) |
 | Shows | the first page as a table of records (filename, taken, size, hash, "already in library?") plus validation errors | the diff ("would add 12 to *For Mom*, remove 3"), then the adapter's recorded web calls per batch |
 | Library writes | none, no downloads | none |
+
+**Which account Test uses.** A sync's Test uses that sync's connection. The
+builder's Test (`test_adapter`) uses the custom adapter's test connection
+(`sync_adapters.test_connection_key`); with none signed in, its reads return
+recorded placeholders like its writes.
 
 Live read GETs in Test answer the web-calls doc's open question **for
 adapters**: without them, neither the builder nor the user can see whether a
@@ -741,7 +945,7 @@ Two layers, matching the two separate questions a user is asked:
    template), approved at publish, re-opened when code widens. **Presets** ship
    with their manifests and a pinned code hash; installing one shows the manifest
    once.
-2. **Binding consent**: what the engine will do with it.
+2. **Sync consent**: what the engine will do with it.
    - Source: "Import new photos from *OneDrive › Camera Roll* into
      *Pictures › Imports › OneDrive*." The import root is part of the consent;
      changing it re-asks.
@@ -753,6 +957,422 @@ Two layers, matching the two separate questions a user is asked:
      (the album is the user's consent, item by item).
    - Endpoints marked `shares_externally` (OneDrive `createLink`, Immich shared
      links) keep their own separate confirmation, as in the web-calls doc.
+
+## UI
+
+A sync is a **type of automation**, next to system automations and custom
+(script) automations. It lives in the existing Utilities › Automations list,
+uses the existing detail page, triggers pages, and run history, and adds no
+new top-level pages. There is no Connections page and no Adapters page.
+
+Mockup: [sync automation pages](assets/automation-sync-adapters/sync-automation-mockup.html)
+(a running Google Photos target, a OneDrive import mid-backfill, a Flickr target
+mid-setup, a OneDrive target that needs more access on a shared account, and the
+*New automation* dialog). It's a rough static HTML sketch, not the final styling.
+
+### Creating one
+
+*New automation* gets a type choice before the name:
+
+| type | what follows |
+|---|---|
+| **Custom** | today's flow: name, then the builder chat |
+| **Import from…** | pick a service: source adapters, presets first, then the user's custom ones |
+| **Send to…** | pick a service: target adapters, presets first, then custom ones |
+| **Add a new service…** | builder chat for a custom adapter (see *Custom adapters*) |
+
+After the service, setup is one page, filled top to bottom. Every step is a
+section of the detail page, so an unfinished setup is just an automation whose
+status says what's missing (`needs_sign_in`, `needs_consent`):
+
+1. **Account.** If a connection for this provider exists, it's preselected
+   ("OneDrive · jason@outlook.com ✓ · Use a different account"), and if this
+   sync needs scopes it lacks, the step asks to extend it. Otherwise *Sign in
+   to OneDrive* runs the OAuth flow in the browser (API-key providers show a
+   key field, Immich also asks for its server URL). Afterwards the section
+   shows the account label, "also used by 2 other syncs" when shared, and a
+   *Sign in again* link.
+2. **Options.** A form generated from `ADAPTER["options"]` (see *Options*):
+   plain fields use the macro system automations use for `config_fields` today
+   (`render_configure_form`); `remote_folder` / `remote_collection` options
+   open a folder browser or an album list on the signed-in account. Locked
+   until the *Account* step is done.
+3. **Where.**
+   - Source: the import root, using the existing media-dir picker plus a
+     subfolder (default `Imports/<provider>`).
+   - Target: the selection: *Album* (album picker), *Photos matching a filter*
+     (the existing filter UI, saved as the `data_query`), or *Custom rule*
+     (opens the builder chat on this automation for a selector script).
+4. **When.** Defaults filled in, editable on the existing triggers page:
+   nightly for sources; for album targets, *when the album changes* plus
+   nightly.
+5. **Turn on.** Shows the consent sentence ("Send the photos in *For Mom* to
+   Google Photos › *For Mom* as jason@gmail.com") and the endpoint list for
+   custom adapters. Confirming stores the consent hash and enables the
+   automation. *Test* sits next to it and shows the preview described in
+   *Test / preview*.
+
+### The detail page of a sync
+
+Same layout as other automations, with the code section replaced by:
+
+- **Header:** "OneDrive › Camera Roll → Pictures/Imports/OneDrive", status chip,
+  on/off toggle.
+- **Status line** from `runtime`: "Importing your existing photos: 8,200 so
+  far" during a backfill, "Up to date · checked 06:00" afterwards, or the
+  action needed ("Sign in again", "Review changes to turn back on", "The album
+  *For Mom* was deleted").
+- **Setup sections** (above), collapsed once complete.
+- **Items:** the `sync_items` ledger for this automation, filterable by status
+  (sent, failed, can't remove, deleted at source), with *Retry failed*.
+- **Run history:** the existing component; each run's summary carries the
+  engine's counts ("+34 imported, 2 skipped as duplicates, 12 deleted in
+  OneDrive and kept").
+
+### Custom adapters
+
+A custom adapter is created from *Add a new service…* and is reached
+afterwards from any sync that uses it (*Edit service* on the Options
+section). It opens the builder chat with the adapter's code, the Web access
+panel, Test, and Publish, as in the web-calls doc (see *Building a custom
+adapter* for the builder's tools and permissions). When an adapter fails
+validation after an upgrade, the syncs using it show "This service needs
+updating" with *Regenerate*. Presets never show code.
+
+### In the library
+
+- **Album page:** a chip when a sync sends this album ("Sent to Google Photos ·
+  3 failed"), linking to the automation. *Send this album to…* in the album
+  menu is a shortcut into *New automation › Send to…* with the selection
+  pre-filled.
+- **Photo details:** "Imported from OneDrive" / "Sent to *For Mom*", from
+  `sync_items`.
+- **Filters:** *Imported by* (a sync automation), *Deleted at source*, *Sync
+  failed*.
+
+## Building a custom adapter
+
+*Add a new service…* opens the builder chat on a new, empty custom adapter.
+The model writes **only the adapter**: the provider-specific hooks (roughly
+50–150 lines) plus, because there's no preset to supply one, the provider's
+**connection definition**. The sync engine, the item ledger, retries, and file
+writes stay in the host, exactly as for presets. Once published, the adapter
+appears in *Import from…* / *Send to…* tagged "custom", and any number of syncs
+can use it.
+
+Mockup: [Add a new service](assets/automation-sync-adapters/add-service-mockup.html)
+(the builder chat with Overview, Test account, Web access, Code, and Test tabs,
+stepping through describe → reading docs → test account → live test →
+publish).
+
+### The `connection` block
+
+Presets get their connection definition from host code. A custom adapter
+declares it in `ADAPTER`, as a literal like the rest of the metadata, so it's
+validated statically and shown at *Turn on* without running code:
+
+```python
+ADAPTER = {
+    "contract": 1,
+    "role": "target",
+    "provider": "custom",                 # no preset
+    "title": "Flickr sets",
+    "connection": {
+        "auth_kind": "oauth1a",           # oauth2 | oauth1a | api_key | sigv4 | basic | session
+        "auth": {
+            "request_token_url": "https://www.flickr.com/services/oauth/request_token",
+            "authorize_url": "https://www.flickr.com/services/oauth/authorize",
+            "access_token_url": "https://www.flickr.com/services/oauth/access_token",
+            "scopes": ["write"],
+        },
+        "base_urls": ["https://api.flickr.com", "https://up.flickr.com"],
+        "followup_hosts": [],
+        "app_credentials": ["client_id", "client_secret"],  # entered once while building
+        "redirect": "registered",         # OAuth only; see "The return address" below
+        "app_form_labels": {              # the service's own words, for the instructions
+            "redirect": "Callback URL", "client_id": "Key", "client_secret": "Secret",
+        },
+    },
+    "options": {...},
+    "capabilities": {...},
+    "hooks": {...},
+}
+```
+
+Rules, checked on write and at publish:
+
+- `auth_kind` must be one of the six in *Sign-in methods* below, with the
+  fields that kind requires. A service that needs anything else can't be built
+  as a custom adapter; the builder says so instead of trying.
+- Every URL is `https`. `base_urls` and `followup_hosts` are plain origins (no
+  wildcards beyond a leading `*.` on a registrable domain), and every endpoint
+  the static detector finds must fall under them.
+- OAuth blocks declare `redirect` (below); `app_form_labels` is optional and
+  only changes wording.
+- The connection block is part of the adapter's code hash, so changing a host,
+  token URL, or scope is a code change: it goes through draft → Test → publish
+  and re-asks consent on every sync using it.
+
+### Sign-in methods
+
+**Scripts never see secrets, and there is no script-defined sign-in.** A token,
+key, or password enters a request only where the connection block declares
+it, filled in by Yaffo (a header, a path or query placeholder, a cookie) or
+used by Yaffo to sign the request. A script that did its own sign-in would have
+to hold the secret, and a buggy or prompt-injected adapter could then send it
+to any host it's allowed to call (in a caption, a title, a request body); the
+domain allow-list can't catch that, because the host is legitimate. Keeping
+auth declarative keeps that property checkable. Services that need something
+outside these six are unsupported until three real services need the same
+new kind (the web-calls doc's rule of three).
+
+| `auth_kind` | for | block declares | the user does | secret kept in the keychain |
+|---|---|---|---|---|
+| `oauth2` | Google, Microsoft, Dropbox, pCloud | authorize + token URLs, scopes, `redirect`, optional `device_code` URL, token-request variations (client secret in body or header, PKCE only, extra parameters) | signs in in the browser, or enters a device code | refresh + access token |
+| `oauth1a` | Flickr, SmugMug | request-token, authorize, access-token URLs, `redirect` | signs in in the browser | access token + token secret |
+| `api_key` | Immich, Pixelfed personal tokens, Nextcloud file-drop links | where the key goes: `header` (name, optional prefix), `query` (parameter), or `path` (placeholder) | pastes a key, token, or share link | the key |
+| `sigv4` | S3, R2, B2 | service, how the endpoint is built (from region or account id) | pastes an access key pair | key id + secret |
+| `basic` | Nextcloud and other WebDAV, some NAS | `scheme`: `basic` or `digest` | enters a username and an app password | username + password |
+| `session` | Synology Photos, PhotoPrism, Piwigo, Lychee, Backblaze native B2 | a login request, where the token comes from, how it's attached, what "expired" looks like, optional 2FA | enters a username, password, and a 2FA code if asked | username + password (to log in again), plus the current session token |
+
+**`session` in detail.** Many self-hosted servers trade a username and password
+for a session token. Yaffo does the exchange; the adapter only ever sees the
+token's *effect* (authenticated responses):
+
+```python
+"connection": {
+    "auth_kind": "session",
+    "login": {
+        "method": "GET",
+        "url": "{base_url}/webapi/entry.cgi",
+        "query": {"api": "SYNO.API.Auth", "version": "7", "method": "login",
+                  "account": "{username}", "passwd": "{password}",
+                  "otp_code": "{otp}", "format": "sid"},
+    },
+    "token_from": {"json": "/data/sid"},          # or {"cookie": "PHPSESSID"}, {"header": "X-Session-Id"}
+    "attach": {"query": "_sid"},                   # or {"header": "Authorization", "prefix": "Bearer "}, {"cookie": "…"}
+    "expired_when": {"json": "/error/code", "in": [106, 107, 119]},  # or {"status": [401]}
+    "otp": "optional",                             # "none" | "optional" | "required"
+    "check": {"method": "GET", "url": "{base_url}/webapi/entry.cgi?api=SYNO.Core.NormalUser&method=get&version=1"},
+}
+```
+
+- `{username}`, `{password}`, `{otp}` exist only in the `login` request. The
+  static checker rejects them anywhere else, including in scripts.
+- On an `expired_when` match Yaffo logs in again once and retries the call; a
+  failed login sets `needs_sign_in`. Re-login uses the same refresh lease as
+  OAuth token refresh, so concurrent runs don't log in twice.
+- **2FA:** a one-time code can only be typed by a person, so re-login can't use
+  one. When a login needs a code, the sign-in screen asks for it and offers the
+  service's "remember this device" option where the login request supports it
+  (Synology's `enable_device_token`, whose device token is then stored with the
+  password and sent on re-login). If re-login still demands a code, the
+  connection goes to `needs_sign_in` and every sync using it says so.
+- Because Yaffo must store the password to log in again, the screen recommends
+  a dedicated user or an app-specific password where the service has one.
+
+**Every kind declares a `check` call** (`whoami`): a read-only request Yaffo
+makes right after sign-in (Pixelfed `verify_credentials`, Immich `/api/users/me`, a `HEAD`
+on the chosen bucket for S3). It proves the credential works before any sync
+relies on it and supplies the account id and label (see *Connections*). OAuth
+kinds may use the ID token or token response instead. Without a usable
+`check`, the account id falls back to a fingerprint of the key and instance.
+
+**Secret URLs** (a Nextcloud *file drop* share link, an Immich shared-album
+upload link) are `api_key` with `path` placement: the UI asks for "the share
+link", and Yaffo splits it into the host (checked against `base_urls`) and the
+secret path parts. In the adapter's code the secret parts are **connection
+placeholders** (e.g. `https://cloud.example.org/public.php/dav/files/{token}/`),
+filled in by the host. The
+script never sees their values, and the endpoint detector treats them as part
+of the connection, not as script values.
+
+**Self-hosted servers** (Immich, Nextcloud, Synology, PhotoPrism) declare
+`instance: ["base_url"]`. The address the user enters is added to the
+connection's allowed hosts at run time, shown in consent ("Yaffo will only
+talk to immich.home.lan"), and part of the account id, so two servers are two
+connections. *Open question:* plain `http` on a home network. https only is
+safest, but many home servers are http-only on the LAN. Proposed: allow
+`http` only for a private-network address (RFC 1918, `.local`, `.lan`) after an
+explicit warning, never for a public address.
+
+**Device code as a fallback.** A preset whose provider supports both (OneDrive,
+some Google scopes) shows a "Signing in on another device?" link under the
+normal button, which switches to the device-code screen. That covers Yaffo
+running on a home server opened from a laptop, where the browser can't reach
+Yaffo's local return address.
+
+**Not supported:** client certificates (mTLS), signed-JWT service accounts,
+OAuth 2 client credentials (server-to-server setups, not personal photo
+services), and cookie sessions scraped from a website's login (iCloud, Google
+Photos without the API).
+
+**App credentials and the test account.** Yaffo has no registered app with an
+unknown service, so an OAuth custom adapter needs the user to register their
+own developer app once. The builder's **Test account** tab has two parts:
+
+1. **App credentials** (only when the connection block lists
+   `app_credentials`): fields for the client id and secret, labelled with the
+   service's own words from `app_form_labels` ("Key", "Secret" on Flickr), and,
+   only when `redirect` is `registered`, Yaffo's return address as a
+   copy-paste step in the same words ("On Flickr's *Create an app* form, paste
+   this into **Callback URL**"). The builder explains the service's
+   registration steps from its docs. The credentials are stored in the
+   keychain under the adapter (`app_secret_ref`), never in the database, never
+   sent to the LLM provider, and reused by every sync that uses the adapter.
+2. **Test account**: *Sign in to Flickr* creates (or picks) an ordinary
+   connection and records it as the adapter's `test_connection_key`, which
+   `test_adapter` uses. It stays after publishing, so later edits and
+   *Regenerate* can be tested live.
+
+**The return address.** In an OAuth sign-in the user approves access on the
+service's site, which then sends the browser back to Yaffo with a one-time
+code. Services differ in whether that return address has to be registered with
+the app in advance, so the connection block declares which case applies and
+Yaffo only shows the address when the user has to register it:
+
+| `redirect` | the service… | the user sees |
+|---|---|---|
+| `registered` | only returns to addresses registered with the app | the copy-paste step above |
+| `any_loopback` | accepts any `127.0.0.1` / `localhost` address (the RFC 8252 rule for desktop apps; e.g. Google's *desktop app* client type) | nothing |
+| `per_request` | takes the address in each sign-in request (common with OAuth 1.0a) | nothing |
+| `device_code` | supports device sign-in (RFC 8628): the user types a short code on the service's site; no return address at all | the code and a link, during sign-in |
+
+The builder decides from the docs, like `auth_kind`. A wrong declaration shows
+up the same way: signing in the test account fails (the service rejects the
+return address), and the error goes back to the builder to fix.
+
+The return address must stay **the same across restarts**, since a registered
+address has to match exactly: it's built from the configured web port
+(`web.port`, default 5001), never a random one. If the port changes, every
+custom adapter with `redirect: registered` shows "Update the return address on
+Flickr" with the new address, and its connections go to `needs_sign_in` until
+the user does.
+
+Mockup: [account types](assets/automation-sync-adapters/account-types-mockup.html)
+(the *Account* step for each sign-in method, return-address case, and the
+`session` login with 2FA, with what each stores).
+
+Because the connection is shared, the first sync set up with this adapter
+finds the account already signed in and just confirms it. API-key services
+(Immich, Pixelfed, most self-hosted tools) have no app registration: signing
+in just asks for a key.
+
+A custom adapter's connections are stored with `provider: "custom:<adapter
+slug>"`; the auth endpoints, hosts, and scopes are read from the adapter's
+`published.metadata.connection` (the working version while building), not
+copied into the connection row.
+
+### Where the model's API knowledge comes from
+
+Three sources, from least to most reliable:
+
+1. **What the model already knows.** Good enough for a first draft against big,
+   stable APIs; unreliable on field names, versions, and deprecations. Never
+   trusted on its own.
+2. **Documentation**, through the builder tools below. An OpenAPI spec is the
+   best input: the host condenses it to a compact endpoint list (method, path,
+   parameters, response fields) rather than pasting raw HTML into the prompt.
+3. **Live responses in Test.** The decisive one. After the user signs in, Test
+   runs the adapter's granted read calls for real and the model sees the actual
+   JSON: write → test → read the real response → fix the mapping. Docs get the
+   model close; real responses get it right, and catch docs that are wrong or
+   out of date.
+
+### Builder tools
+
+The custom-adapter builder gets its own tool set, alongside today's
+`write_automation_code` / `test_automation_code`:
+
+| tool | does | available |
+|---|---|---|
+| `write_adapter_code` | saves the draft; returns static-check errors (metadata, hooks, connection block, endpoint manifest) | always |
+| `test_adapter` | runs Test (see *Test / preview*); returns records or the diff plus recorded calls, trimmed for the model | always; live reads need permission 3 below |
+| `fetch_docs(urls)` | fetches a **batch** of pages or OpenAPI specs **from Yaffo** (not the LLM provider) and returns readable, size-capped text per URL | URLs on authorized domains run at once; the rest wait for one batch prompt (permission 1) |
+| `web_search(query)` | runs a search **from Yaffo** through the configured search backend and returns titles, URLs, and snippets (no page bodies; the model reads results with `fetch_docs`) | once the backend's domain is authorized (permission 2) |
+
+Both web tools are ordinary builder tools that **Yaffo** executes, so they work
+the same with every LLM provider and every request goes through Yaffo's own
+authorization. The LLM providers' built-in search tools (Anthropic's
+`web_search` server tool and the like) are deliberately **not** used: they run
+inside the model call, so Yaffo can't show the query or ask before it runs, and
+they exist for only some LLM providers.
+
+**Search backend.** `web_search` needs a search API behind it. Proposed: a
+pluggable backend, configured in Settings next to the LLM settings, with its
+API key in the keychain like the LLM keys. Candidates are a hosted search API
+with a free tier (e.g. Brave Search API) or a self-hosted SearXNG URL. With no
+backend configured, the tool isn't offered and the model works from the docs
+URLs it already knows (most services' API docs live at well-known places, such
+as `flickr.com/services/api`), fetched with `fetch_docs` as usual.
+
+None of these tools exist in the `adapter` host profile: an adapter at run time
+can make only its granted calls.
+
+### Permissions
+
+Each thing the builder does on the user's behalf is a separate permission,
+because each carries a different risk. Prompts use the global confirm dialog or
+an inline chat card, never `confirm()`.
+
+**Web access is authorized by domain, deterministically.** Neither Yaffo nor
+the user judges the content of a request (a URL's path, a search query) to
+decide whether it may run. A request runs if and only if its domain is in the
+adapter's authorized set; otherwise it waits for the user to authorize that
+domain. The same inputs always give the same decision, so it's testable and
+can't be argued with by a model.
+
+- **Domain** means the registrable domain (eTLD+1, from a bundled snapshot of
+  the Public Suffix List, never fetched at run time): authorizing `flickr.com`
+  covers `www.flickr.com` and `api.flickr.com`; `alice.github.io` and
+  `bob.github.io` are different domains because `github.io` is a public suffix.
+- **The authorized set** is stored on the adapter
+  (`sync_adapters.doc_domains`) and lasts for its conversation, including
+  later edits and *Regenerate*. It starts **empty**: a domain is added only
+  when the user approves a request the model actually makes. A URL appearing
+  in the chat (typed by the user or written by the model) authorizes nothing;
+  if the model never fetches it, nobody is asked about it.
+- **Redirects** are followed only within authorized domains. A redirect to a
+  new domain stops there and comes back to the model as "needs
+  authorization", so it lands in the next batch prompt.
+
+| # | action | risk | how it's approved |
+|---|---|---|---|
+| 1 | Read documentation (`fetch_docs`) | an outbound request from a local-first app; the content is untrusted | **one prompt per batch**, listing only the domains in the batch that aren't authorized yet, each with its URLs: "The builder wants to read 4 pages. Already allowed: flickr.com (2). New: githubusercontent.com (1), example.org (1). Allow all / choose / Deny". URLs on already-authorized domains are fetched without asking; a batch with no new domains shows no prompt. Denied URLs come back to the model as denied |
+| 2 | Web search (`web_search`) | queries go to the search backend; a hosted backend may bill per query | the search backend is treated as a domain like any other (`brave.com` for Brave Search): the first search asks "Allow the builder to search the web through Brave Search?", and later searches run without asking. Results are opened with `fetch_docs`, under row 1. A per-conversation cap on searches (e.g. 10) stops a looping model and bounds cost; it's a count, not a judgment |
+| 3 | Live read calls in Test, using the adapter's test connection | real account data goes into the model's context, and so to the LLM provider | the user clicking *Test* is its own approval. For the builder to run `test_adapter` live on its own, the user approves once per adapter: "Let the builder make read-only calls to your Flickr account (jturan) while building. Responses are sent to the AI model." Limited to granted `read`-risk endpoints; without it, model-initiated tests use recorded placeholders |
+
+Writes are never sent from Test under any permission; they're recorded, as for
+every Test. The host caps what goes back to the model from live calls (first
+few records, long fields trimmed, response headers dropped except paging and
+rate-limit ones).
+
+### Fetched docs are untrusted
+
+A docs page or search result is text from the internet in the model's context,
+and could tell the model to add a call to some other host or to send data
+somewhere. Nothing the model writes takes effect without passing through the
+checks that already exist:
+
+- endpoints are detected statically and must be under the connection block's
+  hosts;
+- the hosts are listed in plain words at *Turn on* ("This service talks to
+  api.flickr.com and up.flickr.com") and changing them re-asks consent;
+- endpoints marked `shares_externally` keep their separate confirmation;
+- the adapter can't read files or Yaffo data except what the engine hands each
+  hook.
+
+So a poisoned docs page can make the model write a bad adapter, but the user
+sees any unexpected host or endpoint before it runs.
+
+### What can't be built
+
+- Services with no public API, or whose API is closed to new apps (iCloud
+  Photos, Instagram's personal-account API).
+- Sign-in methods outside the six in *Sign-in methods* (custom signing
+  schemes, client certificates, scraped web logins).
+- Sources that need a person in the loop or local OS access (see *Sources that
+  aren't adapters*).
 
 ## Preset sketches
 
@@ -767,8 +1387,8 @@ def list_page(cursor, ctx):
     elif ctx["state"].get("checkpoint"):
         url = ctx["state"]["checkpoint"]               # deltaLink from the last full pass
     else:
-        url = url_template(GRAPH + "/me/drive/{path}:/delta",
-                           path=ctx["options"]["folder"])
+        url = url_template(GRAPH + "/me/drive/items/{id}/delta",
+                           id=ctx["options"]["folder"]["id"])
     r = web_request(CONNECTION, "GET", url)
     if r["status"] == 429:
         return {"error": {"code": "rate_limited",
@@ -800,14 +1420,35 @@ def to_record(i):
         "updated_at": i.get("lastModifiedDateTime"),
     }
 
+def choices(option, parent_id, cursor, ctx):
+    items = []
+    if cursor:
+        url = cursor
+    elif parent_id:
+        url = url_template(GRAPH + "/me/drive/items/{id}/children", id=parent_id)
+    else:
+        url = GRAPH + "/me/drive/root/children"
+        roll = web_request(CONNECTION, "GET", GRAPH + "/me/drive/special/cameraroll")
+        if roll["status"] == 200:
+            items.append({"id": roll["json"]["id"], "label": "Camera Roll",
+                          "has_children": True, "suggested": True})
+    r = web_request(CONNECTION, "GET", url)
+    if r["status"] != 200:
+        return {"error": {"code": "retry_later", "message": "graph %d" % r["status"]}}
+    items += [{"id": i["id"], "label": i["name"], "has_children": i["folder"]["childCount"] > 0}
+              for i in r["json"]["value"] if "folder" in i]
+    return {"items": items, "next_cursor": r["json"].get("@odata.nextLink")}
+
 ADAPTER = {"contract": 1, "role": "source", "provider": "onedrive",
            "title": "OneDrive folder",
-           "options": {"folder": {"type": "string", "default": "special/cameraroll"}},
-           "hooks": {"list_page": list_page}}
+           "options": {"folder": {"type": "remote_folder", "label": "OneDrive folder",
+                                  "required": True}},
+           "hooks": {"list_page": list_page, "choices": choices}}
 ```
 
 `ADAPTER` comes last because Starlark evaluates the module top to bottom: the
-`hooks` names must already be defined. `to_record` is a private helper.
+`hooks` names must already be defined. `to_record` is a private helper. The
+folder is stored by id, so renaming it in OneDrive doesn't break the sync.
 
 Note `nextLink`/`deltaLink` are full URLs returned by a granted call. They pass
 the grant check through the follow-up-URL rule (the host recognizes URLs it
@@ -820,11 +1461,14 @@ API = "https://photoslibrary.googleapis.com/v1"
 
 def push(batch, ctx):
     albums = dict(ctx["state"].get("albums", {}))
+    pinned = ctx["options"].get("album")       # set only if the user picked an existing album
     results, by_target = [], {}
     for item in batch:
         by_target.setdefault(item["target"], []).append(item)
     for target, items in by_target.items():
-        if target not in albums:
+        if pinned and "id" in pinned:
+            albums[target] = pinned["id"]
+        elif target not in albums:
             r = web_request(CONNECTION, "POST", API + "/albums", json={"album": {"title": target}})
             if r["status"] != 200:
                 return {"error": {"code": "retry_later"}, "state_patch": {"albums": albums}}
@@ -857,114 +1501,232 @@ def remove(items, ctx):
 def list_remote(cursor, ctx):
     ...  # mediaItems:search {albumId, pageToken}; needs photoslibrary.readonly.appcreateddata
 
+def choices(option, parent_id, cursor, ctx):
+    ...  # GET albums?pageToken=… ; Google returns only albums this app created
+
 ADAPTER = {"contract": 1, "role": "target", "provider": "google_photos",
            "title": "Google Photos album",
+           "options": {"album": {"type": "remote_collection", "label": "Google Photos album",
+                                 "help": "Leave empty to use the Yaffo album's name.",
+                                 "allow_create": True}},
            "capabilities": {"max_batch": 50, "remove": True, "update": False,
-                            "reconcile": True, "targets": "many", "kind": "collection"},
-           "hooks": {"push": push, "remove": remove, "list_remote": list_remote}}
+                            "reconcile": True, "targets": "many"},
+           "hooks": {"push": push, "remove": remove, "list_remote": list_remote,
+                     "choices": choices}}
 ```
 
-### Telegram target (stream)
-
-```python
-def push(batch, ctx):
-    results = []
-    for item in batch:
-        r = web_upload_media(CONNECTION, "POST",
-                             "https://api.telegram.org/bot{token}/sendPhoto",
-                             item["media_item_id"], encoding="multipart", field="photo",
-                             fields={"chat_id": ctx["options"]["chat_id"],
-                                     "caption": item["caption"] or ""})
-        ok = r["status"] == 200 and r["json"]["ok"]
-        results.append({"media_item_id": item["media_item_id"],
-                        "remote_id": str(r["json"]["result"]["message_id"]) if ok else None,
-                        "error": None if ok else {"code": "retry_later"}})
-    return {"results": results}
-
-ADAPTER = {"contract": 1, "role": "target", "provider": "telegram_bot",
-           "title": "Telegram chat",
-           "options": {"chat_id": {"type": "string"}},
-           "capabilities": {"max_batch": 10, "remove": False, "update": False,
-                            "reconcile": False, "targets": "one", "kind": "stream"},
-           "hooks": {"push": push}}
-```
-
-`{token}` is a **connection placeholder** filled in by the host from the secret
-(Telegram puts the bot token in the path). The script never sees its value,
-and the detector treats it as part of the connection, not a script value.
+The remote album normally comes from the **selection**: each routing target
+(by default the Yaffo album's name) gets a Google album of that name, created
+on the first run and remembered by id in `state.albums`. The optional
+`album` option pins one existing album instead. Its picker can only list
+albums **Yaffo created**: since Google's 2025 Library API changes, an app can
+list and add to only its own albums, and the picker says so ("Only albums
+Yaffo created can be used").
 
 ## Sources that aren't adapters
 
 Some imports have no listing API but can still feed the same engine as
 **host-native record producers** (Python, reviewed, one per kind). They emit the
 same record schema, so dedupe, file writes, metadata merge, and indexing are
-shared:
+shared. The ones a user sets up as a sync (Folder) are `sync_adapters` rows with
+a `handler` instead of code, like built-in targets; the Picker and Takeout are
+one-off utility actions:
 
 | producer | why it isn't an adapter |
 |---|---|
 | Google Photos Picker | needs a person in the loop (a picker session in their browser); a utility button, not a schedule |
 | Google Takeout ingester | a local ZIP with JSON sidecars; no network |
 | macOS Photos (osxphotos / PhotoKit) | local bridge with macOS permissions, not web calls |
+| **Folder** | local files, no web calls (below) |
+
+### Folder (source)
+
+*Import from… › Folder* **copies** new photos from a folder into the import
+root. It's the mirror of the Folder target, for folders that aren't a
+permanent home: an SD card or camera, a desktop sync app's camera-upload
+folder the user prunes (Dropbox, OneDrive, Google Drive, which gives a
+Dropbox import with no API), Downloads, or a family member's shared folder.
+
+It differs from adding the folder as a **media folder** (Settings), which
+indexes files in place:
+
+| | media folder (exists today) | Folder source |
+|---|---|---|
+| files | stay put; the folder becomes part of the library | copied into `Imports/<name>/YYYY/MM` |
+| folder cleaned out (card reformatted, uploads emptied) | the photos leave the library | the library's copies stay |
+| files already in the library | indexed again as duplicates | skipped (content hash match) |
+
+The setup says so: "Want to keep these photos where they are? Add the folder
+as a media folder instead."
+
+- **Options:** the folder, include subfolders (on by default), photos /
+  videos / both.
+- **Records:** one per file. `source_id` is the path relative to the folder;
+  size + modification time act as `updated_at`; the content sha1 is the
+  `hash`, so files already in the library are linked, not copied. No date or
+  location hints: the file's own metadata is used.
+- **Originals are never touched,** and there's no "delete after import". The
+  user can clear the card themselves once they've checked the import.
+- **No tombstones.** Files disappearing from the folder is normal (a
+  reformatted card, an emptied upload folder), so the producer never emits
+  `deleted: True` and nothing is marked `deleted_at_source`.
+- **Missing folder:** if the card or drive isn't connected, the run ends with
+  "waiting for the folder" as an ordinary outcome, not an error or a pause.
+- **Guards:** the folder can't be inside a library media folder or any sync's
+  import root (Yaffo would import its own files), checked on save and at run
+  start.
+- **Triggers:** a schedule or *Run now*. A "when this drive is connected"
+  event (a new `volume_mounted` domain event, filtered by volume) is the
+  natural trigger for cards and is left for later.
+- **No account, no connection.** Consent: "Copy new photos from
+  */Volumes/EOS_DIGITAL/DCIM* into *Pictures › Imports › Camera*."
+
+## Targets that aren't adapters
+
+Some targets don't make web calls, so they can't be Starlark adapters. They're
+**built-in targets**: reviewed Python that plugs into the same engine in place
+of `push` / `remove` / `list_remote`. Everything else is shared with adapter
+targets: selection (album, filter, rule), the `album_changed` trigger and
+settle window, the item ledger, `accepts` conversion, Test, consent, and the
+*Send to…* setup. Each is a `sync_adapters` row with `is_preset` set and a
+`handler` naming the Python implementation instead of code.
+
+### Folder
+
+*Send to… › Folder* keeps a copy of the selected photos in a folder outside the
+library. Whatever watches that folder takes it from there:
+
+| what watches the folder | result |
+|---|---|
+| the Amazon Photos desktop app's folder backup | photos reach Amazon Photos (and an Echo Show showing them) |
+| Dropbox, Google Drive, OneDrive, or Synology Drive desktop apps | photos sync to that service with no API, app registration, or sign-in |
+| a NAS share or mounted network drive | a plain copy elsewhere |
+| a USB stick or SD card | load it into a photo frame that reads cards (most do, Frameo included) |
+
+**Options** (rendered like any adapter's `options`):
+
+| option | values | default |
+|---|---|---|
+| Folder | a folder picker; must exist and be writable | none |
+| Layout | flat · one subfolder per routing target (album) · by year/month of capture | one subfolder per target |
+| Convert to JPEG | off · on (sets `accepts` to JPEG/PNG) · on, sized for a photo frame (also caps pixels and bytes) | off |
+| When a photo leaves the selection | delete Yaffo's copy · keep it | delete Yaffo's copy |
+
+**Capabilities:** `kind: collection`, `targets: many`, `remove` and `reconcile`
+supported, `update: false` (captions aren't written; the copy keeps the
+original's embedded metadata), `accepts` from the *Convert* option.
+
+**Writing.** Each item is copied to a temporary name in the destination, then
+renamed into place, so a watcher never sees a half-written file. The file's
+modification time is set to the capture date (sync clients and frames sort by
+it). Name collisions get a suffix (`IMG_1234 (2).jpg`). The copy's path,
+relative to the folder, is the item's `remote_id`; its size and modification
+time go in `sync_items.details`. Copies are made lock-free and the ledger is
+committed per batch, as for web targets.
+
+**Deleting is limited to Yaffo's own unchanged copies.** On removal the engine
+deletes a file only if the ledger says Yaffo wrote it *and* its size and
+modification time still match; anything else (a file the user edited, or one
+Yaffo never wrote) is left alone and the item is marked `cant_remove` with a
+note. Deleted files go to the OS trash, like library deletes. Yaffo never
+lists, renames, or deletes anything else in the folder.
+
+**Reconcile and crash recovery** scan only the paths in the ledger: a `pending`
+row whose file exists with the expected size is marked sent; a sent copy the
+user deleted is marked `removed_remotely` and not re-copied unless they ask,
+the same rule as for web targets.
+
+**Guards.**
+
+- The folder can't be inside a library media folder or Yaffo's thumbnail
+  folder (Yaffo would index its own exports as new photos), checked on save
+  and at run start.
+- If the folder is missing (an unplugged drive or unmounted share), the sync
+  pauses with `destination_missing` rather than failing each item, and resumes
+  when it's back. A run checks free space before copying a batch.
+- The folder has to be reachable from the computer Yaffo runs on. A desktop
+  sync app on a laptop can't see a folder on a headless home server, and the
+  setup says so when the path looks remote.
+
+**What the user is told.** Yaffo knows only that a copy was **written**, not
+whether a desktop app uploaded it, so the run summary and Items list say
+"written to folder", never "sent". The consent sentence names the folder and
+the removal behavior: "Copy the photos in *For Mom* to *~/Amazon Photos
+Backup* as JPEG. Photos removed from the album are deleted from that folder."
+The *Turn on* step adds what that means downstream when the user picks a known
+sync app's folder: Amazon's folder backup only uploads, so deleting a copy
+doesn't remove the photo from Amazon Photos, while a Dropbox folder would.
+
+## Targets considered and not planned
+
+| target | why not | what covers it instead |
+|---|---|---|
+| **Email** (send photos to an address, e.g. a photo frame's) | email isn't an HTTP API, so it can't be an adapter: it would need a built-in target (see above) (Gmail `gmail.send` / Graph `Mail.Send` over OAuth, or SMTP with an app password) plus an `smtp` connection kind for that target only. Sent mail can't be removed (send-only destinations are out of scope, see *Target capabilities*), and frames and personal mail accounts have per-email and daily limits. The audience is small: owners of email-enabled frames (Skylight, Pix-Star, Nixplay) | **deferred.** Revisit if users ask; `accepts` (above) already covers the format half |
+| **Amazon Photos** | no public upload API: Amazon closed its Cloud Drive API to new developers years ago and shut Amazon Drive down at the end of 2023 (as of this writing). The only ways in are Amazon's own apps | the **Folder** target, pointed at a folder the Amazon Photos desktop app backs up |
+| **Frameo frames** | no API and no email; photos arrive only from the Frameo phone app, peer to peer | the **Folder** target writing to a USB stick or SD card the frame reads |
+| **Photo frames generally** | most consumer frames have no public API | frames and smart displays that show a **cloud album** (Google Nest Hub, Nixplay and some Aura models with Google Photos) are covered by the Google Photos target: send an album there and point the frame at it. Frames that read a USB stick or SD card are covered by the **Folder** target |
 
 ## Data model
 
-**Rule: configuration and per-binding state are JSON; the per-item ledger is a
-table.** Bindings, grants, adapter state, and cursors are always read and written
-whole, one binding at a time, by the engine. Nothing queries *across* them
+**Rule: configuration and per-sync state are JSON; the per-item ledger is a
+table.** Sync configs, grants, adapter state, and cursors are always read and written
+whole, one sync at a time, by the engine. Nothing queries *across* them
 except a few small admin lookups. They are validated in code (named
 dataclasses plus `jsonschema`, which Yaffo already uses for `data_query`) at
 every write and at load. Item rows are different: there can be tens of
-thousands per binding, the engine looks them up by key and status on every
+thousands per sync, the engine looks them up by key and status on every
 page, they join to `media_items`, and they must follow media deletes. That
 needs a table.
 
-So this design adds **three tables, three columns**:
+So this design adds **two tables, three columns**, plus connection rows in the
+existing `application_settings` table:
 
 ```
- connections ◄─────────── automations.sync.connection_id        (JSON reference)
+ application_settings ◄── automations.sync.connection_key       (JSON reference)
+   ("sync_connection:…" rows)   ◄── sync_adapters.test_connection_key
  sync_adapters ◄───────── automations.sync.adapter_id           (JSON reference)
    (code, metadata, manifest, grants: JSON)
  automations
-   .sync  (JSON: binding config, consent, state, cursors)
+   .sync  (JSON: config, consent, state, cursors)
    .working_code / .published_code  (selector script, existing columns)
      └──< sync_items ──► media_items
  conversations.sync_adapter_id ──► sync_adapters   (builder chat for a custom adapter)
  media_items.sha1                                  (dedupe)
 ```
 
-`connections` is shared with [Automation Web Calls](automation-web-calls.md#connection).
-All changes follow the migration rules in [Project Context](project-context.md).
+There is no `connections` table: connections are rows in
+`application_settings` (below). The secret itself is in the OS keychain, named
+by `secret_ref`; token refreshes write only the keychain (and the lease), never
+the token into the database. All changes follow the migration rules in
+[Project Context](project-context.md).
 
-### `connections` (table)
+### Connections (`application_settings` rows)
 
-A table rather than JSON because a connection is a shared entity: several
-bindings and the web host functions refer to it by id, its `slug` must be
-unique, and its `status` is updated by token refresh independently of any
-binding.
+`ApplicationSettings` is the existing key/value table (`name` unique, `type`,
+`value` as a string). Each connection is one row:
 
-```python
-class Connection(db.Model):
-    """A named, user-created credential for one remote service. Secrets are not
-    stored here: `secret_ref` names the OS keychain entry (keyring) holding the
-    token/key. Scripts only ever see the literal CONNECTION, bound by the host."""
+| column | value |
+|---|---|
+| `name` | `sync_connection:<provider>:<account_id>`, e.g. `sync_connection:onedrive:4f1a9c…`. The unique `name` is what makes "one connection per account" hold |
+| `type` | `json` (a new type value; existing rows use `string`) |
+| `value` | a `SyncConnection` serialized as JSON (see *JSON shapes*) |
 
-    __tablename__ = "connections"
+`account_id` is the provider's stable id for the signed-in user (Google's
+`sub`, the Microsoft account id, Flickr's `nsid`, Immich's user id), from the
+sign-in method's `check` call or token response. For `basic` and `session` it's
+the username plus the server. For a service that can't report one, it's a
+fingerprint of the key (and instance URL), so the same key is recognized and a
+different key is a different connection.
 
-    id = db.Column(db.Integer, primary_key=True)
-    slug = db.Column(db.String, unique=True, nullable=False)       # "google_photos", "moms_onedrive"
-    name = db.Column(db.String, nullable=False)
-    provider = db.Column(db.String, nullable=False)                # preset key: "onedrive", "immich", ...
-    config = db.Column(db.JSON, nullable=False)                    # ConnectionConfig: auth kind/endpoints/
-                                                                   # scopes, base_urls, followup_hosts
-    secret_ref = db.Column(db.String, nullable=True)               # keychain entry; NULL until signed in
-    status = db.Column(db.String, nullable=False)                  # ready | needs_sign_in | disabled
-    created_at = db.Column(db.DateTime, default=utcnow)
-    last_used_at = db.Column(db.DateTime, nullable=True)
-```
+Access goes through a small repository (`yaffo/sync/connections.py`:
+`get`, `find_for_provider`, `upsert_after_sign_in`, `mark_needs_sign_in`,
+`take_refresh_lease`, `release_if_unreferenced`), not ad-hoc queries, so the
+JSON is validated on every read and write like the rest of the sync JSON.
+Nothing else in `application_settings` starts with `sync_connection:`.
 
 ### `sync_adapters` (table, mostly JSON)
 
-A table because adapters are shared: one preset serves many bindings, and a
+A table because adapters are shared: one preset serves many syncs, and a
 custom adapter has its own draft/publish lifecycle and builder chat. Everything
 derived from the code is JSON.
 
@@ -985,12 +1747,22 @@ class SyncAdapter(db.Model):
     provider = db.Column(db.String, nullable=False)                # must match the connection's provider
     is_preset = db.Column(db.Boolean, nullable=False, default=False)
     preset_version = db.Column(db.String, nullable=True)           # bump → re-seed on app start
+    handler = db.Column(db.String, nullable=True)                  # built-ins only ("folder_source",
+                                                                   # "folder_target"): Python implementation;
+                                                                   # code columns are NULL
 
     working_code = db.Column(db.Text, nullable=True)
     published_code = db.Column(db.Text, nullable=True)
     working = db.Column(db.JSON, nullable=True)                    # AdapterVersion for working_code
     published = db.Column(db.JSON, nullable=True)                  # AdapterVersion for published_code
     grants = db.Column(db.JSON, nullable=False, default=list)      # [WebGrant]
+
+    doc_domains = db.Column(db.JSON, nullable=False, default=list)  # custom only: registrable domains the builder
+                                                                   # may fetch docs from / search through
+    app_secret_ref = db.Column(db.String, nullable=True)           # custom OAuth only: keychain entry with the
+                                                                   # user's developer-app client id + secret
+    test_connection_key = db.Column(db.String, nullable=True)      # custom only: application_settings name of the
+                                                                   # connection the builder's Test uses
 
     status = db.Column(db.String, nullable=False)                  # draft | ready | invalid
     created_at = db.Column(db.DateTime, default=utcnow)
@@ -999,7 +1771,7 @@ class SyncAdapter(db.Model):
 
 ### `automations.sync` (new JSON column)
 
-A binding *is* its automation, so its configuration goes on the `automations`
+A sync *is* its automation, so its configuration goes on the `automations`
 row rather than a 1:1 table. Dispatch routes an automation with a non-NULL
 `sync` to the sync engine (a third route in `automation_dispatch.py`, next to
 system handlers and custom code). The existing `working_code` /
@@ -1008,7 +1780,7 @@ system handlers and custom code). The existing `working_code` /
 The column holds two parts with different writers, which the engine keeps
 apart:
 
-- `binding`: written only by the UI/builder (and re-consent).
+- `config`: written only by the UI/builder (and re-consent).
 - `runtime`: written only by the engine, in the same transaction as the page or
   batch of `sync_items` it describes.
 
@@ -1016,16 +1788,23 @@ apart:
 
 Named frozen dataclasses in `yaffo/sync/schemas.py`, each with `from_dict` that
 runs a `jsonschema` validator and `to_dict` for storage. Loading invalid JSON
-raises, and the engine pauses the binding (`status: "invalid_config"`) rather
+raises, and the engine pauses the sync (`status: "invalid_config"`) rather
 than running on a guess.
 
 ```python
 @dataclass(frozen=True)
-class ConnectionConfig:
-    auth_kind: str                    # oauth2 | oauth1a | api_key | sigv4
-    auth: dict                        # endpoints, scopes, key header, region (by auth_kind)
-    base_urls: list[str]
-    followup_hosts: list[str]
+class SyncConnection:                 # application_settings value for "sync_connection:…"
+    provider: str                     # preset key: "onedrive", "immich", ... (supplies auth kind,
+                                      # endpoints, client id, base_urls, followup_hosts), or
+                                      # "custom:<adapter slug>" (read from the adapter's connection block)
+    account_id: str                   # provider's stable user id (or key fingerprint); part of the name
+    account_label: str | None         # shown in the UI, e.g. the email the provider returns
+    scopes: list[str]                 # granted; the union of what the syncs using it need
+    status: str                       # ready | needs_sign_in
+    secret_ref: str                   # keychain entry (keyring): token, key, or (basic/session)
+                                      # username + password and any device/session token
+    instance: dict                    # self-hosted fields only, e.g. {"base_url": "https://immich.home"}
+    refreshing_until: str | None      # refresh lease (see Connection)
 
 @dataclass(frozen=True)
 class AdapterVersion:                 # sync_adapters.working / .published
@@ -1051,10 +1830,12 @@ class Selection:
     query: dict | None = None         # a data_query dict, validated by data_query's own schema
 
 @dataclass(frozen=True)
-class SyncBinding:                    # automations.sync["binding"]
+class SyncConfig:                     # automations.sync["config"]
     role: str                         # source | target
     adapter_id: int
-    connection_id: int
+    connection_key: str | None        # application_settings name of the connection; None only for
+                                      # built-ins with no account (Folder source/target)
+    scopes_needed: list[str]          # what this sync needs; must be ⊆ the connection's scopes
     options: dict                     # validated against the adapter's ADAPTER["options"]
     import_root: dict | None          # sources: {"media_dir_id": uuid, "subpath": "Imports/OneDrive"}
     selection: Selection | None       # targets
@@ -1076,12 +1857,18 @@ class SyncRuntime:                    # automations.sync["runtime"]
     cursors: dict[str, SyncCursor]    # "list" (sources) | "reconcile" (targets with list_remote)
 ```
 
-Stored example (a OneDrive source):
+Stored example (a OneDrive source), with its connection row
+`sync_connection:onedrive:4f1a9c…` holding `{"provider": "onedrive",
+"account_id": "4f1a9c…", "account_label": "jason@outlook.com", "scopes":
+["Files.Read", "offline_access"], "status": "ready", "secret_ref":
+"yaffo.sync.onedrive.4f1a9c", "instance": {}, "refreshing_until": null}`:
 
 ```json
 {
-  "binding": {
-    "role": "source", "adapter_id": 3, "connection_id": 1,
+  "config": {
+    "role": "source", "adapter_id": 3,
+    "connection_key": "sync_connection:onedrive:4f1a9c…",
+    "scopes_needed": ["Files.Read", "offline_access"],
     "options": {"folder": "special/cameraroll"},
     "import_root": {"media_dir_id": "6f1c…", "subpath": "Imports/OneDrive"},
     "selection": null,
@@ -1109,7 +1896,7 @@ source and target tables.
 
 ```python
 class SyncItem(db.Model):
-    """One item a sync binding has seen (source) or sent (target). Unique on
+    """One item a sync has seen (source) or sent (target). Unique on
     (automation, item_key), which is what makes re-listing and re-pushing
     idempotent. For targets the row doubles as the intent log: written 'pending'
     before push(), resolved after; rows left pending by a crashed run are
@@ -1127,7 +1914,8 @@ class SyncItem(db.Model):
     automation_id = db.Column(db.Integer, db.ForeignKey("automations.id", ondelete="CASCADE"), nullable=False)
     item_key = db.Column(db.String, nullable=False)
     media_item_id = db.Column(db.Integer, db.ForeignKey("media_items.id", ondelete="SET NULL"), nullable=True)
-    remote_id = db.Column(db.String, nullable=True)                # target: provider id (sources: = item_key)
+    remote_id = db.Column(db.String, nullable=True)                # target: provider id, or the path relative to
+                                                                   # the folder (Folder target); sources: = item_key
     target = db.Column(db.String, nullable=True)                   # target routing key; NULL for sources
     fingerprint = db.Column(db.String, nullable=True)              # source: record.updated_at;
                                                                    # target: hash of caption → update()
@@ -1152,7 +1940,7 @@ class SyncItem(db.Model):
 Why this stays a table:
 
 - **Lookups per page.** "Have I seen `source_id` X?" and "which rows are
-  `pending`?" for one binding, thousands of times per backfill. Keys and indexes
+  `pending`?" for one sync, thousands of times per backfill. Keys and indexes
   make that cheap; a JSON blob would be parsed and rewritten in full per page.
 - **Write locks.** The engine commits a page's items in chunks (lock-free
   compute, then bulk flush). Rewriting one growing JSON value per page would
@@ -1169,7 +1957,8 @@ outcome codes.
 
 | table | change | why |
 |---|---|---|
-| `automations` | add `sync` (JSON, nullable) | binding config and runtime state (above) |
+| `automations` | add `sync` (JSON, nullable) | sync config and runtime state (above) |
+| `application_settings` | no schema change; new `sync_connection:…` rows of a new `json` type | connections (see *Connections*) |
 | `media_items` | add `sha1` (String(40), nullable, indexed) | cross-library dedupe on import; match Immich/OneDrive hashes before downloading. Computed at index time; existing rows backfilled by a maintenance task |
 | `conversations` | add `sync_adapter_id` (FK → `sync_adapters`, CASCADE, nullable) | the builder chat for a custom adapter, like `automation_id` for automations |
 
@@ -1177,35 +1966,50 @@ outcome codes.
 
 | lost | handled by |
 |---|---|
-| FK `RESTRICT` on deleting a connection or adapter in use | the delete route checks for bindings first. Automations are few, so a scan of `automations.sync` (or SQLite `json_extract`) is fine. The UI lists the bindings that block the delete |
-| FK `SET NULL` on deleting the selected album | the engine checks the album exists at run start; if not, the binding pauses (`paused`, code `selection_missing`) rather than treating "no album" as "remove everything remotely" |
+| FK `RESTRICT` on deleting a custom adapter in use | the delete route checks for syncs first. Automations are few, so a scan of `automations.sync` (or SQLite `json_extract`) is fine. The UI lists the syncs that block the delete |
+| FK from a sync to its connection row | the engine loads the connection at run start; a missing or unreadable row sets `needs_sign_in` rather than failing obscurely. Garbage collection (see *Connection*) only deletes rows no sync or adapter names |
+| FK `SET NULL` on deleting the selected album | the engine checks the album exists at run start; if not, the sync pauses (`paused`, code `selection_missing`) rather than treating "no album" as "remove everything remotely" |
 | Column types/constraints | `jsonschema` on every write and load, plus a drift-guard test that each dataclass's fields match its schema |
-| Partial updates | `binding` and `runtime` are always replaced whole by their single writer; one run per binding at a time (the engine takes a per-automation run lock), so there are no concurrent writers to one blob |
+| Partial updates | `config` and `runtime` are always replaced whole by their single writer; one run per sync at a time (the engine takes a per-automation run lock), so there are no concurrent writers to one blob |
 | Schema evolution | JSON shapes carry no version of their own; a shape change ships with a data migration that rewrites `automations.sync`, like any other migration |
 
 ### Consent hash
 
-`binding.consent_hash` is a hash over: role, adapter id and
-`published.code_hash`, connection id, `import_root`, and selection (kind plus
-album id, query, or the selector's published code hash). The engine recomputes
-it at run start; a mismatch sets `runtime.status = "needs_consent"` and the run
-stops before any web call. Because the selection's query and the selector's
-code hash are part of the hash, every new version of the selection needs
-re-authorization by construction. The UI asks at publish time, so this
+`config.consent_hash` is a hash over: role, adapter id and
+`published.code_hash` (or `handler` for a built-in), the connection key
+(provider and account) and the sync's `scopes_needed`, the adapter `options`,
+`import_root`, and selection (kind plus album id, query, or the selector's
+published code hash). The engine recomputes it at run start; a mismatch sets
+`runtime.status = "needs_consent"` and the run stops before any web call or
+file write. Because the selection's query and the selector's code hash are
+part of the hash, every new version of the selection needs re-authorization
+by construction. Options are included because several decide where photos go
+or who sees them (the Folder target's path and removal setting, a remote
+album title, Flickr's "make public"). The UI asks at publish time, so this
 check at run start is only a backstop.
 
 ### Lifecycle rules
 
-- **Delete a sync automation**: cascades its `sync_items` (the config goes with
-  the row). Nothing is removed remotely and no imported file is deleted.
-- **Delete a connection or adapter**: refused while bindings reference it.
-  Presets can't be deleted.
+- **Delete a sync automation**: cascades its `sync_items` (the config goes
+  with the row). Its connection is deleted, and its token revoked, only if no
+  other sync or adapter refers to it. Nothing is removed remotely and no
+  imported file is deleted.
+- **Sign in again** (expired or revoked token): replaces the connection's
+  keychain entry in place and sets it `ready`, for every sync using it. Signing
+  in as a *different* account creates or picks a different connection, which
+  changes the consent hash, so that sync re-asks.
+- **Delete a custom adapter**: refused while syncs reference it. Otherwise
+  deletes its app credentials from the keychain and releases its test
+  connection (deleted if nothing else refers to it). Presets can't be deleted.
+- **Change a custom adapter's app credentials**: tokens are issued to an app,
+  so every connection for that adapter's provider goes to `needs_sign_in`,
+  and with them every sync using it. The UI says so before saving.
 - **Republish a custom adapter**: new `published.code_hash`. Grants whose hash
   no longer matches stop authorizing calls. If the new manifest only narrows,
   grants are re-stamped automatically; otherwise the publish modal asks.
-  Bindings using it get `needs_consent` only if the grant set changed.
+  Syncs using it get `needs_consent` only if the grant set changed.
 - **Preset upgrade** (`preset_version` bump on app update): re-seeded code goes
-  through the same rule. A widened manifest pauses the affected bindings with
+  through the same rule. A widened manifest pauses the affected syncs with
   `needs_consent` instead of silently granting.
 
 ## Compared with the web-calls design
