@@ -9,11 +9,11 @@
 - Sections live on `/settings`. Success/error toasts are `.notification.visible`.
 - **Media dirs:** list `#media-dirs-list`, rows `.media-dir-item` (`.media-dir-path`,
   `[data-action="remove-media-dir"]`). Add: `#new-media-dir` +
-  `[data-action="add-media-dir"]` → POST `/api/settings/media-dirs`. The server
+  `[data-action="add-media-dir"]` → POST `/settings/media-dirs`. The server
   `mkdir -p`s the path, so any scratch path under the sandbox root works. Empty path
   → toast "Please enter a directory path". Remove confirms via
   `#global-confirm-dialog` (message names the dir) then DELETE
-  `/api/settings/media-dirs/<index>`; toast "Removed: <dir>".
+  `/settings/media-dirs/<index>`; toast "Removed: <dir>".
 - **Sandbox root discovery:** read System Information's "Database Path:" `<code>`
   (`<root>/yaffo.db`) and take its dirname. Use **exact** text matching —
   "Database Path:" is a substring of "Task Queue Database Path:".
@@ -32,7 +32,7 @@
   `#thumbnail-count` / `#thumbnail-size` on load (assert they leave '…'/'Counting…').
   `[data-action="change-thumbnail-dir"]` fetches stats, then the global confirm
   dialog message contains "New location: <dir>" and "This will move N files (SIZE)".
-  Confirm POSTs `/api/settings/thumbnail-dir` (moves files, rewrites Face/poster
+  Confirm POSTs `/settings/thumbnail-dir` (moves files, rewrites Face/poster
   paths) and the page reloads. Test moves to `<current>-spec-<uniq>` and moves back
   in `finally`.
 - **Labels vocabulary:** same `#labels-section` the labels suite covers extensively;

@@ -6,14 +6,14 @@ test.describe('Photo Details - Edit Tags', () => {
   const TEST_TAG_NAME = `TestTag_${Date.now()}`;
   const TEST_TAG_VALUE = 'TestValue';
   // Snapshot of the photo's tags before the test, used to restore state.
-  // Tags are saved wholesale via PUT /api/media/<id>/tags (no per-tag delete).
+  // Tags are saved wholesale via PUT /media/<id>/tags (no per-tag delete).
   let originalTags: { tag_name: string; tag_value: string }[] | null = null;
   let photoId: number | null = null;
 
   test.afterEach(async ({ request }) => {
     if (originalTags && photoId !== null) {
       try {
-        await request.put(`/api/media/${photoId}/tags`, {
+        await request.put(`/media/${photoId}/tags`, {
           data: { tags: originalTags },
         });
       } catch (error) {
@@ -87,7 +87,7 @@ test.describe('Photo Details - Edit Tags', () => {
     const saveButton = page.locator('#tagsModal button[type="submit"]').filter({ hasText: 'Save Changes' });
     await expect(saveButton).toBeVisible();
     const [response] = await Promise.all([
-      page.waitForResponse(resp => resp.url().includes(`/api/media/${photoId}/tags`)),
+      page.waitForResponse(resp => resp.url().includes(`/media/${photoId}/tags`)),
       saveButton.click(),
     ]);
     expect(response.ok()).toBeTruthy();

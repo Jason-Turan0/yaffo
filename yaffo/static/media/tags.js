@@ -156,7 +156,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, i18n, c
         }));
 
         try {
-            const response = await fetch(config.buildUrl('update_media_tags', { media_item_id: photoId }), {
+            const response = await fetch(config.buildUrl('media_tags_update', { media_item_id: photoId }), {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tags: payload })

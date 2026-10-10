@@ -195,7 +195,7 @@
                 ...window.APP_CONFIG,
                 urls: {
                     ...window.APP_CONFIG.urls,
-                    get_tag_values: {{ url_for('sharing_device_tag_values', device_id=device.device_id, media_dir_id=media_dir_id, scope=scope) | tojson }},
+                    api_tag_values_list: {{ url_for('sharing_device_tag_values', device_id=device.device_id, media_dir_id=media_dir_id, scope=scope, tag_name='TAG_NAME') | replace('TAG_NAME', '<tag_name>') | tojson }},
                 },
             });
             app.filters.initLocationAutocomplete(app.i18n, window.APP_CONFIG);

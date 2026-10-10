@@ -58,8 +58,8 @@ PAGES: dict[str, str] = {
 # GET routes that aren't pages: JSON APIs, htmx fragments and polls, files and
 # images, stylesheets, and pages that need context the assistant can't give.
 NOT_PAGES: frozenset[str] = frozenset({
-    "assistant_conversations", "assistant_conversation", "fs_list", "location_autocomplete",
-    "get_thumbnail_stats_api", "get_tag_values", "settings_thumbnail_stats_stream",
+    "assistant_conversations", "assistant_conversation", "fs_list", "api.locations_list",
+    "settings_thumbnail_stats", "api.tag_values_list", "settings_thumbnail_stats_stream",
     "face_thumbnail", "favicon", "placeholder", "media", "media_poster", "media_by_path",
     "job_fragment", "job_status", "jobs_section",
     "pages_version_status", "pages_widget_frame",

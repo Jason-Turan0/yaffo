@@ -20,7 +20,7 @@ def _add_pending_import_job():
 def test_thumbnail_directory_update_keeps_raw_path(client, app, tmp_path):
     thumbnail_dir = tmp_path / "Faces & Crops"
 
-    response = client.post("/api/settings/thumbnail-dir", json={"directory": str(thumbnail_dir)})
+    response = client.post("/settings/thumbnail-dir", json={"directory": str(thumbnail_dir)})
 
     assert response.status_code == 200
     assert response.get_json()["new_directory"] == str(thumbnail_dir)
@@ -46,7 +46,7 @@ def test_media_directory_add_is_blocked_during_library_update(client, app, tmp_p
     with app.app_context():
         _add_pending_import_job()
 
-    response = client.post("/api/settings/media-dirs", json={"directory": str(tmp_path / "media")})
+    response = client.post("/settings/media-dirs", json={"directory": str(tmp_path / "media")})
 
     assert response.status_code == 409
     assert response.get_json() == {
@@ -59,7 +59,7 @@ def test_media_directory_remove_is_blocked_during_library_update(client, app):
     with app.app_context():
         _add_pending_import_job()
 
-    response = client.delete("/api/settings/media-dirs/0")
+    response = client.delete("/settings/media-dirs/0")
 
     assert response.status_code == 409
     assert response.get_json()["code"] == "library_update_in_progress"
@@ -69,7 +69,7 @@ def test_thumbnail_directory_update_is_blocked_during_library_update(client, app
     with app.app_context():
         _add_pending_import_job()
 
-    response = client.post("/api/settings/thumbnail-dir", json={"directory": str(tmp_path / "thumbs")})
+    response = client.post("/settings/thumbnail-dir", json={"directory": str(tmp_path / "thumbs")})
 
     assert response.status_code == 409
     assert response.get_json()["code"] == "library_update_in_progress"
@@ -92,7 +92,7 @@ def test_thumbnail_directory_update_rewrites_face_paths(client, app, tmp_path):
         ])
         db.session.commit()
 
-    response = client.post("/api/settings/thumbnail-dir", json={"directory": str(new_dir)})
+    response = client.post("/settings/thumbnail-dir", json={"directory": str(new_dir)})
 
     assert response.status_code == 200
     assert response.get_json()["faces_updated"] == 1
@@ -114,7 +114,7 @@ def test_thumbnail_directory_update_marks_new_dir_and_keeps_old_marker(client, a
         db.session.add(ApplicationSettings(name="thumbnail_dir", type="str", value=str(old_dir)))
         db.session.commit()
 
-    response = client.post("/api/settings/thumbnail-dir", json={"directory": str(new_dir)})
+    response = client.post("/settings/thumbnail-dir", json={"directory": str(new_dir)})
 
     assert response.status_code == 200
     assert (new_dir / THUMBNAIL_DIR_MARKER).is_file()
@@ -139,7 +139,7 @@ def test_thumbnail_directory_update_rewrites_missing_face_paths(client, app, tmp
         ])
         db.session.commit()
 
-    response = client.post("/api/settings/thumbnail-dir", json={"directory": str(new_dir)})
+    response = client.post("/settings/thumbnail-dir", json={"directory": str(new_dir)})
 
     assert response.status_code == 200
     assert response.get_json()["faces_updated"] == 1
@@ -162,7 +162,7 @@ def test_thumbnail_directory_update_rewrites_video_poster_paths(client, app, tmp
         ])
         db.session.commit()
 
-    response = client.post("/api/settings/thumbnail-dir", json={"directory": str(new_dir)})
+    response = client.post("/settings/thumbnail-dir", json={"directory": str(new_dir)})
 
     assert response.status_code == 200
     assert response.get_json()["posters_updated"] == 1

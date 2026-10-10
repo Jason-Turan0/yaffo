@@ -206,7 +206,7 @@ is idempotent, since the timeline re-runs init as batches stream in.
 
 **Detail view** (`templates/media/view.html`) — four states: file missing on disk;
 playable video (`<video controls preload="metadata">`); non-playable video (poster
-plus an "open in default player" button through `/api/open-file`); photo. Duration
+plus an "open in default player" button through `POST /api/openings`); photo. Duration
 and codec join the metadata panel. The face-box canvas overlay is photo-only —
 video faces come from arbitrary sampled frames, so their boxes do not correspond to
 anything on screen.

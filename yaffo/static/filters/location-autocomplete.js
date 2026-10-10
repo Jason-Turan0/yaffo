@@ -132,7 +132,7 @@ window.PHOTO_ORGANIZER.filters.initLocationAutocomplete = (i18n, appConfig) => {
         suggestionsContainer.classList.add('active');
 
         try {
-            const url = `${appConfig.urls.location_autocomplete}?q=${encodeURIComponent(query)}`;
+            const url = `${appConfig.urls.api_locations_list}?q=${encodeURIComponent(query)}`;
             const response = await fetch(url, {
                 signal: controller.signal
             });

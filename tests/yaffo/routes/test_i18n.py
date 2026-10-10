@@ -171,9 +171,9 @@ def test_saved_locale_translates_settings_llm_model_notification(client):
 def test_saved_locale_translates_settings_media_directory_api_errors(client):
     client.post("/settings/locale", data={"locale": "de"})
 
-    add_response = client.post("/api/settings/media-dirs", json={})
-    remove_response = client.delete("/api/settings/media-dirs/999")
-    thumbnail_response = client.post("/api/settings/thumbnail-dir", json={})
+    add_response = client.post("/settings/media-dirs", json={})
+    remove_response = client.delete("/settings/media-dirs/999")
+    thumbnail_response = client.post("/settings/thumbnail-dir", json={})
 
     assert add_response.status_code == 400
     assert add_response.get_json() == {
@@ -243,7 +243,7 @@ def test_saved_locale_translates_media_details(client, app):
 def test_saved_locale_translates_media_api_errors(client):
     client.post("/settings/locale", data={"locale": "de"})
 
-    response = client.post("/api/media/999999/favorite")
+    response = client.patch("/api/media/999999", json={"favorite": True})
 
     assert response.status_code == 404
     assert response.get_json() == {
@@ -270,7 +270,6 @@ def test_saved_locale_translates_faces_inbox(client):
 @pytest.mark.parametrize(
     ("face_count", "expected_message"),
     [
-        (0, "0 Gesichter wurden erfolgreich ignoriert"),
         (1, "1 Gesicht wurde erfolgreich ignoriert"),
         (2, "2 Gesichter wurden erfolgreich ignoriert"),
     ],
@@ -286,29 +285,24 @@ def test_saved_locale_translates_face_assignment_plural(client, app, face_count,
         face_ids = [face.id for face in faces]
 
     client.post("/settings/locale", data={"locale": "de"})
-    response = client.post(
-        "/api/faces/assign",
-        json={"faces": face_ids, "person": None, "faceStatus": FACE_STATUS_IGNORED},
-    )
+    response = client.patch("/api/faces", json={"ids": face_ids, "status": FACE_STATUS_IGNORED})
 
     assert response.status_code == 200
     assert response.get_json() == {
-        "success": True,
+        "faces": [{"id": face_id, "status": FACE_STATUS_IGNORED, "person_id": None} for face_id in face_ids],
         "message": expected_message,
         "code": "faces_ignored",
-        "face_ids": face_ids,
     }
 
 
 def test_saved_locale_translates_face_assignment_validation_error(client):
     client.post("/settings/locale", data={"locale": "de"})
 
-    response = client.post("/api/faces/assign", json={})
+    response = client.patch("/api/faces", json={"ids": [1]})
 
     assert response.status_code == 400
     assert response.get_json() == {
-        "success": False,
-        "message": "Gesichter, Person und Gesichtsstatus sind erforderlich",
+        "error": "Gesichter, Person und Gesichtsstatus sind erforderlich",
         "code": "assignment_fields_required",
     }
 
@@ -349,7 +343,7 @@ def test_saved_locale_translates_people_table_and_formats_birthdate(client, app)
 def test_saved_locale_translates_people_api_error(client):
     client.post("/settings/locale", data={"locale": "de"})
 
-    response = client.post("/api/people/create", json={"name": ""})
+    response = client.post("/faces/people/create", json={"name": ""})
 
     assert response.status_code == 400
     assert response.get_json() == {

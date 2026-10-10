@@ -104,23 +104,23 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign = (allPeople, i18n, config) =
         clearBtn.disabled = true;
         clearBtn.textContent = i18n.t('media:faces.clearing');
         try {
-            const response = await fetch(config.urls.faces_unassign, {
-                method: 'POST',
+            const response = await fetch(config.urls.api_faces_update, {
+                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: JSON.stringify({ faces: [faceId] })
+                body: JSON.stringify({ ids: [faceId], person_id: null })
             });
             const data = await response.json();
-            if (response.ok && data.success) {
+            if (response.ok) {
                 window.notification.success(data.message || i18n.t('media:faces.clearSucceeded'));
                 setTimeout(() => {
                     window.location.reload();
                 }, 500);
                 return;
             }
-            window.notification.error(data.message || i18n.t('media:faces.clearFailed'));
+            window.notification.error(data.error || i18n.t('media:faces.clearFailed'));
         } catch (error) {
             console.error('Error clearing face:', error);
             window.notification.failure(i18n.t('media:faces.clearFailed'));
@@ -144,28 +144,27 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign = (allPeople, i18n, config) =
         applyBtn.textContent = i18n.t('media:faces.applying');
 
         try {
-            const response = await fetch(config.urls.faces_assign, {
-                method: 'POST',
+            const response = await fetch(config.urls.api_faces_update, {
+                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify({
-                    faces: [faceId],
-                    person: personId,
-                    faceStatus: 'ASSIGNED'
+                    ids: [faceId],
+                    person_id: Number(personId)
                 })
             });
 
             const data = await response.json();
 
-            if (response.ok && data.success) {
+            if (response.ok) {
                 window.notification.success(data.message || i18n.t('media:faces.reassignSucceeded'));
                 setTimeout(() => {
                     window.location.reload();
                 }, 500);
             } else {
-                window.notification.error(data.message || i18n.t('media:faces.reassignFailed'));
+                window.notification.error(data.error || i18n.t('media:faces.reassignFailed'));
                 applyBtn.disabled = false;
                 applyBtn.textContent = i18n.t('common:apply');
             }

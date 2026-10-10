@@ -421,8 +421,8 @@ def test_settings_media_controls_use_catalog_keys_and_delegated_actions():
     assert "settings:media.removeMessage" in source
     assert "settings:thumbnail.moveMessage" in source
     assert "settings:thumbnail.moveSucceeded" in source
-    assert "config.urls.add_media_dir" in source
-    assert "config.urls.update_thumbnail_dir" in source
+    assert "config.urls.settings_media_dirs_add" in source
+    assert "config.urls.settings_thumbnail_dir" in source
     assert "window.location.reload()" in source
     assert "escapeHtml(dir.path)" in source
     assert 'data-action="remove-media-dir"' in template

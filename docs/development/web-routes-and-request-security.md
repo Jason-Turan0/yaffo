@@ -1,6 +1,14 @@
-# Web Routes and Request Security (Plan)
+# Web Routes and Request Security
 
-**Status: proposed.** Four changes, in order:
+**Status: implemented** (2026-10-10). The sections below describe the state before
+the change and the plan as carried out; the conventions now live in
+[Coding Standards — Web Routes and the API](coding-standards.md#web-routes-and-the-api).
+Two things differ from the survey below: the app already had a session CSRF token
+(`yaffo/security.py`, enforced outside `TESTING`), which stays alongside the new
+checks, and the folder picker's `/api/fs/list` and `/api/fs/create-folder` weren't
+covered by the plan and are unchanged.
+
+Four changes, in order:
 
 1. An app-wide request check that refuses DNS-rebinding and cross-site requests.
 2. Opening files and folders on this computer by id, never by a path from the

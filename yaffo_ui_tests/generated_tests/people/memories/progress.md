@@ -37,8 +37,8 @@
   test round-trips gender/birthdate by reopening the modal after save.
 
 ## Faces Integration
-- Setup shortcuts: `POST /api/people/create {name}` → 201 `{person_id}`;
-  `POST /api/faces/assign {faces:[id], person:id, faceStatus:'ASSIGNED'}` — runs as a
+- Setup shortcuts: `POST /faces/people/create {name}` → 201 `{person_id}`;
+  `PATCH /api/faces {ids:[id], person_id:id}` — runs as a
   background task (taskq host must be up), so poll `/people/<id>/faces` for
   `[data-face-id="<id>"]` (toPass ≤20s).
 - Unassigned-pool membership: `/faces?threshold=1` renders `.suggestion-group`

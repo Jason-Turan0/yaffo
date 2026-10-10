@@ -359,8 +359,8 @@ type MediaTag = {
 type PhotoViewApi = {
     highlightFace(faceId: number): void;
     clearHighlights(): void;
-    openFile(filePath: string): void;
-    openFolder(folderPath: string): void;
+    openFile(mediaItemId: number): void;
+    openFolder(mediaItemId: number): void;
     reindex(mediaItemId: number): Promise<void>;
 };
 
@@ -377,8 +377,6 @@ type FaceReassignApi = Record<string, never>;
 type ViewPhotoNamespace = {
     initPhotoView?: (
         faceData: MediaFace[] | null,
-        absoluteFilePath: string,
-        absoluteFolderPath: string,
         i18n: I18nService,
         config: AppConfig,
     ) => PhotoViewApi;

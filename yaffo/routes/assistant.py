@@ -9,7 +9,6 @@ and in demo mode.
 from __future__ import annotations
 
 import json
-import subprocess
 from dataclasses import dataclass
 
 from flask import Flask, abort, jsonify, make_response, render_template, request
@@ -23,7 +22,6 @@ from yaffo.db.repositories import assistant_repository as repo
 from yaffo.runtime_mode import demo_mode_enabled
 from yaffo.site_agents.assistant import plans
 from yaffo.site_agents.assistant import settings as assistant_settings
-from yaffo.site_agents.assistant.file_targets import SHOW_FOLDER, FileTarget, TargetError, resolve_target
 from yaffo.site_agents.assistant.run_queue import run_queue_status
 from yaffo.site_agents.assistant.schemas import (
     AssistantError,
@@ -37,7 +35,6 @@ from yaffo.site_agents.assistant.schemas import (
     plan_view,
 )
 from yaffo.utils.context import context
-from yaffo.utils.open_in_os import open_in_os
 
 # Pages without contextual "Ask Yaffo" buttons.
 HELP_EXCLUDED_ENDPOINTS = frozenset({"settings_index"})
@@ -342,7 +339,7 @@ def init_assistant_routes(app: Flask):
         _require_available()
         return render_template("assistant/index.html")
 
-    @app.route("/api/assistant/conversations", methods=["GET"])
+    @app.route("/assistant/conversations", methods=["GET"])
     def assistant_conversations():
         _require_available()
         pending = repo.pending_plan_counts(db.session)
@@ -350,7 +347,7 @@ def init_assistant_routes(app: Flask):
                      for c in repo.list_conversations(db.session)]
         return jsonify(ConversationList(conversations=summaries).to_dict())
 
-    @app.route("/api/assistant/conversations", methods=["POST"])
+    @app.route("/assistant/conversations", methods=["POST"])
     def assistant_conversation_create():
         """Start a conversation with its first message (no empty conversations)."""
         _require_available()
@@ -365,7 +362,7 @@ def init_assistant_routes(app: Flask):
         conversation = repo.get_conversation(db.session, conversation.id)
         return jsonify(ConversationStarted(ConversationSummary.from_model(conversation)).to_dict()), 202
 
-    @app.route("/api/assistant/conversations/<int:conversation_id>", methods=["GET"])
+    @app.route("/assistant/conversations/<int:conversation_id>", methods=["GET"])
     def assistant_conversation(conversation_id: int):
         """The chat dialog's poll: status, run start time, the transcript, and
         while the run waits for a background worker, why (`queue`)."""
@@ -376,7 +373,7 @@ def init_assistant_routes(app: Flask):
                  if conversation.status == ASSISTANT_STATUS_RUNNING else None)
         return jsonify(conversation_status(conversation, events, queue, _plan_views(conversation_id)).to_dict())
 
-    @app.route("/api/assistant/conversations/<int:conversation_id>/messages", methods=["POST"])
+    @app.route("/assistant/conversations/<int:conversation_id>/messages", methods=["POST"])
     def assistant_message(conversation_id: int):
         _require_available()
         conversation = _get_conversation_or_404(conversation_id)
@@ -408,7 +405,7 @@ def init_assistant_routes(app: Flask):
             return _error(str(exc), exc.code, PLAN_ERROR_STATUS.get(exc.code, 409))
         return jsonify(PlanDecided(plan_view(plan, assistant_settings.confirm_threshold())).to_dict())
 
-    @app.route("/api/assistant/conversations/<int:conversation_id>/plans/<int:plan_id>/approve",
+    @app.route("/assistant/conversations/<int:conversation_id>/plans/<int:plan_id>/approve",
                methods=["POST"])
     def assistant_plan_approve(conversation_id: int, plan_id: int):
         """Approve a change plan: re-validate it, then replay its recorded calls.
@@ -419,44 +416,26 @@ def init_assistant_routes(app: Flask):
         return _decide_plan(conversation_id, plan_id,
                             lambda: plans.approve(db.session, plan_id, conversation_id, confirm_count))
 
-    @app.route("/api/assistant/conversations/<int:conversation_id>/plans/<int:plan_id>/decline",
+    @app.route("/assistant/conversations/<int:conversation_id>/plans/<int:plan_id>/decline",
                methods=["POST"])
     def assistant_plan_decline(conversation_id: int, plan_id: int):
         return _decide_plan(conversation_id, plan_id,
                             lambda: plans.decline(db.session, plan_id, conversation_id))
 
-    @app.route("/api/assistant/conversations/<int:conversation_id>/plans/<int:plan_id>/undo",
+    @app.route("/assistant/conversations/<int:conversation_id>/plans/<int:plan_id>/undo",
                methods=["POST"])
     def assistant_plan_undo(conversation_id: int, plan_id: int):
         return _decide_plan(conversation_id, plan_id,
                             lambda: plans.undo(db.session, plan_id, conversation_id))
 
-    @app.route("/api/assistant/open", methods=["POST"])
-    def assistant_open():
-        """An assistant "open" button (link_to_file) was clicked. The body names the
-        file or folder by ids only; the path is looked up again here and must be in a
-        configured media folder, so the button can't be turned into "open anything"."""
-        _require_available()
-        try:
-            target = FileTarget.from_dict(request.get_json(silent=True))
-            resolved = resolve_target(db.session, target)
-        except TargetError:  # its reasons are worded for the model; the user gets one message
-            return _error(gettext("That file or folder isn't available. It may have moved, or its drive "
-                                  "isn't connected."), "open_target_unavailable", 404)
-        try:
-            open_in_os(resolved.path, reveal=target.show == SHOW_FOLDER and not resolved.is_dir)
-        except (OSError, subprocess.SubprocessError):
-            return _error(gettext("Couldn't open it on this computer."), "open_failed", 500)
-        return "", 204
-
-    @app.route("/api/assistant/conversations/<int:conversation_id>/cancel", methods=["POST"])
+    @app.route("/assistant/conversations/<int:conversation_id>/cancel", methods=["POST"])
     def assistant_cancel(conversation_id: int):
         _require_available()
         _get_conversation_or_404(conversation_id)
         repo.set_status(db.session, conversation_id, ASSISTANT_STATUS_IDLE)
         return "", 204
 
-    @app.route("/api/assistant/conversations/<int:conversation_id>", methods=["PATCH"])
+    @app.route("/assistant/conversations/<int:conversation_id>", methods=["PATCH"])
     def assistant_rename(conversation_id: int):
         _require_available()
         _get_conversation_or_404(conversation_id)
@@ -466,7 +445,7 @@ def init_assistant_routes(app: Flask):
         repo.rename_conversation(db.session, conversation_id, title[:repo.TITLE_MAX_LENGTH])
         return "", 204
 
-    @app.route("/api/assistant/conversations/<int:conversation_id>", methods=["DELETE"])
+    @app.route("/assistant/conversations/<int:conversation_id>", methods=["DELETE"])
     def assistant_delete(conversation_id: int):
         """Delete a conversation. A run still working on it stops at its next step
         (its status poll finds the conversation gone)."""
@@ -514,7 +493,7 @@ def init_assistant_routes(app: Flask):
         assistant_settings.set_confirm_threshold(count)
         return _toast(make_response("", 200), gettext("Assistant settings saved."))
 
-    @app.route("/api/assistant/conversations/delete-all", methods=["POST"])
+    @app.route("/assistant/conversations/delete-all", methods=["POST"])
     def assistant_delete_all():
         """"Delete all conversations" under the list on the Ask Yaffo page."""
         if demo_mode_enabled():

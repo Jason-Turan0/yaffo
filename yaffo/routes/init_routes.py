@@ -1,6 +1,7 @@
 from flask import Flask
 
 from yaffo.routes.albums import init_albums_routes
+from yaffo.routes.api import init_api_routes
 from yaffo.routes.assistant import init_assistant_routes
 from yaffo.routes.base import init_base_routes
 from yaffo.routes.faces import init_faces_routes
@@ -19,6 +20,7 @@ from yaffo.routes.themes_page import init_themes_page_routes
 
 def init_routes(app: Flask):
     init_base_routes(app)
+    init_api_routes(app)
     init_home_routes(app)
     init_filter_config_routes(app)
     init_media_routes(app)

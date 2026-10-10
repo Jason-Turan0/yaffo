@@ -1,6 +1,6 @@
 from datetime import date
 
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_babel import gettext
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload, aliased
@@ -86,36 +86,6 @@ def init_people_routes(app: Flask):
 
         flash(gettext("Added %(name)s", name=name), "success")
         return redirect(url_for("people_list"))
-
-    @app.route("/api/people/create", methods=["POST"])
-    def api_people_create():
-        """Create a new person via JSON API"""
-        data = request.get_json(silent=True) or {}
-        raw_name = data.get("name")
-        name = raw_name.strip() if isinstance(raw_name, str) else ""
-
-        if not name:
-            return jsonify({
-                "error": gettext("Name is required"),
-                "code": "name_required",
-            }), 400
-
-        existing = Person.query.filter(Person.name == name).first()
-        if existing:
-            return jsonify({
-                "error": gettext("Person '%(name)s' already exists", name=name),
-                "code": "person_already_exists",
-            }), 400
-
-        person = Person(name=name)
-        db.session.add(person)
-        db.session.commit()
-
-        return jsonify({
-            "success": True,
-            "person_id": person.id,
-            "name": person.name
-        }), 201
 
     @app.route("/people/<int:person_id>/update", methods=["POST"])
     def people_update(person_id):

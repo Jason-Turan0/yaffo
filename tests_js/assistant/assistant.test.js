@@ -610,18 +610,18 @@ describe('app links', () => {
           opens: [{ title: 'IMG_0412.HEIC', show: 'folder', target }] } },
         { type: 'assistant', content: 'This one.' },
       ]),
-      'POST /api/assistant/open': () => Promise.resolve({ ok: true, status: 204, json: () => Promise.resolve({}) }),
+      'POST /api/openings': () => Promise.resolve({ ok: true, status: 202, json: () => Promise.resolve({}) }),
     });
     window.notification = { success: vi.fn(), error: vi.fn() };
     await start();
-    window.APP_CONFIG.urls.assistant_open = '/api/assistant/open';
+    window.APP_CONFIG.urls.api_openings_create = '/api/openings';
 
     const button = document.querySelector('.assistant-links button.assistant-open-link');
     expect(button.textContent).toBe('IMG_0412.HEIC');
     expect(button.dataset.icon).toBe('folder');
     button.click();
     await settle();
-    const post = fetchMock.mock.calls.find(([url]) => url === '/api/assistant/open');
+    const post = fetchMock.mock.calls.find(([url]) => url === '/api/openings');
     expect(JSON.parse(post[1].body)).toEqual(target);
     expect(window.notification.success).toHaveBeenCalled();
   });

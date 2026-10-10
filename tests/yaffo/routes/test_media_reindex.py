@@ -24,7 +24,7 @@ def test_reindex_enqueues_a_forced_index_job(app, client, monkeypatch, tmp_path)
         or SimpleNamespace(import_job_id="i1", index_job_id="x1"),
     )
 
-    response = client.post(f"/api/media/{media_item.id}/reindex")
+    response = client.post(f"/media/{media_item.id}/reindex")
 
     assert response.status_code == 202
     assert response.get_json() == {"job_id": "x1"}
@@ -32,7 +32,7 @@ def test_reindex_enqueues_a_forced_index_job(app, client, monkeypatch, tmp_path)
 
 
 def test_reindex_unknown_photo_is_a_404(client):
-    response = client.post("/api/media/999999/reindex")
+    response = client.post("/media/999999/reindex")
 
     assert response.status_code == 404
     assert response.get_json()["code"] == "media_item_not_found"
@@ -45,7 +45,7 @@ def test_reindex_reports_a_file_that_is_gone_from_disk(app, client, tmp_path):
     db.session.add(media_item)
     db.session.commit()
 
-    response = client.post(f"/api/media/{media_item.id}/reindex")
+    response = client.post(f"/media/{media_item.id}/reindex")
 
     assert response.status_code == 404
     assert response.get_json()["code"] == "file_not_found"

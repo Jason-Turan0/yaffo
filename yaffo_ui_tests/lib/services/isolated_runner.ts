@@ -377,7 +377,13 @@ const startInstance = async (options: StartInstanceOptions): Promise<IsolatedIns
         // disposable instance gets a different process-local signing key.
         SECRET_KEY: randomBytes(32).toString("hex"),
     } : {};
-    const flaskEnv = {...env, ...flaskOnlyEnv, ...demoEnv};
+    // The app refuses requests naming a host it doesn't know (DNS-rebinding guard).
+    // The docs-capture container names the sandbox host.docker.internal, so a sandbox
+    // bound beyond loopback has to allow that name.
+    const containerHostEnv = process.env.YAFFO_SANDBOX_HOST && process.env.YAFFO_SANDBOX_HOST !== "127.0.0.1"
+        ? {YAFFO_WEB_ALLOWED_HOSTS: "host.docker.internal"}
+        : {};
+    const flaskEnv = {...env, ...flaskOnlyEnv, ...containerHostEnv, ...demoEnv};
 
     let taskqProcess: ChildProcess | null = null;
     if (demoRole) {

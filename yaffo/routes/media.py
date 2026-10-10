@@ -1,6 +1,4 @@
 import io
-import os
-import subprocess
 from pathlib import Path
 
 from flask import Flask, Response, abort, current_app, jsonify, render_template, request, send_file, send_from_directory
@@ -15,7 +13,6 @@ from yaffo.db.repositories.media_dir_repository import get_media_dirs
 from yaffo.themes import get_theme
 from yaffo.utils.image import upright_image_from_path
 from yaffo.utils.index_jobs import reindex_media_items
-from yaffo.utils.open_in_os import open_in_os
 from yaffo.utils.safe_paths import PathOutsideAllowedRoots, resolve_path_in_roots
 from yaffo.utils.settings import get_thumbnail_dir
 
@@ -192,8 +189,8 @@ def init_media_routes(app: Flask):
             all_people=all_people_data
         )
 
-    @app.route("/api/media/<int:media_item_id>/reindex", methods=["POST"])
-    def reindex_media_item(media_item_id: int):
+    @app.route("/media/<int:media_item_id>/reindex", methods=["POST"])
+    def media_reindex(media_item_id: int):
         """Re-run indexing for one photo — the fix when its metadata or its faces are
         wrong (a stale face box, a missing size). The photo goes back to IMPORTED and
         its faces are deleted immediately, so any person assignments on them are
@@ -214,66 +211,8 @@ def init_media_routes(app: Flask):
         jobs = reindex_media_items(db.session, [media_item])
         return jsonify({"job_id": jobs.index_job_id}), 202
 
-    @app.route("/api/open-file", methods=["POST"])
-    def open_file():
-        data = request.get_json(silent=True) or {}
-        file_path = data.get('path')
-
-        if not file_path or not os.path.exists(file_path):
-            return jsonify({
-                "error": gettext("File not found"),
-                "code": "file_not_found",
-            }), 404
-
-        try:
-            open_in_os(Path(file_path))
-            return jsonify({"success": True})
-        except (OSError, subprocess.SubprocessError):
-            return jsonify({
-                "error": gettext("Could not open file"),
-                "code": "open_file_failed",
-            }), 500
-
-    @app.route("/api/open-folder", methods=["POST"])
-    def open_folder():
-        data = request.get_json(silent=True) or {}
-        folder_path = data.get('path')
-
-        if not folder_path or not os.path.exists(folder_path):
-            return jsonify({
-                "error": gettext("Folder not found"),
-                "code": "folder_not_found",
-            }), 404
-
-        try:
-            open_in_os(Path(folder_path))
-            return jsonify({"success": True})
-        except (OSError, subprocess.SubprocessError):
-            return jsonify({
-                "error": gettext("Could not open folder"),
-                "code": "open_folder_failed",
-            }), 500
-
-    @app.route("/api/media/<int:media_item_id>/favorite", methods=["POST"])
-    def toggle_media_favorite(media_item_id: int):
-        """Toggle a photo's favorite flag between True and NULL (NULL = unset, so the
-        export/filter treat it as nothing). Emits photo_modified so the export
-        automation can write the keyword. Returns the new favorite state."""
-        media_item = db.session.get(MediaItem, media_item_id)
-        if not media_item:
-            return jsonify({
-                "error": gettext("Photo not found"),
-                "code": "photo_not_found",
-            }), 404
-
-        media_item.favorite = True if not media_item.favorite else None
-        db.session.commit()
-
-        emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": [media_item_id]})
-        return jsonify({"favorite": media_item.favorite})
-
-    @app.route("/api/media/<int:media_item_id>/tags", methods=["PUT"])
-    def update_media_tags(media_item_id: int):
+    @app.route("/media/<int:media_item_id>/tags", methods=["PUT"])
+    def media_tags_update(media_item_id: int):
         """Replace a photo's full tag set in one request, then emit photo_modified so
         downstream automations (e.g. export_photo_tag) react once per save."""
         media_item = db.session.get(MediaItem, media_item_id)

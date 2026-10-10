@@ -38,6 +38,6 @@ Reference material for contributors and agents working in the Yaffo codebase.
   devices through the sync engine, and the internal REST API sync workers use to
   reach the web process's P2P engine.
 - [Video](video.md)
-- [Web Routes and Request Security](web-routes-and-request-security.md) - plan
-  (proposed): an app-wide `Host` and origin check, opening files by id, a small
-  shared `/api/` blueprint, and moving page-specific routes out of `/api/`.
+- [Web Routes and Request Security](web-routes-and-request-security.md) - the
+  app-wide `Host` and origin check, opening files by id, the small shared `/api/`
+  blueprint, and page-specific routes kept out of `/api/` (implemented).

@@ -43,6 +43,11 @@ host = "127.0.0.1"
 port = 5001
 # Waitress request threads. Demo containers start with four to bound concurrency.
 threads = 8
+# Host names (besides 127.0.0.1, localhost, and ::1) the web server answers to.
+# Requests naming any other host are refused, which blocks DNS-rebinding pages.
+# Only needed when the server is bound beyond loopback and reached by a name, e.g.
+# ["yaffo.lan"]. YAFFO_WEB_ALLOWED_HOSTS (comma-separated) overrides this.
+allowed_hosts = []
 
 [database]
 # SQLite durability vs. write speed (PRAGMA synchronous), paired with WAL.
@@ -76,8 +81,10 @@ _KEY_RE = re.compile(r"^(\s*)#?\s*([A-Za-z_][\w-]*)\s*=\s*(.*)$")
 
 
 def _toml_value(value: Any) -> str:
-    """Render a Python scalar as a TOML literal (covers the value types this config
-    uses: str, int, float, bool)."""
+    """Render a Python value as a TOML literal (covers the value types this config
+    uses: str, int, float, bool, and flat lists of those)."""
+    if isinstance(value, list):
+        return "[" + ", ".join(_toml_value(item) for item in value) + "]"
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, (int, float)):

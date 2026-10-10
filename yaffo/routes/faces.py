@@ -2,27 +2,19 @@ import json
 from dataclasses import dataclass
 from typing import Optional, Tuple, List
 import numpy as np
-from flask import Flask, current_app, render_template, request, jsonify
-from flask_babel import gettext, ngettext
+from flask import Flask, jsonify, render_template, request
+from flask_babel import gettext
 from sqlalchemy import func
 
-from yaffo.background_tasks.tasks.assign_faces_to_person import (
-    assign_faces_to_person,
-    assign_faces_to_person_now,
-)
-from yaffo.demo import DEMO_ROLE_RECEIVER, DEMO_ROLE_SOURCE, demo_unsafe_allowed
 from yaffo.logging_config import get_logger
 
 import pydash as _
 from sqlalchemy.orm import joinedload
-from yaffo.db.models import db, Face, Person, PersonFace, FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED, \
-    FACE_STATUS_ASSIGNED, MediaItem, FACE_STATUS_PROCESSING, \
-    ApplicationSettings, EVENT_MEDIA_MODIFIED
+from yaffo.db.models import db, Face, Person, PersonFace, FACE_STATUS_UNASSIGNED, MediaItem, ApplicationSettings
 
 from sklearn.metrics.pairwise import cosine_similarity
 
-from yaffo.background_tasks.events import emit_event
-from yaffo.db.repositories.person_repository import clear_faces, get_similarity_bounds
+from yaffo.db.repositories.person_repository import get_similarity_bounds
 from yaffo.db.repositories.media_repository import get_distinct_years, get_distinct_months
 from yaffo.domain.compare_utils import load_embedding, ui_threshold_to_similarity
 from yaffo.domain.face_clusters import cluster_faces
@@ -394,158 +386,33 @@ def init_faces_routes(app: Flask):
         _save_shortcut_person_ids(person_ids)
         return "", 204
 
-    @app.route("/api/faces/unassign", methods=["POST"])
-    @demo_unsafe_allowed(DEMO_ROLE_SOURCE, DEMO_ROLE_RECEIVER)
-    def faces_unassign():
-        """Clear faces back to unassigned: unlink them from their person (or undo
-        an ignore). The photo detail screen's "Clear" on a face."""
+    @app.route("/faces/people/create", methods=["POST"])
+    def faces_person_create():
+        """The Faces page's "Create Person": JSON in and out, for its sidebar. The
+        People page has its own form version (people_create)."""
         data = request.get_json(silent=True) or {}
-        face_ids = data.get("faces", [])
-        try:
-            if not isinstance(face_ids, list) or not face_ids:
-                raise ValueError
-            face_ids = list(dict.fromkeys(int(face_id) for face_id in face_ids))
-        except (TypeError, ValueError):
+        raw_name = data.get("name")
+        name = raw_name.strip() if isinstance(raw_name, str) else ""
+
+        if not name:
             return jsonify({
-                "success": False,
-                "message": gettext("Faces must contain numeric identifiers"),
-                "code": "invalid_face_ids",
+                "error": gettext("Name is required"),
+                "code": "name_required",
             }), 400
 
-        cleared = clear_faces(db.session, face_ids)
-        if not cleared.face_ids:
+        existing = Person.query.filter(Person.name == name).first()
+        if existing:
             return jsonify({
-                "success": False,
-                "message": gettext("This face isn't assigned to anyone"),
-                "code": "faces_not_assigned",
-            }), 409
-        if cleared.media_item_ids:
-            emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": cleared.media_item_ids})
+                "error": gettext("Person '%(name)s' already exists", name=name),
+                "code": "person_already_exists",
+            }), 400
+
+        person = Person(name=name)
+        db.session.add(person)
+        db.session.commit()
+
         return jsonify({
             "success": True,
-            "message": ngettext(
-                "Cleared %(count)s face",
-                "Cleared %(count)s faces",
-                len(cleared.face_ids),
-                count=len(cleared.face_ids),
-            ),
-            "code": "faces_unassigned",
-            "face_ids": cleared.face_ids,
-        })
-
-    @app.route("/api/faces/assign", methods=["POST"])
-    @demo_unsafe_allowed(DEMO_ROLE_SOURCE, DEMO_ROLE_RECEIVER)
-    def faces_assign():
-        data = request.get_json(silent=True) or {}
-        selected_face_ids = data.get("faces", [])
-        person_id = data.get("person")
-        face_status = data.get("faceStatus")
-        try:
-            if not isinstance(selected_face_ids, list):
-                return jsonify({
-                    "success": False,
-                    "message": gettext("Faces must contain numeric identifiers"),
-                    "code": "invalid_face_ids",
-                }), 400
-
-            try:
-                selected_face_ids = list(dict.fromkeys(int(face_id) for face_id in selected_face_ids))
-            except (TypeError, ValueError):
-                return jsonify({
-                    "success": False,
-                    "message": gettext("Faces must contain numeric identifiers"),
-                    "code": "invalid_face_ids",
-                }), 400
-            assignable_face_ids = [
-                face_id
-                for face_id, in (
-                    db.session.query(Face.id)
-                    .filter(Face.id.in_(selected_face_ids), Face.status == FACE_STATUS_UNASSIGNED)
-                    .all()
-                )
-            ]
-            if len(assignable_face_ids) != len(selected_face_ids):
-                return jsonify({
-                    "success": False,
-                    "message": gettext("One or more faces are no longer available"),
-                    "code": "faces_not_available",
-                }), 409
-
-            if face_status == FACE_STATUS_IGNORED:
-                db.session.query(Face).filter(Face.id.in_(assignable_face_ids)).update(
-                    {Face.status: face_status}, synchronize_session=False
-                )
-                db.session.commit()
-                return jsonify({
-                    "success": True,
-                    "message": ngettext(
-                        "Successfully ignored %(count)s face",
-                        "Successfully ignored %(count)s faces",
-                        len(selected_face_ids),
-                        count=len(selected_face_ids),
-                    ),
-                    "code": "faces_ignored",
-                    "face_ids": selected_face_ids
-                })
-
-            elif assignable_face_ids and person_id and face_status == FACE_STATUS_ASSIGNED:
-                try:
-                    person_id = int(person_id)
-                except (TypeError, ValueError):
-                    return jsonify({
-                        "success": False,
-                        "message": gettext("Person not found"),
-                        "code": "person_not_found",
-                    }), 404
-                person: Person | None = (
-                    Person.query.options(joinedload(Person.stage_embeddings)).order_by(Person.name).get(
-                        person_id))
-                if person is None:
-                    error_msg = f'Person {person_id} not found'
-                    logger.warn(error_msg)
-                    return jsonify({
-                        "success": False,
-                        "message": gettext("Person not found"),
-                        "code": "person_not_found",
-                    }), 404
-
-                if current_app.config.get("DEMO_MODE"):
-                    assign_faces_to_person_now(
-                        db.session,
-                        person_id,
-                        assignable_face_ids,
-                        emit_change_event=False,
-                    )
-                else:
-                    db.session.query(Face).filter(Face.id.in_(assignable_face_ids)).update(
-                        {Face.status: FACE_STATUS_PROCESSING}, synchronize_session=False
-                    )
-                    db.session.commit()
-                    assign_faces_to_person(person_id, assignable_face_ids)
-                return jsonify({
-                    "success": True,
-                    "message": ngettext(
-                        "Successfully assigned %(count)s face to %(person)s",
-                        "Successfully assigned %(count)s faces to %(person)s",
-                        len(selected_face_ids),
-                        count=len(selected_face_ids),
-                        person=person.name,
-                    ),
-                    "code": "faces_assigned",
-                    "face_ids": selected_face_ids
-                })
-            else:
-                return jsonify({
-                    "success": False,
-                    "message": gettext("Faces, person, and face status are required"),
-                    "code": "assignment_fields_required",
-                }), 400
-        except Exception as e:
-            db.session.rollback()
-            error_msg = f"Error processing faces: {str(e)}"
-            logger.error(error_msg)
-            return jsonify({
-                "success": False,
-                "message": gettext("Could not process faces"),
-                "code": "face_processing_failed",
-            }), 500
+            "person_id": person.id,
+            "name": person.name
+        }), 201

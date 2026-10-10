@@ -4,18 +4,14 @@ window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.VIEW_PHOTO = window.PHOTO_ORGANIZER.VIEW_PHOTO || {};
 /**
  * @param {MediaFace[] | null} faceData
- * @param {string} absoluteFilePath
- * @param {string} absoluteFolderPath
  * @param {I18nService} i18n
- * @param {AppConfig} _config
+ * @param {AppConfig} config
  * @returns {PhotoViewApi}
  */
 window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (
     faceData,
-    absoluteFilePath,
-    absoluteFolderPath,
     i18n,
-    _config
+    config
 ) => {
     /** @type {HTMLCanvasElement | null} */
     let canvas = null;
@@ -134,49 +130,45 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (
         });
     };
 
-    const openFile = (/** @type {string} */ filePath) => {
-        fetch('/api/open-file', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ path: filePath })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                window.notification.failure(i18n.t('media:actions.openFileFailedWithReason', { reason: data.error }));
-            } else {
-                window.notification.success(i18n.t('media:actions.openingFile'));
+    /**
+     * Ask the server to show the photo on this computer. It's named by id; the
+     * server looks up its path and only opens files inside the media folders.
+     * @param {number} mediaItemId
+     * @param {'file' | 'folder'} show  'folder' reveals the file in its folder
+     * @param {{ opening: string, failed: string, failedWithReason: string }} messages
+     */
+    const openOnComputer = async (mediaItemId, show, messages) => {
+        try {
+            const response = await fetch(config.urls.api_openings_create, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ show, media_item_id: mediaItemId }),
+            });
+            if (response.ok) {
+                window.notification.success(i18n.t(messages.opening));
+                return;
             }
-        })
-        .catch(error => {
-            window.notification.failure(i18n.t('media:actions.openFileFailed'));
+            const data = await response.json().catch(() => ({}));
+            window.notification.failure(data.error
+                ? i18n.t(messages.failedWithReason, { reason: data.error })
+                : i18n.t(messages.failed));
+        } catch (error) {
+            window.notification.failure(i18n.t(messages.failed));
             console.error('Error:', error);
-        });
+        }
     };
 
-    const openFolder = (/** @type {string} */ folderPath) => {
-        fetch('/api/open-folder', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ path: folderPath })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                window.notification.failure(i18n.t('media:actions.openFolderFailedWithReason', { reason: data.error }));
-            } else {
-                window.notification.success(i18n.t('media:actions.openingFolder'));
-            }
-        })
-        .catch(error => {
-            window.notification.failure(i18n.t('media:actions.openFolderFailed'));
-            console.error('Error:', error);
-        });
-    };
+    const openFile = (/** @type {number} */ mediaItemId) => openOnComputer(mediaItemId, 'file', {
+        opening: 'media:actions.openingFile',
+        failed: 'media:actions.openFileFailed',
+        failedWithReason: 'media:actions.openFileFailedWithReason',
+    });
+
+    const openFolder = (/** @type {number} */ mediaItemId) => openOnComputer(mediaItemId, 'folder', {
+        opening: 'media:actions.openingFolder',
+        failed: 'media:actions.openFolderFailed',
+        failedWithReason: 'media:actions.openFolderFailedWithReason',
+    });
 
     // Re-run indexing for this one photo. Destructive in one specific way — the faces
     // are re-detected, so whoever was assigned to them is forgotten — so it confirms
@@ -191,7 +183,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (
         if (!confirmed) return;
 
         try {
-            const response = await fetch(`/api/media/${mediaItemId}/reindex`, { method: 'POST' });
+            const response = await fetch(config.buildUrl('media_reindex', { media_item_id: mediaItemId }), { method: 'POST' });
             const data = await response.json();
             if (!response.ok) {
                 window.notification.failure(

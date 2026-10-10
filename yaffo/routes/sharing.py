@@ -619,7 +619,7 @@ def init_sharing_routes(app: Flask):
     @app.route("/sharing/devices/<device_id>/tag-values", methods=["GET"])
     def sharing_device_tag_values(device_id: str):
         """Peer-side tag values for the remote gallery's tag filter — same
-        response shape as the home page's /api/tag-values, but the values
+        values as the library's /api/tags/<name>/values, but the values
         come from the peer, scoped to the grant (a facets-only list_files
         call; no manifests wanted, hence limit=1)."""
         service = _service()

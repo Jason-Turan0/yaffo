@@ -19,7 +19,8 @@
 ## Automations
 - Classify labels is the system automation at `/utilities/automations/classify_labels`.
 - System automations have no `#edit-automation-button` or `#delete-automation-button`.
-- Configure button is `#configure-automation-button`; modal is `#configureAutomationModal`.
+- Config lives in the collapsible `#automation-configure-panel` (click its `summary`; save with
+  `button[type="submit"]`). Triggers are inline in `#automation-trigger-panel` ("When").
 - Config fields:
   - `#config-confidence_threshold`
   - `#config-max_labels`

@@ -296,8 +296,8 @@ def init_settings_routes(app: Flask):
             llm_config.clear_api_key(provider)
         return _render_api_key(provider)
 
-    @app.route("/api/settings/media-dirs", methods=["POST"])
-    def add_media_dir():
+    @app.route("/settings/media-dirs", methods=["POST"])
+    def settings_media_dirs_add():
         """Add a new media directory"""
         if _library_update_in_progress():
             return _library_update_blocked_response()
@@ -329,8 +329,8 @@ def init_settings_routes(app: Flask):
             "media_dirs": yaffo.db.repositories.media_dir_repository.list_media_dirs(db.session)
         })
 
-    @app.route("/api/settings/media-dirs/<int:index>", methods=["DELETE"])
-    def remove_media_dir(index: int):
+    @app.route("/settings/media-dirs/<int:index>", methods=["DELETE"])
+    def settings_media_dirs_remove(index: int):
         """Remove a media directory by index"""
         if _library_update_in_progress():
             return _library_update_blocked_response()
@@ -346,8 +346,8 @@ def init_settings_routes(app: Flask):
             "media_dirs": yaffo.db.repositories.media_dir_repository.list_media_dirs(db.session),
         })
 
-    @app.route("/api/settings/thumbnail-stats", methods=["GET"])
-    def get_thumbnail_stats_api():
+    @app.route("/settings/thumbnail-stats", methods=["GET"])
+    def settings_thumbnail_stats():
         """Get current thumbnail directory statistics"""
         # Get thumbnail_dir from settings or use default
         thumbnail_setting = db.session.query(ApplicationSettings).filter_by(name="thumbnail_dir").first()
@@ -397,8 +397,8 @@ def init_settings_routes(app: Flask):
             headers={"Cache-Control": "no-store"},
         )
 
-    @app.route("/api/settings/thumbnail-dir", methods=["POST"])
-    def update_thumbnail_dir():
+    @app.route("/settings/thumbnail-dir", methods=["POST"])
+    def settings_thumbnail_dir():
         """Update thumbnail directory and move files"""
         if _library_update_in_progress():
             return _library_update_blocked_response()

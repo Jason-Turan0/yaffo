@@ -35,9 +35,10 @@ describe('initFavoriteToggles', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(fetchMock).toHaveBeenCalledWith('/toggle_media_favorite/42', {
-      method: 'POST',
+    expect(fetchMock).toHaveBeenCalledWith('/api_media_update/42', {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ favorite: true }),
     });
     expect(button.classList.contains('is-favorite')).toBe(true);
     expect(button.getAttribute('aria-pressed')).toBe('true');

@@ -35,22 +35,22 @@ function automationsSidebar(page: Page): Locator {
   });
 }
 
-function enableToggleButton(page: Page): Locator {
-  // The template renders the label with surrounding whitespace, so anchor loosely.
-  return page.locator('.automation-actions button').filter({ hasText: /^\s*(Enable|Disable)\s*$/ }).first();
+function enableSwitch(page: Page): Locator {
+  // The header's on/off switch (components/switch.html): its state is aria-checked.
+  return page.locator('.automation-actions [role="switch"]');
 }
 
-// Click the Enable/Disable toggle and follow the HX-Refresh reload through: wait for
-// the POST to actually fire, for the label to flip, and for the reloaded document to
+// Flip the enable switch and follow the HX-Refresh reload through: wait for the
+// POST to actually fire, for the state to flip, and for the reloaded document to
 // reach 'load' — htmx re-binds on DOMContentLoaded, so clicking again earlier can hit
-// an unbound button and silently do nothing.
-async function toggleEnabledTo(page: Page, expectedLabel: string): Promise<void> {
+// an unbound control and silently do nothing.
+async function toggleEnabledTo(page: Page, expectedChecked: 'true' | 'false'): Promise<void> {
   await Promise.all([
     page.waitForResponse(response =>
       response.url().includes('/enabled') && response.request().method() === 'POST'),
-    enableToggleButton(page).click(),
+    enableSwitch(page).click(),
   ]);
-  await expect(enableToggleButton(page)).toHaveText(expectedLabel, { timeout: 15_000 });
+  await expect(enableSwitch(page)).toHaveAttribute('aria-checked', expectedChecked, { timeout: 15_000 });
   await page.waitForLoadState('load');
 }
 
@@ -161,8 +161,8 @@ test.describe('Automations', () => {
     // geotag_from_neighbors ships disabled and its only trigger is an event, so
     // briefly enabling it cannot start a run.
     await openAutomation(page, 'geotag_from_neighbors');
-    const before = (await enableToggleButton(page).textContent())!.trim();
-    const after = before === 'Enable' ? 'Disable' : 'Enable';
+    const before = (await enableSwitch(page).getAttribute('aria-checked')) === 'true' ? 'true' : 'false';
+    const after = before === 'true' ? 'false' : 'true';
 
     // The toggle posts and the server answers with HX-Refresh, reloading the page.
     await toggleEnabledTo(page, after);
@@ -244,7 +244,7 @@ test.describe('Automations', () => {
     // The reviewed seed intentionally starts disabled with no trigger. The Run
     // control may choose a scope, but cancelling it must leave history untouched.
     await openAutomation(page, 'file-favorite-kid-photos');
-    await expect(enableToggleButton(page)).toHaveText(/Enable/);
+    await expect(enableSwitch(page)).toHaveAttribute('aria-checked', 'false');
     await page.locator('.js-run-files').click();
     const picker = page.locator('#folder-picker-modal');
     await expect(picker).toHaveClass(/active/);

@@ -149,8 +149,7 @@
             {% endif %}
         {% endmacro %}
         {% macro render_actions() %}
-            <form method="POST" action="{{ url_for('faces_assign') }}" id="sidebar-assign-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <form id="sidebar-assign-form">
                 <input type="hidden" name="face_status" value="ASSIGNED">
 
 

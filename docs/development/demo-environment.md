@@ -94,8 +94,10 @@ authorization system, and it does not extend into the desktop product.
 Every other `POST`/`PUT`/`PATCH`/`DELETE` is blocked. The only exceptions to the
 fail-closed gate are:
 
-- `faces_assign` (both roles) — currently-unassigned faces only, executed
-  synchronously in the web process instead of enqueueing a task.
+- `api.faces_update` (`PATCH /api/faces`, both roles) — assigning and ignoring
+  apply to currently-unassigned faces only, and assignment runs synchronously in
+  the web process instead of enqueueing a task. Clearing a face (`person_id: null`)
+  is open too, as the old `faces_unassign` route was.
 - `pages_version_widget_query` (both roles) — reviewed, published widgets only, with
   read-only bounded queries; widget-state persistence is **not** included.
 - `sharing_device_pull_selected` (receiver only) — one bounded transfer batch from
@@ -309,7 +311,7 @@ container and global backstops still apply.
   keys, production databases, SSH keys, cloud credentials, or identifiable EXIF.
 - **Server-enforced boundary.** The central unsafe-method gate, exact exception set,
   and public-read allowlist deny risky routes on the server, not by hiding
-  navigation. Filesystem list/create, `open-file`/`open-folder`, media/thumbnail
+  navigation. Filesystem list/create, `/api/openings`, media/thumbnail
   directory changes, arbitrary scans, duplicate-file actions, LLM key management and
   generation, device revoke/delete/rename, and raw path-based media access are all
   blocked. Only the widget-query, bounded face-assignment, and receiver-pull
@@ -363,7 +365,7 @@ separate maintenance profile.
 |---|---|---|---|
 | Arbitrary filesystem reads/discovery | `/api/fs/list`, `/media-by-path` | Blocked | DB-backed media IDs only; instance-only mounts; path/symlink containment |
 | Directory/storage reconfiguration | folder create, media/thumbnail/download dir changes | Blocked | Immutable settings baked into the golden DB |
-| Host process launch | `/api/open-file`, `/api/open-folder` | Blocked | Routes disabled; no desktop helpers in the image; PID limits |
+| Host process launch | `POST /api/openings` | Blocked | Routes disabled; no desktop helpers in the image; PID limits |
 | File deletion/trash/movement | duplicate removal, automation move/trash | Blocked | Seed media mounted read-only; trash helpers omitted |
 | LLM credentials / paid generation | key set/clear, model select, page/theme/automation chat | Blocked | No provider keys; key and generation routes/tasks blocked; pre-generated content read-only |
 | P2P identity/pairing/trust/grants | code generation, pair, revoke/rename, grant, album share | Blocked | Pre-paired A/B, seeded grants, read-only trust/grant views; IAP-only pairing mode |
@@ -372,7 +374,7 @@ separate maintenance profile.
 | External lookup calls | reverse geocoding, URL-backed integrations | Blocked | Pre-resolved fixture locations |
 | Media/preview/video delivery | `/media/<id>`, posters, remote previews, Range | Limited | Small low-res fixtures; validated ranges; per-IP and global byte/request budgets |
 | P2P pulls and relay traffic | remote browse/preview, transfer pull | Limited (B) | One active batch, small file/count/byte caps, per-IP cooldown, download-volume quota, cleared on reset |
-| Seeded metadata edits | favorites, tags, face/person, location | Blocked (except bounded `faces_assign`) | Browse prepared examples; bounded scratch assignment only |
+| Seeded metadata edits | favorites, tags, face/person, location | Blocked (except bounded `api.faces_update`) | Browse prepared examples; bounded scratch assignment only |
 | Album edits | create/update/delete, add/remove/reorder, cover | Blocked | Browse prepared albums |
 | Global application settings | locale, units, filter config, vocabulary, theme | Blocked or browser-local | DB-backed globals immutable |
 | People/other row creation/deletion | person create/update/delete | Blocked | Protected seed IDs |
@@ -418,7 +420,7 @@ fixture rights, or spending ceiling requires updating this section first.
 
 - **Audience.** Anonymous public product demo — no login, invitation code, or claim
   of per-visitor isolation. The read-mostly v1 interactive set is the baseline; the
-  only unsafe-method exceptions are the three named above (`faces_assign`,
+  only unsafe-method exceptions are the three named above (`api.faces_update`,
   `pages_version_widget_query`, `sharing_device_pull_selected`). The walkthrough
   states that visitors share one transfer slot and that state resets automatically.
 - **Hours.** Available 8:00 AM–10:00 PM `America/Chicago` daily. The VM starts at

@@ -289,7 +289,7 @@ assistant.init = (i18n, config) => {
      */
     const openOnComputer = async (open) => {
         try {
-            const response = await fetch(config.urls.assistant_open, {
+            const response = await fetch(config.urls.api_openings_create, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(open.target),

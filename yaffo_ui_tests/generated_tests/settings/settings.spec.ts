@@ -92,7 +92,7 @@ test.describe('Settings', () => {
     await page.locator('#new-media-dir').fill(scratchDir);
     await Promise.all([
       page.waitForResponse(response =>
-        response.url().includes('/api/settings/media-dirs') && response.request().method() === 'POST'),
+        response.url().includes('/settings/media-dirs') && response.request().method() === 'POST'),
       page.locator('[data-action="add-media-dir"]').click(),
     ]);
     await expect(notification(page)).toContainText('Media directory added successfully');
@@ -113,7 +113,7 @@ test.describe('Settings', () => {
     await page.locator('#new-media-dir').fill(scratchDir);
     await Promise.all([
       page.waitForResponse(response =>
-        response.url().includes('/api/settings/media-dirs') && response.request().method() === 'POST'),
+        response.url().includes('/settings/media-dirs') && response.request().method() === 'POST'),
       page.locator('[data-action="add-media-dir"]').click(),
     ]);
     await expect(mediaDirItem(page, scratchDir)).toHaveCount(1);
@@ -226,7 +226,7 @@ test.describe('Settings', () => {
 
       await Promise.all([
         page.waitForResponse(response =>
-          response.url().includes('/api/settings/thumbnail-dir') && response.ok()),
+          response.url().includes('/settings/thumbnail-dir') && response.ok()),
         page.locator('#confirm-dialog-confirm').click(),
       ]);
       // The success toast fires and the page reloads with the new current directory.
