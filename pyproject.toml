@@ -107,7 +107,7 @@ yaffo-gui = "yaffo.launcher:main"
 
 [project.urls]
 Homepage = "https://github.com/Jason-Turan0/yaffo"
-Documentation = "https://jason-turan0.github.io/yaffo/"
+Documentation = "https://yaffo.app/"
 Repository = "https://github.com/Jason-Turan0/yaffo"
 
 [tool.coverage.run]

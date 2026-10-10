@@ -28,3 +28,8 @@ detection, and organization rules. The human should spend time on decisions that
 actually need judgment, not on mechanical sorting. Yaffo is open source because
 that same problem is not unique to me, and I hope it is useful to others who
 want more control over their photo library.
+
+## Privacy
+
+Yaffo runs on your computer and keeps your library there. See the
+[Privacy Policy](privacy.md) for what leaves it, and when.
