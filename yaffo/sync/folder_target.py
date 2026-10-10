@@ -49,8 +49,10 @@ FRAME_MAX_BYTES = 3_000_000
 OPTIONS: dict[str, dict[str, Any]] = {
     "folder": {"type": OPTION_LOCAL_FOLDER, "label": "Folder", "required": True,
                "help": "Copies go here. It must exist, and it can't be inside your library."},
-    "layout": {"type": OPTION_SELECT, "label": "Layout", "default": LAYOUT_PER_TARGET, "choices": [
-        {"value": LAYOUT_PER_TARGET, "label": "One subfolder per album"},
+    "layout": {"type": OPTION_SELECT, "label": "Layout", "default": LAYOUT_PER_TARGET,
+               "help": "For a named subfolder, Yaffo uses the album name or, for a filter, the automation name.",
+               "choices": [
+        {"value": LAYOUT_PER_TARGET, "label": "In a named subfolder"},
         {"value": LAYOUT_FLAT, "label": "All in the folder"},
         {"value": LAYOUT_BY_DATE, "label": "By year and month taken"},
     ]},
@@ -106,6 +108,10 @@ class FolderTarget(TargetHandler):
             return PurePosixPath(f"{taken.year:04d}", f"{taken.month:02d}") if taken else PurePosixPath(UNDATED_FOLDER)
         return PurePosixPath(sanitize_name(item.get("target") or "", fallback="Photos"))
 
+    def planned_relative_path(self, item: dict[str, Any], layout: str) -> PurePosixPath:
+        """The intended path before a possible collision suffix is added."""
+        return self._subfolder(item, layout) / sanitize_name(item["filename"])
+
     def push(self, batch: list[dict[str, Any]], ctx: HookContext) -> dict[str, Any]:
         folder = Path(ctx.options["folder"])
         layout = ctx.options.get("layout", LAYOUT_PER_TARGET)
@@ -116,11 +122,10 @@ class FolderTarget(TargetHandler):
                 results.append({"key": item["key"], "error": {"code": ERROR_REJECTED,
                                                               "message": "the photo's file is missing"}})
                 continue
-            subfolder = self._subfolder(item, layout)
+            planned = self.planned_relative_path(item, layout)
             taken = _capture_time(item)
             try:
-                written = place_copy(source, folder.joinpath(*subfolder.parts),
-                                     sanitize_name(item["filename"]),
+                written = place_copy(source, folder.joinpath(*planned.parent.parts), planned.name,
                                      mtime=taken.timestamp() if taken else None,
                                      temp_tag=str(ctx.automation_id) if ctx.automation_id else None)
             except OSError as e:

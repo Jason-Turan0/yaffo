@@ -964,9 +964,13 @@ def test_delete_system_rejected(app, client):
 
 def test_toggle_enabled_flips(app, client):
     _add(app, enabled=False)
+    page = client.get("/utilities/automations/a1").get_data(as_text=True)
+    assert 'role="switch"' in page and 'aria-label="A1" aria-checked="false"' in page
     assert client.post("/utilities/automations/a1/enabled").status_code == 204
     with app.app_context():
         assert db.session.query(Automation).filter_by(slug="a1").first().enabled is True
+    page = client.get("/utilities/automations/a1").get_data(as_text=True)
+    assert 'aria-label="A1" aria-checked="true"' in page
 
 
 def test_edit_triggers_page_renders(app, client):
@@ -1162,11 +1166,12 @@ def test_remove_trigger(app, client):
 def test_toggle_trigger_enabled(app, client):
     _add(app)
     tid = _add_trigger(app, trigger_type=TRIGGER_TYPE_SCHEDULE, enabled=True, cron="* * * * *")
-    client.post(
+    resp = client.post(
         "/utilities/automations/a1/triggers",
         data={"action": "toggle", "trigger_id": tid},
     )
     assert _triggers(app)[0].enabled is False
+    assert 'aria-label="Schedule * * * * *" aria-checked="false"' in resp.get_data(as_text=True)
 
 
 def test_validate_cron_endpoint(app, client):

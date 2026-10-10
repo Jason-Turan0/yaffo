@@ -4249,6 +4249,10 @@ msgstr "Comienza vacío: constrúyalo a través de una conversación y luego pub
 msgid "On"
 msgstr "En"
 
+#: yaffo/templates/components/switch.html:12
+msgid "Off"
+msgstr "Desactivado"
+
 #: yaffo/templates/utilities/_base.html:35 yaffo/templates/utilities/_base.html:59
 msgid "Automations"
 msgstr "Automatizaciones"
@@ -4774,3 +4778,6 @@ msgstr "Seleccionar carpeta de destino"
 msgid "Remove Selected Duplicates"
 msgstr "Eliminar duplicados seleccionados"
 
+#: yaffo/templates/utilities/sync_detail.html:281
+msgid "Describe which photos to send, then publish the rule."
+msgstr "Describe qué fotos enviar y luego publica la regla."

@@ -4261,6 +4261,10 @@ msgstr ""
 msgid "On"
 msgstr "An"
 
+#: yaffo/templates/components/switch.html:12
+msgid "Off"
+msgstr "Aus"
+
 #: yaffo/templates/utilities/_base.html:35 yaffo/templates/utilities/_base.html:59
 msgid "Automations"
 msgstr "Automatisierungen"
@@ -4791,3 +4795,6 @@ msgstr "Zielordner auswählen"
 msgid "Remove Selected Duplicates"
 msgstr "Ausgewählte Duplikate entfernen"
 
+#: yaffo/templates/utilities/sync_detail.html:281
+msgid "Describe which photos to send, then publish the rule."
+msgstr "Beschreiben Sie, welche Fotos gesendet werden sollen, und veröffentlichen Sie dann die Regel."

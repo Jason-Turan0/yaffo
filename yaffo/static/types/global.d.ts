@@ -543,6 +543,13 @@ type SyncTestRecord = {
     filename: string;
     size: number | null;
     state: 'new' | 'imported' | 'in_library' | 'changed' | 'deleted_at_source';
+    media_item_id: number | null;
+};
+
+type SyncTestSample = {
+    filename: string;
+    media_item_id: number | null;
+    destination?: string | null;
 };
 
 /** One folder or album a remote option's picker lists (routes/utilities/sync_account.py). */
@@ -582,18 +589,23 @@ type SyncTestResult = {
     unchanged: number;
     convert: number;
     unsupported: number;
-    add_samples: string[];
-    remove_samples: string[];
+    add_samples: SyncTestSample[];
+    remove_samples: SyncTestSample[];
     records: SyncTestRecord[];
     more: boolean;
     detail: string | null;
+    current_page: number;
+    page_size: number;
+    total_items: number;
+    state_counts: Record<string, number>;
+    pagination_html: string;
 };
 
 type SyncNamespace = {
     initSyncPage: (i18n: I18nService, config: AppConfig) => void;
     initRemoteOption: (root: HTMLElement, i18n: Pick<I18nService, 't'>) => void;
     initDeviceCode: (root: HTMLElement, i18n: Pick<I18nService, 't'>) => void;
-    renderTestResult: (container: HTMLElement, result: SyncTestResult, i18n: Pick<I18nService, 't'>) => void;
+    renderTestResult: (container: HTMLElement, result: SyncTestResult, i18n: Pick<I18nService, 't'>, config: AppConfig) => void;
 };
 
 type SettingsNamespace = {

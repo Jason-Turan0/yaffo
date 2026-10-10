@@ -121,7 +121,7 @@ library. It keeps three:
 |---|---|
 | `photoslibrary.appendonly` | Upload bytes, create media items and albums |
 | `photoslibrary.readonly.appcreateddata` | List the albums and items Yaffo created (reconcile) |
-| `photoslibrary.edit.appcreateddata` | Add to and remove from Yaffo-created albums (`batchAddMediaItems`, `batchRemoveMediaItems`) |
+| `photoslibrary.edit.appcreateddata` | Remove uploaded items from Yaffo-created albums (`batchRemoveMediaItems`) |
 
 These are exactly what the Google Photos *target* needs, because it only
 manages albums it created. A Google Photos *source* isn't possible with the
@@ -162,6 +162,16 @@ Steps in the [Google Cloud console](https://console.cloud.google.com):
      token endpoint expects it.
 
 Run acceptance check 2 as a test user.
+
+**Phase 3 readiness check (2026-10-10):** The public home page and privacy
+policy both returned HTTP 200. The home page links to the privacy policy; the
+policy describes Google Photos access, local token and ID storage, revocation,
+and the Google API Services User Data Policy Limited Use commitment. The live
+Google Photos target uploaded three photos, and a read of the app-created album
+found all three remote IDs. The Google Auth Platform console still shows
+**Testing**, one test user, the expected three Photos scopes, the `yaffo.app`
+branding links and authorized domain, and no restricted scopes. The demo video
+and verification submission remain.
 
 **Registered 2026-10-09:**
 - Project `yaffo-511203`, in Testing, with turan.jason@gmail.com as the
@@ -209,8 +219,8 @@ Suggested scope justifications:
 - **readonly.appcreateddata:** "Yaffo lists the albums and photos it
   created to check that the album still matches the user's selection, and
   to avoid uploading duplicates."
-- **edit.appcreateddata:** "Yaffo adds new photos to the album it created
-  and removes ones the user deleted or took out of the selection, keeping
+- **edit.appcreateddata:** "Yaffo removes photos from the album it created
+  when the user deletes them or takes them out of the selected set, keeping
   the Google Photos album in step with Yaffo."
 
 The privacy policy must state at least:

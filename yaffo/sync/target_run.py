@@ -50,6 +50,8 @@ from yaffo.sync.schemas import (
     CURSOR_RECONCILE, PASS_INCREMENTAL, PAUSE_SELECTION_MISSING, RUNTIME_NEEDS_SIGN_IN, SyncColumn, SyncCursor,
 )
 from yaffo.sync.selection import Desired, SelectionMissing, resolve_selection
+from yaffo.sync.target_layout import one_drive_targets
+from yaffo.sync.folder_target import LAYOUT_PER_TARGET
 from yaffo.sync.starlark_adapter import HookFailed
 from yaffo.utils import job_codes as codes
 
@@ -163,9 +165,12 @@ class TargetRun:
                 if isinstance(match, dict) and match.get("details"):
                     row.details = {**(row.details or {}), **match["details"]}
         for row in sent:
-            if found.get(str(row.id)) == MISSING:
+            match = found.get(str(row.id))
+            if match == MISSING:
                 row.status = SYNC_ITEM_REMOVED_REMOTELY
                 self.counters.removed_remotely += 1
+            elif isinstance(match, dict) and match.get("status") == PRESENT and match.get("details"):
+                row.details = {**(row.details or {}), **match["details"]}
         if drift_due:
             self.runtime = self.runtime.with_cursor(CURSOR_RECONCILE, SyncCursor(last_completed_at=now.isoformat()))
         self.commit_runtime(patch)
@@ -367,6 +372,9 @@ class TargetRun:
         try:
             desired = resolve_selection(self.session, self.config.selection, self.automation.name,
                                         self.automation.published_code)
+            if self.adapter.provider == "onedrive":
+                desired = one_drive_targets(self.session, desired, self.config.selection,
+                                            self.options.get("layout", LAYOUT_PER_TARGET))
         except SelectionMissing:
             shutil.rmtree(self.scratch, ignore_errors=True)
             return pause(self.session, self.automation, self.runtime, PAUSE_SELECTION_MISSING)

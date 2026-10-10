@@ -2,6 +2,7 @@
 {% from "components/page_header.html" import page_header %}
 {% from "components/collapsible_panel.html" import collapsible_panel %}
 {% from "components/modal.html" import render_modal with context %}
+{% from "components/switch.html" import switch %}
 {% from "macros/automation_forms.html" import render_edit_automation_form with context %}
 {% from "macros/local_datetime.html" import local_datetime %}
 
@@ -11,7 +12,8 @@
    (routes/utilities/sync_views.py) and comes back here. #}
 
 {% macro option_field(field) %}
-    <div class="form-group">
+    <div class="form-group" {% if sync.role == 'target' and field.key == 'layout' %}data-sync-layout-option
+         {{ 'hidden' if sync.selection and sync.selection.kind == 'script' }}{% endif %}>
         {% if field.type == 'local_folder' %}
             <div class="sync-option-label">
                 <label for="sync-option-{{ field.key }}">{{ field.label }}</label>
@@ -91,6 +93,7 @@
 {% block utility_styles %}
     <link rel="stylesheet" href="{{ url_for('static', filename='components/cron_builder.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/collapsible_panel.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='components/switch.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='utilities/automations.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='utilities/sync.css') }}">
     {# The pager's styles stay loaded while it's swapped (its macro links them too). #}
@@ -104,13 +107,11 @@
 {% set header_actions %}
 <div class="automation-actions">
     {% if sync.is_web and not is_on %}
-        <button type="button" class="btn-primary" id="sync-enable-review"
-                {{ 'disabled' if sync.missing }}>{{ _("Enable") }}</button>
+        {{ switch(selected.display_name, false, id='sync-enable-review', disabled=sync.missing) }}
     {% else %}
     <form method="POST" action="{{ url_for('sync_turn_off' if is_on else 'sync_turn_on', slug=selected.slug) }}" class="sync-inline-action">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <button type="submit" class="{{ 'btn-secondary' if is_on else 'btn-primary' }}"
-                {{ 'disabled' if not is_on and sync.missing }}>{{ _("Disable") if is_on else _("Enable") }}</button>
+        {{ switch(selected.display_name, is_on, button_type='submit', disabled=not is_on and sync.missing) }}
     </form>
     {% endif %}
     {% if is_on %}
@@ -278,7 +279,7 @@
                             <span>{{ _("A custom rule") }}</span>
                         </label>
                         <div class="sync-selection-detail" data-selection-detail="script" {{ "hidden" if not sync.selection or sync.selection.kind != 'script' }}>
-                            <p class="hint-text">{{ _("Publish a rule to choose photos and route them to destinations.") }}</p>
+                            <p class="hint-text">{{ _("Describe which photos to send, then publish the rule.") }}</p>
                         </div>
                     </div>
                 </fieldset>

@@ -14,6 +14,7 @@ from yaffo.db.models import (
     EVENT_ALBUM_CHANGED, MEDIA_STATUS_INDEXED,
 )
 from yaffo.db.repositories import sync_repository
+from yaffo.routes.utilities.sync_views import build_page
 
 pytestmark = pytest.mark.unit
 
@@ -109,7 +110,7 @@ def test_creating_a_send_sync_opens_its_setup(client, library):
     assert 'data-tooltip="Remove moves only unchanged copies Yaffo made to the Trash. Keep leaves them at the destination."' in body
     assert "Delete Yaffo&#39;s copy" not in body
     enable_form = body.split(f'action="/utilities/automations/{automation.slug}/sync/turn-on"')[1].split('</form>')[0]
-    assert 'disabled>Enable</button>' in enable_form
+    assert 'aria-checked="false"' in enable_form and 'disabled' in enable_form
     triggers = {(t.trigger_type, t.event_type, t.cron) for t in automation.triggers}
     assert ("schedule", None, "0 2 * * *") in triggers and ("event", "media_deleted", None) in triggers
 
@@ -169,7 +170,7 @@ def test_a_folder_inside_the_library_is_explained(client, library):
     # Nothing to test or enable until the folder is fixed.
     assert 'id="sync-test"' not in body
     enable_form = body.split(f'action="/utilities/automations/{automation.slug}/sync/turn-on"')[1].split('</form>')[0]
-    assert 'disabled>Enable</button>' in enable_form
+    assert 'aria-checked="false"' in enable_form and 'disabled' in enable_form
 
 
 def test_choosing_an_album_creates_its_change_trigger_and_turning_on_records_consent(client, mom, outbox):
@@ -183,7 +184,8 @@ def test_choosing_an_album_creates_its_change_trigger_and_turning_on_records_con
     assert '<h1>For Mom backup</h1>' in body
     assert 'page-header-title-badge' not in body
     assert f'action="/utilities/automations/{automation.slug}/sync/turn-off"' in body
-    assert "Disable" in body and "Review and turn on" not in body
+    assert 'aria-label="For Mom backup" aria-checked="true"' in body
+    assert "Review and turn on" not in body
     assert "Since" in body
 
 
@@ -213,19 +215,71 @@ def test_a_ready_sync_has_enable_in_the_header_without_a_review_panel(client, mo
     body = client.get(f"/utilities/automations/{automation.slug}").get_data(as_text=True)
 
     enable_form = body.split(f'action="/utilities/automations/{automation.slug}/sync/turn-on"')[1].split('</form>')[0]
-    assert '>Enable</button>' in enable_form
-    assert 'disabled>Enable</button>' not in enable_form
+    assert 'aria-checked="false"' in enable_form
+    assert 'disabled' not in enable_form
     assert 'id="sync-step-consent"' not in body
     assert 'page-header-title-badge' not in body
 
 
 def test_test_shows_what_a_run_would_do_without_doing_it(client, mom, outbox):
     automation = _ready_target(client, mom, outbox)
+    body = client.get(f"/utilities/automations/{automation.slug}").get_data(as_text=True)
+    assert "In a named subfolder" in body
+    assert "For a named subfolder, Yaffo uses the album name" in body
 
     data = client.post(f"/utilities/automations/{automation.slug}/sync/test").get_json()
 
     assert (data["would_add"], data["would_remove"], data["problem"]) == (1, 0, None)
-    assert data["add_samples"] == ["a.jpg"]
+    assert data["add_samples"] == [{"filename": "a.jpg", "media_item_id": mom.items[0].media_item_id,
+                                    "destination": str(outbox / "For Mom" / "a.jpg")}]
+    assert list(outbox.iterdir()) == []
+
+
+def test_custom_rule_owns_folder_layout_and_preview_shows_destination(client, mom, outbox):
+    automation = _ready_target(client, mom, outbox)
+    media_id = mom.items[0].media_item_id
+    automation.published_code = f'[{{"media_item_id": {media_id}, "target": "Nathan"}}]'
+    db.session.commit()
+
+    client.post(f"/utilities/automations/{automation.slug}/sync/selection", data={"kind": "script"})
+    db.session.refresh(automation)
+    assert automation.sync["config"]["options"]["layout"] == "per_target"
+    body = client.get(f"/utilities/automations/{automation.slug}").get_data(as_text=True)
+    assert 'data-sync-layout-option' in body
+    assert 'data-sync-layout-option\n         hidden' in body
+    assert "In a named subfolder" not in build_page(db.session, automation).options_summary
+
+    client.post(f"/utilities/automations/{automation.slug}/sync/options",
+                data={"folder": str(outbox), "layout": "flat", "convert": "off", "on_leave": "delete"})
+    db.session.refresh(automation)
+    assert automation.sync["config"]["options"]["layout"] == "per_target"
+    data = client.post(f"/utilities/automations/{automation.slug}/sync/test").get_json()
+    assert data["add_samples"][0]["destination"] == str(outbox / "Nathan" / "a.jpg")
+
+
+def test_test_pages_the_full_send_preview(client, mom, outbox, library):
+    automation = _ready_target(client, mom, outbox)
+    for index in range(12):
+        photo = library / f"extra-{index}.jpg"
+        Image.new("RGB", (8, 8), (index, 9, 9)).save(photo)
+        media = MediaItem(full_file_path=str(photo), status=MEDIA_STATUS_INDEXED,
+                          date_taken="2024-07-04T10:00:00", year=2024, month=7)
+        db.session.add(media)
+        db.session.flush()
+        db.session.add(AlbumItem(album_id=mom.id, media_item_id=media.id, position=index + 1))
+    db.session.commit()
+
+    url = f"/utilities/automations/{automation.slug}/sync/test"
+    first = client.post(url).get_json()
+    second = client.post(url, json={"page": 1, "page_size": 10}).get_json()
+
+    assert first["would_add"] == second["would_add"] == 13
+    assert first["total_items"] == second["total_items"] == 13
+    assert (len(first["add_samples"]), len(second["add_samples"])) == (10, 3)
+    assert len({row["media_item_id"] for row in first["add_samples"] + second["add_samples"]}) == 13
+    assert 'class="pagination-container"' in first["pagination_html"]
+    assert 'data-pagination-page="1"' in first["pagination_html"]
+    assert 'data-pagination-page="1"' in second["pagination_html"]
     assert list(outbox.iterdir()) == []
 
 

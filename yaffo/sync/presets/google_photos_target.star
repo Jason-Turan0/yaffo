@@ -82,17 +82,28 @@ def push(batch, ctx):
                 reply = replies[index] if index < len(replies) else {}
                 media = reply.get("mediaItem")
                 if media and media.get("id"):
-                    results.append({"key": item["key"], "remote_id": media["id"]})
+                    results.append({"key": item["key"], "remote_id": media["id"],
+                                    "details": {"album_id": album["id"]}})
                 else:
                     results.append({"key": item["key"], "error": {"code": "retry_later"}})
     return {"results": results, "state_patch": {"albums": albums}}
 
 def remove(items, ctx):
     albums = _albums(ctx)
+    pinned = ctx["options"].get("album")
+    missing = [item["target"] for item in items if item["target"] not in albums
+               and not (item.get("details") or {}).get("album_id")]
+    if missing and not (pinned and pinned.get("id")):
+        discovered = _discover(missing)
+        if discovered.get("error"):
+            return discovered
+        albums.update(discovered["albums"])
     grouped = {}
     results = []
     for item in items:
-        album_id = albums.get(item["target"])
+        album_id = (item.get("details") or {}).get("album_id") or albums.get(item["target"])
+        if not album_id and pinned:
+            album_id = pinned.get("id")
         if album_id:
             grouped.setdefault(album_id, []).append(item)
         else:
@@ -108,8 +119,8 @@ def remove(items, ctx):
             for member in members:
                 results.append({"key": member["key"]})
         else:
-            return {"results": results, "error": _error(r)}
-    return {"results": results}
+            return {"results": results, "state_patch": {"albums": albums}, "error": _error(r)}
+    return {"results": results, "state_patch": {"albums": albums}}
 
 def list_remote(cursor, ctx):
     albums = _albums(ctx)
@@ -142,7 +153,8 @@ def list_remote(cursor, ctx):
         return {"items": [], "next_cursor": next_cursor, "state_patch": {"albums": albums}}
     if r["status"] != 200:
         return {"error": _error(r)}
-    found = [{"remote_id": item["id"], "target": target, "filename": item.get("filename")}
+    found = [{"remote_id": item["id"], "target": target, "filename": item.get("filename"),
+              "details": {"album_id": albums[target]}}
              for item in r["json"].get("mediaItems", [])]
     next_page = r["json"].get("nextPageToken")
     next_cursor = (str(index) + "|" + next_page) if next_page else (

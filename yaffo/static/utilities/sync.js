@@ -15,6 +15,7 @@ const initSyncSelection = (form) => {
     const choices = Array.from(form.querySelectorAll('input[name="kind"]'));
     const album = /** @type {HTMLSelectElement | null} */ (form.querySelector('#sync-album'));
     const submit = /** @type {HTMLButtonElement | null} */ (form.querySelector('[data-selection-submit]'));
+    const layoutOption = /** @type {HTMLElement | null} */ (document.querySelector('[data-sync-layout-option]'));
     const render = () => {
         const selected = choices.find((choice) => choice instanceof HTMLInputElement && choice.checked);
         const kind = selected instanceof HTMLInputElement ? selected.value : '';
@@ -25,6 +26,7 @@ const initSyncSelection = (form) => {
             if (detail) detail.hidden = !active;
         });
         if (album) album.disabled = kind !== 'album';
+        if (layoutOption) layoutOption.hidden = kind === 'script';
         if (submit) {
             submit.textContent = kind === 'query' ? submit.dataset.filterLabel || ''
                 : kind === 'script' ? submit.dataset.ruleLabel || '' : submit.dataset.saveLabel || '';
@@ -253,7 +255,7 @@ const initDeviceCode = (root, i18n) => {
 
 /** @type {SyncNamespace} */
 const syncNamespace = {
-    renderTestResult: (container, result, i18n) => {
+    renderTestResult: (container, result, i18n, config) => {
         container.replaceChildren();
         container.hidden = false;
         if (result.problem_text) {
@@ -265,9 +267,7 @@ const syncNamespace = {
         let stats;
         let nothing;
         if (result.role === 'source') {
-            /** @type {Record<string, number>} */
-            const byState = {};
-            for (const record of result.records) byState[record.state] = (byState[record.state] || 0) + 1;
+            const byState = result.state_counts;
             stats = ['new', 'changed', 'in_library', 'imported', 'deleted_at_source']
                 .map((state) => /** @type {[string, number]} */ ([`state.${state}`, byState[state] || 0]));
             nothing = !(byState.new || byState.changed) && i18n.t('utilities:sync.test.nothingNew');
@@ -315,32 +315,44 @@ const syncNamespace = {
         };
         /** @param {string} text @param {string} tone */
         const chip = (text, tone) => syncEl('span', text, `chip ${tone}`.trim());
+        /** @param {string} name @param {number | null} mediaItemId */
+        const photoName = (name, mediaItemId) => {
+            if (mediaItemId === null) return name;
+            const link = /** @type {HTMLAnchorElement} */ (syncEl('a', name, 'row-link'));
+            link.href = config.buildUrl('media_view', { media_item_id: mediaItemId });
+            return link;
+        };
 
         if (result.role === 'source') {
             /** @type {Record<string, string>} */
             const tones = { new: 'chip-accent', changed: 'chip-warning' };
             if (result.records.length) {
                 table(['file', 'size', 'state'], result.records.map((record) => [
-                    record.filename, syncFormatSize(record.size),
+                    photoName(record.filename, record.media_item_id), syncFormatSize(record.size),
                     chip(i18n.t(`utilities:sync.test.state.${record.state}`), tones[record.state] || ''),
                 ]));
             }
             if (result.more) container.append(syncEl('p', i18n.t('utilities:sync.test.more'), 'hint-text sync-test-note'));
         } else {
+            const showDestination = [...result.add_samples, ...result.remove_samples]
+                .some((sample) => Boolean(sample.destination));
+            /** @param {SyncTestSample} sample @param {string} action @param {string} tone */
+            const targetRow = (sample, action, tone) => {
+                /** @type {Array<string | HTMLElement>} */
+                const cells = [photoName(sample.filename, sample.media_item_id)];
+                if (showDestination) cells.push(sample.destination || '');
+                cells.push(chip(action, tone));
+                return cells;
+            };
             const samples = [
-                ...result.add_samples.map((name) => [name, chip(i18n.t('utilities:sync.test.preview.copy'), 'chip-accent')]),
-                ...result.remove_samples.map((name) => [name, chip(i18n.t('utilities:sync.test.preview.remove'), 'chip-warning')]),
+                ...result.add_samples.map((sample) => targetRow(sample, i18n.t('utilities:sync.test.preview.copy'), 'chip-accent')),
+                ...result.remove_samples.map((sample) => targetRow(sample, i18n.t('utilities:sync.test.preview.remove'), 'chip-warning')),
             ];
             if (samples.length) {
-                table(['file', 'action'], samples);
-                const total = result.would_add + result.would_remove;
-                if (total > samples.length) {
-                    container.append(syncEl('p', i18n.t('utilities:sync.test.preview.showing', {
-                        shown: samples.length, total,
-                    }), 'hint-text sync-test-note sync-test-sample-note'));
-                }
+                table(showDestination ? ['file', 'destination', 'action'] : ['file', 'action'], samples);
             }
         }
+        if (result.pagination_html) container.insertAdjacentHTML('beforeend', result.pagination_html);
     },
 
     initRemoteOption,
@@ -404,7 +416,8 @@ const syncNamespace = {
                 if (testCard) testCard.hidden = true;
                 testButton.focus();
             });
-            testButton.addEventListener('click', async () => {
+            /** @param {number} [page] @param {number | null} [pageSize] */
+            const runTest = async (page = 0, pageSize = null) => {
                 testButton.disabled = true;
                 if (testCard) {
                     testCard.hidden = false;
@@ -413,9 +426,13 @@ const syncNamespace = {
                 testResult.replaceChildren(syncEl('p', i18n.t('utilities:sync.test.running'), 'hint-text'));
                 if (testMeta) testMeta.textContent = '';
                 try {
-                    const response = await fetch(testUrl, { method: 'POST' });
+                    const options = pageSize === null ? { method: 'POST' } : {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ page, page_size: pageSize }),
+                    };
+                    const response = await fetch(testUrl, options);
                     if (!response.ok) throw new Error(String(response.status));
-                    syncNamespace.renderTestResult(testResult, /** @type {SyncTestResult} */ (await response.json()), i18n);
+                    syncNamespace.renderTestResult(testResult, /** @type {SyncTestResult} */ (await response.json()), i18n, config);
                     if (testMeta) {
                         const time = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' }).format(new Date());
                         testMeta.textContent = i18n.t('utilities:sync.test.checked', { time });
@@ -425,6 +442,20 @@ const syncNamespace = {
                 } finally {
                     testButton.disabled = false;
                 }
+            };
+            testButton.addEventListener('click', () => { void runTest(); });
+            testResult.addEventListener('click', (event) => {
+                if (!(event.target instanceof Element)) return;
+                const button = event.target.closest('[data-pagination-page]');
+                if (!(button instanceof HTMLButtonElement) || button.disabled || testButton.disabled) return;
+                const size = testResult.querySelector('[data-pagination-size]');
+                if (!(size instanceof HTMLSelectElement)) return;
+                void runTest(Number(button.dataset.paginationPage), Number(size.value));
+            });
+            testResult.addEventListener('change', (event) => {
+                if (!(event.target instanceof HTMLSelectElement) || !event.target.matches('[data-pagination-size]')
+                    || testButton.disabled) return;
+                void runTest(0, Number(event.target.value));
             });
         }
         void config;

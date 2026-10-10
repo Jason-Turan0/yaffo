@@ -3,6 +3,7 @@
 {% from "components/page_header.html" import page_header %}
 {% from "components/collapsible_panel.html" import collapsible_panel %}
 {% from "components/modal.html" import render_modal with context %}
+{% from "components/switch.html" import switch %}
 {% from "macros/automation_forms.html" import render_edit_automation_form with context %}
 
 {% macro render_configure_form() %}
@@ -61,6 +62,7 @@
 {% block utility_styles %}
     <link rel="stylesheet" href="{{ url_for('static', filename='components/cron_builder.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/collapsible_panel.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='components/switch.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='utilities/automations.css') }}">
 {% endblock %}
 
@@ -73,10 +75,8 @@
 {% else %}
 {% set header_actions %}
 <div class="automation-actions">
-    <button type="button" class="{{ 'btn-secondary' if selected.enabled else 'btn-primary' }}"
-            hx-post="{{ url_for('automations_toggle_enabled', slug=selected.slug) }}"
-            hx-swap="none">{{ _("Disable") if selected.enabled else _("Enable") }}
-    </button>
+    {{ switch(selected.display_name, selected.enabled,
+              hx_post=url_for('automations_toggle_enabled', slug=selected.slug), hx_swap='none') }}
     <button type="button" class="btn-secondary js-run-files" data-mode="any">{{ _("Run…") }}</button>
     {% if not selected.is_system %}
         <a href="{{ url_for('automations_edit', slug=selected.slug) }}"

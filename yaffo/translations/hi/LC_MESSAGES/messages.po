@@ -4214,6 +4214,10 @@ msgstr "खाली शुरू होता है - इसे बातच�
 msgid "On"
 msgstr "पर"
 
+#: yaffo/templates/components/switch.html:12
+msgid "Off"
+msgstr "बंद"
+
 #: yaffo/templates/utilities/_base.html:35 yaffo/templates/utilities/_base.html:59
 msgid "Automations"
 msgstr "स्वचालन"
@@ -4739,3 +4743,6 @@ msgstr "गंतव्य फ़ोल्डर चुनें"
 msgid "Remove Selected Duplicates"
 msgstr "चयनित डुप्लिकेट हटाएँ"
 
+#: yaffo/templates/utilities/sync_detail.html:281
+msgid "Describe which photos to send, then publish the rule."
+msgstr "बताएँ कि कौन-सी फ़ोटो भेजनी हैं, फिर नियम प्रकाशित करें।"

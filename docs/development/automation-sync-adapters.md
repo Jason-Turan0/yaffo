@@ -1045,10 +1045,10 @@ As built, the result appears in a *What a run would do now* panel: when it was
 checked ("a preview; nothing was copied or changed"), number tiles for what would
 happen (to copy, to remove, already there, converted, can't be sent; for sources,
 new, edited, already in the library, already imported, deleted at the source), a
-sentence when there's nothing to do, and a sample table with each file's planned
-action. When the diff is larger than the sample, it says how many are listed. A web
-source's Test reads the first page live with read grants only; nothing is
-downloaded.
+sentence when there's nothing to do, and a paginated table with each file's
+planned action. The table uses the shared pagination controls; changing pages
+reruns the read-only Test. A web source's Test reads the first remote page live
+with read grants only; nothing is downloaded.
 
 **Which account Test uses.** A sync's Test uses that sync's connection. The
 builder's Test (`test_adapter`) uses the custom adapter's test connection
@@ -1760,6 +1760,12 @@ library. Whatever watches that folder takes it from there:
 | Convert to JPEG | off · on (sets `accepts` to JPEG/PNG) · on, sized for a photo frame (also caps pixels and bytes) | off |
 | When a photo leaves the selection | remove from destination · keep at destination | remove from destination |
 
+For a custom selector rule, `target` is the name of the subfolder within Folder.
+The Layout choice is hidden and stored as `per_target` so flat/date layouts cannot
+discard the rule's routing. The folder, conversion, and removal options still apply.
+The Test preview shows each planned full path; an occupied filename may receive a
+numbered suffix when the copy is actually made.
+
 **Capabilities:** `kind: collection`, `targets: many`, `remove` and `reconcile`
 supported, `update: false` (captions aren't written; the copy keeps the
 original's embedded metadata), `accepts` from the *Convert* option.
@@ -2360,6 +2366,12 @@ notes, where they settle what the doc left open:
   `HOST_API`: its functions are bound to a sync's web access, not a session.
 - **Remote options** store exactly `{id, label}`; the label is the picker's
   breadcrumb path.
+- The OneDrive target has the same export layouts as the built-in Folder target:
+  one subfolder per selection target, all in the selected folder, or folders by
+  capture year and month. Layout is shown for album/filter selections; a custom
+  rule supplies its own single folder name and hides the choice. The Test preview
+  shows the resulting OneDrive destination folder. A layout change re-asks consent
+  and queues existing copies for removal and re-copying at the new destination.
 
 ### Phase 3: cloud targets
 
@@ -2408,10 +2420,20 @@ A live Google Photos test on 2026-10-10 sent three photos to an app-created
 album. The completed job reported `sent=3` and `failed=0`; all three ledger
 rows are `sent`, have distinct remote IDs, and have no error code. The user
 confirmed the photos appeared in Google Photos. This verifies the basic upload
-path, but not crash recovery or later removal and reconcile behavior.
+path. A later read of the real album found all three remote IDs. A recovery
+run against a temporary copy of the live database changed one row to `pending`
+and cleared the remembered album state; the engine rediscovered the album and
+remote item, restored the original remote ID, and made zero upload calls.
+Removal now stores the album ID on each sent item and discovers an older
+item's album when state is missing. Local tests cover this recovery path,
+membership removal, and weekly remote-deletion drift. A process-level test
+also exits the worker immediately after the fake service creates the remote
+item, then restarts against the same SQLite database and finds the item without
+another upload. The full sync regression suite passes (156 tests).
 
-**Still required for the Phase 3 exit:** a worker-kill/restart check against
-the live service, the demo video, and Google's OAuth verification. The app remains
+**Still required for the Phase 3 exit:** an actual worker-kill/restart check
+mid-batch against the live service, the demo video, and Google's OAuth
+verification. The app remains
 limited to Google's configured test users until verification passes.
 
 ### Phase 4: custom adapters and self-hosted servers

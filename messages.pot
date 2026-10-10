@@ -4247,6 +4247,10 @@ msgstr ""
 msgid "On"
 msgstr ""
 
+#: yaffo/templates/components/switch.html:12
+msgid "Off"
+msgstr ""
+
 #: yaffo/templates/utilities/_base.html:35
 #: yaffo/templates/utilities/_base.html:59
 msgid "Automations"
@@ -4771,3 +4775,6 @@ msgstr ""
 msgid "Remove Selected Duplicates"
 msgstr ""
 
+#: yaffo/templates/utilities/sync_detail.html:281
+msgid "Describe which photos to send, then publish the rule."
+msgstr ""

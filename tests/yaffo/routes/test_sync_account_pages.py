@@ -9,7 +9,7 @@ import pytest
 import requests
 
 from yaffo.db import db
-from yaffo.db.models import ApplicationSettings, Automation, SyncAdapter
+from yaffo.db.models import Album, AlbumItem, ApplicationSettings, Automation, MediaItem, SyncAdapter, MEDIA_STATUS_INDEXED
 from yaffo.db.repositories import sync_repository
 from yaffo.sync import connections, pending_sign_ins
 
@@ -87,6 +87,57 @@ def test_a_new_onedrive_sync_starts_at_the_account_step(client, library, fake):
     assert "Signing in on another device?" in html
 
 
+def test_onedrive_target_preview_shows_rule_folder(client, library):
+    from yaffo.sync import setup
+    from yaffo.sync.schemas import Selection
+
+    client.get("/utilities/automations")  # seed the preset adapters
+    adapter = db.session.query(SyncAdapter).filter_by(slug="preset.onedrive_target").one()
+    target = setup.create_sync(db.session, "Yearly OneDrive", adapter.id)
+    key = connections.upsert_after_sign_in(db.session, "onedrive", "preview-user", "me@example.com",
+                                           ["Files.ReadWrite"],
+                                           {"access_token": "test", "refresh_token": "test"})
+    setup.set_connection(db.session, target, key)
+    setup.set_options(db.session, target, {"folder": {"id": "root", "label": "Pictures › Saved pictures"}})
+    source = library / "photo.jpg"
+    source.write_bytes(b"photo")
+    photo = MediaItem(full_file_path=str(source), status=MEDIA_STATUS_INDEXED,
+                      date_taken="2025-02-16T10:00:00")
+    db.session.add(photo)
+    db.session.commit()
+    setup.set_selection(db.session, target, Selection(kind="script"))
+    target.published_code = f'[{{"media_item_id": {photo.id}, "target": "2025"}}]'
+    db.session.commit()
+
+    result = client.post(f"/utilities/automations/{target.slug}/sync/test").get_json()
+
+    assert result["add_samples"] == [{"filename": "photo.jpg", "media_item_id": photo.id,
+                                      "destination": "OneDrive › Pictures › Saved pictures › 2025"}]
+    body = client.get(f"/utilities/automations/{target.slug}").get_data(as_text=True)
+    assert 'data-sync-layout-option\n         hidden' in body
+
+    album = Album(name="Family")
+    db.session.add(album)
+    db.session.flush()
+    db.session.add(AlbumItem(album_id=album.id, media_item_id=photo.id, position=0))
+    db.session.commit()
+    setup.set_selection(db.session, target, Selection(kind="album", album_id=album.id))
+    setup.set_options(db.session, target, {"folder": {"id": "root", "label": "Pictures › Saved pictures"},
+                                           "layout": "by_date"})
+    body = client.get(f"/utilities/automations/{target.slug}").get_data(as_text=True)
+    assert 'data-sync-layout-option\n         hidden' not in body
+    assert "In a named subfolder" in body
+    assert "For a named subfolder, Yaffo uses the album name" in body
+    assert "By year and month taken" in body
+    result = client.post(f"/utilities/automations/{target.slug}/sync/test").get_json()
+    assert result["add_samples"][0]["destination"] == "OneDrive › Pictures › Saved pictures › 2025 › 02"
+
+    setup.set_options(db.session, target, {"folder": {"id": "root", "label": "Pictures › Saved pictures"},
+                                           "layout": "flat"})
+    result = client.post(f"/utilities/automations/{target.slug}/sync/test").get_json()
+    assert result["add_samples"][0]["destination"] == "OneDrive › Pictures › Saved pictures"
+
+
 def test_google_target_can_be_reviewed_without_choosing_an_existing_album(client, library, monkeypatch):
     from yaffo.sync import setup
     from yaffo.sync.adapters import load_adapter
@@ -122,6 +173,7 @@ def test_google_target_can_be_reviewed_without_choosing_an_existing_album(client
     assert "Family" in html
     assert "photoslibrary.googleapis.com" in html
     assert 'id="sync-enable-review"' in html
+    assert f'aria-label="{target.display_name}" aria-checked="false"' in html
     assert not setup.missing_setup(db.session, target)
 
 
@@ -148,6 +200,7 @@ def test_sign_in_then_pick_a_folder_then_review_and_enable(client, library, fake
     assert "Imports new photos from OneDrive › Camera Roll" in html
     # Enabling a web sync goes through a review of what it will do.
     assert 'id="sync-enable-review"' in html and 'id="syncEnableModal"' in html
+    assert f'aria-label="{automation.display_name}" aria-checked="false"' in html
     assert "graph.microsoft.com" in html and "Kept in your library" in html
 
     test = client.post(f"/utilities/automations/{automation.slug}/sync/test").get_json()
@@ -158,6 +211,8 @@ def test_sign_in_then_pick_a_folder_then_review_and_enable(client, library, fake
     assert resp.status_code == 302
     db.session.refresh(automation)
     assert automation.enabled
+    html = client.get(f"/utilities/automations/{automation.slug}").get_data(as_text=True)
+    assert f'aria-label="{automation.display_name}" aria-checked="true"' in html
 
 
 def test_the_picker_needs_a_signed_in_account(client, library, fake):

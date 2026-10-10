@@ -38,7 +38,7 @@ class PresetFile:
 PRESETS: tuple[PresetFile, ...] = (
     PresetFile(slug="preset.onedrive_source", name="OneDrive", filename="onedrive_source.star", version="2"),
     PresetFile(slug="preset.google_photos_target", name="Google Photos", filename="google_photos_target.star", version="1"),
-    PresetFile(slug="preset.onedrive_target", name="OneDrive", filename="onedrive_target.star", version="1"),
+    PresetFile(slug="preset.onedrive_target", name="OneDrive", filename="onedrive_target.star", version="3"),
 )
 
 

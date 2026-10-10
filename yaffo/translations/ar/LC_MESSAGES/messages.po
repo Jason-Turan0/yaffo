@@ -4328,6 +4328,10 @@ msgstr "يبدأ فارغًا — قم ببنائه من خلال محادثة،
 msgid "On"
 msgstr "على"
 
+#: yaffo/templates/components/switch.html:12
+msgid "Off"
+msgstr "متوقف"
+
 #: yaffo/templates/utilities/_base.html:35 yaffo/templates/utilities/_base.html:59
 msgid "Automations"
 msgstr "الأتمتة"
@@ -4863,3 +4867,6 @@ msgstr "حدد المجلد الوجهة"
 msgid "Remove Selected Duplicates"
 msgstr "إزالة التكرارات المحددة"
 
+#: yaffo/templates/utilities/sync_detail.html:281
+msgid "Describe which photos to send, then publish the rule."
+msgstr "صِف الصور التي تريد إرسالها، ثم انشر القاعدة."

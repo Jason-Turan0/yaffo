@@ -4045,6 +4045,10 @@ msgstr "从空开始——通过对话构建它，然后发布。"
 msgid "On"
 msgstr "在"
 
+#: yaffo/templates/components/switch.html:12
+msgid "Off"
+msgstr "关闭"
+
 #: yaffo/templates/utilities/_base.html:35 yaffo/templates/utilities/_base.html:59
 msgid "Automations"
 msgstr "自动化"
@@ -4553,3 +4557,6 @@ msgstr "选择目标文件夹"
 msgid "Remove Selected Duplicates"
 msgstr "删除选定的重复项"
 
+#: yaffo/templates/utilities/sync_detail.html:281
+msgid "Describe which photos to send, then publish the rule."
+msgstr "描述要发送哪些照片，然后发布规则。"

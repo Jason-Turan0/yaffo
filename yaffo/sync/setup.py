@@ -28,6 +28,7 @@ from yaffo.sync import access, connections
 from yaffo.sync.adapters import LoadedAdapter, load_adapter
 from yaffo.sync.consent import consent_hash
 from yaffo.sync.options import option_defaults, validate_options
+from yaffo.sync.folder_target import LAYOUT_PER_TARGET
 from yaffo.sync.schemas import (
     DEFAULT_IMPORT_LAYOUT, IMPORT_LAYOUTS, RUNTIME_NEEDS_CONSENT, RUNTIME_READY, SELECTION_ALBUM, SELECTION_SCRIPT,
     Selection,
@@ -77,6 +78,11 @@ def _config(automation: Automation) -> SyncConfig:
     return sync_repository.load_sync(automation).config
 
 
+def _rule_controls_layout(adapter: LoadedAdapter) -> bool:
+    choices = adapter.options.get("layout", {}).get("choices", [])
+    return adapter.role == SYNC_ROLE_TARGET and any(c.get("value") == LAYOUT_PER_TARGET for c in choices)
+
+
 def _store(session: Session, automation: Automation, config: SyncConfig) -> None:
     """Save a config change. Anything the consent covers turns the sync off until
     it's approved again."""
@@ -97,16 +103,32 @@ def set_options(session: Session, automation: Automation, values: dict) -> None:
     """Validate and store the adapter options. Raises OptionError."""
     config = _config(automation)
     adapter = load_adapter(session, config.adapter_id)
+    if _rule_controls_layout(adapter) and config.selection is not None \
+            and config.selection.kind == SELECTION_SCRIPT:
+        values = {**values, "layout": LAYOUT_PER_TARGET}
     options = validate_options(adapter.options, values)
-    if config.role == SYNC_ROLE_TARGET and options != config.options:
-        # A new destination or output format needs a fresh copy. Keep the old
-        # remote id so the next enabled run can remove it before sending again.
-        for row in sync_repository.rows(session, automation.id):
-            if row.remote_id and row.status in (SYNC_ITEM_SENT, SYNC_ITEM_PENDING):
-                if adapter.handler_key == SYNC_HANDLER_FOLDER_TARGET:
-                    row.details = {**(row.details or {}), "folder": config.options["folder"]}
-                row.status = SYNC_ITEM_REMOVING
+    previous_options = {**option_defaults(adapter.options), **config.options}
+    if config.role == SYNC_ROLE_TARGET and options != previous_options:
+        _mark_target_rows_for_recopy(session, automation, adapter, config)
+        if adapter.provider == "onedrive":
+            _clear_target_folders(automation)
     _store(session, automation, replace(config, options=options))
+
+
+def _mark_target_rows_for_recopy(session: Session, automation: Automation, adapter: LoadedAdapter,
+                                 config: SyncConfig) -> None:
+    """Keep the old remote location for removal when destination settings change."""
+    for row in sync_repository.rows(session, automation.id):
+        if row.remote_id and row.status in (SYNC_ITEM_SENT, SYNC_ITEM_PENDING):
+            if adapter.handler_key == SYNC_HANDLER_FOLDER_TARGET:
+                row.details = {**(row.details or {}), "folder": config.options["folder"]}
+            row.status = SYNC_ITEM_REMOVING
+
+
+def _clear_target_folders(automation: Automation) -> None:
+    runtime = sync_repository.load_sync(automation).runtime
+    sync_repository.save_runtime(automation, replace(runtime, state={
+        key: value for key, value in runtime.state.items() if key != "folders"}))
 
 
 def set_connection(session: Session, automation: Automation, connection_key: str) -> None:
@@ -159,6 +181,16 @@ def set_selection(session: Session, automation: Automation, selection: Selection
     """Store the target's selection and keep its owned album_changed trigger in step
     (created, re-pointed, or removed in the same transaction)."""
     config = _config(automation)
+    adapter = load_adapter(session, config.adapter_id)
+    if _rule_controls_layout(adapter) and selection.kind == SELECTION_SCRIPT \
+            and config.options.get("layout") != LAYOUT_PER_TARGET:
+        # A selector's target is its folder. Do not let a prior flat/date layout
+        # silently discard the route supplied by the rule.
+        if config.options.get("layout", LAYOUT_PER_TARGET) != LAYOUT_PER_TARGET:
+            _mark_target_rows_for_recopy(session, automation, adapter, config)
+            if adapter.provider == "onedrive":
+                _clear_target_folders(automation)
+        config = replace(config, options={**config.options, "layout": LAYOUT_PER_TARGET})
     trigger = _album_trigger(automation)
     if selection.kind == SELECTION_ALBUM:
         trigger_config = {TRIGGER_KEY_ALBUM: selection.album_id, TRIGGER_KEY_SYNC: automation.id,

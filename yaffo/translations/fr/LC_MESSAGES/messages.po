@@ -4262,6 +4262,10 @@ msgstr "Commence vide : créez-le via une conversation, puis publiez-le."
 msgid "On"
 msgstr "Sur"
 
+#: yaffo/templates/components/switch.html:12
+msgid "Off"
+msgstr "Désactivé"
+
 #: yaffo/templates/utilities/_base.html:35 yaffo/templates/utilities/_base.html:59
 msgid "Automations"
 msgstr "Automatisations"
@@ -4789,3 +4793,6 @@ msgstr "Sélectionnez le dossier de destination"
 msgid "Remove Selected Duplicates"
 msgstr "Supprimer les doublons sélectionnés"
 
+#: yaffo/templates/utilities/sync_detail.html:281
+msgid "Describe which photos to send, then publish the rule."
+msgstr "Décrivez les photos à envoyer, puis publiez la règle."

@@ -17,9 +17,13 @@ describe('sync Test results', () => {
 
     PO.sync.renderTestResult(out, {
       role: 'target', problem: null, problem_text: null, would_add: 2, would_remove: 1, unchanged: 3,
-      convert: 1, unsupported: 0, add_samples: ['a.jpg', 'b.heic'], remove_samples: ['For Mom/c.jpg'],
+      convert: 1, unsupported: 0,
+      add_samples: [{ filename: 'a.jpg', media_item_id: 7, destination: '/OneDrive/Nathan/a.jpg' },
+        { filename: 'b.heic', media_item_id: 8, destination: '/OneDrive/Chase/b.heic' }],
+      remove_samples: [{ filename: 'For Mom/c.jpg', media_item_id: 9,
+        destination: '/OneDrive/For Mom/c.jpg' }],
       records: [], more: false,
-    }, i18n);
+    }, i18n, window.APP_CONFIG);
 
     expect(out.hidden).toBe(false);
     expect(tiles(out)).toEqual([
@@ -28,14 +32,17 @@ describe('sync Test results', () => {
     ]);
     expect(out.querySelector('.sync-test-nothing')).toBeNull();
     expect([...out.querySelectorAll('table.sync-test-table thead th')].map((th) => th.textContent)).toEqual([
-      'utilities:sync.test.columns.file', 'utilities:sync.test.columns.action',
+      'utilities:sync.test.columns.file', 'utilities:sync.test.columns.destination',
+      'utilities:sync.test.columns.action',
     ]);
     expect([...out.querySelectorAll('tbody tr')].map((tr) => [...tr.cells].map((cell) => cell.textContent))).toEqual([
-      ['a.jpg', 'utilities:sync.test.preview.copy'],
-      ['b.heic', 'utilities:sync.test.preview.copy'],
-      ['For Mom/c.jpg', 'utilities:sync.test.preview.remove'],
+      ['a.jpg', '/OneDrive/Nathan/a.jpg', 'utilities:sync.test.preview.copy'],
+      ['b.heic', '/OneDrive/Chase/b.heic', 'utilities:sync.test.preview.copy'],
+      ['For Mom/c.jpg', '/OneDrive/For Mom/c.jpg', 'utilities:sync.test.preview.remove'],
     ]);
     expect(out.querySelector('tbody .chip.chip-warning').textContent).toBe('utilities:sync.test.preview.remove');
+    expect([...out.querySelectorAll('tbody td:first-child a')].map((link) => link.getAttribute('href')))
+      .toEqual(['/media_view/media_item_id/7', '/media_view/media_item_id/8', '/media_view/media_item_id/9']);
     expect(out.querySelector('.sync-test-sample-note')).toBeNull();
   });
 
@@ -47,14 +54,14 @@ describe('sync Test results', () => {
     PO.sync.renderTestResult(out, {
       role: 'target', problem: null, problem_text: null, would_add: 0, would_remove: 0, unchanged: 103,
       convert: 0, unsupported: 0, add_samples: [], remove_samples: [], records: [], more: false,
-    }, i18n);
+    }, i18n, window.APP_CONFIG);
 
     expect(out.querySelector('p.sync-test-nothing').textContent).toBe('utilities:sync.test.nothingToDo');
     expect(tiles(out)).toEqual([['103', 'utilities:sync.test.stat.unchanged:103']]);
     expect(out.querySelector('table')).toBeNull();
   });
 
-  it('labels a partial target preview with the full planned count', async () => {
+  it('places the shared pagination controls after a target page', async () => {
     document.body.innerHTML = '<div id="out"></div>';
     const PO = await loadModule('utilities/sync.js');
     const out = document.getElementById('out');
@@ -62,12 +69,14 @@ describe('sync Test results', () => {
     PO.sync.renderTestResult(out, {
       role: 'target', problem: null, problem_text: null, would_add: 103, would_remove: 0,
       unchanged: 0, convert: 0, unsupported: 0,
-      add_samples: ['one.jpg', 'two.jpg'], remove_samples: [], records: [], more: false,
-    }, i18n);
+      add_samples: [{ filename: 'one.jpg', media_item_id: 1 }, { filename: 'two.jpg', media_item_id: 2 }],
+      remove_samples: [], records: [], more: false,
+      pagination_html: '<div class="pagination-container"><span class="results-count">Showing 1–2 of 103 results</span></div>',
+    }, i18n, window.APP_CONFIG);
 
     expect(out.querySelectorAll('tbody tr')).toHaveLength(2);
-    expect(out.querySelector('.sync-test-sample-note').textContent)
-      .toBe('utilities:sync.test.preview.showing:2/103');
+    expect(out.querySelector('.pagination-container .results-count').textContent)
+      .toBe('Showing 1–2 of 103 results');
   });
 
   it('counts a source page by what would happen to each file', async () => {
@@ -78,10 +87,11 @@ describe('sync Test results', () => {
     PO.sync.renderTestResult(out, {
       role: 'source', problem: null, problem_text: null, would_add: 1, would_remove: 0, unchanged: 0,
       convert: 0, unsupported: 0, add_samples: [], remove_samples: [], more: true,
-      records: [{ filename: 'IMG_1.JPG', size: 2048, state: 'new' },
-        { filename: 'IMG_2.JPG', size: null, state: 'in_library' },
-        { filename: 'IMG_3.JPG', size: 10, state: 'imported' }],
-    }, i18n);
+      state_counts: { new: 1, in_library: 1, imported: 1 },
+      records: [{ filename: 'IMG_1.JPG', size: 2048, state: 'new', media_item_id: null },
+        { filename: 'IMG_2.JPG', size: null, state: 'in_library', media_item_id: 9 },
+        { filename: 'IMG_3.JPG', size: 10, state: 'imported', media_item_id: 10 }],
+    }, i18n, window.APP_CONFIG);
 
     expect(tiles(out)).toEqual([
       ['1', 'utilities:sync.test.state.new:1'], ['1', 'utilities:sync.test.state.in_library:1'],
@@ -94,6 +104,8 @@ describe('sync Test results', () => {
       ['IMG_3.JPG', '10 B', 'utilities:sync.test.state.imported'],
     ]);
     expect(out.querySelector('tbody .chip.chip-accent').textContent).toBe('utilities:sync.test.state.new');
+    expect([...out.querySelectorAll('tbody td:first-child a')].map((link) => link.textContent))
+      .toEqual(['IMG_2.JPG', 'IMG_3.JPG']);
     expect(out.textContent).toContain('utilities:sync.test.more');
   });
 
@@ -105,8 +117,9 @@ describe('sync Test results', () => {
     PO.sync.renderTestResult(out, {
       role: 'source', problem: null, problem_text: null, would_add: 0, would_remove: 0, unchanged: 0,
       convert: 0, unsupported: 0, add_samples: [], remove_samples: [], more: false,
-      records: [{ filename: 'a.png', size: 5, state: 'imported' }],
-    }, i18n);
+      state_counts: { imported: 1 },
+      records: [{ filename: 'a.png', size: 5, state: 'imported', media_item_id: 1 }],
+    }, i18n, window.APP_CONFIG);
 
     expect(out.querySelector('.sync-test-nothing').textContent).toBe('utilities:sync.test.nothingNew');
   });
@@ -117,7 +130,7 @@ describe('sync Test results', () => {
     const out = document.getElementById('out');
 
     PO.sync.renderTestResult(out, { role: 'target', problem: 'destination_missing',
-      problem_text: 'The destination isn’t available.', records: [], add_samples: [], remove_samples: [] }, i18n);
+      problem_text: 'The destination isn’t available.', records: [], add_samples: [], remove_samples: [] }, i18n, window.APP_CONFIG);
 
     expect(out.querySelector('.form-error').textContent).toBe('The destination isn’t available.');
     expect(out.querySelector('ul')).toBeNull();
@@ -156,6 +169,37 @@ describe('sync page controls', () => {
 
     expect(global.fetch).toHaveBeenCalledWith('/test', { method: 'POST' });
     expect(document.getElementById('sync-test').disabled).toBe(false);
+  });
+
+  it('loads the next preview page from the shared pager', async () => {
+    document.body.innerHTML = `
+      <button type="button" id="sync-test" data-test-url="/test">Test</button>
+      <div id="sync-test-result" hidden></div>`;
+    const PO = await loadModule('utilities/sync.js');
+    const base = { role: 'target', problem: null, problem_text: null, would_add: 11, would_remove: 0,
+      unchanged: 0, convert: 0, unsupported: 0, remove_samples: [], records: [], more: false };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ...base,
+        add_samples: [{ filename: 'first.jpg', media_item_id: 1 }],
+        pagination_html: `<div class="pagination-container">
+          <select data-pagination-size><option value="10" selected>10</option></select>
+          <button type="button" data-pagination-page="1">Next</button></div>`,
+      }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ...base,
+        add_samples: [{ filename: 'last.jpg', media_item_id: 11 }], pagination_html: '',
+      }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    PO.sync.initSyncPage(window.testI18n, window.APP_CONFIG);
+    document.getElementById('sync-test').click();
+    await vi.waitFor(() => expect(document.querySelector('[data-pagination-page="1"]')).not.toBeNull());
+    document.querySelector('[data-pagination-page="1"]').click();
+    await vi.waitFor(() => expect(document.getElementById('sync-test-result').textContent).toContain('last.jpg'));
+
+    expect(fetchMock).toHaveBeenLastCalledWith('/test', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ page: 1, page_size: 10 }),
+    });
   });
 });
 

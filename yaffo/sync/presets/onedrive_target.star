@@ -1,4 +1,4 @@
-# Copy selected photos into child folders of a chosen OneDrive folder.
+# Copy selected photos into a chosen OneDrive folder, arranged by layout.
 GRAPH = "https://graph.microsoft.com/v1.0"
 CHUNK = 1638400
 
@@ -12,18 +12,14 @@ def _error(r):
         return {"code": "not_found"}
     return {"code": "retry_later", "message": r.get("error") or "OneDrive request failed"}
 
-def _folder(target, folders, ctx):
-    if target in folders:
-        return {"id": folders[target]}
-    root = ctx["options"]["folder"]["id"]
-    url = url_template(GRAPH + "/me/drive/items/{id}/children", id=root)
+def _child_folder(parent_id, name):
+    url = url_template(GRAPH + "/me/drive/items/{id}/children", id=parent_id)
     for _ in range(20):
         listed = web_request(CONNECTION, "GET", url)
         if listed["status"] != 200:
             return {"error": _error(listed)}
         for entry in listed["json"].get("value", []):
-            if entry.get("name") == target and "folder" in entry:
-                folders[target] = entry["id"]
+            if entry.get("name") == name and "folder" in entry:
                 return {"id": entry["id"]}
         url = listed["json"].get("@odata.nextLink")
         if not url:
@@ -31,13 +27,37 @@ def _folder(target, folders, ctx):
     if url:
         return {"error": {"code": "retry_later", "message": "too many OneDrive folders"}}
     made = web_request(CONNECTION, "POST",
-                       url_template(GRAPH + "/me/drive/items/{id}/children", id=root),
-                       json={"name": target, "folder": {},
+                       url_template(GRAPH + "/me/drive/items/{id}/children", id=parent_id),
+                       json={"name": name, "folder": {},
                              "@microsoft.graph.conflictBehavior": "fail"})
     if made["status"] != 201:
         return {"error": _error(made)}
-    folders[target] = made["json"]["id"]
-    return {"id": folders[target]}
+    return {"id": made["json"]["id"]}
+
+def _folder(target, folders, ctx):
+    root = ctx["options"]["folder"]["id"]
+    if target == ".":
+        folders[target] = root
+        return {"id": root}
+    if target in folders:
+        return {"id": folders[target]}
+    layout = ctx["options"].get("layout", "per_target")
+    parts = target.split("/") if layout == "by_date" else [target]
+    parent = root
+    path = ""
+    for part in parts:
+        if not part or part == "." or part == ".." or "\\" in part:
+            return {"error": {"code": "rejected", "message": "invalid OneDrive folder name"}}
+        path = path + "/" + part if path else part
+        if path in folders:
+            parent = folders[path]
+            continue
+        child = _child_folder(parent, part)
+        if child.get("error"):
+            return child
+        parent = child["id"]
+        folders[path] = parent
+    return {"id": parent}
 
 def push(batch, ctx):
     folders = dict(ctx["state"].get("folders") or {})
@@ -148,7 +168,16 @@ ADAPTER = {
     "title": "OneDrive folder",
     "description": "Keep selected photos in folders under a OneDrive folder.",
     "scopes": ["Files.ReadWrite"],
-    "options": {"folder": {"type": "remote_folder", "label": "OneDrive folder", "required": True}},
+    "options": {
+        "folder": {"type": "remote_folder", "label": "OneDrive folder", "required": True},
+        "layout": {"type": "select", "label": "Layout", "default": "per_target",
+                   "help": "For a named subfolder, Yaffo uses the album name or, for a filter, the automation name.",
+                   "choices": [
+            {"value": "per_target", "label": "In a named subfolder"},
+            {"value": "flat", "label": "All in the folder"},
+            {"value": "by_date", "label": "By year and month taken"},
+        ]},
+    },
     "capabilities": {"max_batch": 5, "remove": True, "reconcile": True, "targets": "many"},
     "hooks": {"push": push, "remove": remove, "list_remote": list_remote, "choices": choices},
 }

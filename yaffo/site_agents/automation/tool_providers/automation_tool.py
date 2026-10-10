@@ -50,7 +50,10 @@ class AutomationToolProvider(ToolProvider):
     def get_tools(self) -> list[RawToolDefinition]:
         if self.selector_mode:
             schema = {"type": "object", "properties": {"code": {"type": "string",
-                      "description": "Read-only Starlark rule; its final expression is a list of desired photo records."}},
+                      "description": "Read-only Starlark rule; its final expression is a list of desired photo records. "
+                                     "Each record's target is one destination folder or album name, not a "
+                                     "path; do not include slashes or the photo's filename in target. "
+                                     "Preserve existing selection filters when the user only changes routing."}},
                       "required": ["code"], "additionalProperties": False}
             return [RawToolDefinition(name=self.WRITE, description="Save a custom sync selection rule draft.",
                                       input_schema=schema),

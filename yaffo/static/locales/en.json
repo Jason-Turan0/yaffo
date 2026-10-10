@@ -384,6 +384,7 @@
         },
         "columns": {
           "file": "File",
+          "destination": "Destination",
           "size": "Size",
           "state": "What happens",
           "action": "Action"

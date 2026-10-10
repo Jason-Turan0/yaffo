@@ -42,7 +42,7 @@ from yaffo.sync.folder_target import CONVERT_FRAME, CONVERT_OFF, ON_LEAVE_KEEP
 from yaffo.sync.options import (
     OPTION_BOOL, OPTION_LOCAL_FOLDER, OPTION_REMOTE_COLLECTION, OPTION_REMOTE_FOLDER, OptionError,
 )
-from yaffo.sync.preview import PROBLEM_SERVICE_ERROR, PROBLEM_SIGN_IN, preview_sync
+from yaffo.sync.preview import PREVIEW_PAGE_SIZE, PREVIEW_PAGE_SIZES, PROBLEM_SERVICE_ERROR, PROBLEM_SIGN_IN, preview_sync
 from yaffo.sync.schemas import (
     DEFAULT_IMPORT_LAYOUT, IMPORT_LAYOUTS, RUNTIME_NEEDS_CONSENT, RUNTIME_READY, SELECTION_ALBUM, SELECTION_QUERY,
     SELECTION_SCRIPT,
@@ -176,7 +176,7 @@ def _option_fields(adapter: LoadedAdapter, values: dict, session: Session) -> li
         fields.append(OptionField(
             key=key, type=spec["type"], label=_option_label(spec.get("label", key)),
             help=_option_label(spec["help"]) if spec.get("help") else None,
-            required=bool(spec.get("required")), value=value,
+            required=bool(spec.get("required")), value=value if value is not None else spec.get("default"),
             choices=[{"value": c["value"], "label": _option_label(c["label"])} for c in spec.get("choices", [])],
             problem=problem,
         ))
@@ -390,18 +390,22 @@ def build_page(session: Session, automation: Automation) -> SyncPage | None:
     page.missing_labels = missing_labels(page.missing, config.role, web=account is not None)
     page.status = status
     page.attention = status != RUNTIME_READY and status != RUNTIME_NEEDS_CONSENT
-    page.options_summary = _options_summary(options)
+    page.options_summary = _options_summary(
+        options, hide_layout=page.role == SYNC_ROLE_TARGET and config.selection is not None
+        and config.selection.kind == SELECTION_SCRIPT)
     page.where_summary = _where_summary(session, page)
     page.summary = _summary(page)
     page.items_summary = items_summary(page.counts, config.role, page.folder_target)
     return page
 
 
-def _options_summary(options: list[OptionField]) -> str | None:
+def _options_summary(options: list[OptionField], *, hide_layout: bool = False) -> str | None:
     """The options in one line, for the collapsed section: the folder, then each
     choice's label."""
     parts = []
     for option in options:
+        if hide_layout and option.key == "layout":
+            continue
         if option.type == OPTION_LOCAL_FOLDER and option.value:
             parts.append(display_path(option.value))
         elif option.type in REMOTE_TYPES and remote_value_label(option.value):
@@ -708,8 +712,20 @@ def init_sync_routes(app: Flask) -> None:
     @app.route("/utilities/automations/<slug>/sync/test", methods=["POST"])
     def sync_test(slug: str):
         automation = _require_sync(slug)
-        payload = asdict(preview_sync(db.session, automation))
+        params = request.get_json(silent=True) or {}
+        if not isinstance(params, dict):
+            params = {}
+        page = params.get("page", 0)
+        page_size = params.get("page_size", PREVIEW_PAGE_SIZE)
+        page = page if isinstance(page, int) and not isinstance(page, bool) else 0
+        page_size = page_size if isinstance(page_size, int) and not isinstance(page_size, bool) else PREVIEW_PAGE_SIZE
+        preview = preview_sync(db.session, automation, page, page_size)
+        payload = asdict(preview)
         payload["problem_text"] = _preview_problem_text(payload["problem"])
+        payload["pagination_html"] = render_template("utilities/sync_test_pager.html", pagination={
+            "current_page": preview.current_page, "total_items": preview.total_items,
+            "page_size": preview.page_size, "page_sizes": PREVIEW_PAGE_SIZES,
+        })
         return jsonify(payload)
 
 

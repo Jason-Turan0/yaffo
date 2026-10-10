@@ -1,4 +1,4 @@
-{% macro htmx_pagination(pagination, hx_endpoint, hx_target, method="POST", hx_swap="outerHTML") %}
+{% macro htmx_pagination(pagination, hx_endpoint, hx_target, method="POST", hx_swap="outerHTML", client=false) %}
     {% set current_page = pagination.current_page %}
     {% set total_items = pagination.total_items %}
     {% set page_size = pagination.page_size %}
@@ -26,11 +26,11 @@
                         name="page-size"
                         class="searchable-select"
                         data-search-disabled
-                        {% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
-                        hx-target="{{ hx_target }}"
-                        hx-swap="{{ hx_swap }}"
+                        {% if client %}data-pagination-size
+                        {% else %}{% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
+                        hx-target="{{ hx_target }}" hx-swap="{{ hx_swap }}"
                         hx-include="closest form"
-                        hx-vals='js:{"page": 0, "page-size": event.target.value}'>
+                        hx-vals='js:{"page": 0, "page-size": event.target.value}'{% endif %}>
                     {% for size in page_sizes %}
                         <option value="{{ size }}"
                                 {% if size == page_size %}selected{% endif %}>
@@ -42,22 +42,22 @@
 
             <div class="page-navigation">
                 <button type="button" data-icon="page-first" aria-label="{{ _('First') }}"
-                        {% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
-                        hx-target="{{ hx_target }}"
-                        hx-swap="{{ hx_swap }}"
+                        {% if client %}data-pagination-page="0"
+                        {% else %}{% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
+                        hx-target="{{ hx_target }}" hx-swap="{{ hx_swap }}"
                         hx-include="closest form"
-                        hx-vals='{"page": 0, "page-size": {{ page_size }}}'
+                        hx-vals='{"page": 0, "page-size": {{ page_size }}}'{% endif %}
                         class="page-btn {% if current_page == 0 %}disabled{% endif %}"
                         {% if current_page == 0 %}disabled{% endif %}>
                     <span class="page-btn-label">&laquo; {{ _("First") }}</span>
                 </button>
 
                 <button type="button" data-icon="page-previous" aria-label="{{ _('Previous') }}"
-                        {% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
-                        hx-target="{{ hx_target }}"
-                        hx-swap="{{ hx_swap }}"
+                        {% if client %}data-pagination-page="{{ current_page - 1 }}"
+                        {% else %}{% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
+                        hx-target="{{ hx_target }}" hx-swap="{{ hx_swap }}"
                         hx-include="closest form"
-                        hx-vals='{"page": {{ current_page - 1 }}, "page-size": {{ page_size }}}'
+                        hx-vals='{"page": {{ current_page - 1 }}, "page-size": {{ page_size }}}'{% endif %}
                         class="page-btn {% if current_page == 0 %}disabled{% endif %}"
                         {% if current_page == 0 %}disabled{% endif %}>
                     <span class="page-btn-label">&lsaquo; {{ _("Previous") }}</span>
@@ -70,22 +70,22 @@
             </span>
 
                 <button type="button" data-icon="page-next" aria-label="{{ _('Next') }}"
-                        {% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
-                        hx-target="{{ hx_target }}"
-                        hx-swap="{{ hx_swap }}"
+                        {% if client %}data-pagination-page="{{ current_page + 1 }}"
+                        {% else %}{% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
+                        hx-target="{{ hx_target }}" hx-swap="{{ hx_swap }}"
                         hx-include="closest form"
-                        hx-vals='{"page": {{ current_page + 1 }}, "page-size": {{ page_size }}}'
+                        hx-vals='{"page": {{ current_page + 1 }}, "page-size": {{ page_size }}}'{% endif %}
                         class="page-btn {% if current_page >= total_pages-1 %}disabled{% endif %}"
                         {% if current_page >= total_pages - 1 %}disabled{% endif %}>
                     <span class="page-btn-label">{{ _("Next") }} &rsaquo;</span>
                 </button>
 
                 <button type="button" data-icon="page-last" aria-label="{{ _('Last') }}"
-                        {% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
-                        hx-target="{{ hx_target }}"
-                        hx-swap="{{ hx_swap }}"
+                        {% if client %}data-pagination-page="{{ total_pages - 1 }}"
+                        {% else %}{% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
+                        hx-target="{{ hx_target }}" hx-swap="{{ hx_swap }}"
                         hx-include="closest form"
-                        hx-vals='{"page": {{ total_pages - 1 }}, "page-size": {{ page_size }}}'
+                        hx-vals='{"page": {{ total_pages - 1 }}, "page-size": {{ page_size }}}'{% endif %}
                         class="page-btn {% if current_page >= total_pages - 1 %}disabled{% endif %}"
                         {% if current_page >= total_pages - 1 %}disabled{% endif %}>
                     <span class="page-btn-label">{{ _("Last") }} &raquo;</span>
