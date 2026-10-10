@@ -36,6 +36,7 @@ from yaffo.i18n import DEFAULT_LOCALE, get_saved_locale
 from yaffo.logging_config import get_logger
 from yaffo.site_agents import llm_config
 from yaffo.site_agents.agent import create_automation_builder_agent
+from yaffo.site_agents.common.history import builder_history
 from yaffo.site_agents.automation.prompt_generator.automation_user_prompt import build_automation_user_message
 
 logger = get_logger(__name__, 'background_tasks')
@@ -94,8 +95,9 @@ def run_automation_generation(
         if automation.sync:
             column = sync_repository.load_sync(automation)
             selector_mode = bool(column.config.selection and column.config.selection.kind == SELECTION_SCRIPT)
+        history = builder_history((m.type, m.content) for m in automation.messages)
         agent = create_automation_builder_agent(slug, model=model, api_key=api_key, session=session,
-                                                selector_mode=selector_mode)
+                                                selector_mode=selector_mode, history=history)
         for event in agent.run_events(user_message, should_cancel=should_cancel):
             if event.type == "assistant":
                 repo.add_message(session, automation_id, CONVERSATION_TYPE_ASSISTANT, event.text)

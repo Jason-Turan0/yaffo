@@ -4,6 +4,10 @@ the values a sync stores in `config.options`.
 Each option has a `type`, a `label`, and optionally `help`, `default`, `required`,
 and (for `select`) `choices: [{value, label}]`. `local_folder` is host-native only
 (built-in adapters): an absolute folder path picked with the native folder picker.
+
+A remote value is `{id, label}`, picked from the service. A `remote_collection` that
+declares `create: True` may instead hold `{label, new: True}`: a collection the user
+named, which the adapter creates on its first run.
 """
 from __future__ import annotations
 
@@ -21,6 +25,7 @@ OPTION_TYPES = (OPTION_STRING, OPTION_INT, OPTION_BOOL, OPTION_SELECT, OPTION_LO
                 OPTION_REMOTE_FOLDER, OPTION_REMOTE_COLLECTION)
 
 MAX_STRING_LENGTH = 1000
+MAX_NEW_NAME_LENGTH = 200
 
 
 class OptionError(ValueError):
@@ -65,6 +70,12 @@ def _coerce(key: str, spec: dict, value: Any) -> Any:
         if isinstance(value, dict) and set(value) == {"id", "label"} \
                 and isinstance(value["id"], str) and isinstance(value["label"], str):
             return dict(value)
+        if spec.get("create") and isinstance(value, dict) and set(value) == {"label", "new"} \
+                and value["new"] is True and isinstance(value["label"], str):
+            name = value["label"].strip()
+            if not name or len(name) > MAX_NEW_NAME_LENGTH:
+                raise OptionError(key, "bad_new_name", f"{key} needs a name of at most {MAX_NEW_NAME_LENGTH} characters")
+            return {"label": name, "new": True}
         raise OptionError(key, "not_remote_value", f"{key} must be picked from the service")
     raise OptionError(key, "unknown_type", f"{key} has an unknown option type {kind!r}")
 

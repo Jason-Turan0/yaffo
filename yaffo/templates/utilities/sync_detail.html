@@ -57,12 +57,19 @@
                 <input type="hidden" name="{{ field.key }}" value="{{ field.value | tojson if field.value else '' }}">
                 <div class="sync-folder-input">
                     <input type="text" id="sync-option-{{ field.key }}" class="sync-remote-value" readonly
-                           value="{{ field.value.label if field.value else '' }}"
+                           value="{{ (_('%(name)s (new)', name=field.value.label) if field.value.new else field.value.label) if field.value else '' }}"
                            placeholder="{{ _('Nothing chosen yet') }}" data-remote-open>
                     <button type="button" class="btn-secondary" data-icon="folder" data-remote-open>{{ _("Choose…") }}</button>
                 </div>
                 <div class="sync-picker" data-remote-picker hidden>
                     <nav class="sync-picker-crumbs" aria-label="{{ _('Folder path') }}" data-remote-crumbs></nav>
+                    {% if field.create %}
+                        <div class="sync-picker-new">
+                            <label for="sync-new-{{ field.key }}">{{ _("Or name a new one") }}</label>
+                            <input type="text" id="sync-new-{{ field.key }}" maxlength="200" data-remote-new-name>
+                            <button type="button" class="btn-secondary btn-sm" data-remote-new>{{ _("Use this name") }}</button>
+                        </div>
+                    {% endif %}
                     <ul class="sync-picker-list" data-remote-list></ul>
                     <p class="hint-text sync-picker-status" data-remote-status aria-live="polite"></p>
                     <div class="sync-picker-actions">

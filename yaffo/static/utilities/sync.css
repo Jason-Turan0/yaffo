@@ -538,6 +538,20 @@ span.sync-picker-name[data-icon]::before {
     flex: 1;
 }
 
+.sync-picker-new {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.sync-picker-new input {
+    flex: 1;
+    min-width: 12rem;
+}
+
 /* ---- review before enabling a web sync ---- */
 
 .sync-review-terms {

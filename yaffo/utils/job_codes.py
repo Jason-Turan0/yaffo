@@ -59,7 +59,7 @@ def load_job_data(raw: str | None) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
-def with_problem(raw: str | None, code: str, **params: Any) -> str:
+def with_problem(raw: str | None, code: str, /, **params: Any) -> str:
     """`raw` job_data with a problem recorded on it, keeping everything else."""
     data = load_job_data(raw)
     data["problem"] = code

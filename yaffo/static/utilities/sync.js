@@ -64,7 +64,8 @@ const syncEl = (tag, text, className) => {
 /**
  * One remote option's picker: a breadcrumb of opened folders, the folders inside the
  * current one, and Choose. Choosing stores {id, label} (the label is the breadcrumb
- * path) in the option's hidden input and saves the options form.
+ * path) in the option's hidden input and saves the options form. A collection that
+ * can be created also offers a name field, which stores {label, new: true}.
  * @param {HTMLElement} root
  * @param {Pick<I18nService, 't'>} i18n
  */
@@ -189,6 +190,26 @@ const initRemoteOption = (root, i18n) => {
     });
     more.addEventListener('click', () => void load(false));
     chooseHere.addEventListener('click', () => { if (path.length) choose(path); });
+
+    const newName = root.querySelector('[data-remote-new-name]');
+    const useNewName = root.querySelector('[data-remote-new]');
+    if (newName instanceof HTMLInputElement && useNewName) {
+        const chooseNew = () => {
+            const label = newName.value.trim();
+            if (!label) return;
+            input.value = JSON.stringify({ label, new: true });
+            if (value instanceof HTMLInputElement) value.value = label;
+            picker.hidden = true;
+            const form = input.form;
+            if (form) form.requestSubmit();
+        };
+        useNewName.addEventListener('click', chooseNew);
+        newName.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            chooseNew();
+        });
+    }
 };
 
 /**

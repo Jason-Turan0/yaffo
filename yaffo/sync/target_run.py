@@ -114,6 +114,7 @@ class TargetRun:
         self.started = time.monotonic()
         self.scratch = Path(tempfile.mkdtemp(prefix="yaffo-sync-", dir=run.scratch_dir))
         self.client = None
+        self.to_send = 0
 
     # ---- helpers ----------------------------------------------------------
 
@@ -292,6 +293,8 @@ class TargetRun:
             if item is not None:
                 pending.append((row, item))
         self.commit_runtime()
+        self.to_send = len(pending)
+        self.report_progress()
         for batch in self.batches(pending):
             if self.out_of_time():
                 for row, _ in batch:
@@ -352,8 +355,13 @@ class TargetRun:
             row.details = details or None
             self.counters.sent += 1
         self.apply_hook_error(envelope, [row for row, _ in by_key.values()])
+        self.report_progress()
+        logger.info(f"sync '{self.automation.slug}' sent {self.counters.sent} and failed "
+                    f"{self.counters.failed} of {self.to_send}")
+
+    def report_progress(self) -> None:
         if self.run.on_progress:
-            self.run.on_progress(self.counters.sent + self.counters.failed, 0)
+            self.run.on_progress(self.counters.sent + self.counters.failed, self.to_send)
 
     # ---- the run -----------------------------------------------------------------
 

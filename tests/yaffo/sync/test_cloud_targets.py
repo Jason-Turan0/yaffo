@@ -14,6 +14,7 @@ from yaffo.sync.adapter_static import analyze_adapter
 from yaffo.sync import access, setup
 from yaffo.sync.adapters import load_adapter
 from yaffo.sync.preset_seed import ensure_presets
+from yaffo.sync.options import OptionError, validate_options
 from yaffo.sync.schemas import Selection
 from yaffo.sync.target_run import run_target
 from yaffo.db.models import AlbumItem, SyncAdapter, SYNC_ITEM_PENDING, SYNC_ITEM_SENT
@@ -124,6 +125,10 @@ class GoogleService:
                 if item["album_id"] == kwargs["json"]["albumId"]]}}
         if url.endswith(":batchRemoveMediaItems"):
             ids = set(kwargs["json"]["mediaItemIds"])
+            album_id = url.rsplit("/", 1)[1].split(":")[0]
+            # Like Google: one item not in the album rejects the whole batch.
+            if ids - {item["id"] for item in self.media if item["album_id"] == album_id}:
+                return {"status": 400, "json": {"error": {"message": "Invalid media item ID."}}}
             for item in self.media:
                 if item["id"] in ids:
                     item["album_id"] = None
@@ -169,6 +174,62 @@ def test_google_target_removes_membership_after_album_state_was_lost():
     assert removed["results"] == [{"key": "42"}]
     assert removed["state_patch"] == {"albums": {"Family": "album-1"}}
     assert service.media[0]["album_id"] is None
+
+
+def test_google_target_counts_items_already_gone_from_the_album_as_removed():
+    code = (PRESETS / "google_photos_target.star").read_text()
+    hooks = analyze_adapter(code).metadata["hooks"]
+    service = GoogleService()
+    call = HookCall(code, service)
+    items = [{"key": str(key), "media_item_id": key, "target": "Family", "caption": "",
+              "filename": f"photo__yaffo_{key}.jpg", "mime": "image/jpeg", "size": 10} for key in (1, 2)]
+    call.call("push", hooks, items, {"options": {}, "state": {}, "run": {}})
+    service.media[0]["album_id"] = None   # deleted in Google Photos by the user
+
+    rows = [{"key": str(key), "remote_id": f"media-{key}", "target": "Family", "details": {}} for key in (1, 2)]
+    removed = call.call("remove", hooks, rows, {"options": {}, "state": {"albums": {"Family": "album-1"}},
+                                                "run": {}})
+
+    assert removed["results"] == [{"key": "1"}, {"key": "2"}]
+    assert "error" not in removed
+    assert service.media[1]["album_id"] is None
+
+
+def test_a_collection_that_can_be_created_accepts_a_new_name():
+    spec = {"album": {"type": "remote_collection", "label": "Album", "create": True}}
+
+    assert validate_options(spec, {"album": {"label": " Trip 2026 ", "new": True}}) == {
+        "album": {"label": "Trip 2026", "new": True}}
+    assert validate_options(spec, {"album": {"id": "a1", "label": "Old"}}) == {"album": {"id": "a1", "label": "Old"}}
+    with pytest.raises(OptionError) as blank:
+        validate_options(spec, {"album": {"label": "  ", "new": True}})
+    assert blank.value.code == "bad_new_name"
+    with pytest.raises(OptionError) as not_offered:
+        validate_options({"album": {"type": "remote_collection", "label": "Album"}},
+                         {"album": {"label": "Trip", "new": True}})
+    assert not_offered.value.code == "not_remote_value"
+
+
+def test_google_target_sends_every_target_to_the_named_new_album():
+    code = (PRESETS / "google_photos_target.star").read_text()
+    hooks = analyze_adapter(code).metadata["hooks"]
+    service = GoogleService()
+    call = HookCall(code, service)
+    options = {"album": {"label": "Trip 2026", "new": True}}
+    items = [{"key": str(key), "media_item_id": key, "target": target, "caption": "",
+              "filename": f"photo__yaffo_{key}.jpg", "mime": "image/jpeg", "size": 10}
+             for key, target in ((1, "Beach"), (2, "Hike"))]
+
+    sent = call.call("push", hooks, items, {"options": options, "state": {}, "run": {}})
+
+    assert service.albums == {"Trip 2026": "album-1"}
+    assert sent["state_patch"] == {"albums": {"Trip 2026": "album-1"}}
+    assert [r["remote_id"] for r in sent["results"]] == ["media-1", "media-2"]
+    # Reconcile reports each item under its own routing target, so pending rows match.
+    found = call.call("list_remote", hooks, None, {
+        "options": options, "state": sent["state_patch"], "run": {},
+        "reconcile_items": [{"target": "Beach"}, {"target": "Hike"}]})
+    assert {(i["remote_id"], i["target"]) for i in found["items"]} >= {("media-1", "Beach"), ("media-2", "Hike")}
 
 
 def test_google_target_run_recovers_pending_upload_without_duplicate(

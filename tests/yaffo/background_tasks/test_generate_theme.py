@@ -13,6 +13,8 @@ from yaffo import themes
 from yaffo.background_tasks.tasks import generate_theme as task
 from yaffo.db import db
 from yaffo.db.models import (
+    CONVERSATION_TYPE_ASSISTANT,
+    CONVERSATION_TYPE_USER,
     PAGE_VERSION_STATUS_FAILED,
     PAGE_VERSION_STATUS_IN_PROGRESS,
     PAGE_VERSION_STATUS_READY,
@@ -181,3 +183,19 @@ class TestProgressLabelsCoverAgentTools:
     def test_every_agent_tool_has_a_progress_label(self):
         missing = self._agent_tool_names() - set(task._TOOL_STATUS)
         assert not missing, f"_TOOL_STATUS is missing progress text for: {sorted(missing)}"
+
+
+def test_a_follow_up_sends_the_earlier_turns(session, theme, monkeypatch):
+    seen = {}
+
+    def agent(*args, **kwargs):
+        seen["history"] = kwargs.get("history")
+        return _FakeAgent([AgentEvent("done")])
+    monkeypatch.setattr(task, "create_theme_builder_agent", agent)
+    themes.add_theme_message(theme, CONVERSATION_TYPE_USER, "neon colors", session)
+    themes.add_theme_message(theme, CONVERSATION_TYPE_ASSISTANT, "Went with pink and cyan.", session)
+    themes.add_theme_message(theme, CONVERSATION_TYPE_USER, "darker", session)
+
+    task.run_theme_generation(session, theme, "darker", should_cancel=_no_cancel)
+
+    assert seen["history"] == [("user", "neon colors"), ("assistant", "Went with pink and cyan.")]

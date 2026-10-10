@@ -76,6 +76,7 @@ class OptionField:
     value: Any
     choices: list[dict]
     problem: str | None = None
+    create: bool = False              # remote_collection: the picker offers a new, named one
 
 
 @dataclass(frozen=True)
@@ -159,6 +160,8 @@ REMOTE_TYPES = (OPTION_REMOTE_FOLDER, OPTION_REMOTE_COLLECTION)
 
 
 def remote_value_label(value: Any) -> str | None:
+    if isinstance(value, dict) and value.get("new"):
+        return gettext("%(name)s (new)", name=value.get("label"))
     if isinstance(value, dict):
         return value.get("label")
     return None
@@ -178,7 +181,7 @@ def _option_fields(adapter: LoadedAdapter, values: dict, session: Session) -> li
             help=_option_label(spec["help"]) if spec.get("help") else None,
             required=bool(spec.get("required")), value=value if value is not None else spec.get("default"),
             choices=[{"value": c["value"], "label": _option_label(c["label"])} for c in spec.get("choices", [])],
-            problem=problem,
+            problem=problem, create=bool(spec.get("create")),
         ))
     return fields
 
@@ -768,6 +771,7 @@ def _error_text(code: str | None) -> str | None:
         "required": gettext("Fill in the required fields."),
         "not_absolute": gettext("Choose a folder with the folder picker."),
         "not_remote_value": gettext("Choose the folder with Choose…"),
+        "bad_new_name": gettext("Give the new album a name of at most 200 characters."),
         "unknown_layout": gettext("Choose how to arrange the photos."),
         "sign_in_failed": gettext("The sign-in didn't complete. Try again."),
         "account_unknown": gettext("That account isn't available any more."),

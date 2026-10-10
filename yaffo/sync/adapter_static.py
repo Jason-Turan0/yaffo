@@ -60,6 +60,7 @@ _OPTION_SCHEMA = {
         "label": {"type": "string", "minLength": 1},
         "help": {"type": "string"},
         "required": {"type": "boolean"},
+        "create": {"type": "boolean"},                 # remote_collection: offer "New …" with a name
         "default": {},
         "choices": {"type": "array", "items": {
             "type": "object", "required": ["value", "label"], "additionalProperties": False,
@@ -238,6 +239,10 @@ class _Analyzer:
                   and spec.get("type") in (OPTION_REMOTE_FOLDER, OPTION_REMOTE_COLLECTION)]
         if remote and "choices" not in hooks:
             self.problem("choices_missing", f"option {remote[0]!r} needs a 'choices' hook", self.adapter_node)
+        for key, spec in options.items():
+            if isinstance(spec, dict) and spec.get("create") and spec.get("type") != OPTION_REMOTE_COLLECTION:
+                self.problem("create_not_collection", f"option {key!r}: only a remote_collection can offer "
+                             "a new one", self.adapter_node)
         if "choices" in hooks and not remote:
             self.problem("choices_unused", "a 'choices' hook needs a remote_folder or remote_collection option",
                          self.adapter_node)

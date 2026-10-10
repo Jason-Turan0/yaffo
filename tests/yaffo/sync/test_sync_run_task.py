@@ -10,6 +10,7 @@ from yaffo.db.models import (
 )
 from yaffo.db.repositories import media_repository
 from yaffo.sync import deletes, setup
+from yaffo.sync.run_common import RunResult
 from yaffo.sync.schemas import Selection
 from yaffo.utils import job_codes as codes
 from yaffo.utils.index_photos import delete_orphaned_media_items
@@ -39,6 +40,21 @@ def test_a_run_is_recorded_as_a_completed_job_with_its_counts(session, target):
     assert job.completed_at is not None
 
 
+def test_a_running_job_shows_its_progress_between_batches(session, target, monkeypatch):
+    seen: list[tuple[int, int]] = []
+    write = sync_run._write_progress
+
+    def spy(session_, job_id, done, total):
+        write(session_, job_id, done, total)
+        job = session_.get(Job, job_id)
+        seen.append((job.completed_count, job.task_count))
+    monkeypatch.setattr(sync_run, "_write_progress", spy)
+
+    sync_run.run_and_record_sync(session, target, "run-1")
+
+    assert seen == [(0, 1), (1, 1)]
+
+
 def test_a_setup_change_shows_as_needing_consent(session, target, tmp_path):
     other = tmp_path / "other"
     other.mkdir()
@@ -59,6 +75,18 @@ def test_an_engine_crash_fails_the_job_instead_of_the_worker(session, target, mo
 
     assert job.status == JOB_STATUS_FAILED and job.error == "disk on fire"
     assert json.loads(job.job_data)["problem"] == codes.PROBLEM_TASK_ERROR
+
+
+def test_a_run_the_service_stopped_records_why(session, target, monkeypatch):
+    stopped = RunResult(outcome=codes.OUTCOME_SYNC_SENT, problem=codes.PROBLEM_SYNC_STOPPED,
+                        problem_params={"code": "retry_later"}, error="graph 503")
+    monkeypatch.setattr(sync_run, "run_sync", lambda *args: stopped)
+
+    job = sync_run.run_and_record_sync(session, target, "run-1")
+
+    data = json.loads(job.job_data)
+    assert (data["problem"], data["problem_params"]) == (codes.PROBLEM_SYNC_STOPPED, {"code": "retry_later"})
+    assert job.error == "graph 503"
 
 
 def test_a_finished_run_is_not_repeated_on_a_queue_retry(session, target):

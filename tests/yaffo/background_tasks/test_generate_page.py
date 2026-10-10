@@ -212,3 +212,19 @@ class TestProgressLabelsCoverAgentTools:
     def test_every_agent_tool_has_a_progress_label(self):
         missing = self._agent_tool_names() - set(task._TOOL_STATUS)
         assert not missing, f"_TOOL_STATUS is missing progress text for: {sorted(missing)}"
+
+
+def test_a_follow_up_sends_the_earlier_turns(session, version, monkeypatch):
+    seen = {}
+
+    def agent(*args, **kwargs):
+        seen["history"] = kwargs.get("history")
+        return _FakeAgent([AgentEvent("done")])
+    monkeypatch.setattr(task, "create_page_builder_agent", agent)
+    repo.add_version_message(session, version.id, "user", "make a gallery")
+    repo.add_version_message(session, version.id, "assistant", "Here is a gallery.")
+    repo.add_version_message(session, version.id, "user", "add captions")
+
+    task.run_generation(session, version.id, "add captions", should_cancel=_no_cancel)
+
+    assert seen["history"] == [("user", "make a gallery"), ("assistant", "Here is a gallery.")]

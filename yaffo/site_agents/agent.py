@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterator, Optional
+from typing import Callable, Iterator, Optional, Sequence
 
 from sqlalchemy.orm import Session
 
@@ -204,6 +204,7 @@ def create_page_builder_agent(
     api_key: str,
     session: Session,
     max_iterations: int = _MAX_ITERATIONS,
+    history: Sequence[tuple[str, str]] = (),
 ) -> Agent:
     """Wire the agent for a working version: data-query + widget tools, the stable
     system prompt, and an Anthropic client. The widget tool persists directly into
@@ -224,6 +225,7 @@ def create_page_builder_agent(
         providers=providers,
         api_key=api_key,
     )
+    client.load_history(list(history))
     return Agent(client, providers, max_iterations=max_iterations)
 
 def create_theme_builder_agent(
@@ -233,6 +235,7 @@ def create_theme_builder_agent(
     api_key: str,
     session: Session,
     max_iterations: int = _MAX_ITERATIONS,
+    history: Sequence[tuple[str, str]] = (),
 ) -> Agent:
     """Wire the agent for a custom theme: the write_theme tool (scoped to `slug`, which
     persists the working draft via `session`) and the stable theme-builder system
@@ -249,6 +252,7 @@ def create_theme_builder_agent(
         providers=providers,
         api_key=api_key,
     )
+    client.load_history(list(history))
     return Agent(client, providers, max_iterations=max_iterations)
 
 def create_automation_builder_agent(
@@ -258,6 +262,7 @@ def create_automation_builder_agent(
     api_key: str,
     session: Session,
     max_iterations: int = _MAX_ITERATIONS,
+    history: Sequence[tuple[str, str]] = (),
     selector_mode: bool = False,
 ) -> Agent:
     """Wire the agent for a custom automation: the write_automation_code tool (scoped
@@ -286,6 +291,7 @@ def create_automation_builder_agent(
         providers=providers,
         api_key=api_key,
     )
+    client.load_history(list(history))
     return Agent(client, providers, max_iterations=max_iterations)
 
 

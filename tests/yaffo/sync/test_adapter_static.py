@@ -86,6 +86,9 @@ def test_metadata_rules():
     assert "choices_missing" in check(
         '{"contract": 1, "role": "source", "provider": "onedrive", "title": "T", '
         '"options": {"f": {"type": "remote_folder", "label": "F"}}, "hooks": {"list_page": list_page}}')
+    assert "create_not_collection" in check(
+        '{"contract": 1, "role": "source", "provider": "onedrive", "title": "T", '
+        '"options": {"f": {"type": "string", "label": "F", "create": True}}, "hooks": {"list_page": list_page}}')
     assert "unknown_provider" in check(
         '{"contract": 1, "role": "source", "provider": "dropbox", "title": "T", "hooks": {"list_page": list_page}}')
     assert "custom_not_supported" in check(

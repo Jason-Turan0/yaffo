@@ -33,6 +33,7 @@ from yaffo.i18n import DEFAULT_LOCALE, get_saved_locale
 from yaffo.logging_config import get_logger
 from yaffo.site_agents import llm_config
 from yaffo.site_agents.agent import create_page_builder_agent
+from yaffo.site_agents.common.history import builder_history
 from yaffo.site_agents.page.prompt_generator import build_user_message
 from yaffo.site_agents.serializers import widget_draft
 
@@ -94,7 +95,9 @@ def run_generation(
     )
 
     try:
-        agent = create_page_builder_agent(version_id, model=model, api_key=api_key, session=session)
+        history = builder_history((m.type, m.content) for m in version.messages)
+        agent = create_page_builder_agent(version_id, model=model, api_key=api_key, session=session,
+                                          history=history)
         for event in agent.run_events(user_message, should_cancel=should_cancel):
             if event.type == "assistant":
                 page_repo.add_version_message(session, version_id, CONVERSATION_TYPE_ASSISTANT, event.text)

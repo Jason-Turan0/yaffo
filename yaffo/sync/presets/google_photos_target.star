@@ -7,7 +7,12 @@ def _error(r):
         return {"code": "auth", "message": "Google Photos refused the account"}
     if status == 429 or status == 503:
         return {"code": "rate_limited", "message": "Google Photos is busy"}
-    return {"code": "retry_later", "message": r.get("error") or "Google Photos request failed"}
+    detail = r.get("error")
+    if not detail:
+        body = r.get("json") or {}
+        detail = (body.get("error") or {}).get("message") if type(body) == "dict" else None
+    return {"code": "retry_later",
+            "message": "Google Photos request failed (%d): %s" % (status, detail or (r.get("text") or "")[:300])}
 
 def _albums(ctx):
     return dict(ctx["state"].get("albums") or {})
@@ -29,6 +34,14 @@ def _discover(targets):
         if not token:
             return {"albums": found}
     return {"error": {"code": "retry_later", "message": "too many Google Photos albums"}}
+
+def _title(target, ctx):
+    """The Google album a routing target goes to: the new album the user named, or
+    an album titled after the target."""
+    pinned = ctx["options"].get("album")
+    if pinned and pinned.get("new"):
+        return pinned["label"]
+    return target
 
 def _album(target, albums, ctx):
     pinned = ctx["options"].get("album")
@@ -54,7 +67,7 @@ def push(batch, ctx):
     results = []
     grouped = {}
     for item in batch:
-        grouped.setdefault(item["target"], []).append(item)
+        grouped.setdefault(_title(item["target"], ctx), []).append(item)
     for target, items in grouped.items():
         album = _album(target, albums, ctx)
         if album.get("error"):
@@ -91,7 +104,7 @@ def push(batch, ctx):
 def remove(items, ctx):
     albums = _albums(ctx)
     pinned = ctx["options"].get("album")
-    missing = [item["target"] for item in items if item["target"] not in albums
+    missing = [_title(item["target"], ctx) for item in items if _title(item["target"], ctx) not in albums
                and not (item.get("details") or {}).get("album_id")]
     if missing and not (pinned and pinned.get("id")):
         discovered = _discover(missing)
@@ -101,7 +114,7 @@ def remove(items, ctx):
     grouped = {}
     results = []
     for item in items:
-        album_id = (item.get("details") or {}).get("album_id") or albums.get(item["target"])
+        album_id = (item.get("details") or {}).get("album_id") or albums.get(_title(item["target"], ctx))
         if not album_id and pinned:
             album_id = pinned.get("id")
         if album_id:
@@ -112,9 +125,19 @@ def remove(items, ctx):
         ids = [member["remote_id"] for member in members if member.get("remote_id")]
         if not ids:
             continue
-        r = web_request(CONNECTION, "POST",
-                        url_template(API + "/albums/{id}:batchRemoveMediaItems", id=album_id),
-                        json={"mediaItemIds": ids})
+        r = _remove_from_album(album_id, ids)
+        if r["status"] == 400:
+            # Google rejects the whole batch if any item has already left the album
+            # (deleted in Google Photos, say). Removal is idempotent: those count as
+            # removed, and only the items still there are removed.
+            listed = _album_members(album_id)
+            if listed.get("error"):
+                return {"results": results, "state_patch": {"albums": albums}, "error": listed["error"]}
+            present = [i for i in ids if i in listed["members"]]
+            if present:
+                r = _remove_from_album(album_id, present)
+            else:
+                r = {"status": 200}
         if r["status"] == 200 or r["status"] == 204 or r["status"] == 404:
             for member in members:
                 results.append({"key": member["key"]})
@@ -122,14 +145,38 @@ def remove(items, ctx):
             return {"results": results, "state_patch": {"albums": albums}, "error": _error(r)}
     return {"results": results, "state_patch": {"albums": albums}}
 
+def _remove_from_album(album_id, ids):
+    return web_request(CONNECTION, "POST",
+                       url_template(API + "/albums/{id}:batchRemoveMediaItems", id=album_id),
+                       json={"mediaItemIds": ids})
+
+def _album_members(album_id):
+    members = {}
+    token = None
+    for _ in range(200):
+        query = {"albumId": album_id, "pageSize": 100}
+        if token:
+            query["pageToken"] = token
+        r = web_request(CONNECTION, "POST", API + "/mediaItems:search", json=query)
+        if r["status"] != 200:
+            return {"error": _error(r)}
+        for item in r["json"].get("mediaItems", []):
+            members[item["id"]] = True
+        token = r["json"].get("nextPageToken")
+        if not token:
+            return {"members": members}
+    return {"error": {"code": "fatal", "message": "Google Photos album is too large to check"}}
+
 def list_remote(cursor, ctx):
     albums = _albums(ctx)
     pinned = ctx["options"].get("album")
     if pinned and pinned.get("id"):
         for item in ctx.get("reconcile_items") or []:
             albums[item["target"]] = pinned["id"]
-    missing = [item["target"] for item in ctx.get("reconcile_items") or []
-               if item["target"] not in albums]
+    targets_of = {}
+    for item in ctx.get("reconcile_items") or []:
+        targets_of.setdefault(_title(item["target"], ctx), {})[item["target"]] = True
+    missing = [title for title in targets_of if title not in albums]
     if missing:
         discovered = _discover(missing)
         if discovered.get("error"):
@@ -153,9 +200,10 @@ def list_remote(cursor, ctx):
         return {"items": [], "next_cursor": next_cursor, "state_patch": {"albums": albums}}
     if r["status"] != 200:
         return {"error": _error(r)}
-    found = [{"remote_id": item["id"], "target": target, "filename": item.get("filename"),
+    found = [{"remote_id": item["id"], "target": routed, "filename": item.get("filename"),
               "details": {"album_id": albums[target]}}
-             for item in r["json"].get("mediaItems", [])]
+             for item in r["json"].get("mediaItems", [])
+             for routed in (targets_of.get(target) or {target: True}).keys()]
     next_page = r["json"].get("nextPageToken")
     next_cursor = (str(index) + "|" + next_page) if next_page else (
         str(index + 1) + "|" if index + 1 < len(keys) else None)
@@ -181,8 +229,8 @@ ADAPTER = {
     "scopes": ["https://www.googleapis.com/auth/photoslibrary.appendonly",
                "https://www.googleapis.com/auth/photoslibrary.readonly.appcreateddata",
                "https://www.googleapis.com/auth/photoslibrary.edit.appcreateddata"],
-    "options": {"album": {"type": "remote_collection", "label": "Google Photos album",
-                          "help": "Only albums created by Yaffo can be used. Leave empty to make one for the selection."}},
+    "options": {"album": {"type": "remote_collection", "label": "Google Photos album", "create": True,
+                          "help": "Choose an album Yaffo created, or name a new one. Leave empty to name it after the selection."}},
     "capabilities": {"max_batch": 50, "remove": True, "reconcile": True, "targets": "many",
                      "accepts": {"types": ["image/avif", "image/bmp", "image/gif", "image/heic",
                                            "image/heif", "image/jpeg", "image/png", "image/tiff",

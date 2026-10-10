@@ -12,7 +12,9 @@ from sqlalchemy.orm import Session
 from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.utils import SessionFactory
 from yaffo.db.models import Automation, Job, MediaItem, JOB_STATUS_COMPLETED, JOB_STATUS_FAILED
-from yaffo.db.repositories.job_repository import is_job_cancelled, open_run_job, run_job_id
+from yaffo.db.repositories.job_repository import (
+    is_job_cancelled, open_run_job, refresh_estimated_completion, run_job_id,
+)
 from yaffo.logging_config import get_logger
 from yaffo.sync.engine import run_sync
 from yaffo.sync.run_common import RunContext
@@ -41,6 +43,14 @@ def _reindex_items(session: Session, media_item_ids: list[int]) -> None:
         reindex_media_items(session, items)
 
 
+def _write_progress(session: Session, job_id: str, done: int, total: int) -> None:
+    """Show a long run's progress on its Job. Called between batches, after the engine
+    has committed the batch, so this commit carries only the counts."""
+    session.query(Job).filter_by(id=job_id).update({"task_count": total, "completed_count": done})
+    refresh_estimated_completion(session, job_id)
+    session.commit()
+
+
 def run_and_record_sync(session: Session, automation: Automation, job_id: str) -> Job | None:
     job = open_run_job(session, job_id, name=automation.slug, automation_id=automation.id,
                        message=automation.name)
@@ -48,7 +58,8 @@ def run_and_record_sync(session: Session, automation: Automation, job_id: str) -
         logger.info(f"sync '{automation.slug}' run {job_id} already ended; not running it again")
         return None
     run = RunContext(job_id=job.id, index_files=_index_files, reindex_items=_reindex_items,
-                     should_cancel=lambda: is_job_cancelled(session, job.id))
+                     should_cancel=lambda: is_job_cancelled(session, job.id),
+                     on_progress=lambda done, total: _write_progress(session, job.id, done, total))
     try:
         result = run_sync(session, automation.id, run)
     except Exception as e:

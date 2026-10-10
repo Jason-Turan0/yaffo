@@ -34,4 +34,10 @@ Reference material for contributors and agents working in the Yaffo codebase.
 - [Icons](icons.md)
 - [P2P Device Pairing](p2p-sharing.md) - design sketch for peer trust without a
   login system.
+- [Peer Sync](peer-sync.md) - design sketch (proposed): importing from paired
+  devices through the sync engine, and the internal REST API sync workers use to
+  reach the web process's P2P engine.
 - [Video](video.md)
+- [Web Routes and Request Security](web-routes-and-request-security.md) - plan
+  (proposed): an app-wide `Host` and origin check, opening files by id, a small
+  shared `/api/` blueprint, and moving page-specific routes out of `/api/`.
