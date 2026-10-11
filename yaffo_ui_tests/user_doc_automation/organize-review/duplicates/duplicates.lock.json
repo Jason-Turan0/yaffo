@@ -1,6 +1,6 @@
 {
     "page": "organize-review/duplicates",
-    "lastVerifiedSha": "07b05535b0b5fa731d76f750ff66bfb0f364b711",
+    "lastVerifiedSha": "ceea1bc927bca14c2ad2cda6923a546c2aace777",
     "observed": {
         "page": "organize-review/duplicates",
         "urls": [
@@ -10,11 +10,11 @@
             "/themes/classic/theme.css",
             "/utilities/remove-duplicates",
             "/utilities/remove-duplicates-form",
-            "/utilities/remove-duplicates/action-change/e807a864-8575-445d-945b-40600ec7015f",
-            "/utilities/remove-duplicates/execute/e807a864-8575-445d-945b-40600ec7015f",
-            "/utilities/remove-duplicates/results/32d85402-2b3a-456d-9be5-441cbcedf0a5",
-            "/utilities/remove-duplicates/results/9b37754e-866f-43ca-b6b6-a312c953a5bb",
-            "/utilities/remove-duplicates/results/e807a864-8575-445d-945b-40600ec7015f",
+            "/utilities/remove-duplicates/action-change/ce0398c1-8456-46ca-8a6e-b01dcbb319ab",
+            "/utilities/remove-duplicates/execute/ce0398c1-8456-46ca-8a6e-b01dcbb319ab",
+            "/utilities/remove-duplicates/results/c738f689-7b18-41f2-8d69-c22b6684dc67",
+            "/utilities/remove-duplicates/results/ce0398c1-8456-46ca-8a6e-b01dcbb319ab",
+            "/utilities/remove-duplicates/results/e722833a-7fcb-4598-9a78-8003b30e0f11",
             "/utilities/remove-duplicates/start",
             "/utilities/remove-duplicates/toggle-photo"
         ],

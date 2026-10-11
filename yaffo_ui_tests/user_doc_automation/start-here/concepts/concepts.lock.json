@@ -1,6 +1,6 @@
 {
     "page": "start-here/concepts",
-    "lastVerifiedSha": "07b05535b0b5fa731d76f750ff66bfb0f364b711",
+    "lastVerifiedSha": "ceea1bc927bca14c2ad2cda6923a546c2aace777",
     "observed": {
         "page": "start-here/concepts",
         "urls": [
@@ -17,8 +17,8 @@
             "/media/:id/poster",
             "/media/view/:id",
             "/pages/:id",
-            "/pages/:id/widgets/95c9e75269fd413895110f99e26e5912/frame",
-            "/pages/:id/widgets/bb8bbaac65194c6786c16618942d2eb7/frame",
+            "/pages/:id/widgets/1bd07d124c99456ca6d7bcf84affae48/frame",
+            "/pages/:id/widgets/56edee3b55594d438cb306ca399f515e/frame",
             "/people",
             "/placeholder",
             "/settings",
