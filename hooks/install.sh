@@ -11,8 +11,8 @@ echo "Installing git hooks..."
 for hook in "$SCRIPT_DIR"/*; do
     hook_name=$(basename "$hook")
 
-    # Skip this install script
-    if [ "$hook_name" = "install.sh" ]; then
+    # Skip this install script and anything that isn't a hook file
+    if [ "$hook_name" = "install.sh" ] || [ ! -f "$hook" ]; then
         continue
     fi
 
