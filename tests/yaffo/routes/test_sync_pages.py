@@ -2,6 +2,7 @@
 setup sections, consent, Test, Items, the filter screen, and how runs read in the
 run history."""
 import json
+from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
@@ -10,11 +11,13 @@ from PIL import Image
 from yaffo.background_tasks.tasks import sync_run
 from yaffo.db import db
 from yaffo.db.models import (
-    Album, AlbumItem, ApplicationSettings, Automation, AutomationTrigger, MediaItem, SyncAdapter, SyncItem,
-    EVENT_ALBUM_CHANGED, MEDIA_STATUS_INDEXED,
+    Album, AlbumItem, ApplicationSettings, Automation, AutomationTrigger, Job, KnownDevice, MediaItem, SyncAdapter,
+    SyncItem,
+    EVENT_ALBUM_CHANGED, MEDIA_STATUS_INDEXED, SYNC_HANDLER_PEER_SOURCE,
 )
 from yaffo.db.repositories import sync_repository
 from yaffo.routes.utilities.sync_views import build_page
+from yaffo.sync import setup as sync_setup
 
 pytestmark = pytest.mark.unit
 
@@ -89,6 +92,193 @@ def test_sync_detail_embeds_trigger_panel_above_run_history(client, library):
     assert "data-cron-builder" in body
     assert body.index('id="automation-trigger-panel"') < body.index('id="automation-runs"')
     assert 'btn-secondary btn-sm">Edit triggers</span>' not in body
+
+
+def test_peer_device_picker_preserves_json_value_in_html(client, library):
+    class DeviceInputParser(HTMLParser):
+        value: str | None = None
+
+        def handle_starttag(self, tag, attrs):
+            if tag == "input" and ("name", "device") in attrs:
+                self.value = dict(attrs).get("value")
+
+    adapter = SyncAdapter(slug="builtin.peer_source", name="Paired device", role="source",
+                          provider="peer", is_preset=True, handler=SYNC_HANDLER_PEER_SOURCE,
+                          grants=[], doc_domains=[])
+    db.session.add(adapter)
+    db.session.commit()
+    automation = sync_setup.create_sync(db.session, "Import from paired device", adapter.id)
+    device = {"id": "PEER-0001", "label": "Laptop"}
+    sync_setup.set_options(db.session, automation, {"device": device})
+
+    body = client.get(f"/utilities/automations/{automation.slug}").get_data(as_text=True)
+    parser = DeviceInputParser()
+    parser.feed(body)
+
+    assert "Also copy through Yaffo's relay" not in body
+    assert "relay_budget_gb" not in body
+    assert json.loads(parser.value) == device
+    scope = {"id": "folder:photos", "label": "Photos"}
+    response = client.post(f"/utilities/automations/{automation.slug}/sync/options",
+                           data={"device": parser.value, "scope": json.dumps(scope)})
+    assert response.status_code == 302
+    assert "sync_error" not in response.headers["Location"]
+    assert sync_repository.load_sync(automation).config.options["scope"] == scope
+
+
+def test_turning_on_a_peer_import_goes_through_the_review(client, library):
+    adapter = SyncAdapter(slug="builtin.peer_source", name="Paired device", role="source",
+                          provider="peer", is_preset=True, handler=SYNC_HANDLER_PEER_SOURCE,
+                          grants=[], doc_domains=[])
+    db.session.add(adapter)
+    db.session.commit()
+    automation = sync_setup.create_sync(db.session, "Import from Mom", adapter.id)
+    sync_setup.set_options(db.session, automation, {"device": {"id": "PEER-0001", "label": "Mom's laptop"},
+                                                    "scope": {"id": "album:12", "label": "For Mom"}})
+    sync_setup.set_import_root(db.session, automation, MEDIA_DIR_ID, "Imports/Mom", "year_month")
+
+    html = client.get(f"/utilities/automations/{automation.slug}").get_data(as_text=True)
+
+    assert 'id="sync-enable-review"' in html and 'id="syncEnableModal"' in html
+    assert "Mom&#39;s laptop › For Mom" in html and "Only on your network or over a direct connection" in html
+    assert "Changing the device, what it shares, or where photos go" in html
+    assert "Changing the account" not in html
+
+
+def test_a_peer_import_names_the_device_by_its_current_name(client, library):
+    adapter = SyncAdapter(slug="builtin.peer_source", name="Paired device", role="source",
+                          provider="peer", is_preset=True, handler=SYNC_HANDLER_PEER_SOURCE,
+                          grants=[], doc_domains=[])
+    db.session.add_all([adapter, KnownDevice(device_id="PEER-0001", pubkey="key", display_name="Mom's laptop",
+                                             trust_state="trusted")])
+    db.session.commit()
+    automation = sync_setup.create_sync(db.session, "Import from Mom", adapter.id)
+    # Chosen before the pairing had a name: the saved label is the device id.
+    saved = {"id": "PEER-0001", "label": "PEER-0001"}
+    sync_setup.set_options(db.session, automation, {"device": saved, "scope": {"id": "album:12", "label": "For Mom"}})
+    sync_setup.set_import_root(db.session, automation, MEDIA_DIR_ID, "Imports/Mom", "year_month")
+    sync_setup.turn_on(db.session, automation)
+
+    html = client.get(f"/utilities/automations/{automation.slug}").get_data(as_text=True)
+
+    assert "Imports new photos from Mom&#39;s laptop › For Mom" in html
+    assert 'value="Mom&#39;s laptop"' in html
+    assert "PEER-0001 ›" not in html
+    # The saved option (and with it the consent) is untouched.
+    assert sync_repository.load_sync(automation).config.options["device"] == saved
+    assert build_page(db.session, automation).consented
+
+
+def _peer_import(**options) -> Automation:
+    adapter = SyncAdapter(slug="builtin.peer_source", name="Paired device", role="source",
+                          provider="peer", is_preset=True, handler=SYNC_HANDLER_PEER_SOURCE,
+                          grants=[], doc_domains=[])
+    db.session.add(adapter)
+    db.session.commit()
+    automation = sync_setup.create_sync(db.session, "Import from Mom", adapter.id)
+    sync_setup.set_options(db.session, automation, {"device": {"id": "PEER-0001", "label": "Mom's laptop"},
+                                                    "scope": {"id": "album:12", "label": "For Mom"}, **options})
+    sync_setup.set_import_root(db.session, automation, MEDIA_DIR_ID, "Imports/Mom", "year_month")
+    return automation
+
+
+class _FakeP2P:
+    def __init__(self):
+        self.calls = []
+        self.list_files = type("Endpoint", (), {"send": self._list_files})()
+
+    def _list_files(self, device_id, media_dir_id, relative_path, filters, offset=0, limit=200, album_id=None):
+        self.calls.append({"device_id": device_id, "album_id": album_id, "filters": filters, "limit": limit})
+        return {"status": "ok", "total": 2, "files": [
+            {"media_item_id": 41, "name": "a.jpg", "relative_path": "a.jpg", "media_type": "image", "mtime": 1.0,
+             "date_taken": "2024-07-04T18:22:10"},
+            {"media_item_id": 42, "name": "b.jpg", "relative_path": "b.jpg", "media_type": "image", "mtime": 2.0,
+             "date_taken": None},
+        ], "facets": {"years": [2023, 2024], "people": [{"id": 7, "name": "Grandma"}]}}
+
+
+def test_a_peer_import_starts_with_everything_in_the_share(client, library):
+    automation = _peer_import()
+
+    html = client.get(f"/utilities/automations/{automation.slug}").get_data(as_text=True)
+
+    assert 'id="sync-step-import"' in html and "Everything in For Mom" in html
+    assert 'id="sync-import-all" name="kind" value="all" checked' in html
+    assert "All of them" in html  # the review's "Which ones"
+
+
+def test_choosing_a_filter_opens_the_peer_filter_screen(client, library):
+    automation = _peer_import()
+
+    response = client.post(f"/utilities/automations/{automation.slug}/sync/import-filter", data={"kind": "query"})
+
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith(f"/utilities/automations/{automation.slug}/sync/peer-filter")
+
+
+def test_the_peer_filter_screen_filters_the_devices_library(client, library, app, monkeypatch):
+    automation = _peer_import()
+    p2p = _FakeP2P()
+    monkeypatch.setitem(app.extensions, "p2p_service", p2p)
+
+    html = client.get(f"/utilities/automations/{automation.slug}/sync/peer-filter?year=2024&person=7").get_data(
+        as_text=True)
+
+    assert p2p.calls == [{"device_id": "PEER-0001", "album_id": 12, "filters": {"year": 2024, "people": [7]},
+                          "limit": 24}]
+    assert "2 files match" in html and "Grandma" in html
+    assert "/sharing/devices/PEER-0001/preview?media_item_id=41" in html
+    assert "album_id=12" in html  # the tag values come from the device's share
+
+
+def test_importing_the_filtered_photos_saves_the_filter(client, library):
+    automation = _peer_import()
+
+    response = client.post(f"/utilities/automations/{automation.slug}/sync/import-filter?year=2024&person=7",
+                           data={"kind": "query"})
+
+    assert response.status_code == 302 and "sync_error" not in response.headers["Location"]
+    config = sync_repository.load_sync(automation).config
+    assert config.source_filters == {"year": 2024, "people": [7]}
+    html = client.get(f"/utilities/automations/{automation.slug}").get_data(as_text=True)
+    assert "Photos matching a filter" in html and "Only those matching your filters" in html
+    assert 'value="query" checked' in html
+
+
+def test_reopening_the_filter_screen_starts_from_the_saved_filter(client, library):
+    automation = _peer_import()
+    sync_setup.set_import_filters(db.session, automation, {"year": 2024})
+
+    response = client.get(f"/utilities/automations/{automation.slug}/sync/peer-filter")
+
+    assert response.status_code == 302 and "year=2024" in response.headers["Location"]
+
+
+def test_importing_with_no_filter_set_is_refused(client, library):
+    automation = _peer_import()
+
+    response = client.post(f"/utilities/automations/{automation.slug}/sync/import-filter?person-match-type=any",
+                           data={"kind": "query"})
+
+    assert "sync_error=filter_required" in response.headers["Location"]
+    assert sync_repository.load_sync(automation).config.source_filters is None
+
+
+def test_everything_clears_a_saved_filter(client, library):
+    automation = _peer_import()
+    sync_setup.set_import_filters(db.session, automation, {"year": 2024})
+
+    client.post(f"/utilities/automations/{automation.slug}/sync/import-filter", data={"kind": "all"})
+
+    assert sync_repository.load_sync(automation).config.source_filters is None
+
+
+def test_the_import_filter_routes_are_only_for_peer_imports(client, library):
+    automation = _create(client, "import", "Camera card")
+
+    assert client.post(f"/utilities/automations/{automation.slug}/sync/import-filter",
+                       data={"kind": "all"}).status_code == 404
+    assert client.get(f"/utilities/automations/{automation.slug}/sync/peer-filter").status_code == 404
 
 
 def test_the_new_automation_dialog_offers_import_and_send(client, library):
@@ -296,6 +486,23 @@ def test_items_and_run_history_after_a_run(client, mom, outbox):
     assert "Wrote 1 photo to the folder" in page
     # The Items panel folds to its counts.
     assert 'id="sync-items"' in page and "1 written to folder" in page
+
+
+def test_sync_run_history_hides_import_and_index_batches(client, mom, outbox):
+    automation = _ready_target(client, mom, outbox)
+    sync_run.run_and_record_sync(db.session, automation, "run-1")
+    db.session.add_all([
+        Job(id="import-batch", name="import_photos", status="COMPLETED", automation_id=automation.id),
+        Job(id="index-batch", name="index_photos", status="RUNNING", automation_id=automation.id,
+            task_count=200, completed_count=50),
+    ])
+    db.session.commit()
+
+    body = client.get(f"/utilities/automations/{automation.slug}/runs").get_data(as_text=True)
+
+    assert body.count('class="run-history-row') == 1
+    assert "Wrote 1 photo to the folder" in body
+    assert "50 of 200 processed" not in body
 
 
 def test_the_filter_screen_saves_the_filters_as_the_selection(client, mom, outbox):

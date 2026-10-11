@@ -11,6 +11,7 @@ import hashlib
 import os
 import re
 import shutil
+import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,13 +35,35 @@ def temp_path(folder: Path, tag: str | None = None) -> Path:
     return folder / f"{TEMP_PREFIX}{middle}{uuid.uuid4().hex}{TEMP_SUFFIX}"
 
 
-def sweep_temps(folder: Path, tag: str) -> int:
+def stable_temp_path(folder: Path, tag: str, key: str) -> Path:
+    """The same temporary name for the same record every run (a resumable download:
+    its partial sits next to this name until it's complete)."""
+    return folder / f"{TEMP_PREFIX}{tag}-{hashlib.sha1(key.encode('utf-8')).hexdigest()}{TEMP_SUFFIX}"
+
+
+# A resumable download keeps its progress in `<temp>.partial` (+ `.partial.json`)
+# across runs; one nobody resumed for this long is abandoned.
+PARTIAL_MAX_AGE_SECONDS = 3 * 24 * 3600
+PARTIAL_SUFFIXES = (".partial", ".partial.json")
+
+
+def sweep_temps(folder: Path, tag: str, now: float | None = None) -> int:
     """Delete this sync's leftover temporary files under `folder`. Call at run start,
-    when the sync's previous run (one at a time) can't still be writing them."""
+    when the sync's previous run (one at a time) can't still be writing them.
+    Resumable partials are kept until they're PARTIAL_MAX_AGE_SECONDS old."""
     removed = 0
     if not folder.is_dir():
         return 0
-    for leftover in folder.rglob(f"{TEMP_PREFIX}{tag}-*{TEMP_SUFFIX}"):
+    now = time.time() if now is None else now
+    leftovers = list(folder.rglob(f"{TEMP_PREFIX}{tag}-*{TEMP_SUFFIX}"))
+    for suffix in PARTIAL_SUFFIXES:
+        for partial in folder.rglob(f"{TEMP_PREFIX}{tag}-*{TEMP_SUFFIX}{suffix}"):
+            try:
+                if now - partial.stat().st_mtime > PARTIAL_MAX_AGE_SECONDS:
+                    leftovers.append(partial)
+            except OSError:
+                continue
+    for leftover in leftovers:
         try:
             leftover.unlink()
             removed += 1

@@ -8,11 +8,12 @@ consent covers changes. See docs/development/automation-sync-adapters.md (UI).
 from __future__ import annotations
 
 import json
+from concurrent.futures import TimeoutError as FutureTimeoutError
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from flask import Flask, abort, jsonify, redirect, render_template, request, url_for
+from flask import Flask, abort, current_app, jsonify, redirect, render_template, request, url_for
 from flask_babel import format_number, gettext, ngettext
 from sqlalchemy.orm import Session
 
@@ -20,18 +21,26 @@ from yaffo.background_tasks.automation_dispatch import invoke_automation
 from yaffo.db import db
 from yaffo.db.models import (
     Album, Automation, MediaItem, SyncItem,
-    EVENT_ALBUM_CHANGED, EVENT_MEDIA_DELETED, SYNC_HANDLER_FOLDER_TARGET, SYNC_ITEM_CANT_REMOVE,
+    EVENT_ALBUM_CHANGED, EVENT_DEVICE_ONLINE, EVENT_MEDIA_DELETED, SYNC_HANDLER_FOLDER_TARGET,
+    SYNC_HANDLER_PEER_SOURCE, SYNC_ITEM_CANT_REMOVE,
     SYNC_ITEM_DELETED_AT_SOURCE, SYNC_ITEM_FAILED, SYNC_ITEM_IMPORTED, SYNC_ITEM_LINKED_EXISTING, SYNC_ITEM_PENDING,
     SYNC_ITEM_REMOVED, SYNC_ITEM_REMOVED_REMOTELY, SYNC_ITEM_REMOVING, SYNC_ITEM_SENT, SYNC_ITEM_SKIPPED,
     SYNC_ROLE_SOURCE,
     SYNC_ROLE_TARGET, TRIGGER_TYPE_EVENT, TRIGGER_TYPE_SCHEDULE,
 )
-from yaffo.db.repositories import album_repository, media_dir_repository, sync_repository
+from yaffo.db.repositories import album_repository, media_dir_repository, p2p_repository, sync_repository
 from yaffo.db.repositories import automation_repository as repo
 from yaffo.db.repositories.media_filter_repository import apply_media_filters
-from yaffo.domain.media_filter_params import selections_from_wire
+from yaffo.distance_units import get_saved_distance_unit
+from yaffo.domain.media_filter_params import query_params_from_wire, selections_from_wire
 from yaffo.routes import filter_config
-from yaffo.routes.filter_panel import build_filters_context, to_media_filters, to_query_params, to_wire_filters
+from yaffo.p2p.errors import P2PServiceError
+from yaffo.p2p.peer_api import PeerApiError, parse_scope_key
+from yaffo.p2p.signaling import CallError
+from yaffo.routes.filter_panel import (
+    build_filters_context, filter_selections, remote_filters_context, to_media_filters, to_query_params,
+    to_wire_filters,
+)
 from yaffo.routes.utilities import sync_text
 from yaffo.routes.utilities.sync_account import AccountView, account_view, init_sync_account_routes
 from yaffo.routes.utilities.common import automations_sidebar_context
@@ -77,6 +86,7 @@ class OptionField:
     choices: list[dict]
     problem: str | None = None
     create: bool = False              # remote_collection: the picker offers a new, named one
+    value_label: str | None = None    # remote types: what the chosen value is called now
 
 
 @dataclass(frozen=True)
@@ -124,6 +134,9 @@ class SyncPage:
     hosts: list[str] = field(default_factory=list)
     items_summary: str | None = None
     layout_choices: list[dict[str, str]] = field(default_factory=sync_text.import_layout_choices)
+    peer_source: bool = False
+    shown_options: dict[str, Any] = field(default_factory=dict)
+    import_summary: str | None = None
 
     @property
     def options_locked(self) -> bool:
@@ -132,6 +145,12 @@ class SyncPage:
     @property
     def is_web(self) -> bool:
         return self.account is not None
+
+    @property
+    def reviews_before_enable(self) -> bool:
+        """Turning it on goes through the review modal: it reaches past this machine
+        (a web account or a paired device)."""
+        return self.is_web or self.peer_source
 
     @property
     def selection(self) -> Selection | None:
@@ -157,6 +176,8 @@ def _option_label(text: str) -> str:
 
 
 REMOTE_TYPES = (OPTION_REMOTE_FOLDER, OPTION_REMOTE_COLLECTION)
+# Files shown on the peer filter screen: each is a live preview call to the device.
+PEER_FILTER_PREVIEW_SIZE = 24
 
 
 def remote_value_label(value: Any) -> str | None:
@@ -167,8 +188,22 @@ def remote_value_label(value: Any) -> str | None:
     return None
 
 
+def shown_options(session: Session, adapter: LoadedAdapter, options: dict[str, Any]) -> dict[str, Any]:
+    """The options as the page names them: a paired device by its current name. The
+    saved label is the name it had when it was chosen and is part of the consent hash,
+    so renaming the device doesn't rewrite it (that would turn the sync off)."""
+    device = options.get("device")
+    if adapter.handler_key != SYNC_HANDLER_PEER_SOURCE or not isinstance(device, dict) or not device.get("id"):
+        return options
+    known = p2p_repository.get_known_device(session, device["id"])
+    if known is None or not known.display_name:
+        return options
+    return {**options, "device": {**device, "label": known.display_name}}
+
+
 def _option_fields(adapter: LoadedAdapter, values: dict, session: Session) -> list[OptionField]:
     fields = []
+    shown = shown_options(session, adapter, values)
     for key, spec in adapter.options.items():
         value = values.get(key)
         problem = None
@@ -179,9 +214,11 @@ def _option_fields(adapter: LoadedAdapter, values: dict, session: Session) -> li
         fields.append(OptionField(
             key=key, type=spec["type"], label=_option_label(spec.get("label", key)),
             help=_option_label(spec["help"]) if spec.get("help") else None,
-            required=bool(spec.get("required")), value=value if value is not None else spec.get("default"),
+            required=bool(spec.get("required") or spec.get("needed")),
+            value=value if value is not None else spec.get("default"),
             choices=[{"value": c["value"], "label": _option_label(c["label"])} for c in spec.get("choices", [])],
             problem=problem, create=bool(spec.get("create")),
+            value_label=remote_value_label(shown.get(key)) if spec["type"] in REMOTE_TYPES else None,
         ))
     return fields
 
@@ -221,6 +258,9 @@ def _triggers(session: Session, automation: Automation) -> list[TriggerSummary]:
         elif trigger.event_type == EVENT_MEDIA_DELETED:
             summaries.append(TriggerSummary(kind=TRIGGER_TYPE_EVENT,
                                             text=gettext("When a sent photo is deleted from Yaffo")))
+        elif trigger.event_type == EVENT_DEVICE_ONLINE:
+            summaries.append(TriggerSummary(kind=TRIGGER_TYPE_EVENT,
+                                            text=gettext("When the device comes online (after a minute's quiet)")))
         else:
             summaries.append(TriggerSummary(kind=TRIGGER_TYPE_EVENT, text=trigger.event_type))
     return summaries
@@ -242,6 +282,8 @@ def consent_terms(session: Session, page_column: SyncColumn, adapter: LoadedAdap
         return _web_source_terms(session, config, adapter)
     if config.role == SYNC_ROLE_TARGET and adapter.needs_connection:
         return _web_target_terms(session, config, adapter)
+    if adapter.handler_key == SYNC_HANDLER_PEER_SOURCE:
+        return _peer_source_terms(session, config, adapter)
     if config.role == SYNC_ROLE_SOURCE:
         root = _import_root_path(session, config.import_root)
         if not options.get("folder") or not root:
@@ -297,6 +339,33 @@ def _web_source_terms(session: Session, config, adapter: LoadedAdapter) -> list[
     ]
 
 
+def _peer_source_terms(session: Session, config, adapter: LoadedAdapter) -> list[ConsentTerm]:
+    """The review before turning on an import from a paired device: from where, into
+    where, and by which paths the photos may travel."""
+    options = shown_options(session, adapter, config.options)
+    root = _import_root_path(session, config.import_root)
+    device = remote_value_label(options.get("device"))
+    if root is None or not device or not remote_value_label(options.get("scope")):
+        return []
+    if options.get("allow_relay"):
+        paths = gettext("On your network, over a direct connection, or through Yaffo's relay "
+                        "(up to %(num)s GB per run)", num=format_number(options.get("relay_budget_gb") or 0))
+    else:
+        paths = gettext("Only on your network or over a direct connection")
+    which = gettext("Only those matching your filters") if config.source_filters else gettext("All of them")
+    return [
+        ConsentTerm(gettext("Copies new photos and videos from"), adapter.handler.describe_source(options)),
+        ConsentTerm(gettext("Which ones"), which),
+        ConsentTerm(gettext("Into"), sync_text.import_into_text(display_path(root),
+                                                               (config.import_root or {}).get("layout"))),
+        ConsentTerm(gettext("Already in your library"), gettext("Linked, not copied again")),
+        ConsentTerm(gettext("Copied"), paths),
+        ConsentTerm(gettext("Deleted or no longer shared on %(device)s", device=device),
+                    gettext("Kept in your library")),
+        ConsentTerm(gettext("On %(device)s", device=device), gettext("Nothing is changed or deleted")),
+    ]
+
+
 def _web_target_terms(session: Session, config, adapter: LoadedAdapter) -> list[ConsentTerm]:
     if config.selection is None:
         return []
@@ -346,6 +415,10 @@ def missing_labels(page_missing: list[str], role: str, web: bool = False) -> lis
         elif code in ("option:folder", "folder"):
             text = (gettext("Choose a folder to copy from") if role == SYNC_ROLE_SOURCE
                     else gettext("Choose a folder outside your library"))
+        elif code == "option:device":
+            text = gettext("Choose a paired device")
+        elif code == "option:scope":
+            text = gettext("Choose what to import from the device")
         else:
             text = gettext("Finish the folder and options")
         if text not in labels:
@@ -382,6 +455,8 @@ def build_page(session: Session, automation: Automation) -> SyncPage | None:
         counts=sync_repository.status_counts(session, automation.id),
         folder_target=adapter.handler_key == SYNC_HANDLER_FOLDER_TARGET,
         account=account, hosts=adapter.hosts,
+        peer_source=adapter.handler_key == SYNC_HANDLER_PEER_SOURCE,
+        shown_options=shown_options(session, adapter, config.options),
     )
     if config.role == SYNC_ROLE_TARGET:
         page.albums = album_repository.list_albums(session)
@@ -397,6 +472,8 @@ def build_page(session: Session, automation: Automation) -> SyncPage | None:
         options, hide_layout=page.role == SYNC_ROLE_TARGET and config.selection is not None
         and config.selection.kind == SELECTION_SCRIPT)
     page.where_summary = _where_summary(session, page)
+    if page.peer_source:
+        page.import_summary = _import_summary(page)
     page.summary = _summary(page)
     page.items_summary = items_summary(page.counts, config.role, page.folder_target)
     return page
@@ -411,8 +488,8 @@ def _options_summary(options: list[OptionField], *, hide_layout: bool = False) -
             continue
         if option.type == OPTION_LOCAL_FOLDER and option.value:
             parts.append(display_path(option.value))
-        elif option.type in REMOTE_TYPES and remote_value_label(option.value):
-            parts.append(remote_value_label(option.value))
+        elif option.type in REMOTE_TYPES and option.value_label:
+            parts.append(option.value_label)
         elif option.choices:
             label = next((c["label"] for c in option.choices if c["value"] == option.value), None)
             if label:
@@ -420,6 +497,14 @@ def _options_summary(options: list[OptionField], *, hide_layout: bool = False) -
         elif option.type == OPTION_BOOL and option.value:
             parts.append(option.label)
     return " · ".join(parts) or None
+
+
+def _import_summary(page: SyncPage) -> str:
+    """What a peer import takes from its share, for the collapsed section."""
+    if page.column.config.source_filters:
+        return gettext("Photos matching a filter")
+    scope = remote_value_label(page.shown_options.get("scope"))
+    return gettext("Everything in %(scope)s", scope=scope) if scope else gettext("Everything it shares")
 
 
 def _where_summary(session: Session, page: SyncPage) -> str | None:
@@ -442,6 +527,11 @@ def _where_summary(session: Session, page: SyncPage) -> str | None:
 
 def _summary(page: SyncPage) -> str | None:
     """A short description of what the sync does for the page header."""
+    if page.peer_source:
+        source = page.adapter.handler.describe_source(page.shown_options)
+        if source:
+            return gettext("Imports new photos from %(source)s", source=source)
+        return gettext("Copies new photos from a paired device into your library.")
     if page.is_web and page.role == SYNC_ROLE_SOURCE:
         options = page.column.config.options
         if any(remote_value_label(options.get(o.key)) for o in page.options if o.type in REMOTE_TYPES):
@@ -555,6 +645,17 @@ def items_summary(counts: dict[str, int], role: str, folder_target: bool) -> str
                       for code in ordered_statuses(counts, role))
 
 
+def _require_peer_sync(slug: str) -> Automation:
+    automation = _require_sync(slug)
+    try:
+        adapter = setup.adapter_of(db.session, automation)
+    except (SyncSchemaError, AdapterUnavailable):
+        abort(404)
+    if adapter.handler_key != SYNC_HANDLER_PEER_SOURCE:
+        abort(404)
+    return automation
+
+
 def _require_sync(slug: str) -> Automation:
     automation = repo.get_by_slug(db.session, slug)
     if automation is None or not automation.is_sync:
@@ -634,6 +735,69 @@ def init_sync_routes(app: Flask) -> None:
         else:
             abort(400)
         return _back(automation)
+
+    @app.route("/utilities/automations/<slug>/sync/import-filter", methods=["POST"])
+    def sync_update_import_filter(slug: str):
+        """A peer import's "What to import": everything the share holds, or only the
+        photos matching a filter (chosen on the peer filter screen, whose filters
+        arrive as the querystring)."""
+        automation = _require_peer_sync(slug)
+        kind = request.form.get("kind")
+        if kind == "all":
+            setup.set_import_filters(db.session, automation, None)
+        elif kind == SELECTION_QUERY:
+            if not request.args:
+                return redirect(url_for("sync_peer_filter", slug=automation.slug))
+            filters = to_wire_filters(filter_selections(db.session, request.args))
+            if not filters:
+                return _back(automation, error="filter_required")
+            setup.set_import_filters(db.session, automation, filters)
+        else:
+            abort(400)
+        return _back(automation)
+
+    @app.route("/utilities/automations/<slug>/sync/peer-filter", methods=["GET"])
+    def sync_peer_filter(slug: str):
+        """Choose which of a share's photos a peer import takes: the filter panel
+        over the paired device's library (its facets, scoped to the grant), how many
+        files match, and a preview. Opens on the saved filter when there is one."""
+        automation = _require_peer_sync(slug)
+        config = sync_repository.load_sync(automation).config
+        device = config.options.get("device") or {}
+        scope_value = config.options.get("scope") or {}
+        if not device.get("id") or not scope_value.get("id"):
+            return _back(automation, error="setup_incomplete")
+        if not request.args and config.source_filters:
+            return redirect(url_for("sync_peer_filter", slug=automation.slug, **query_params_from_wire(
+                config.source_filters, get_saved_distance_unit(db.session))))
+        try:
+            scope = parse_scope_key(scope_value["id"])
+        except PeerApiError:
+            return _back(automation, error="setup_incomplete")
+        selections = filter_selections(db.session, request.args)
+        filters = to_wire_filters(selections)
+        result, error = {}, None
+        service = current_app.extensions.get("p2p_service")
+        if service is None:
+            error = gettext("Device sharing is not running.")
+        else:
+            try:
+                result = service.list_files.send(device["id"], scope.media_dir_id, scope.relative_path, filters,
+                                                 offset=0, limit=PEER_FILTER_PREVIEW_SIZE, album_id=scope.album_id)
+            except (CallError, P2PServiceError) as exc:
+                error = gettext("Could not ask the device: %(reason)s", reason=str(exc))
+            except FutureTimeoutError:
+                error = gettext("The device didn't answer. Is it online?")
+        shown = shown_options(db.session, setup.adapter_of(db.session, automation), config.options)
+        return render_template(
+            "utilities/sync_peer_filter.html", selected=automation,
+            device_id=device["id"], device_name=remote_value_label(shown.get("device")),
+            scope=scope, scope_label=remote_value_label(scope_value),
+            filters=remote_filters_context(selections, result.get("facets") or {}),
+            files=result.get("files") or [], match_count=int(result.get("total") or 0), error=error,
+            filter_layout=filter_config.load_layout(db.session), filter_default_keys=filter_config.default_keys(),
+            has_filters=bool(filters),
+        )
 
     @app.route("/utilities/automations/<slug>/sync/filter", methods=["GET"])
     def sync_filter(slug: str):
@@ -754,6 +918,8 @@ def _preview_problem_text(code: str | None) -> str | None:
         return gettext("This sync's setup can't be used.")
     if code == codes.OUTCOME_SYNC_WAITING_FOR_FOLDER:
         return gettext("The folder isn't connected.")
+    if code in sync_text.PEER_OUTCOMES:
+        return sync_text.outcome_sentence({"outcome": code})
     if code == PROBLEM_SIGN_IN:
         return gettext("Sign in first.")
     if code == PROBLEM_SERVICE_ERROR:
@@ -770,7 +936,7 @@ def _error_text(code: str | None) -> str | None:
         "setup_incomplete": gettext("Finish the setup first."),
         "required": gettext("Fill in the required fields."),
         "not_absolute": gettext("Choose a folder with the folder picker."),
-        "not_remote_value": gettext("Choose the folder with Choose…"),
+        "not_remote_value": gettext("Use Choose… to select a device, folder, or album."),
         "bad_new_name": gettext("Give the new album a name of at most 200 characters."),
         "unknown_layout": gettext("Choose how to arrange the photos."),
         "sign_in_failed": gettext("The sign-in didn't complete. Try again."),

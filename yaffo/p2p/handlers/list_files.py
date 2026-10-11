@@ -22,7 +22,7 @@ from yaffo.p2p.handlers.sharing import (
     validate_list_filters,
 )
 from yaffo.p2p.identity import DeviceIdentity
-from yaffo.p2p.messages import PeerLookup, build_signed_message, verify_signed_message
+from yaffo.p2p.messages import PeerLookup, build_signed_message, negotiated_protocol, verify_signed_message
 
 MESSAGE_LIST_FILES = "list_files"
 
@@ -98,6 +98,9 @@ class ListFilesEndpoint:
             denial = verify_list_files_request(body, peer_lookup())
             if denial is not None:
                 return {"status": "error", "detail": denial}
+            limited = self._service.rate_limits.check(MESSAGE_LIST_FILES, body["device_id"])
+            if limited is not None:
+                return limited
 
             album_id = body.get("album_id")
             if album_id is not None:
@@ -121,11 +124,13 @@ class ListFilesEndpoint:
             files_query = apply_list_filters(scope_query, target, filters)
             total = files_query.count()
             files = []
+            protocol = negotiated_protocol(body)
             for item in _page(files_query, offset, limit):
                 path = Path(item.full_file_path).expanduser().resolve()
                 if not path_inside(path, root) or not path.is_file():
                     continue
-                files.append(file_manifest(media_dir_id, path.relative_to(root).as_posix(), path, item))
+                files.append(file_manifest(media_dir_id, path.relative_to(root).as_posix(), path, item,
+                                           protocol=protocol))
             facets = list_files_facets(scope_query, filters)
 
         return {
@@ -174,6 +179,7 @@ class ListFilesEndpoint:
         total = files_query.count()
 
         files = []
+        protocol = negotiated_protocol(body)
         for item in _page(files_query, offset, limit):
             path = Path(item.full_file_path).expanduser().resolve()
             if not path.is_file():
@@ -182,7 +188,8 @@ class ListFilesEndpoint:
             if location is None:
                 continue  # a member outside every configured media dir has no scope
             media_dir_id, relative_path = location
-            files.append(file_manifest(media_dir_id, relative_path, path, item))
+            files.append(file_manifest(media_dir_id, relative_path, path, item,
+                                       protocol=protocol))
         facets = list_files_facets(scope_query, filters)
 
         return {

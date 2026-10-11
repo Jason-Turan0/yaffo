@@ -102,9 +102,10 @@ class AutomationRunStarted:
 def _recent_runs(automation: Automation | None) -> list[RunView]:
     if automation is None:
         return []
-    # Read further back than the rows shown: a started sync's import/index Jobs fold
-    # into its row and repeated in-sync checks collapse, so jobs outnumber rows.
-    jobs = repo.get_recent_jobs(db.session, automation.id, limit=RUN_HISTORY_ROWS * 6)
+    # Read further back than the rows shown so repeated in-sync checks collapse.
+    # A source sync's index batches are background work, not separate sync runs.
+    jobs = repo.get_recent_jobs(db.session, automation.id, limit=RUN_HISTORY_ROWS * 6,
+                                exclude_index_batches=automation.is_sync)
     return run_views(db.session, jobs, limit=RUN_HISTORY_ROWS)
 
 

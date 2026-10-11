@@ -879,16 +879,19 @@ loop:
         sniff type (images/videos only), enforce size caps, check free space
         atomic rename to <import root>/<folder by layout>/<sanitized name>
         record watcher suppression (Mechanism 2 in Automations) so file_sync doesn't double-index
+        commit this record's media and ledger rows, releasing SQLite's writer lock
     index the page's new files (existing indexer), passing taken_at/location hints
-    commit sync_items + runtime (state_patch, next_cursor) in one transaction (chunked)
+    commit runtime (state_patch, next_cursor) after the page
     cursor = page.next_cursor; until None
 promote checkpoint
 ```
 
-Pages are committed in chunks (lock-free compute, then a bulk flush), per the
-SQLite concurrency rules. Long backfills run as a resumable task-queue job; a
-run's time budget ends the loop cleanly at a page boundary, and the next run
-continues from the stored cursor.
+Committing after each record lets the web process cancel a run while the next
+file downloads. The cursor advances only after the page, so a crash or cancellation
+replays that page; committed ledger rows make its completed records idempotent.
+An imported row is marked `index_queued` when its index job is queued, so replay
+also queues any file committed just before a crash.
+Long backfills run as a resumable task-queue job.
 
 ### Target run
 

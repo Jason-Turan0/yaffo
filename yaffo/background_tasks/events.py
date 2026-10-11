@@ -39,6 +39,8 @@ class EventContext:
     change: str | None = None
     # media_deleted only: the sync automations that had the photos' copies queued for removal.
     sync_automation_ids: list[int] = field(default_factory=list)
+    # device_online only: which paired device appeared, and where (hub | lan).
+    device_id: str | None = None
 
 
 # The causal chain in force for the current automation run, set by event_chain_scope.

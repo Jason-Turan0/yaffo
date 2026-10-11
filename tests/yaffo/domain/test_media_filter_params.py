@@ -145,3 +145,18 @@ def test_exact_item_ids_are_url_only():
     assert "media_item_ids" not in fp.wire_filters(values, "km")
     assert "item" not in {p["param"] for p in fp.client_filter_config()["params"]}
     assert "media_item_ids" in fp.filters_json_schema()["properties"]
+
+
+def test_saved_wire_filters_reopen_the_panel_on_the_same_selections():
+    values = fp.parse_filter_params(MultiDict([
+        ("person", "10"), ("person-match-type", "all"), ("year", "2019"), ("favorite", "1"),
+        ("proximity-lat", "45.0"), ("proximity-lon", "-110.0"), ("proximity-distance", "10"),
+    ]))
+    wire = fp.wire_filters(values, "mi")
+
+    params = fp.query_params_from_wire(wire, "mi")
+
+    reopened = fp.parse_filter_params(MultiDict([(k, v) for k, value in params.items() if value not in (None, [], "")
+                                                 for v in (value if isinstance(value, list) else [value])]))
+    assert fp.wire_filters(reopened, "mi") == wire
+    assert reopened["proximity_distance"] == pytest.approx(10)

@@ -16,7 +16,10 @@ from yaffo.db.models import (
     GRANT_SCOPE_MEDIA_DIR,
     ApplicationSettings,
     KnownDevice,
+    MediaItem,
     ShareGrant,
+    SyncAdapter,
+    SYNC_HANDLER_PEER_SOURCE,
     TRUST_STATE_REVOKED,
     TRUST_STATE_TRUSTED,
 )
@@ -24,6 +27,7 @@ from yaffo.db.repositories import album_repository, media_dir_repository, p2p_re
 from yaffo.p2p.pairing import PairingError, new_pairing_code
 from yaffo.p2p.service import P2PServiceError
 from yaffo.p2p.signaling import CallError
+from yaffo.sync import setup as sync_setup
 from yaffo.utils.settings import SHARED_DOWNLOAD_DIR_SETTING
 
 pytestmark = pytest.mark.unit
@@ -339,6 +343,42 @@ def test_sidebar_lists_outbound_shares(app, client, service, tmp_path):
     assert "Shared With Others" in body
     assert "laptop - library" in body
     assert "Revoke" in body
+
+
+def test_device_page_warns_only_for_shares_returning_imports_to_the_source(app, client, service, tmp_path):
+    _seed_devices(app)
+    library = tmp_path / "library"
+    library.mkdir()
+    with app.app_context():
+        media_dir = media_dir_repository.add_media_dir(db.session, str(library))
+        db.session.add(SyncAdapter(id=3, slug="builtin.peer_source", name="Paired device", role="source",
+                                   provider="peer", is_preset=True, handler=SYNC_HANDLER_PEER_SOURCE,
+                                   grants=[], doc_domains=[]))
+        db.session.commit()
+        sync = sync_setup.create_sync(db.session, "Import from laptop", 3)
+        sync_setup.set_import_root(db.session, sync, media_dir.id, "Imports/Laptop")
+        sync_setup.set_options(db.session, sync, {"device": {"id": PEER_ONLINE, "label": "laptop"}})
+        p2p_repository.create_grant(db.session, PEER_ONLINE, GRANT_SCOPE_MEDIA_DIR, media_dir_id=media_dir.id)
+        p2p_repository.create_grant(db.session, PEER_ONLINE, GRANT_SCOPE_FOLDER,
+                                    media_dir_id=media_dir.id, relative_path="Other")
+        p2p_repository.create_grant(db.session, PEER_OFFLINE, GRANT_SCOPE_MEDIA_DIR, media_dir_id=media_dir.id)
+        album = album_repository.create_album(db.session, "Imported")
+        db.session.add(MediaItem(full_file_path=str(library / "Imports" / "Laptop" / "a.jpg")))
+        db.session.flush()
+        media = db.session.query(MediaItem).one()
+        album_repository.add_items(db.session, album.id, [media.id])
+        p2p_repository.create_grant(db.session, PEER_ONLINE, GRANT_SCOPE_ALBUM, album_id=album.id)
+
+    sidebar = client.get("/sharing/sidebar").get_data(as_text=True)
+    source_page = client.get(f"/sharing/devices/{PEER_ONLINE}").get_data(as_text=True)
+    other_page = client.get(f"/sharing/devices/{PEER_OFFLINE}").get_data(as_text=True)
+
+    assert "These shares include photos imported from this device:" not in sidebar
+    assert source_page.count("These shares include photos imported from this device:") == 1
+    assert "<li>library</li>" in source_page
+    assert "<li>Imported</li>" in source_page
+    assert "<li>Other</li>" not in source_page
+    assert "These shares include photos imported from this device:" not in other_page
 
 
 def test_device_page_404_for_unknown(client, service):
@@ -1026,7 +1066,7 @@ def test_transfers_fragment_offers_delete_for_inactive_batches(app, client, serv
     body = client.get(f"/sharing/devices/{PEER_ONLINE}/transfers").get_data(as_text=True)
 
     assert "Cancelled" in body
-    assert f"/transfers/batch-1/delete" in body
+    assert "/transfers/batch-1/delete" in body
     assert "Dismiss" in body
 
 
@@ -1061,7 +1101,7 @@ def test_transfers_paused_batch_offers_continue_anyway(app, client, service):
 
     body = resp.get_data(as_text=True)
     assert "Continue anyway" in body
-    assert f"/transfers/batch-1/continue" in body
+    assert "/transfers/batch-1/continue" in body
 
 
 def test_cancel_and_continue_transfer_routes(app, client, service):

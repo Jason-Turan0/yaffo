@@ -1,12 +1,14 @@
 """Test: what a sync run would do, without doing it.
 
 Targets: the diff against the ledger ("would add 12, remove 3") and how many photos
-would be converted. Sources: the first page of records, each marked new, already
-imported, already in the library, or edited. No files are written, nothing is
-downloaded, and the ledger isn't touched.
+would be converted. Sources: the records, listed a page at a time until the listing
+ends or the time budget runs out, each marked new, already imported, already in the
+library, or edited. No files are written, nothing is downloaded, and the ledger
+isn't touched.
 """
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -36,6 +38,9 @@ PREVIEW_PAGE_SIZE = 10
 PREVIEW_PAGE_SIZES = (10, 25, 50)
 CONVERSION_CHECK_LIMIT = 500
 HASH_CHECK_LIMIT = 50
+# How long a source Test keeps listing pages. The request runs on the web server's
+# small thread pool, so a large cloud library is counted partly ("more").
+SOURCE_LIST_BUDGET_SECONDS = 5.0
 
 RECORD_NEW = "new"
 RECORD_IMPORTED = "imported"
@@ -80,6 +85,8 @@ class SyncTestResult:
     page_size: int = PREVIEW_PAGE_SIZE
     total_items: int = 0
     state_counts: dict[str, int] = field(default_factory=dict)
+    # Sources: how many files the source says it has, when it reports a total.
+    source_total: int | None = None
 
 
 def _target(session: Session, automation: Automation, column: SyncColumn, adapter: LoadedAdapter,
@@ -176,37 +183,14 @@ def _target(session: Session, automation: Automation, column: SyncColumn, adapte
     return result
 
 
-def _source(session: Session, automation: Automation, column: SyncColumn, adapter: LoadedAdapter,
-            page_number: int, page_size: int) -> SyncTestResult:
-    """The first page, live. A web source reads through the sync's account with read
-    grants only; nothing is downloaded."""
-    handler = source_handler(adapter)
-    options = column.config.options
-    result = SyncTestResult(role=column.config.role)
-    result.problem = handler.source_problem(options)
-    if result.problem:
-        return result
-    cursor = column.runtime.cursor("list")
-    client = access.attach(session, adapter, column.config, read_only=True, vouched=column.runtime.followups)
-    ctx = HookContext(options=options, state={**column.runtime.state, "checkpoint": cursor.checkpoint},
-                      run_id=None, pass_kind=PASS_INCREMENTAL, preview=True, automation_id=automation.id)
-    try:
-        page = handler.list_page(None, ctx)
-    except HookFailed as e:
-        result.problem, result.detail = PROBLEM_SERVICE_ERROR, str(e)
-        return result
-    error = page.get("error")
-    if (client is not None and client.auth_failed) or (error and error.get("code") == ERROR_AUTH):
-        result.problem = PROBLEM_SIGN_IN
-        return result
-    if error:
-        result.problem = PAUSE_OPTION_MISSING if error.get("code") == ERROR_NOT_FOUND else PROBLEM_SERVICE_ERROR
-        result.detail = error.get("message") or error.get("code")
-        return result
-    records = [r for r in page.get("records") or [] if isinstance(r, dict) and r.get("source_id")]
+def _classify(session: Session, automation: Automation, records: list[dict],
+              hash_budget: int) -> list[RecordPreview]:
+    """What a run would do with each record. Local files are hashed only while
+    `hash_budget` lasts, since hashing reads the whole file."""
     known = sync_repository.rows_by_key(session, automation.id, [r["source_id"] for r in records])
     known_ids = {row.media_item_id for row in known.values() if row.media_item_id is not None}
     local_ids = {item_id for (item_id,) in session.query(MediaItem.id).filter(MediaItem.id.in_(known_ids))}
+    previews = []
     for index, record in enumerate(records):
         row = known.get(record["source_id"])
         media_item_id = row.media_item_id if row is not None and row.media_item_id in local_ids else None
@@ -219,7 +203,7 @@ def _source(session: Session, automation: Automation, column: SyncColumn, adapte
             state = RECORD_NEW
             digest = record.get("hash") or {}
             sha1 = digest.get("value") if digest.get("algo") == "sha1" else None
-            if sha1 is None and index < HASH_CHECK_LIMIT and record.get("local_path"):
+            if sha1 is None and index < hash_budget and record.get("local_path"):
                 try:
                     sha1 = file_sha1(Path(record["local_path"]))
                 except OSError:
@@ -229,13 +213,57 @@ def _source(session: Session, automation: Automation, column: SyncColumn, adapte
                 if match:
                     state = RECORD_IN_LIBRARY
                     media_item_id = match.id
-        result.records.append(RecordPreview(filename=record.get("filename") or record["source_id"],
-                                            size=None if record.get("deleted") else record.get("size"),
-                                            state=state, media_item_id=media_item_id))
+        previews.append(RecordPreview(filename=record.get("filename") or record["source_id"],
+                                      size=None if record.get("deleted") else record.get("size"),
+                                      state=state, media_item_id=media_item_id))
+    return previews
+
+
+def _source(session: Session, automation: Automation, column: SyncColumn, adapter: LoadedAdapter,
+            page_number: int, page_size: int) -> SyncTestResult:
+    """Every page the source lists within SOURCE_LIST_BUDGET_SECONDS, live. A web
+    source reads through the sync's account with read grants only; nothing is
+    downloaded."""
+    handler = source_handler(adapter)
+    options = column.config.options
+    result = SyncTestResult(role=column.config.role)
+    result.problem = handler.source_problem(options)
+    if result.problem:
+        return result
+    cursor = column.runtime.cursor("list")
+    client = access.attach(session, adapter, column.config, read_only=True, vouched=column.runtime.followups)
+    ctx = HookContext(options=options, state={**column.runtime.state, "checkpoint": cursor.checkpoint},
+                      run_id=None, pass_kind=PASS_INCREMENTAL, preview=True, automation_id=automation.id,
+                      filters=column.config.source_filters)
+    started = time.monotonic()
+    next_cursor = None
+    while True:
+        try:
+            page = handler.list_page(next_cursor, ctx)
+        except HookFailed as e:
+            result.problem, result.detail = PROBLEM_SERVICE_ERROR, str(e)
+            return result
+        error = page.get("error")
+        if (client is not None and client.auth_failed) or (error and error.get("code") == ERROR_AUTH):
+            result.problem = PROBLEM_SIGN_IN
+            return result
+        if error:
+            result.problem = PAUSE_OPTION_MISSING if error.get("code") == ERROR_NOT_FOUND else PROBLEM_SERVICE_ERROR
+            result.detail = error.get("message") or error.get("code")
+            return result
+        records = [r for r in page.get("records") or [] if isinstance(r, dict) and r.get("source_id")]
+        result.records.extend(_classify(session, automation, records,
+                                        max(0, HASH_CHECK_LIMIT - len(result.records))))
+        total = (page.get("progress") or {}).get("total")
+        if isinstance(total, int) and not isinstance(total, bool) and total >= 0:
+            result.source_total = total
+        next_cursor = page.get("next_cursor")
+        if next_cursor is None or time.monotonic() - started >= SOURCE_LIST_BUDGET_SECONDS:
+            break
     for record in result.records:
         result.state_counts[record.state] = result.state_counts.get(record.state, 0) + 1
     result.would_add = result.state_counts.get(RECORD_NEW, 0)
-    result.more = page.get("next_cursor") is not None
+    result.more = next_cursor is not None
     result.total_items = len(result.records)
     result.current_page = min(page_number, max(0, (result.total_items - 1) // page_size))
     result.page_size = page_size

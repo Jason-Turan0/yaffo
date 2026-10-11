@@ -353,7 +353,14 @@ const syncNamespace = {
                     chip(i18n.t(`utilities:sync.test.state.${record.state}`), tones[record.state] || ''),
                 ]));
             }
-            if (result.more) container.append(syncEl('p', i18n.t('utilities:sync.test.more'), 'hint-text sync-test-note'));
+            if (result.more) {
+                const format = new Intl.NumberFormat().format;
+                const counted = format(result.total_items);
+                const note = result.source_total === null
+                    ? i18n.t('utilities:sync.test.partial', { counted })
+                    : i18n.t('utilities:sync.test.partialOf', { counted, total: format(result.source_total) });
+                container.append(syncEl('p', note, 'hint-text sync-test-note'));
+            }
         } else {
             const showDestination = [...result.add_samples, ...result.remove_samples]
                 .some((sample) => Boolean(sample.destination));

@@ -21,6 +21,29 @@ from yaffo.p2p.pairing import sign_nonce, verify_nonce_signature
 
 SIGNED_MESSAGE_MAX_AGE_SECONDS = 300
 
+# The peer protocol version, carried by every signed request and every response
+# (docs/development/peer-sync.md, "Wire protocol changes"). A message without one
+# is from a version-1 peer. Each side adapts to the lower version; so far every
+# change is additive (version 2 adds `sha1` to manifests), so adapting means
+# treating new fields as optional. Deliberately NOT part of the signed payload:
+# a version-1 verifier recomputes the signature from its own field list, and the
+# version carries no authority of its own.
+PROTOCOL_VERSION = 2
+
+
+def peer_protocol(message: Optional[dict]) -> int:
+    """The protocol version a peer's message speaks (1 when it doesn't say)."""
+    try:
+        version = int((message or {}).get("protocol") or 1)
+    except (TypeError, ValueError):
+        return 1
+    return max(version, 1)
+
+
+def negotiated_protocol(message: Optional[dict]) -> int:
+    """The version both sides understand: the lower of ours and the peer's."""
+    return min(PROTOCOL_VERSION, peer_protocol(message))
+
 TRUST_STATE_TRUSTED = "trusted"
 
 
@@ -53,6 +76,7 @@ def build_signed_message(identity: DeviceIdentity, message_type: str, payload: O
         "type": message_type,
         "device_id": identity.device_id,
         "ts": timestamp,
+        "protocol": PROTOCOL_VERSION,
         "signature": sign_nonce(identity.private_key, _canonical(message_type, identity.device_id, timestamp, payload)),
     }
     if payload:

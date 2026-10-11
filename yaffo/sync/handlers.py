@@ -32,6 +32,10 @@ ERROR_CODES = (ERROR_RATE_LIMITED, ERROR_RETRY_LATER, ERROR_AUTH, ERROR_NOT_FOUN
 # Built-in only: a remove refused because the copy changed since Yaffo wrote it.
 ERROR_CHANGED = "changed"
 
+# SourceStop.error_code from a fetch that gave up because the run's time is up: the
+# run ends normally and continues soon, like a backfill that ran out of time.
+STOP_OUT_OF_TIME = "out_of_time"
+
 TARGETS_ONE = "one"
 TARGETS_MANY = "many"
 
@@ -65,6 +69,9 @@ class HookContext:
     automation_id: int | None = None
     scratch_dir: Path | None = None
     extra: dict[str, Any] = field(default_factory=dict)
+    # A source's subset: the sharing wire filters its listing applies (the peer
+    # source's "photos matching a filter"); None imports everything.
+    filters: dict[str, Any] | None = None
 
     def to_contract(self) -> dict[str, Any]:
         return {"options": self.options, "state": self.state,
@@ -102,13 +109,69 @@ class TargetHandler:
         raise NotImplementedError
 
 
+class SourceStop(Exception):
+    """A built-in source can't go on with this run. Raised from list_page or fetch;
+    the run keeps the records already processed, leaves the cursor at the start of
+    the page it was on, and then either pauses the sync (`pause_code`), ends with an
+    outcome (`outcome`, a normal "waiting for ..." end), or stops like a hook error
+    (`error_code`)."""
+
+    def __init__(self, message: str = "", *, pause_code: str | None = None, outcome: str | None = None,
+                 error_code: str | None = None, params: dict[str, Any] | None = None):
+        super().__init__(message)
+        self.message = message
+        self.pause_code = pause_code
+        self.outcome = outcome
+        self.error_code = error_code
+        self.params = params or {}
+
+
+class SourceItemSkipped(Exception):
+    """fetch: the source refused this one item for good (it left what's shared).
+    The item is recorded as skipped, not failed, and the run carries on."""
+
+    def __init__(self, message: str = "", error_code: str | None = None):
+        super().__init__(message)
+        self.error_code = error_code
+
+
+class ChoicesUnavailable(Exception):
+    """A built-in handler's picker can't list anything right now; the message says
+    why, for people."""
+
+
 class SourceHandler:
     """A source's provider-specific operations."""
+
+    # True when fetch resumes a partial download left by an earlier run: the engine
+    # then names each record's temporary file after the record instead of randomly,
+    # so the next run writes to (and resumes) the same file.
+    resumable_fetch: bool = False
 
     def source_problem(self, options: dict[str, Any]) -> str | None:
         """An outcome code when the source can't be read right now (a card that
         isn't connected). The run ends normally with that outcome; it isn't a pause."""
         return None
+
+    def source_pause(self, options: dict[str, Any]) -> str | None:
+        """A pause code when the sync can't run until the user acts (a device that
+        was revoked), checked once at run start."""
+        return None
+
+    def plan_fetches(self, upcoming: list[tuple[dict[str, Any], Path]], ctx: HookContext) -> None:
+        """The records of the current page the engine is about to fetch, in order,
+        with their temporary destinations. A handler may start work ahead on them;
+        the engine still calls fetch for each."""
+        return None
+
+    def finish_run(self, ctx: HookContext) -> None:
+        """The run is over (finished, stopped, or out of time): release whatever the
+        run held open."""
+        return None
+
+    def summary_params(self) -> dict[str, Any]:
+        """Extra parameters for this run's outcome (e.g. how a peer was reached)."""
+        return {}
 
     def describe_source(self, options: dict[str, Any]) -> str:
         raise NotImplementedError

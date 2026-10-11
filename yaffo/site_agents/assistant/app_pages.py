@@ -70,8 +70,11 @@ NOT_PAGES: frozenset[str] = frozenset({
     "themes_status", "theme_css", "theme_preview_css", "theme_tokens_css",
     "automations_status", "automations_runs", "automations_validate_cron",
     # A sync's Items fragment, and its filter screen (needs a sync to send to).
-    "sync_items", "sync_filter",
+    "sync_items", "sync_filter", "sync_peer_filter",
     "utilities_index_photos_scan",
+    # The internal P2P API serves sync workers, never people.
+    "internal_p2p.status", "internal_p2p.devices", "internal_p2p.scopes", "internal_p2p.files",
+    "internal_p2p.session_info", "internal_p2p.pull_status",
 })
 
 _ARGUMENT_RE = re.compile(r"<(?:(\w+)(?:\([^)]*\))?:)?(\w+)>")

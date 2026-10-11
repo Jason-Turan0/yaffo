@@ -34,6 +34,7 @@ RUNTIME_STATUSES = (RUNTIME_READY, RUNTIME_NEEDS_CONSENT, RUNTIME_NEEDS_SIGN_IN,
 PAUSE_SELECTION_MISSING = "selection_missing"
 PAUSE_DESTINATION_MISSING = "destination_missing"
 PAUSE_OPTION_MISSING = "option_missing"
+PAUSE_DEVICE_REVOKED = "device_revoked"  # peer source: the device was unpaired (or unpaired this one)
 
 PASS_BACKFILL = "backfill"
 PASS_INCREMENTAL = "incremental"
@@ -179,6 +180,14 @@ class SyncConfig:
     selection: Selection | None
     consent_hash: str | None
     consented_at: str | None
+
+    @property
+    def source_filters(self) -> dict[str, Any] | None:
+        """A source's subset: its "photos matching a filter" wire filters, or None
+        when it imports everything the source lists."""
+        if self.role == SYNC_ROLE_SOURCE and self.selection is not None and self.selection.kind == SELECTION_QUERY:
+            return self.selection.query
+        return None
 
     @classmethod
     def from_dict(cls, data: dict) -> SyncConfig:

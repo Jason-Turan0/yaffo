@@ -46,9 +46,9 @@ def verify_pull_file_request(body: dict, lookup: PeerLookup) -> Optional[str]:
 
 
 class PullFileEndpoint:
-    """Serving side of the chunked pull protocol. The client side lives in
-    yaffo.p2p.transfers (Phase 6): batches pull chunks over one transfer
-    session instead of one relay call per chunk."""
+    """Serving side of the chunked pull protocol. The client side is
+    yaffo.p2p.puller.PeerPuller: chunks ride one transfer session instead of
+    one relay call per chunk."""
 
     def __init__(self, service) -> None:
         self._service = service
@@ -60,6 +60,9 @@ class PullFileEndpoint:
                 return {"status": "error", "detail": denial}
 
             peer_device_id = body["device_id"]
+            limited = self._service.rate_limits.check(MESSAGE_PULL_FILE, peer_device_id)
+            if limited is not None:
+                return limited
             try:
                 offset = parse_non_negative_int(body.get("offset"), "offset")
                 requested_length = parse_non_negative_int(body.get("length"), "length")

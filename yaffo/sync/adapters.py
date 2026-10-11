@@ -10,15 +10,15 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Callable
 
 from sqlalchemy.orm import Session
 
 from yaffo.db.models import (
-    SYNC_ADAPTER_STATUS_INVALID, SYNC_HANDLER_FOLDER_SOURCE, SYNC_HANDLER_FOLDER_TARGET, SYNC_ROLE_SOURCE,
-    SYNC_ROLE_TARGET, SyncAdapter,
+    SYNC_ADAPTER_STATUS_INVALID, SYNC_HANDLER_FOLDER_SOURCE, SYNC_HANDLER_FOLDER_TARGET, SYNC_HANDLER_PEER_SOURCE,
+    SYNC_ROLE_SOURCE, SYNC_ROLE_TARGET, SyncAdapter,
 )
-from yaffo.sync import folder_source, folder_target
+from yaffo.sync import folder_source, folder_target, peer_source
 from yaffo.sync.adapter_static import CURRENT_CONTRACT
 from yaffo.sync.handlers import SourceHandler, TargetHandler
 from yaffo.sync.providers import ProviderPreset, get_provider
@@ -30,12 +30,18 @@ from yaffo.sync.starlark_adapter import StarlarkSourceHandler, StarlarkTargetHan
 class BuiltinAdapter:
     role: str
     options: dict[str, dict[str, Any]]
-    handler: SourceHandler | TargetHandler
+    # Called for every load: a handler that keeps per-run state (the peer source's
+    # session and downloads) must not be shared between runs.
+    make_handler: Callable[[], SourceHandler | TargetHandler]
 
+
+_FOLDER_SOURCE = folder_source.FolderSource()
+_FOLDER_TARGET = folder_target.FolderTarget()
 
 BUILTINS: dict[str, BuiltinAdapter] = {
-    SYNC_HANDLER_FOLDER_SOURCE: BuiltinAdapter(SYNC_ROLE_SOURCE, folder_source.OPTIONS, folder_source.FolderSource()),
-    SYNC_HANDLER_FOLDER_TARGET: BuiltinAdapter(SYNC_ROLE_TARGET, folder_target.OPTIONS, folder_target.FolderTarget()),
+    SYNC_HANDLER_FOLDER_SOURCE: BuiltinAdapter(SYNC_ROLE_SOURCE, folder_source.OPTIONS, lambda: _FOLDER_SOURCE),
+    SYNC_HANDLER_FOLDER_TARGET: BuiltinAdapter(SYNC_ROLE_TARGET, folder_target.OPTIONS, lambda: _FOLDER_TARGET),
+    SYNC_HANDLER_PEER_SOURCE: BuiltinAdapter(SYNC_ROLE_SOURCE, peer_source.OPTIONS, peer_source.PeerSource),
 }
 
 
@@ -82,6 +88,8 @@ class LoadedAdapter:
 
     @property
     def has_choices(self) -> bool:
+        if self.is_builtin:
+            return callable(getattr(self.handler, "choices", None))
         return "choices" in (self.metadata.get("hooks") or {})
 
 
@@ -134,7 +142,7 @@ def _from_row(row: SyncAdapter) -> LoadedAdapter:
         raise AdapterUnavailable(f"adapter {row.slug!r} can't run in this version")
     return LoadedAdapter(id=row.id, slug=row.slug, name=row.name, role=row.role, provider=row.provider,
                          handler_key=row.handler, code_hash=None, options=builtin.options,
-                         handler=builtin.handler)
+                         handler=builtin.make_handler())
 
 
 def load_adapter(session: Session, adapter_id: int) -> LoadedAdapter:

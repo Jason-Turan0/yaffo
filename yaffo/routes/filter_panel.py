@@ -50,6 +50,23 @@ def filter_selections(session: Session, args: MultiDict) -> dict:
     }
 
 
+def remote_filters_context(selections: dict, facets: dict) -> dict:
+    """The `filters` template context for a paired device's library: every option
+    list comes from the peer's facets (scoped to its grant), and people and label
+    entries are the peer's own ids, echoed back to it when selected."""
+    return {
+        "years": facets.get("years", []),
+        "months": get_distinct_months(),
+        "devices": facets.get("devices", []),
+        "people": facets.get("people", []),
+        "labels": facets.get("labels", []),
+        "tag_names": facets.get("tag_names", []),
+        "location_names": facets.get("locations", []),
+        "genders": gender_options(),
+        **selections,
+    }
+
+
 def _values(filters: dict) -> dict:
     """The `selected_*` context back to plain selection keys."""
     return {param.key: filters[f"selected_{param.key}"] for param in MEDIA_FILTER_PARAMS}

@@ -40,6 +40,18 @@ def test_a_run_is_recorded_as_a_completed_job_with_its_counts(session, target):
     assert job.completed_at is not None
 
 
+def test_run_progress_ignores_text_summary_params(session, target, monkeypatch):
+    result = RunResult(outcome=codes.OUTCOME_SYNC_IMPORTED,
+                       params={"imported": 3, "linked": 1, "unchanged": 2, "path": "lan"})
+    monkeypatch.setattr(sync_run, "run_sync", lambda *args: result)
+
+    job = sync_run.run_and_record_sync(session, target, "run-1")
+
+    assert job.status == JOB_STATUS_COMPLETED
+    assert (job.task_count, job.completed_count) == (4, 4)
+    assert json.loads(job.job_data)["path"] == "lan"
+
+
 def test_a_running_job_shows_its_progress_between_batches(session, target, monkeypatch):
     seen: list[tuple[int, int]] = []
     write = sync_run._write_progress

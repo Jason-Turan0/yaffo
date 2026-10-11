@@ -67,6 +67,9 @@ class PullPreviewEndpoint:
             denial = verify_pull_preview_request(body, peer_lookup())
             if denial is not None:
                 return {"status": "error", "detail": denial}
+            limited = self._service.rate_limits.check(MESSAGE_PULL_PREVIEW, body["device_id"])
+            if limited is not None:
+                return limited
             try:
                 max_dimension = parse_non_negative_int(body.get("max_dimension"), "max_dimension")
             except ValueError as exc:

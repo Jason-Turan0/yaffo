@@ -2,7 +2,10 @@
 the values a sync stores in `config.options`.
 
 Each option has a `type`, a `label`, and optionally `help`, `default`, `required`,
-and (for `select`) `choices: [{value, label}]`. `local_folder` is host-native only
+and (for `select`) `choices: [{value, label}]`. Built-in adapters may also declare
+`needed` (must be set before the sync is turned on, but may be empty while saving,
+for a value picked after another one) and `depends_on` (the option this one is
+picked inside: it's cleared when that one changes). `local_folder` is host-native only
 (built-in adapters): an absolute folder path picked with the native folder picker.
 
 A remote value is `{id, label}`, picked from the service. A `remote_collection` that

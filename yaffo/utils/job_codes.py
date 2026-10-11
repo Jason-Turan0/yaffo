@@ -28,6 +28,10 @@ OUTCOME_SYNC_SENT = "sync_sent"                    # target: {sent, removed, kep
 OUTCOME_SYNC_IMPORTED = "sync_imported"            # source: {imported, linked, replaced, unchanged, failed}
 OUTCOME_SYNC_WAITING_FOR_FOLDER = "sync_waiting_for_folder"  # Folder source: the folder isn't connected
 OUTCOME_SYNC_NOT_RUN = "sync_not_run"              # the sync needs something first (see problem)
+OUTCOME_SYNC_WAITING_FOR_DEVICE = "sync_waiting_for_device"  # peer source: {device}: offline on hub and LAN
+OUTCOME_SYNC_WAITING_FOR_DIRECT = "sync_waiting_for_direct"  # peer source: {device}: only a relay path, relay off
+OUTCOME_SYNC_RELAY_BUDGET = "sync_relay_budget"              # peer source: {device}: this run's relay budget used
+OUTCOME_SYNC_SHARING_OFF = "sync_sharing_off"                # peer source: device sharing isn't running
 
 # ---- problems: why a run needs attention
 PROBLEM_MEDIA_FOLDER_EMPTY = "media_folder_empty"  # file sync held items back: {roots, count}
@@ -43,6 +47,7 @@ PROBLEM_SYNC_PAUSED = "sync_paused"                # {pause_code}: selection/des
 PROBLEM_SYNC_ITEMS_FAILED = "sync_items_failed"    # {count}: some items failed this run
 PROBLEM_SYNC_STOPPED = "sync_stopped"              # {code}: the service stopped the run (rate limit, ...)
 PROBLEM_SYNC_DISK_FULL = "sync_disk_full"          # not enough free space to keep copying
+PROBLEM_SYNC_INTERRUPTED = "sync_interrupted"      # {outcome, ...}: the source went away mid-run (a peer outcome)
 PROBLEM_SYNC_NEEDS_SIGN_IN = "sync_needs_sign_in"  # {reason}: the account must sign in (again)
 # Dispatch failures keep their original key, job_data["dispatch_error_code"].
 PROBLEM_INVALID_SCOPE = "invalid_scope"

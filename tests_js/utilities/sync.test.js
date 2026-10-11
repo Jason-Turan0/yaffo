@@ -87,7 +87,7 @@ describe('sync Test results', () => {
     PO.sync.renderTestResult(out, {
       role: 'source', problem: null, problem_text: null, would_add: 1, would_remove: 0, unchanged: 0,
       convert: 0, unsupported: 0, add_samples: [], remove_samples: [], more: true,
-      state_counts: { new: 1, in_library: 1, imported: 1 },
+      state_counts: { new: 1, in_library: 1, imported: 1 }, total_items: 3, source_total: null,
       records: [{ filename: 'IMG_1.JPG', size: 2048, state: 'new', media_item_id: null },
         { filename: 'IMG_2.JPG', size: null, state: 'in_library', media_item_id: 9 },
         { filename: 'IMG_3.JPG', size: 10, state: 'imported', media_item_id: 10 }],
@@ -106,7 +106,39 @@ describe('sync Test results', () => {
     expect(out.querySelector('tbody .chip.chip-accent').textContent).toBe('utilities:sync.test.state.new');
     expect([...out.querySelectorAll('tbody td:first-child a')].map((link) => link.textContent))
       .toEqual(['IMG_2.JPG', 'IMG_3.JPG']);
-    expect(out.textContent).toContain('utilities:sync.test.more');
+    expect(out.querySelector('.sync-test-note').textContent).toBe('utilities:sync.test.partial');
+  });
+
+  it('says how much of the source total a cut-short Test counted', async () => {
+    document.body.innerHTML = '<div id="out"></div>';
+    const PO = await loadModule('utilities/sync.js');
+    const out = document.getElementById('out');
+    const t = (key, options = {}) => (options.counted ? `${key}:${options.counted}/${options.total}` : key);
+
+    PO.sync.renderTestResult(out, {
+      role: 'source', problem: null, problem_text: null, would_add: 1, would_remove: 0, unchanged: 0,
+      convert: 0, unsupported: 0, add_samples: [], remove_samples: [], more: true,
+      state_counts: { new: 1 }, total_items: 400, source_total: 1342,
+      records: [{ filename: 'IMG_1.JPG', size: 1, state: 'new', media_item_id: null }],
+    }, { t }, window.APP_CONFIG);
+
+    expect(out.querySelector('.sync-test-note').textContent)
+      .toBe(`utilities:sync.test.partialOf:400/${new Intl.NumberFormat().format(1342)}`);
+  });
+
+  it('adds no note when the Test listed the whole source', async () => {
+    document.body.innerHTML = '<div id="out"></div>';
+    const PO = await loadModule('utilities/sync.js');
+    const out = document.getElementById('out');
+
+    PO.sync.renderTestResult(out, {
+      role: 'source', problem: null, problem_text: null, would_add: 1, would_remove: 0, unchanged: 0,
+      convert: 0, unsupported: 0, add_samples: [], remove_samples: [], more: false,
+      state_counts: { new: 1 }, total_items: 1, source_total: 1,
+      records: [{ filename: 'IMG_1.JPG', size: 1, state: 'new', media_item_id: null }],
+    }, i18n, window.APP_CONFIG);
+
+    expect(out.querySelector('.sync-test-note')).toBeNull();
   });
 
   it('says there is nothing new when a source page is all known', async () => {

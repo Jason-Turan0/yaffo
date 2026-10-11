@@ -374,7 +374,8 @@
         "running": "Checking…",
         "failed": "Could not run the test.",
         "nothingToDo": "Nothing to do: the target already matches.",
-        "more": "Showing the first page only.",
+        "partial": "Counted the first {{counted}} files; the rest took too long to list. A run imports them all.",
+        "partialOf": "Counted {{counted}} of {{total}} files; the rest took too long to list. A run imports them all.",
         "state": {
           "new": "New",
           "imported": "Already imported",

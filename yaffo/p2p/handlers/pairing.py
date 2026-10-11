@@ -4,9 +4,10 @@ from typing import Optional
 from yaffo.db import db
 from yaffo.db.repositories import p2p_repository
 from yaffo.p2p.identity import DeviceIdentity, device_id_from_pubkey_b64
-from yaffo.p2p.messages import PeerLookup, build_signed_message, verify_signed_message
+from yaffo.p2p.messages import PROTOCOL_VERSION, PeerLookup, build_signed_message, verify_signed_message
 from yaffo.p2p.pairing import PairingCode, PairingError, new_pairing_code, sign_nonce, verify_nonce_signature
 from yaffo.p2p.errors import P2PServiceError
+from yaffo.p2p.rate_limits import PAIRING_KEY
 
 MESSAGE_REVOKED = "revoked"
 
@@ -54,6 +55,7 @@ class PeeringEndpoint:
             "pubkey": service.identity.public_key_b64,
             "nonce": code.nonce,
             "signature": sign_nonce(service.identity.private_key, code.nonce),
+            "protocol": PROTOCOL_VERSION,
         }
         report = service._submit(service._call_with_lan_first(code.device_id, payload=payload, attempt_upgrade=False))
         result = report["response"]
@@ -87,6 +89,11 @@ class PeeringEndpoint:
     def handle_pairing_confirm(self, body: dict) -> dict:
         """Verify a pairing nonce and record the joining device."""
         service = self._service
+        # Checked before the nonce is looked up: the sender isn't known yet, so
+        # one bucket for every pairing attempt bounds guessing at pending codes.
+        limited = service.rate_limits.check("pairing_confirm", PAIRING_KEY)
+        if limited is not None:
+            return limited
         with service._pending_lock:
             code = service._pending.pop(body.get("nonce"), None)
         if code is None:

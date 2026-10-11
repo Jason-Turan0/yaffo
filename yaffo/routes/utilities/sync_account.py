@@ -8,7 +8,8 @@
 - Account choice: connections are shared, so an existing account for the provider
   is offered (and preselected for a new sync).
 - Pickers: `remote_folder` / `remote_collection` options list what's in the account
-  by calling the adapter's `choices` hook live, with read grants only.
+  by calling the adapter's `choices` hook live, with read grants only. A built-in
+  adapter (the peer source) lists its choices in Python instead.
 """
 from __future__ import annotations
 
@@ -26,7 +27,7 @@ from yaffo.db.repositories import sync_repository
 from yaffo.logging_config import get_logger
 from yaffo.sync import access, connections, oauth, setup
 from yaffo.sync.adapters import LoadedAdapter
-from yaffo.sync.handlers import HookContext
+from yaffo.sync.handlers import ChoicesUnavailable, HookContext
 from yaffo.sync.schemas import PASS_INCREMENTAL, SyncConfig
 from yaffo.sync.starlark_adapter import HookFailed, StarlarkSourceHandler, StarlarkTargetHandler
 
@@ -132,6 +133,20 @@ def _choice_items(raw: Any) -> list[dict]:
     return items[:MAX_CHOICES]
 
 
+def _builtin_choices(adapter: LoadedAdapter, option: str, config: SyncConfig):
+    """A built-in adapter's picker (the peer source's devices and shared scopes),
+    listed by its Python handler. Nothing to sign in to; a reason it can't list is
+    shown in the picker."""
+    try:
+        envelope = adapter.handler.choices(option, request.args.get("parent") or None,
+                                           request.args.get("cursor") or None, config.options)
+    except ChoicesUnavailable as e:
+        return jsonify({"error": str(e)})
+    next_cursor = envelope.get("next_cursor")
+    return jsonify({"items": _choice_items(envelope.get("items")),
+                    "next_cursor": next_cursor if isinstance(next_cursor, str) else None})
+
+
 def init_sync_account_routes(app: Flask) -> None:
     @app.before_request
     def sync_oauth_return():
@@ -227,6 +242,8 @@ def init_sync_account_routes(app: Flask) -> None:
         spec = adapter.options.get(option)
         if spec is None or not spec["type"].startswith("remote_") or not adapter.has_choices:
             abort(404)
+        if adapter.is_builtin:
+            return _builtin_choices(adapter, option, config)
         if access.account_problem(db.session, adapter, config):
             return jsonify({"error": gettext("Sign in first.")}), 409
         client = access.attach(db.session, adapter, config, read_only=True)

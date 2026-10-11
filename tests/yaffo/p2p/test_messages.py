@@ -6,7 +6,14 @@ import pytest
 from yaffo.p2p.handlers.pairing import build_revocation_notice, verify_revocation_notice
 from yaffo.p2p.handlers.pull_file import build_pull_file_request, verify_pull_file_request
 from yaffo.p2p.identity import InMemorySecretStore, load_or_create_identity
-from yaffo.p2p.messages import PeerRecord, build_signed_message, verify_signed_message
+from yaffo.p2p.messages import (
+    PROTOCOL_VERSION,
+    PeerRecord,
+    build_signed_message,
+    negotiated_protocol,
+    peer_protocol,
+    verify_signed_message,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -84,3 +91,39 @@ def test_unsigned_revocation_notice_is_rejected(sender):
     lookup = _store((sender.device_id, sender.public_key_b64, "trusted"))
     forged = {"type": "revoked", "device_id": sender.device_id, "ts": 0, "signature": ""}
     assert verify_revocation_notice(forged, lookup) is not None
+
+
+# ---- protocol versions ----------------------------------------------------------
+
+
+def test_signed_messages_say_protocol_2(sender):
+    assert build_signed_message(sender, "list_shared")["protocol"] == PROTOCOL_VERSION == 2
+
+
+def test_a_version_1_message_without_a_protocol_still_verifies(sender):
+    body = build_pull_file_request(sender, 7, 0, 10)
+    body.pop("protocol")
+    lookup = _store((sender.device_id, sender.public_key_b64, "trusted"))
+    assert verify_pull_file_request(body, lookup) is None
+    assert peer_protocol(body) == 1
+
+
+def test_a_version_1_verifier_accepts_a_version_2_message(sender):
+    """The version rides outside the signature: a v1 peer recomputes the signed
+    payload from its own field list, which doesn't include it."""
+    body = build_pull_file_request(sender, 7, 0, 10)
+    lookup = _store((sender.device_id, sender.public_key_b64, "trusted"))
+    assert verify_signed_message(body, lookup, "pull_file", signed_fields=("media_item_id", "offset", "length")) is None
+
+
+@pytest.mark.parametrize(("message", "theirs", "agreed"), [
+    ({}, 1, 1),
+    ({"protocol": 1}, 1, 1),
+    ({"protocol": 2}, 2, 2),
+    ({"protocol": 7}, 7, 2),
+    ({"protocol": "junk"}, 1, 1),
+    (None, 1, 1),
+])
+def test_both_sides_adapt_to_the_lower_version(message, theirs, agreed):
+    assert peer_protocol(message) == theirs
+    assert negotiated_protocol(message) == agreed

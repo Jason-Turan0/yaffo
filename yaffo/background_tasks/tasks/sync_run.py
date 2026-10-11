@@ -78,7 +78,8 @@ def run_and_record_sync(session: Session, automation: Automation, job_id: str) -
         job.status = JOB_STATUS_FAILED if result.failed_run else JOB_STATUS_COMPLETED
     job.job_data = result.job_data()
     job.error = result.error
-    done = sum(v for k, v in result.params.items() if k not in ("unchanged", "folder"))
+    done = sum(v for k, v in result.params.items()
+               if k not in ("unchanged", "folder") and isinstance(v, int) and not isinstance(v, bool))
     job.task_count = job.completed_count = done
     job.error_count = result.params.get("failed", 0) + result.params.get("unsupported", 0)
     job.completed_at = utcnow()

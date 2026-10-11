@@ -175,6 +175,23 @@ def _task_status(db, task_id):
         conn.close()
 
 
+def test_a_recycling_worker_is_not_handed_work_it_will_never_run(probe):
+    """A worker exits on its own after max_tasks_per_worker. Between its last result
+    and its exit it is still alive and idle; work dispatched to it then was lost and
+    recorded as "worker crashed (exitcode=0)"."""
+    mod, db, out = probe
+    names = [f"m{i}" for i in range(6)]
+    results = [mod.marker(name) for name in names]
+
+    host = Host(filename=str(db), periodic=[], num_workers=1, max_tasks_per_worker=1,
+                bootstrap="taskq_probe", queue_ref="taskq_probe:tq")
+    assert _run_until(host, lambda: all(_task_status(db, r.id) in ("done", "error") for r in results)), \
+        [_task_status(db, r.id) for r in results]
+
+    assert [_task_status(db, r.id) for r in results] == ["done"] * len(names)
+    assert _recorded(out) == set(names)
+
+
 def test_non_json_return_is_a_clean_failure(probe):
     mod, db, out = probe
     res = mod.bad_return()   # worker rejects the non-JSON return -> task error

@@ -13,6 +13,7 @@ from types import SimpleNamespace
 
 import pytest
 
+import yaffo.p2p.puller as puller_module
 import yaffo.p2p.transfers as transfers_module
 from yaffo.p2p.identity import InMemorySecretStore, load_or_create_identity
 from yaffo.p2p.transfers import (
@@ -197,7 +198,7 @@ def test_pull_completes_and_cleans_up_scratch_state(manager, tmp_path):
 
 
 def test_multi_chunk_pull_advances_offsets(manager, tmp_path, monkeypatch):
-    monkeypatch.setattr(transfers_module, "DEFAULT_PULL_CHUNK_BYTES", 3)
+    monkeypatch.setattr(puller_module, "DEFAULT_PULL_CHUNK_BYTES", 3)
     holder = ScriptedHolder({"trip/a.jpg": RemoteFile(b"abcdef")})
     batch, entry = make_batch(tmp_path), make_entry()
 
@@ -210,7 +211,7 @@ def test_multi_chunk_pull_advances_offsets(manager, tmp_path, monkeypatch):
 def test_resume_continues_from_matching_sidecar(manager, tmp_path, monkeypatch):
     """A partial whose sidecar matches the manifest resumes appending; the
     end-to-end hash still covers the resumed bytes."""
-    monkeypatch.setattr(transfers_module, "DEFAULT_PULL_CHUNK_BYTES", 3)
+    monkeypatch.setattr(puller_module, "DEFAULT_PULL_CHUNK_BYTES", 3)
     holder = ScriptedHolder({"trip/a.jpg": RemoteFile(b"abcdef")})
     batch, entry = make_batch(tmp_path), make_entry()
     destination = destination_of(tmp_path)
@@ -228,7 +229,7 @@ def test_resume_continues_from_matching_sidecar(manager, tmp_path, monkeypatch):
 def test_stale_sidecar_restarts_from_zero(manager, tmp_path, monkeypatch):
     """A sidecar recorded against a different manifest (other mtime) must
     NOT be appended to — that would splice two versions of the file."""
-    monkeypatch.setattr(transfers_module, "DEFAULT_PULL_CHUNK_BYTES", 3)
+    monkeypatch.setattr(puller_module, "DEFAULT_PULL_CHUNK_BYTES", 3)
     holder = ScriptedHolder({"trip/a.jpg": RemoteFile(b"abcdef")})
     batch, entry = make_batch(tmp_path), make_entry()
     destination = destination_of(tmp_path)
@@ -246,7 +247,7 @@ def test_source_changed_on_peer_restarts_with_new_manifest(manager, tmp_path, mo
     """The peer's file changed after the browse snapshot: the first chunk's
     size/mtime disagree with the manifest, so the engine restarts against
     the file's new identity instead of splicing."""
-    monkeypatch.setattr(transfers_module, "DEFAULT_PULL_CHUNK_BYTES", 3)
+    monkeypatch.setattr(puller_module, "DEFAULT_PULL_CHUNK_BYTES", 3)
     holder = ScriptedHolder({"trip/a.jpg": RemoteFile(b"abcdef", mtime=MTIME + 100)})
     batch, entry = make_batch(tmp_path), make_entry(size=3, mtime=MTIME)
 
@@ -262,7 +263,7 @@ def test_corrupt_partial_recovers_instead_of_wedging(manager, tmp_path, monkeypa
     """Corrupt resumed bytes fail the eof checksum — the engine must throw
     the partial away and restart, not leave a poisoned partial that makes
     every retry fail forever."""
-    monkeypatch.setattr(transfers_module, "DEFAULT_PULL_CHUNK_BYTES", 3)
+    monkeypatch.setattr(puller_module, "DEFAULT_PULL_CHUNK_BYTES", 3)
     holder = ScriptedHolder({"trip/a.jpg": RemoteFile(b"abcdef")})
     batch, entry = make_batch(tmp_path), make_entry()
     destination = destination_of(tmp_path)
@@ -315,7 +316,7 @@ def test_peer_denial_marks_the_file_failed(manager, tmp_path):
 
 
 def test_cancel_mid_pull_keeps_the_partial_for_a_later_resume(manager, tmp_path, monkeypatch):
-    monkeypatch.setattr(transfers_module, "DEFAULT_PULL_CHUNK_BYTES", 3)
+    monkeypatch.setattr(puller_module, "DEFAULT_PULL_CHUNK_BYTES", 3)
     holder = ScriptedHolder({"trip/a.jpg": RemoteFile(b"abcdefghi")})
     batch, entry = make_batch(tmp_path), make_entry(size=9)
 

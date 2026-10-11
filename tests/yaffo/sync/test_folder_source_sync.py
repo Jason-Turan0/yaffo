@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from yaffo.db.models import MediaItem, MEDIA_STATUS_IMPORTED, MEDIA_STATUS_INDEXED, SYNC_ITEM_IMPORTED, SYNC_ITEM_LINKED_EXISTING, \
-    EVENT_MEDIA_MODIFIED
+from yaffo.db.models import Job, MediaItem, JOB_STATUS_CANCELLED, JOB_STATUS_RUNNING, MEDIA_STATUS_IMPORTED, \
+    MEDIA_STATUS_INDEXED, SYNC_ITEM_IMPORTED, SYNC_ITEM_LINKED_EXISTING, EVENT_MEDIA_MODIFIED
 from yaffo.db.repositories import sync_repository
 from yaffo.sync import folder_source, setup
 from yaffo.sync.engine import run_sync
@@ -68,6 +68,66 @@ def test_new_photos_are_copied_into_the_import_root_by_capture_month(session, li
         ("100CANON/IMG_0001.JPG", SYNC_ITEM_IMPORTED), ("100CANON/IMG_0002.JPG", SYNC_ITEM_IMPORTED)}
     # The card is untouched.
     assert sorted(p.name for p in (card / "100CANON").iterdir()) == ["IMG_0001.JPG", "IMG_0002.JPG", "notes.txt"]
+
+
+def test_a_second_download_does_not_block_cancel_writes(session, make_source, run_context, monkeypatch):
+    source = make_source()
+    session.add(Job(id="cancel-me", name=source.slug, status=JOB_STATUS_RUNNING, automation_id=source.id))
+    session.commit()
+    fetch = folder_source.FolderSource.fetch
+    calls = 0
+
+    def check_writer(self, record, destination, ctx):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            # The first import has flushed a media row. A Cancel request uses a
+            # separate connection to write its Job status at this point.
+            with session.get_bind().begin() as connection:
+                connection.exec_driver_sql("PRAGMA busy_timeout=50")
+                connection.exec_driver_sql(
+                    "UPDATE jobs SET status='CANCELLED' WHERE id='cancel-me'"
+                )
+        return fetch(self, record, destination, ctx)
+
+    monkeypatch.setattr(folder_source.FolderSource, "fetch", check_writer)
+
+    result = run_sync(session, source.id, run_context)
+
+    assert result.params["imported"] == 2
+    assert calls == 2
+    session.expire_all()
+    assert session.get(Job, "cancel-me").status == JOB_STATUS_CANCELLED
+
+
+def test_a_crash_after_one_committed_file_requeues_its_indexing(session, library, card, make_source,
+                                                                run_context, monkeypatch):
+    source = make_source()
+    fetch = folder_source.FolderSource.fetch
+    calls = 0
+
+    def crash_on_second(self, record, destination, ctx):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise RuntimeError("worker stopped")
+        return fetch(self, record, destination, ctx)
+
+    monkeypatch.setattr(folder_source.FolderSource, "fetch", crash_on_second)
+    with pytest.raises(RuntimeError, match="worker stopped"):
+        run_sync(session, source.id, run_context)
+    session.rollback()
+    assert session.query(MediaItem).count() == 1
+    assert run_context.indexed == []
+
+    monkeypatch.setattr(folder_source.FolderSource, "fetch", fetch)
+    result = run_sync(session, source.id, run_context)
+
+    assert result.params["imported"] == 1
+    assert sorted(run_context.indexed[0]) == sorted([
+        str(library / "Imports/Camera/2024/07/IMG_0001.JPG"),
+        str(library / "Imports/Camera/2023/12/IMG_0002.JPG"),
+    ])
 
 
 def test_a_second_run_copies_only_what_is_new(session, library, card, make_source, run_context):

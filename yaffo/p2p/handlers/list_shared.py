@@ -29,6 +29,9 @@ class ListSharedEndpoint:
             if denial is not None:
                 return {"status": "error", "detail": denial}
             peer_device_id = body["device_id"]
+            limited = self._service.rate_limits.check(MESSAGE_LIST_SHARED, peer_device_id)
+            if limited is not None:
+                return limited
             grants = p2p_repository.list_active_grants(db.session, peer_device_id)
             media_dirs = {entry.id: entry for entry in media_dir_repository.get_media_dir_entries(db.session)}
 

@@ -27,6 +27,7 @@ def dispatch_event_task(event_type: str, payload: dict):
         album_id=payload.get('album_id'),
         change=payload.get('change'),
         sync_automation_ids=payload.get('sync_automation_ids', []),
+        device_id=payload.get('device_id'),
     )
     session = SessionFactory()
     try:

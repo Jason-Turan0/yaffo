@@ -37,6 +37,7 @@ def invoke_automation(automation: Automation, context: EventContext | None) -> b
             "album_id": context.album_id,
             "change": context.change,
             "sync_automation_ids": context.sync_automation_ids,
+            "device_id": context.device_id,
         }
         run_automation_code_task(automation.id, payload)
         return True

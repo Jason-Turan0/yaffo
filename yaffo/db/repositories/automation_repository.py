@@ -113,16 +113,14 @@ def remove_event_trigger(session: Session, slug: str, event_type: str) -> int:
     return len(matches)
 
 
-def get_recent_jobs(session: Session, automation_id: int, limit: int = 10) -> list[Job]:
+def get_recent_jobs(session: Session, automation_id: int, limit: int = 10,
+                    exclude_index_batches: bool = False) -> list[Job]:
     """The automation's most recent runs (Jobs tagged with its id), newest first.
     Reuses the Job table as the run history (jobs.automation_id)."""
-    return (
-        session.query(Job)
-        .filter(Job.automation_id == automation_id)
-        .order_by(Job.created_at.desc())
-        .limit(limit)
-        .all()
-    )
+    query = session.query(Job).filter(Job.automation_id == automation_id)
+    if exclude_index_batches:
+        query = query.filter(Job.name.notin_(("import_photos", "index_photos")))
+    return query.order_by(Job.created_at.desc()).limit(limit).all()
 
 
 def get_status(session: Session, slug: str) -> str | None:

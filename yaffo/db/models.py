@@ -332,6 +332,7 @@ EVENT_MEDIA_MODIFIED = "media_modified"
 EVENT_MEDIA_LABELED = "media_labeled"
 EVENT_ALBUM_CHANGED = "album_changed"
 EVENT_MEDIA_DELETED = "media_deleted"
+EVENT_DEVICE_ONLINE = "device_online"
 EVENTS = {
     EVENT_MEDIA_IMPORTED: "Media imported",
     EVENT_MEDIA_INDEXED: "Media indexed",
@@ -340,6 +341,7 @@ EVENTS = {
     EVENT_MEDIA_LABELED: "Media labeled",
     EVENT_ALBUM_CHANGED: "Album changed",
     EVENT_MEDIA_DELETED: "Media deleted",
+    EVENT_DEVICE_ONLINE: "Paired device came online",
 }
 
 # album_changed payload `change` values.
@@ -560,7 +562,9 @@ SYNC_ADAPTER_STATUS_INVALID = "invalid"
 # Built-in adapters: Python handlers instead of Starlark code, no account.
 SYNC_HANDLER_FOLDER_SOURCE = "folder_source"
 SYNC_HANDLER_FOLDER_TARGET = "folder_target"
+SYNC_HANDLER_PEER_SOURCE = "peer_source"
 SYNC_PROVIDER_LOCAL = "local"
+SYNC_PROVIDER_PEER = "peer"
 
 # sync_items.status. Stored as codes; the UI translates them.
 SYNC_ITEM_IMPORTED = "imported"

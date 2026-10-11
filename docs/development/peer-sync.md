@@ -1,6 +1,8 @@
 # Peer Sync — Importing from Paired Devices (Design Sketch)
 
-**Status: proposed.** Builds on [Sync Adapters](automation-sync-adapters.md) (the
+**Status: in progress.** The internal API, protocol 2, and peer source are
+implemented. Two-machine LAN verification and the user guide, translations, and
+browser specs remain. Builds on [Sync Adapters](automation-sync-adapters.md) (the
 sync engine, the item ledger, sources and targets) and
 [P2P Device Sharing](p2p-sharing.md) (pairing, share grants, the wire protocol,
 `TransferManager`). Read those first; this doc only covers what's new.
@@ -318,13 +320,11 @@ implemented in Python against the internal API through a small client
     `GET /devices/{id}/scopes`, stored as `{id: scope_key, label: "Mom's laptop ›
     Vacation 2026"}`. The picker is empty with a hint when the device shares
     nothing with this one.
-  - `allow_relay`: off by default, plus a budget in GB when it's on (see *Relay
-    policy*).
 - **Import root and layout** as for every source. *Keep the source's folders* uses
   the manifest's `relative_path`, taken relative to the scope.
 - **Consent:** "Copy new photos from *Mom's laptop › Vacation 2026* into
-  *Pictures › Imports › Mom*." The device, scope, import root, and relay setting
-  are part of the consent hash.
+  *Pictures › Imports › Mom*." The device, scope, and import root are part of
+  the consent hash.
 
 `SyncConfig.connection_key` stays `None` (like the Folder source). The device is an
 option (`device: {id: device_id, label: display_name}`), so it's covered by
@@ -378,22 +378,21 @@ left as a partial and resumed next run.
 imports a scope on A that contains A's import root. Without hashes, every photo
 crosses twice before dedupe recognizes it. With protocol 2's `sha1` the engine
 links them before downloading (`linked_existing`) and no bytes move. On top of
-that, the Sharing page warns when a grant's scope contains a peer sync's import
-root.
+that, the paired device's Sharing page warns when a grant back to that device
+contains its peer sync's import root.
 
 ## Relay policy for unattended runs
 
 Relay egress is the hub's only metered cost, and an unattended nightly backfill is
 exactly the traffic that policy was written to discourage. Batches in the remote
 gallery stay as they are (a person is watching and can continue anyway).
-Scheduled peer syncs:
+Scheduled peer syncs always use `relay: never`. They run on the LAN or after a
+successful upgrade to a direct path, and otherwise end with "waiting for a direct
+connection". The run summary shows whether LAN or direct was used.
 
-- default to `relay: never`, so they only run on the LAN or after a successful
-  upgrade to a direct path, and otherwise end with "waiting for a direct
-  connection";
-- can opt in per sync to relayed transfers with a per-run byte budget (default
-  1 GB, `RELAY_BATCH_BUDGET_BYTES`), throttled as today;
-- show the path each run used (LAN / direct / relay) in the run summary.
+The automation's Run history shows one sync run. Its progress advances after each
+committed page of the peer's file listing; import and index jobs queued for those
+pages remain background work and do not appear as separate sync runs.
 
 ## Triggers
 

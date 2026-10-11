@@ -7,7 +7,8 @@
         content already in the library (sha1)         -> link, don't copy
         otherwise                                     -> copy to Imports/<root>/YYYY/MM atomically,
                                                          create the media row, queue indexing
-        commit the page's ledger rows + cursor together
+        commit each record so downloads do not hold SQLite's write lock;
+        commit the page cursor after its records
     promote the checkpoint when the pass completes
 
 Starlark adapters (OneDrive) go through the same loop. Their hook errors are
@@ -39,21 +40,21 @@ from yaffo.background_tasks.watcher_suppression import record_self_write
 from yaffo.common import media_type_for_path
 from yaffo.db.models import (
     Automation, MediaItem, SyncItem, EVENT_MEDIA_MODIFIED, MEDIA_STATUS_IMPORTED,
-    SYNC_ITEM_DELETED_AT_SOURCE, SYNC_ITEM_FAILED, SYNC_ITEM_IMPORTED, SYNC_ITEM_LINKED_EXISTING,
+    SYNC_ITEM_DELETED_AT_SOURCE, SYNC_ITEM_FAILED, SYNC_ITEM_IMPORTED, SYNC_ITEM_LINKED_EXISTING, SYNC_ITEM_SKIPPED,
 )
 from yaffo.db.repositories import sync_repository
 from yaffo.logging_config import get_logger
 from yaffo.sync import access, connections
 from yaffo.sync.adapters import LoadedAdapter, source_handler
 from yaffo.sync.files import (
-    file_sha1, free_bytes, move_into_place, replace_file, sanitize_name, sweep_temps, temp_path,
+    file_sha1, free_bytes, move_into_place, replace_file, sanitize_name, stable_temp_path, sweep_temps, temp_path,
 )
 from yaffo.sync.guards import (
     PROBLEM_MEDIA_DIR_MISSING, PROBLEM_UNKNOWN_MEDIA_DIR, folder_source_problem, resolve_import_root,
 )
 from yaffo.sync.handlers import (
     ERROR_AUTH, ERROR_CURSOR_INVALID, ERROR_FATAL, ERROR_NOT_FOUND, ERROR_RATE_LIMITED, ERROR_RETRY_LATER,
-    HookContext, SourceHandler,
+    STOP_OUT_OF_TIME, HookContext, SourceHandler, SourceItemSkipped, SourceStop,
 )
 from yaffo.sync.run_common import (
     HookOutputError, RunContext, RunResult, check_error, merge_state, pause, schedule_continuation, set_runtime,
@@ -78,7 +79,9 @@ UNDATED_FOLDER = "Undated"
 ITEM_IMPORT_FAILED = "import_failed"
 _RECORD_FIELDS = {"source_id", "filename", "folder", "download", "size", "mime", "hash", "taken_at", "location",
                   "deleted", "updated_at"}
-_BUILTIN_RECORD_FIELDS = {"local_path"}
+# Host-only record fields of built-in sources: the Folder source's file, the peer
+# source's pull handle (yaffo/sync/peer_source.py).
+_BUILTIN_RECORD_FIELDS = {"local_path", "peer"}
 # A run that stopped early is continued this soon (time budget) or this late
 # (a transient failure at the service).
 CONTINUE_AFTER_SECONDS = 60
@@ -225,7 +228,8 @@ class SourceRun:
         cursor = self.runtime.cursor(CURSOR_LIST)
         state = {**self.runtime.state, "checkpoint": cursor.checkpoint}
         return HookContext(options=self.options, state=state, run_id=self.run.job_id, pass_kind=pass_kind,
-                           automation_id=self.automation.id)
+                           automation_id=self.automation.id, extra={"should_stop": self.out_of_time},
+                           filters=self.config.source_filters)
 
     # ---- one record --------------------------------------------------------
 
@@ -235,12 +239,19 @@ class SourceRun:
         digest = record.get("hash") or {}
         return digest.get("value") if digest.get("algo") == "sha1" else None
 
+    def temp_for(self, record: dict, folder: Path) -> Path:
+        """Where a record is fetched to. A resumable source gets the same name every
+        run, so a partial download left by an earlier run is picked up again."""
+        if self.handler.resumable_fetch:
+            return stable_temp_path(folder, str(self.automation.id), record["source_id"])
+        return temp_path(folder, str(self.automation.id))
+
     def fetch_to_temp(self, record: dict, folder: Path, ctx: HookContext) -> Path:
         folder.mkdir(parents=True, exist_ok=True)
         size = record.get("size") or 0
         if free_bytes(folder) < size + FREE_SPACE_MARGIN:
             raise DiskFull(str(folder))
-        temp = temp_path(folder, str(self.automation.id))
+        temp = self.temp_for(record, folder)
         try:
             self.handler.fetch(record, temp, ctx)
         except Exception:
@@ -319,6 +330,14 @@ class SourceRun:
         if known is not None and known.fingerprint == record.get("updated_at") and known.status != SYNC_ITEM_FAILED:
             if known.status == SYNC_ITEM_DELETED_AT_SOURCE:
                 known.status = SYNC_ITEM_IMPORTED if known.media_item_id else SYNC_ITEM_LINKED_EXISTING
+            elif (known.status == SYNC_ITEM_IMPORTED and known.media_item_id
+                  and not (known.details or {}).get("index_queued")):
+                # A previous attempt may have committed this record and crashed
+                # before commit_page queued indexing. The page cursor still points
+                # here, so queue it when the replay finds it unindexed.
+                media = self.session.get(MediaItem, known.media_item_id)
+                if media is not None and media.status == MEDIA_STATUS_IMPORTED:
+                    self.new_paths.append(media.full_file_path)
             self.counters.unchanged += 1
             return
         sha1 = self.sha1_of(record)
@@ -348,10 +367,31 @@ class SourceRun:
 
     # ---- pages -------------------------------------------------------------
 
+    def plan_fetches(self, records: list[dict], known: dict[str, SyncItem], ctx: HookContext) -> None:
+        """Tell the handler which of this page's records will be downloaded as new
+        files, so it can work ahead on them. Only new or failed records whose content
+        isn't already in the library: everything else is skipped or linked without a
+        download, and an edited file lands next to its old copy, not in the root."""
+        if type(self.handler).plan_fetches is SourceHandler.plan_fetches or self.root is None:
+            return
+        hashes = {self.sha1_of(r) for r in records if not r.get("local_path") and r.get("hash")} - {None}
+        in_library = {sha1 for sha1, in self.session.query(MediaItem.sha1).filter(MediaItem.sha1.in_(hashes))} \
+            if hashes else set()
+        upcoming = []
+        for record in records:
+            row = known.get(record["source_id"])
+            if record.get("deleted") or (row is not None and row.status != SYNC_ITEM_FAILED):
+                continue
+            if self.sha1_of(record) in in_library:
+                continue
+            upcoming.append((record, self.temp_for(record, self.root)))
+        self.handler.plan_fetches(upcoming, ctx)
+
     def run_page(self, records: list[dict], ctx: HookContext) -> None:
         known = sync_repository.rows_by_key(self.session, self.automation.id,
                                             [record["source_id"] for record in records])
         seen: dict[str, MediaItem] = {}
+        self.plan_fetches(records, known, ctx)
         if self.client is not None:
             self.client.mid_page = True
         try:
@@ -360,12 +400,20 @@ class SourceRun:
                     self.process(record, known.get(record["source_id"]), ctx, seen)
                 except DiskFull:
                     raise
+                except SourceItemSkipped as e:
+                    self.mark_skipped(record, known.get(record["source_id"]), e.error_code)
                 except (OSError, ValueError) as e:
                     # One unreadable or vanished file is one failed item. Nothing for it
                     # was added to the session before the file operation failed.
                     logger.warning(f"sync '{self.automation.slug}': could not import {record['source_id']}: {e}")
                     self.mark_failed(record, known.get(record["source_id"]))
                     self.counters.failed += 1
+                # A page can contain hundreds of downloads. Once the first media
+                # row is flushed, SQLite holds its writer lock until commit; without
+                # this boundary the web process cannot even mark the run cancelled.
+                # The cursor still advances only after the page, so a crash replays
+                # these already committed records through the idempotent ledger.
+                self.session.commit()
         finally:
             if self.client is not None:
                 self.client.mid_page = False
@@ -382,6 +430,16 @@ class SourceRun:
         if not self.adapter.is_builtin:
             # A delta feed won't list it again: keep the record to retry it.
             row.details = {**(row.details or {}), "record": record}
+
+    def mark_skipped(self, record: dict, known: SyncItem | None, error_code: str | None) -> None:
+        row = known
+        if row is None:
+            row = SyncItem(automation_id=self.automation.id, item_key=record["source_id"],
+                           remote_id=record["source_id"], status=SYNC_ITEM_SKIPPED, attempts=0)
+            self.session.add(row)
+        row.status, row.error_code = SYNC_ITEM_SKIPPED, error_code
+        row.attempts = (row.attempts or 0) + 1
+        row.details = {**(row.details or {}), "filename": record.get("filename")}
 
     def retry_failed(self, ctx: HookContext) -> None:
         """Retry items whose download failed in earlier runs, from their kept records."""
@@ -413,20 +471,40 @@ class SourceRun:
         state = merge_state(self.runtime.state, state_patch)
         self.runtime = replace(self.runtime.with_cursor(CURSOR_LIST, cursor), state=state,
                                followups=self.vouched(cursor))
-        set_runtime(self.session, self.automation, self.runtime)
+        sync_repository.save_runtime(self.automation, self.runtime)
         if self.new_paths and self.run.index_files is not None:
-            self.run.index_files(self.session, list(self.new_paths), self.automation.id)
+            paths = list(dict.fromkeys(self.new_paths))
+            for row in (self.session.query(SyncItem)
+                        .join(MediaItem, MediaItem.id == SyncItem.media_item_id)
+                        .filter(SyncItem.automation_id == self.automation.id,
+                                SyncItem.status == SYNC_ITEM_IMPORTED,
+                                MediaItem.full_file_path.in_(paths))):
+                row.details = {**(row.details or {}), "index_queued": True}
+            self.run.index_files(self.session, paths, self.automation.id)
         self.new_paths = []
         if self.replaced_ids:
             if self.run.reindex_items is not None:
                 self.run.reindex_items(self.session, list(self.replaced_ids))
             emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": list(self.replaced_ids)})
         self.replaced_ids = []
+        self.session.commit()
 
     def execute(self) -> RunResult:
+        try:
+            return self._execute()
+        finally:
+            try:
+                self.handler.finish_run(self.ctx(PASS_INCREMENTAL))
+            except Exception:  # noqa: BLE001 — releasing must never hide the run's result
+                logger.exception(f"sync '{self.automation.slug}': finishing the run failed")
+
+    def _execute(self) -> RunResult:
+        pause_code = self.handler.source_pause(self.options)
+        if pause_code:
+            return pause(self.session, self.automation, self.runtime, pause_code)
         problem = self.handler.source_problem(self.options)
         if problem:
-            return RunResult(outcome=problem)
+            return RunResult(outcome=problem, params=self.handler.summary_params())
         root, root_problem = resolve_import_root(self.session, self.config.import_root or {})
         if root_problem in (PROBLEM_UNKNOWN_MEDIA_DIR, PROBLEM_MEDIA_DIR_MISSING):
             return pause(self.session, self.automation, self.runtime, PAUSE_DESTINATION_MISSING)
@@ -466,9 +544,18 @@ class SourceRun:
                 envelope = self.handler.list_page(cursor.next_cursor, ctx)
                 if not isinstance(envelope, dict):
                     raise HookOutputError("list_page must return an object")
-                unknown = set(envelope) - {"records", "next_cursor", "checkpoint", "state_patch", "error"}
+                unknown = set(envelope) - {"records", "next_cursor", "checkpoint", "state_patch", "error",
+                                           "progress"}
                 if unknown:
                     raise HookOutputError(f"unknown keys {sorted(unknown)}")
+                progress = envelope.get("progress")
+                if progress is not None and (
+                    not isinstance(progress, dict) or set(progress) != {"done", "total"}
+                    or not all(isinstance(progress[key], int) and not isinstance(progress[key], bool)
+                               for key in ("done", "total"))
+                    or not 0 <= progress["done"] <= progress["total"]
+                ):
+                    raise HookOutputError("progress must contain valid done and total counts")
                 error = check_error(envelope.get("error"))
                 if self.client is not None and self.client.auth_failed:
                     # Whatever the adapter made of the failed call, the account is the problem.
@@ -497,10 +584,17 @@ class SourceRun:
                         raise HookOutputError("next_cursor must be text")
                     cursor = replace(cursor, next_cursor=next_cursor)
                 self.commit_page(cursor, envelope.get("state_patch"))
+                if progress is not None and self.run.on_progress:
+                    self.run.on_progress(progress["done"], progress["total"])
                 if error:
                     return self.stopped(error)
                 if next_cursor is None:
                     break
+        except SourceStop as e:
+            # Keep what this page already imported; the cursor stays at the page's
+            # start, so the next run lists it again (the done records are unchanged).
+            self.commit_page(cursor, None)
+            return self.interrupted(e)
         except DiskFull as e:
             self.session.rollback()
             return self.result(problem=codes.PROBLEM_SYNC_DISK_FULL, error=f"not enough free space in {e}")
@@ -525,6 +619,24 @@ class SourceRun:
         result.problem_params = {"reason": access.ACCOUNT_NEEDS_SIGN_IN}
         return result
 
+    def interrupted(self, stop_: SourceStop) -> RunResult:
+        if stop_.pause_code:
+            result = pause(self.session, self.automation, self.runtime, stop_.pause_code)
+            result.params = {**self.counters.params(), **self.handler.summary_params()}
+            return result
+        if stop_.outcome:
+            if not any(self.counters.params().values()):
+                return RunResult(outcome=stop_.outcome, params={**self.handler.summary_params(), **stop_.params},
+                                 error=stop_.message or None)
+            return self.result(problem=codes.PROBLEM_SYNC_INTERRUPTED,
+                               problem_params={"outcome": stop_.outcome, **stop_.params},
+                               error=stop_.message or None)
+        if stop_.error_code == STOP_OUT_OF_TIME:
+            if not self.run.should_cancel():
+                schedule_continuation(self.session, self.automation, CONTINUE_AFTER_SECONDS)
+            return self.result()
+        return self.stopped({"code": stop_.error_code or ERROR_FATAL, "message": stop_.message})
+
     def stopped(self, error: dict) -> RunResult:
         """A hook error after its page was applied: stop, and come back later."""
         code = error["code"]
@@ -539,7 +651,8 @@ class SourceRun:
 
     def result(self, problem: str | None = None, problem_params: dict | None = None,
                error: str | None = None, failed: bool = False) -> RunResult:
-        return RunResult(outcome=codes.OUTCOME_SYNC_IMPORTED, params=self.counters.params(), problem=problem,
+        return RunResult(outcome=codes.OUTCOME_SYNC_IMPORTED,
+                         params={**self.counters.params(), **self.handler.summary_params()}, problem=problem,
                          problem_params=problem_params or {}, error=error, failed_run=failed)
 
 

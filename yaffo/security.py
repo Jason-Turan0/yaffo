@@ -12,7 +12,7 @@ CSRF_CODE = "csrf_failed"
 CROSS_ORIGIN_CODE = "cross_origin_request"
 _CSRF_SESSION_KEY = "_yaffo_csrf_token"
 _SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
-_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
+LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 _CROSS_ORIGIN_FETCH_SITES = frozenset({"cross-site", "same-site"})
 
 
@@ -28,7 +28,7 @@ def configured_allowed_hosts() -> list[str]:
     return [str(name).strip().lower() for name in names if str(name).strip()]
 
 
-def _request_hostname() -> str:
+def request_hostname() -> str:
     """The `Host` header's name without its port. A DNS-rebinding page controls the
     name, not the port, so only the name is compared."""
     host = request.host.lower()
@@ -40,7 +40,7 @@ def _request_hostname() -> str:
 
 
 def _host_is_allowed(hostname: str, allowed: frozenset[str]) -> bool:
-    if hostname in _LOOPBACK_HOSTS or hostname in allowed:
+    if hostname in LOOPBACK_HOSTS or hostname in allowed:
         return True
     # Flask's TRUSTED_HOSTS form: ".example.com" matches example.com and subdomains.
     return any(
@@ -105,8 +105,15 @@ def _cross_origin_failure() -> Response:
     return response
 
 
+def exempt_blueprint_from_csrf(app: Flask, blueprint_name: str) -> None:
+    """For a blueprint that refuses browsers by other means (the internal P2P API's
+    loopback and custom-header checks): its callers have no session to hold a token."""
+    app.config.setdefault("CSRF_EXEMPT_BLUEPRINTS", set()).add(blueprint_name)
+
+
 def init_request_security(app: Flask) -> None:
     app.config.setdefault("CSRF_ENABLED", True)
+    app.config.setdefault("CSRF_EXEMPT_BLUEPRINTS", set())
     app.config.setdefault("WEB_ALLOWED_HOSTS", configured_allowed_hosts())
     allowed_hosts = frozenset(
         str(name).lower()
@@ -121,7 +128,7 @@ def init_request_security(app: Flask) -> None:
         Browsers send `Sec-Fetch-Site` and `Origin` on cross-site fetch, HTMX, and
         form posts alike. Requests with neither header come from non-browser
         clients (sync workers, curl, the test client) and pass."""
-        if not _host_is_allowed(_request_hostname(), allowed_hosts):
+        if not _host_is_allowed(request_hostname(), allowed_hosts):
             abort(400)
         if request.method in _SAFE_METHODS:
             return None
@@ -136,6 +143,7 @@ def init_request_security(app: Flask) -> None:
             or not app.config["CSRF_ENABLED"]
             or app.config.get("TESTING")
             or app.config.get("DEMO_MODE")
+            or request.blueprint in app.config["CSRF_EXEMPT_BLUEPRINTS"]
         ):
             return None
         if csrf_is_valid():

@@ -167,9 +167,10 @@ def indexed_media_query(path: Path):
     )
 
 
-def file_manifest(media_dir_id: str, relative_path: str, path: Path, item: MediaItem) -> dict:
+def file_manifest(media_dir_id: str, relative_path: str, path: Path, item: MediaItem,
+                  *, protocol: int) -> dict:
     stat = path.stat()
-    return {
+    manifest = {
         # The id IS the handle: pulls and previews name it, and authorization is a
         # lookup against granted_media_query. The path travels as DATA — the requester
         # needs it for the destination layout and the resume sidecar — never as the
@@ -185,6 +186,9 @@ def file_manifest(media_dir_id: str, relative_path: str, path: Path, item: Media
         "location_name": item.location_name,
         "duration_seconds": item.duration_seconds,
     }
+    if protocol >= 2:
+        manifest["sha1"] = item.sha1
+    return manifest
 
 
 def granted_media_query(peer_device_id: str):

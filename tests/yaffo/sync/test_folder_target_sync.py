@@ -246,7 +246,7 @@ def test_a_run_killed_mid_batch_resumes_without_duplicates(session, add_photo, a
     target = make_target(album("For Mom", [add_photo("a.jpg"), add_photo("b.jpg", color=(1, 1, 1))]))
     builtin = adapters.BUILTINS["folder_target"]
     monkeypatch.setitem(adapters.BUILTINS, "folder_target",
-                        adapters.BuiltinAdapter(builtin.role, builtin.options, CrashingTarget()))
+                        adapters.BuiltinAdapter(builtin.role, builtin.options, CrashingTarget))
     with pytest.raises(SystemExit):
         run_sync(session, target.id, run_context)
     session.rollback()

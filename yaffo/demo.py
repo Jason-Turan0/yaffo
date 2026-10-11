@@ -37,6 +37,7 @@ DEMO_PUBLIC_READ_ENDPOINTS = frozenset(
         "automations_validate_cron",
         "sync_choices",
         "sync_filter",
+        "sync_peer_filter",
         "sync_items",
         "face_thumbnail",
         "faces_index",

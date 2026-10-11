@@ -5,8 +5,10 @@ existing account for its provider preselected (connections are shared), and the
 default triggers:
 - sources: a nightly schedule;
 - targets: a nightly schedule, `media_deleted` filtered to this sync, and, for an
-  album selection, `album_changed` filtered to the album. The event triggers carry
-  a settle window, so a burst of changes is one run.
+  album selection, `album_changed` filtered to the album;
+- peer sources: also `device_online`, filtered to the chosen device (kept in step
+  when the device changes), so a laptop opened once a week imports when it's opened.
+The event triggers carry a settle window, so a burst of changes is one run.
 Every change to what the consent covers clears the consent (the sync turns off
 until the user turns it on again).
 """
@@ -19,8 +21,9 @@ from sqlalchemy.orm import Session
 
 from yaffo.db.models import (
     Automation, AutomationTrigger, SyncAdapter,
-    AUTOMATION_STATUS_ACCEPTED, EVENT_ALBUM_CHANGED, EVENT_MEDIA_DELETED, SYNC_ROLE_SOURCE, SYNC_ROLE_TARGET,
-    SYNC_HANDLER_FOLDER_TARGET, SYNC_ITEM_PENDING, SYNC_ITEM_REMOVING, SYNC_ITEM_SENT,
+    AUTOMATION_STATUS_ACCEPTED, EVENT_ALBUM_CHANGED, EVENT_DEVICE_ONLINE, EVENT_MEDIA_DELETED, SYNC_ROLE_SOURCE,
+    SYNC_ROLE_TARGET, SYNC_HANDLER_FOLDER_TARGET, SYNC_HANDLER_PEER_SOURCE, SYNC_ITEM_PENDING, SYNC_ITEM_REMOVING,
+    SYNC_ITEM_SENT,
     TRIGGER_TYPE_EVENT, TRIGGER_TYPE_SCHEDULE,
 )
 from yaffo.db.repositories import automation_repository, sync_repository
@@ -30,8 +33,8 @@ from yaffo.sync.consent import consent_hash
 from yaffo.sync.options import option_defaults, validate_options
 from yaffo.sync.folder_target import LAYOUT_PER_TARGET
 from yaffo.sync.schemas import (
-    DEFAULT_IMPORT_LAYOUT, IMPORT_LAYOUTS, RUNTIME_NEEDS_CONSENT, RUNTIME_READY, SELECTION_ALBUM, SELECTION_SCRIPT,
-    Selection,
+    DEFAULT_IMPORT_LAYOUT, IMPORT_LAYOUTS, RUNTIME_NEEDS_CONSENT, RUNTIME_READY, SELECTION_ALBUM, SELECTION_QUERY,
+    SELECTION_SCRIPT, Selection,
     SyncConfig, SyncRuntime,
 )
 
@@ -40,6 +43,7 @@ SETTLE_SECONDS = 60
 DEFAULT_IMPORT_SUBPATH = "Imports"
 
 TRIGGER_KEY_ALBUM = "album_id"
+TRIGGER_KEY_DEVICE = "device_id"
 TRIGGER_KEY_SYNC = "sync_automation_id"
 TRIGGER_KEY_SETTLE = "settle_seconds"
 
@@ -108,11 +112,56 @@ def set_options(session: Session, automation: Automation, values: dict) -> None:
         values = {**values, "layout": LAYOUT_PER_TARGET}
     options = validate_options(adapter.options, values)
     previous_options = {**option_defaults(adapter.options), **config.options}
+    for key, spec in adapter.options.items():
+        # A choice made inside another (a peer's scope inside the device) means
+        # nothing once that one changes. The form sends the old value back
+        # unchanged; a value chosen together with the new parent is kept.
+        parent = spec.get("depends_on")
+        if parent and options.get(parent) != previous_options.get(parent) \
+                and options.get(key) == previous_options.get(key):
+            options[key] = None
     if config.role == SYNC_ROLE_TARGET and options != previous_options:
         _mark_target_rows_for_recopy(session, automation, adapter, config)
         if adapter.provider == "onedrive":
             _clear_target_folders(automation)
+    if adapter.handler_key == SYNC_HANDLER_PEER_SOURCE:
+        _sync_device_trigger(session, automation, options.get("device"))
+        # A filtered subset names the peer's own people and labels, and only means
+        # something within the share it was chosen from.
+        if any(options.get(key) != previous_options.get(key) for key in ("device", "scope")):
+            config = replace(config, selection=None)
     _store(session, automation, replace(config, options=options))
+
+
+def set_import_filters(session: Session, automation: Automation, filters: dict | None) -> None:
+    """What a source imports: everything it lists (None), or only what matches these
+    sharing wire filters."""
+    config = _config(automation)
+    selection = Selection(kind=SELECTION_QUERY, query=filters) if filters else None
+    _store(session, automation, replace(config, selection=selection))
+
+
+def _device_trigger(automation: Automation) -> AutomationTrigger | None:
+    return next((t for t in automation.triggers
+                 if t.trigger_type == TRIGGER_TYPE_EVENT and t.event_type == EVENT_DEVICE_ONLINE
+                 and (t.config or {}).get(TRIGGER_KEY_SYNC) == automation.id), None)
+
+
+def _sync_device_trigger(session: Session, automation: Automation, device: dict | None) -> None:
+    """Keep the peer source's own device_online trigger pointed at its device."""
+    trigger = _device_trigger(automation)
+    device_id = device.get("id") if isinstance(device, dict) else None
+    if device_id is None:
+        if trigger is not None:
+            session.delete(trigger)
+        return
+    trigger_config = {TRIGGER_KEY_DEVICE: device_id, TRIGGER_KEY_SYNC: automation.id,
+                      TRIGGER_KEY_SETTLE: SETTLE_SECONDS}
+    if trigger is None:
+        session.add(AutomationTrigger(automation_id=automation.id, trigger_type=TRIGGER_TYPE_EVENT,
+                                      event_type=EVENT_DEVICE_ONLINE, enabled=True, config=trigger_config))
+    else:
+        trigger.config = trigger_config
 
 
 def _mark_target_rows_for_recopy(session: Session, automation: Automation, adapter: LoadedAdapter,
@@ -210,7 +259,7 @@ def missing_setup(session: Session, automation: Automation) -> list[str]:
     config = _config(automation)
     adapter = load_adapter(session, config.adapter_id)
     missing = [f"option:{key}" for key, spec in adapter.options.items()
-               if spec.get("required") and not config.options.get(key)]
+               if (spec.get("required") or spec.get("needed")) and not config.options.get(key)]
     if config.role == SYNC_ROLE_SOURCE and not config.import_root:
         missing.append("import_root")
     if config.role == SYNC_ROLE_TARGET and config.selection is None:

@@ -59,7 +59,17 @@ def test_builtin_folder_adapters_are_seeded_once(fresh_db):
     assert rows == [
         ("builtin.folder_source", "source", "local", "folder_source", 1, "[]"),
         ("builtin.folder_target", "target", "local", "folder_target", 1, "[]"),
+        ("builtin.peer_source", "source", "peer", "peer_source", 1, "[]"),
     ]
+
+
+def test_peer_source_seed_is_idempotent(fresh_db):
+    migration = _load(MIGRATIONS_DIR / "019_MIGRATION_20261010_seed_peer_source.py")
+    migration.migrate(fresh_db)
+    migration.migrate(fresh_db)
+    assert fresh_db.execute(
+        "SELECT name, status FROM sync_adapters WHERE handler = 'peer_source'"
+    ).fetchall() == [("Paired device", "ready")]
 
 
 def test_existing_database_is_upgraded_and_rerun_is_harmless():

@@ -17,8 +17,10 @@ from yaffo.sync import guards
 from yaffo.sync.handlers import (
     ERROR_AUTH, ERROR_CHANGED, ERROR_FATAL, ERROR_NOT_FOUND, ERROR_RATE_LIMITED, ERROR_REJECTED,
 )
+from yaffo.sync.peer_source import ITEM_FILE_REFUSED
 from yaffo.sync.schemas import (
-    LAYOUT_FLAT, LAYOUT_SOURCE_FOLDERS, LAYOUT_YEAR, LAYOUT_YEAR_MONTH, PAUSE_DESTINATION_MISSING, PAUSE_OPTION_MISSING, PAUSE_SELECTION_MISSING, RUNTIME_INVALID_CONFIG,
+    LAYOUT_FLAT, LAYOUT_SOURCE_FOLDERS, LAYOUT_YEAR, LAYOUT_YEAR_MONTH, PAUSE_DESTINATION_MISSING, PAUSE_DEVICE_REVOKED,
+    PAUSE_OPTION_MISSING, PAUSE_SELECTION_MISSING, RUNTIME_INVALID_CONFIG,
     RUNTIME_NEEDS_CONSENT, RUNTIME_NEEDS_SIGN_IN, RUNTIME_PAUSED, RUNTIME_READY,
 )
 from yaffo.sync.source_run import ITEM_IMPORT_FAILED
@@ -26,6 +28,10 @@ from yaffo.sync.target_run import (
     ITEM_CONVERSION_FAILED, ITEM_NOT_SENT, ITEM_SOURCE_MISSING, ITEM_UNSUPPORTED_FORMAT,
 )
 from yaffo.utils import job_codes as codes
+
+# A peer source's run ends with one of these when the device can't be used right now.
+PEER_OUTCOMES = (codes.OUTCOME_SYNC_WAITING_FOR_DEVICE, codes.OUTCOME_SYNC_WAITING_FOR_DIRECT,
+                 codes.OUTCOME_SYNC_RELAY_BUDGET, codes.OUTCOME_SYNC_SHARING_OFF)
 
 
 def _n(data: dict, key: str) -> int:
@@ -79,9 +85,35 @@ def _source_outcome(data: dict) -> str:
         parts.append(ngettext("%(num)d deleted at the source and kept in your library",
                               "%(num)d deleted at the source and kept in your library", deleted))
     if not parts:
-        return gettext("Nothing new")
-    text = ", ".join(parts)
-    return text[0].upper() + text[1:]
+        text = gettext("Nothing new")
+    else:
+        text = ", ".join(parts)
+        text = text[0].upper() + text[1:]
+    path = _peer_path_text(data.get("path"))
+    return gettext("%(outcome)s (%(path)s)", outcome=text, path=path) if path else text
+
+
+def _peer_path_text(path: str | None) -> str | None:
+    """How a peer source reached the device, for the run summary."""
+    return {
+        "lan": gettext("on your network"),
+        "direct": gettext("over a direct connection"),
+        "relay": gettext("through Yaffo's relay"),
+    }.get(path or "")
+
+
+def _peer_outcome(outcome: str, device: str | None) -> str | None:
+    device = device or gettext("the device")
+    if outcome == codes.OUTCOME_SYNC_WAITING_FOR_DEVICE:
+        return gettext("Waiting for %(device)s: it isn't reachable right now", device=device)
+    if outcome == codes.OUTCOME_SYNC_WAITING_FOR_DIRECT:
+        return gettext("Waiting for a direct connection to %(device)s (copying through the relay is off)",
+                       device=device)
+    if outcome == codes.OUTCOME_SYNC_RELAY_BUDGET:
+        return gettext("Stopped at this run's relay limit. The next run carries on.")
+    if outcome == codes.OUTCOME_SYNC_SHARING_OFF:
+        return gettext("Waiting for device sharing to start")
+    return None
 
 
 def outcome_sentence(data: dict) -> str | None:
@@ -94,6 +126,8 @@ def outcome_sentence(data: dict) -> str | None:
         return gettext("Waiting for the folder: it isn't connected")
     if outcome == codes.OUTCOME_SYNC_NOT_RUN:
         return gettext("Didn't run")
+    if outcome in PEER_OUTCOMES:
+        return _peer_outcome(outcome, data.get("device"))
     return None
 
 
@@ -103,6 +137,9 @@ def pause_text(pause_code: str | None) -> str:
     if pause_code == PAUSE_DESTINATION_MISSING:
         return gettext("The destination isn't available (an unplugged drive or a removed folder?). "
                        "The sync carries on when it's back.")
+    if pause_code == PAUSE_DEVICE_REVOKED:
+        return gettext("The device isn't paired with this one any more. Pair it again on the Sharing page, "
+                       "or choose another device.")
     if pause_code == PAUSE_OPTION_MISSING:
         return gettext("The chosen folder or album no longer exists at the service. Choose another.")
     return gettext("Paused.")
@@ -138,6 +175,9 @@ def problem_sentence(code: str | None, params: dict[str, Any]) -> str | None:
         return gettext("The account needs to sign in again. Open the sync and sign in.")
     if code == codes.PROBLEM_SYNC_DISK_FULL:
         return gettext("There isn't enough free space left to keep copying.")
+    if code == codes.PROBLEM_SYNC_INTERRUPTED:
+        return _peer_outcome(params.get("outcome") or "", params.get("device")) or \
+            gettext("The run stopped early. The next run carries on.")
     return None
 
 
@@ -180,6 +220,7 @@ def item_error_text(error_code: str | None) -> str | None:
         ITEM_UNSUPPORTED_FORMAT: gettext("This target doesn't take this kind of file."),
         ITEM_CONVERSION_FAILED: gettext("Couldn't convert it to JPEG."),
         ITEM_IMPORT_FAILED: gettext("Couldn't copy the file."),
+        ITEM_FILE_REFUSED: gettext("The device no longer shares this file."),
         ERROR_CHANGED: gettext("The copy was changed after Yaffo wrote it, so Yaffo left it alone."),
         ERROR_REJECTED: gettext("The service refused it."),
     }.get(error_code, error_code)

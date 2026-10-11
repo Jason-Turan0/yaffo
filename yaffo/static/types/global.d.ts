@@ -596,6 +596,7 @@ type SyncTestResult = {
     page_size: number;
     total_items: number;
     state_counts: Record<string, number>;
+    source_total: number | null;
     pagination_html: string;
 };
 

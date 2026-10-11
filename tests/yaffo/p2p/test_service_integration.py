@@ -2,6 +2,7 @@
 separate databases and identities) plus a local hub on loopback — pair, call
 (relay + direct upgrade), presence, revocation, and re-pairing, end to end
 through the P2PService facade the Flask routes will use."""
+import hashlib
 import re
 import socket
 import time
@@ -15,6 +16,8 @@ from yaffo.db.models import (
     GRANT_SCOPE_MEDIA_DIR,
     MEDIA_TYPE_PHOTO,
     MediaItem,
+    SYNC_HANDLER_PEER_SOURCE,
+    SyncAdapter,
     TRUST_STATE_REVOKED,
     TRUST_STATE_TRUSTED,
 )
@@ -24,6 +27,10 @@ from yaffo.p2p.lan_discovery import LanCandidate
 from yaffo.p2p.pairing import PairingError
 from yaffo.p2p.service import P2PService, P2PServiceError
 from yaffo.p2p.signaling import CallError
+from yaffo.sync import setup as sync_setup
+from yaffo.sync.engine import run_sync
+from yaffo.sync.run_common import RunContext
+from yaffo.utils import job_codes as codes
 
 pytestmark = pytest.mark.integration
 
@@ -119,6 +126,54 @@ def _known_device(app, device_id):
 def _pair(service_a, service_b):
     code = service_a.peering.generate_pairing_code()
     return service_b.peering.send_accept_pairing_code(code.encode())
+
+
+def test_mutual_peer_import_links_existing_photos_without_pulling(two_devices, tmp_path, monkeypatch):
+    (app_a, service_a), (app_b, service_b) = two_devices
+    _pair(service_a, service_b)
+    content = b"the same photo on both devices"
+    sha1 = hashlib.sha1(content).hexdigest()
+    libraries = {}
+    for name, app in (("a", app_a), ("b", app_b)):
+        root = tmp_path / f"library-{name}"
+        root.mkdir()
+        photo = root / "same.jpg"
+        photo.write_bytes(content)
+        with app.app_context():
+            media_dir = media_dir_repository.add_media_dir(db.session, str(root))
+            db.session.add(MediaItem(full_file_path=str(photo), media_type=MEDIA_TYPE_PHOTO, sha1=sha1))
+            db.session.add(SyncAdapter(id=3, slug="builtin.peer_source", name="Paired device", role="source",
+                                       provider="peer", is_preset=True, handler=SYNC_HANDLER_PEER_SOURCE,
+                                       grants=[], doc_domains=[]))
+            db.session.commit()
+            libraries[name] = (root, media_dir.id)
+
+    sync_ids = {}
+    for name, app, other in (("a", app_a, service_b), ("b", app_b, service_a)):
+        other_name = "b" if name == "a" else "a"
+        with app.app_context():
+            p2p_repository.create_grant(db.session, other.identity.device_id, GRANT_SCOPE_MEDIA_DIR,
+                                        media_dir_id=libraries[name][1])
+            sync = sync_setup.create_sync(db.session, f"From {other_name}", 3)
+            sync_setup.set_import_root(db.session, sync, libraries[name][1], f"Imports/From {other_name}")
+            sync_setup.set_options(db.session, sync, {
+                "device": {"id": other.identity.device_id, "label": other_name},
+                "scope": {"id": f"media_dir:{libraries[other_name][1]}", "label": other_name},
+            })
+            sync_setup.turn_on(db.session, sync)
+            sync_ids[name] = sync.id
+
+    def unexpected_pull(*args, **kwargs):
+        pytest.fail("a photo already present on both devices must not be pulled")
+
+    monkeypatch.setattr(service_a.peer_api, "start_pull", unexpected_pull)
+    monkeypatch.setattr(service_b.peer_api, "start_pull", unexpected_pull)
+    for name, app in (("a", app_a), ("b", app_b)):
+        with app.app_context():
+            result = run_sync(db.session, sync_ids[name], RunContext(scratch_dir=tmp_path))
+            assert result.outcome == codes.OUTCOME_SYNC_IMPORTED
+            assert result.params["linked"] == 1 and result.params["imported"] == 0
+        assert not list((libraries[name][0] / "Imports").rglob("*.jpg"))
 
 
 def test_pairing_and_calls_use_lan_when_hub_is_unreachable(tmp_path):
@@ -530,3 +585,97 @@ def test_album_batch_pulls_only_its_members(two_devices, tmp_path):
     assert (downloads / "deviceB" / "Trip" / "trip/a.jpg").read_bytes() == contents["trip/a.jpg"]
     assert (downloads / "deviceB" / "Trip" / "holiday/b.jpg").read_bytes() == contents["holiday/b.jpg"]
     assert not (downloads / "deviceB" / "Trip" / "trip/skip.jpg").exists()
+
+
+def test_internal_api_drives_a_session_and_a_resumed_pull(two_devices, tmp_path, monkeypatch):
+    """Peer sync's Phase 2 exit criterion: a local process, through A's
+    /internal/p2p/v1 only, lists B's granted scope, opens a session, and pulls a
+    file that resumes from a partial left by an earlier run."""
+    import json as json_module
+
+    import yaffo.p2p.puller as puller_module
+
+    monkeypatch.setattr(puller_module, "DEFAULT_PULL_CHUNK_BYTES", 1024)
+    (app_a, service_a), (app_b, service_b) = two_devices
+    _pair(service_a, service_b)
+    id_b = service_b.identity.device_id
+
+    library = tmp_path / "library-b"
+    blob = bytes(range(256)) * 12  # 3072 bytes: three chunks
+    photo = library / "trip" / "photo.jpg"
+    photo.parent.mkdir(parents=True)
+    photo.write_bytes(blob)
+    with app_b.app_context():
+        media_dir_id = media_dir_repository.add_media_dir(db.session, str(library)).id
+        db.session.add(MediaItem(full_file_path=str(photo), media_type=MEDIA_TYPE_PHOTO))
+        db.session.commit()
+        p2p_repository.create_grant(db.session, service_a.identity.device_id, GRANT_SCOPE_MEDIA_DIR,
+                                    media_dir_id=media_dir_id)
+
+    imports = tmp_path / "pictures-a" / "Imports"
+    imports.mkdir(parents=True)
+    with app_a.app_context():
+        media_dir_repository.add_media_dir(db.session, str(imports.parent))
+
+    served_offsets = []
+    original_handle = service_b.pull_file.handle
+
+    def recording_handle(body):
+        served_offsets.append(body.get("offset"))
+        return original_handle(body)
+
+    monkeypatch.setattr(service_b.pull_file, "handle", recording_handle)
+
+    client = app_a.test_client()
+    headers = {"X-Yaffo-Internal": "1"}
+    base = "/internal/p2p/v1"
+
+    devices = client.get(f"{base}/devices", headers=headers).get_json()["devices"]
+    assert [d["device_id"] for d in devices] == [id_b]
+
+    scoped = client.get(f"{base}/devices/{id_b}/scopes", headers=headers).get_json()
+    assert scoped["protocol"] == 2
+    scopes = scoped["scopes"]
+    assert [s["scope_key"] for s in scopes] == [f"media_dir:{media_dir_id}"]
+
+    opened = client.post(f"{base}/devices/{id_b}/sessions", headers=headers,
+                         json={"relay": "budget", "owner": "sync-27"})
+    assert opened.status_code == 201, opened.get_json()
+    session_id = opened.get_json()["session_id"]
+    assert opened.get_json()["path"] in ("direct", "relay")
+
+    page = client.get(f"{base}/devices/{id_b}/files", headers=headers,
+                      query_string={"scope": scopes[0]["scope_key"], "session": session_id}).get_json()
+    manifest = page["files"][0]
+    assert manifest["source_id"] == f"{media_dir_id}:trip/photo.jpg"
+    assert "sha1" in manifest  # protocol 2; null until B's index computes it
+
+    # What an interrupted earlier run left behind: the first chunk and its sidecar.
+    destination = imports / ".yaffo-27-3b9e.part"
+    destination.with_name(destination.name + ".partial").write_bytes(blob[:1024])
+    destination.with_name(destination.name + ".partial.json").write_text(json_module.dumps({
+        "peer_device_id": id_b, "source_id": manifest["source_id"],
+        "size": manifest["size"], "mtime": manifest["mtime"],
+    }))
+
+    started = client.post(f"{base}/sessions/{session_id}/pulls", headers=headers, json={
+        "media_item_id": manifest["media_item_id"], "source_id": manifest["source_id"],
+        "expected": {"size": manifest["size"], "mtime": manifest["mtime"]},
+        "destination": str(destination),
+    })
+    assert started.status_code == 202, started.get_json()
+    pull_id = started.get_json()["pull_id"]
+
+    status = {}
+    for _ in range(10):
+        status = client.get(f"{base}/pulls/{pull_id}", headers=headers, query_string={"wait": 5}).get_json()
+        if status["state"] in ("done", "failed", "cancelled"):
+            break
+    assert status["state"] == "done", status
+    assert status["sha256"] == hashlib.sha256(blob).hexdigest()
+    assert destination.read_bytes() == blob
+    assert served_offsets == [1024, 2048]
+
+    assert client.delete(f"{base}/sessions/{session_id}?owner=sync-27", headers=headers).status_code == 204
+    expired = client.get(f"{base}/sessions/{session_id}", headers=headers)
+    assert expired.get_json()["error"]["code"] == "session_expired"

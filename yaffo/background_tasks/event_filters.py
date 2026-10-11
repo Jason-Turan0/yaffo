@@ -7,6 +7,8 @@ add a matcher of the same shape.
 - `album_changed`: `album_id` (only this album) and `changes` (only these kinds).
 - `media_deleted`: `sync_automation_id` (only deletes that queued removals for this
   sync, the trigger every target sync owns).
+- `device_online`: `device_id` (only this paired device, the trigger every peer
+  source owns).
 
 `settle_seconds` defers the run instead of starting it: dispatch sets the trigger's
 `next_run_at` (only if it isn't already set), and the schedule dispatcher's tick
@@ -22,13 +24,14 @@ from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.events import EventContext
 from yaffo.db.models import (
-    AutomationTrigger, ALBUM_CHANGE_DELETED, EVENT_ALBUM_CHANGED, EVENT_MEDIA_DELETED,
+    AutomationTrigger, ALBUM_CHANGE_DELETED, EVENT_ALBUM_CHANGED, EVENT_DEVICE_ONLINE, EVENT_MEDIA_DELETED,
 )
 from yaffo.utils.time import utcnow
 
 CONFIG_ALBUM_ID = "album_id"
 CONFIG_CHANGES = "changes"
 CONFIG_SYNC_AUTOMATION_ID = "sync_automation_id"
+CONFIG_DEVICE_ID = "device_id"
 CONFIG_SETTLE_SECONDS = "settle_seconds"
 
 
@@ -45,9 +48,15 @@ def _media_deleted(config: dict, context: EventContext) -> bool:
     return sync_id is None or sync_id in context.sync_automation_ids
 
 
+def _device_online(config: dict, context: EventContext) -> bool:
+    device_id = config.get(CONFIG_DEVICE_ID)
+    return device_id is None or device_id == context.device_id
+
+
 MATCHERS: dict[str, Callable[[dict, EventContext], bool]] = {
     EVENT_ALBUM_CHANGED: _album_changed,
     EVENT_MEDIA_DELETED: _media_deleted,
+    EVENT_DEVICE_ONLINE: _device_online,
 }
 
 
