@@ -1,0 +1,8 @@
+{
+  "classification": "environment_instability",
+  "reasoning": "The failing assertion is `expect(process.env.FAKE_IMMICH_URL).toBeTruthy()`, which received `undefined`. FAKE_IMMICH_URL (like FAKE_ONEDRIVE_URL) is injected by the UI-test runner when it starts the fake provider fixture scripts; it is not part of the application and is not derivable from the app itself. The app is not regressed: the run's own `yaffo.log` shows the Immich sign-in validation working correctly — it rejected the unreachable `http://127.0.0.1:1` server three times (matching the test's invalid-server step and its retries), and the test only failed later when it tried to use the missing fixture URL. Test history confirms the identical 8-test file passed at 18:01:02Z (and earlier 6/6, 7/7 runs), so the test code and app behavior were previously verified. In the 22:20:42 run the fake Immich service was simply not started/exported, and the remaining six tests were skipped only because the serial suite aborts after the first failure.",
+  "affectedTests": [
+    "sync_automations/sync_automations.spec.ts › immich_validates_server_and_loads_fake_server_collections"
+  ],
+  "suggestedAction": "Re-run the sync_automations suite with the fake provider fixtures started and FAKE_IMMICH_URL / FAKE_ONEDRIVE_URL exported into the Playwright process. If the harness failed to start scripts/fake_immich.py (or it exited early), fix/restart that fixture service and re-run. No test-code or application-code change is indicated."
+}
