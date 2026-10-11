@@ -34,7 +34,7 @@ from sqlalchemy.orm import Session
 from yaffo.logging_config import get_logger
 from yaffo.sync import connections, pending_sign_ins, secrets_store
 from yaffo.sync.pending_sign_ins import KIND_BROWSER, KIND_DEVICE, PendingSignIn
-from yaffo.sync.providers import ProviderPreset, get_provider, outgoing_url
+from yaffo.sync.providers import ProviderPreset, field_at, outgoing_url
 
 logger = get_logger(__name__)
 
@@ -179,10 +179,10 @@ def _whoami(http: requests.Session, provider: ProviderPreset, access_token: str)
     if response.status_code != 200:
         raise SignInError("whoami_failed", f"{provider.whoami_url} answered {response.status_code}")
     body = response.json()
-    account_id = body.get(provider.account_id_field)
+    account_id = field_at(body, provider.account_id_field)
     if not account_id:
         raise SignInError("whoami_failed", "the provider didn't say which account signed in")
-    label = next((str(body[f]) for f in provider.account_label_fields if body.get(f)), None)
+    label = next((str(v) for v in (field_at(body, f) for f in provider.account_label_fields) if v), None)
     return str(account_id), label
 
 
@@ -192,6 +192,13 @@ def _store_sign_in(session: Session, http: requests.Session, provider: ProviderP
     account_id, label = _whoami(http, provider, secret["access_token"])
     return connections.upsert_after_sign_in(session, provider.key, account_id, label,
                                             _granted_scopes(provider, body, requested), secret)
+
+
+def resolve_provider(session: Session, key: str) -> ProviderPreset | None:
+    # Imported here: adapters loads the Starlark handlers, which use this module.
+    from yaffo.sync.adapters import provider_for_key
+
+    return provider_for_key(session, key)
 
 
 def finish_sign_in(session: Session, state: str, params: dict[str, str],
@@ -206,7 +213,7 @@ def finish_sign_in(session: Session, state: str, params: dict[str, str],
     code = params.get("code")
     if not code:
         raise SignInError("no_code")
-    provider = get_provider(pending.provider)
+    provider = resolve_provider(session, pending.provider)
     if provider is None:
         raise SignInError("unknown_provider")
     http = http or requests.Session()
@@ -260,7 +267,7 @@ def poll_device_code(session: Session, handle: str,
         raise SignInError("expired_token")
     if time.time() < pending.next_poll:
         return DEVICE_PENDING, None
-    provider = get_provider(pending.provider)
+    provider = resolve_provider(session, pending.provider)
     if provider is None:
         raise SignInError("unknown_provider")
     device_code = pending_sign_ins.device_code(handle)

@@ -605,6 +605,7 @@ type SyncNamespace = {
     initRemoteOption: (root: HTMLElement, i18n: Pick<I18nService, 't'>) => void;
     initDeviceCode: (root: HTMLElement, i18n: Pick<I18nService, 't'>) => void;
     renderTestResult: (container: HTMLElement, result: SyncTestResult, i18n: Pick<I18nService, 't'>, config: AppConfig) => void;
+    initServicePage: (slug: string, startStatus: string, i18n: Pick<I18nService, 't'>, config: AppConfig) => void;
 };
 
 type SettingsNamespace = {

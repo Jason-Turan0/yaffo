@@ -5,6 +5,9 @@
   answers before the normal routes when the `state` names a sign-in Yaffo started.
   When the browser can't reach Yaffo that way, the device-code fallback shows a code
   to enter on the provider's site while the page polls.
+- Key or password (`api_key`, `basic`): a form posts what the user entered (and a
+  self-hosted server's address), Yaffo checks it with the provider's `check` call,
+  and stores the connection only if it works (credentials.py).
 - Account choice: connections are shared, so an existing account for the provider
   is offered (and preselected for a new sync).
 - Pickers: `remote_folder` / `remote_collection` options list what's in the account
@@ -23,9 +26,11 @@ from sqlalchemy.orm import Session
 from yaffo.db import db
 from yaffo.db.models import Automation
 from yaffo.db.repositories import automation_repository as repo
+from yaffo.db.repositories import service_builder_repository as services
 from yaffo.db.repositories import sync_repository
 from yaffo.logging_config import get_logger
-from yaffo.sync import access, connections, oauth, setup
+from yaffo.sync import access, connections, credentials, oauth, oauth1, setup
+from yaffo.sync.providers import InstanceUrlError, normalize_instance_url
 from yaffo.sync.adapters import LoadedAdapter
 from yaffo.sync.handlers import ChoicesUnavailable, HookContext
 from yaffo.sync.schemas import PASS_INCREMENTAL, SyncConfig
@@ -34,6 +39,9 @@ from yaffo.sync.starlark_adapter import HookFailed, StarlarkSourceHandler, Starl
 logger = get_logger(__name__, 'webapp')
 
 MAX_CHOICES = 500
+# A pending sign-in for a service builder's test account names the service with this
+# prefix instead of an automation slug.
+SERVICE_TEST_ACCOUNT = "service:"
 
 
 @dataclass(frozen=True)
@@ -52,6 +60,18 @@ class AccountView:
     shared_with: int
     others: list[AccountChoice] = field(default_factory=list)
     device_code: bool = False
+    # How this service signs in: oauth2 (in the browser), api_key, or basic.
+    auth_kind: str = "oauth2"
+    # A self-hosted service: the form asks for the server's address.
+    instance: bool = False
+    instance_url: str | None = None
+    key_label: str = ""
+    key_help: str = ""
+
+    @property
+    def uses_form(self) -> bool:
+        """Signs in with a key or password typed here, not on the service's page."""
+        return self.auth_kind in ("api_key", "basic")
 
     @property
     def done(self) -> bool:
@@ -83,11 +103,15 @@ def account_view(session: Session, automation: Automation, adapter: LoadedAdapte
         shared = len([i for i in connections.references(session, config.connection_key) if i != automation.id])
     others = [AccountChoice(key, c.account_label or c.account_id)
               for key, c in connections.find_for_provider(session, adapter.provider) if key != config.connection_key]
-    return AccountView(provider_label=adapter.preset.label,
+    preset = adapter.preset
+    return AccountView(provider_label=preset.label,
                        connection_key=config.connection_key if connection is not None else None,
                        label=(connection.account_label or connection.account_id) if connection else None,
                        problem=problem, shared_with=shared, others=others,
-                       device_code=adapter.preset.device_code_url is not None)
+                       device_code=preset.device_code_url is not None and preset.is_oauth2,
+                       auth_kind=preset.auth_kind, instance=preset.instance,
+                       instance_url=connection.instance.get("base_url") if connection is not None else None,
+                       key_label=gettext(preset.key_label), key_help=gettext(preset.key_help) if preset.key_help else "")
 
 
 def _require_sync(slug: str) -> Automation:
@@ -150,22 +174,36 @@ def _builtin_choices(adapter: LoadedAdapter, option: str, config: SyncConfig):
 def init_sync_account_routes(app: Flask) -> None:
     @app.before_request
     def sync_oauth_return():
-        """The loopback return address of a browser sign-in is Yaffo's bare root."""
+        """The loopback return address of a browser sign-in is Yaffo's bare root. An
+        OAuth 2 sign-in comes back with the `state` Yaffo sent; an OAuth 1 sign-in with
+        its request token (`oauth_token`), which is the pending sign-in's id."""
         if request.path != "/" or request.method != "GET":
             return None
         state = request.args.get("state")
-        pending = oauth.pending_sign_in(db.session, state) if state else None
+        request_token = request.args.get("oauth_token")
+        pending = oauth.pending_sign_in(db.session, state) if state else \
+            oauth1.pending_sign_in(db.session, request_token) if request_token else None
         if pending is None:
             return None
         return_to = pending.return_to
         try:
-            signed_in = oauth.finish_sign_in(db.session, state, request.args.to_dict(), http=access.make_http())
+            if state:
+                signed_in = oauth.finish_sign_in(db.session, state, request.args.to_dict(), http=access.make_http())
+            else:
+                signed_in = oauth1.finish_sign_in(db.session, request.args.to_dict(), http=access.make_http())
         except oauth.SignInError as e:
             logger.warning(f"sign-in failed: {e.code} {e}")
             joiner = "&" if "?" in return_to else "?"
             return redirect(f"{return_to}{joiner}sync_error=sign_in_failed")
         logger.info(f"browser sign-in completed: {signed_in.connection_key}")
-        if signed_in.automation_slug:
+        marker = signed_in.automation_slug or ""
+        if marker.startswith(SERVICE_TEST_ACCOUNT):
+            # The service builder's test account (sync_services.TEST_ACCOUNT_MARKER).
+            service = services.get_service(db.session, marker[len(SERVICE_TEST_ACCOUNT):])
+            if service is not None:
+                service.test_connection_key = signed_in.connection_key
+                db.session.commit()
+        elif signed_in.automation_slug:
             automation = repo.get_by_slug(db.session, signed_in.automation_slug)
             if automation is not None and automation.is_sync:
                 try:
@@ -179,20 +217,53 @@ def init_sync_account_routes(app: Flask) -> None:
         automation = _require_sync(slug)
         adapter = setup.adapter_of(db.session, automation)
         config = sync_repository.load_sync(automation).config
-        if adapter.preset is None:
+        if adapter.preset is None or not adapter.preset.is_oauth:
             abort(400)
+        return_to = request.host_url.rstrip("/") + url_for("automations_show", slug=automation.slug)
+        if not adapter.preset.is_oauth2:
+            try:
+                return redirect(oauth1.begin_sign_in(db.session, adapter.preset, _server_port(), return_to,
+                                                     automation.slug, http=access.make_http()))
+            except oauth.SignInError as e:
+                logger.warning(f"OAuth 1 sign-in for '{automation.slug}' didn't start: {e.code} {e}")
+                return _back(automation, sync_error=e.code if e.code == "app_missing" else "sign_in_failed")
         fresh = request.form.get("fresh") == "1"
         scopes = _sign_in_scopes(db.session, adapter, config, fresh)
-        return_to = request.host_url.rstrip("/") + url_for("automations_show", slug=automation.slug)
         url = oauth.begin_sign_in(db.session, adapter.preset, scopes, _server_port(), return_to, automation.slug)
         return redirect(url)
+
+    @app.route("/utilities/automations/<slug>/sync/credentials", methods=["POST"])
+    def sync_sign_in_with_secret(slug: str):
+        """Sign in with a key or a password (and a self-hosted server's address):
+        checked with the service before it's stored."""
+        automation = _require_sync(slug)
+        adapter = setup.adapter_of(db.session, automation)
+        provider = adapter.preset
+        if provider is None or provider.is_oauth:
+            abort(400)
+        instance = None
+        if provider.instance:
+            try:
+                instance = {"base_url": normalize_instance_url(request.form.get("base_url") or "",
+                                                               allow_http=request.form.get("allow_http") == "1")}
+            except InstanceUrlError as e:
+                return _back(automation, sync_error=e.code)
+        try:
+            secret = credentials.secret_from_form(provider, request.form)
+            key = credentials.sign_in_with_secret(db.session, provider, secret, instance, http=access.make_http())
+        except oauth.SignInError as e:
+            logger.warning(f"{provider.key} sign-in for '{automation.slug}' failed: {e.code} {e}")
+            return _back(automation, sync_error=e.code)
+        logger.info(f"{provider.key} sign-in completed: {key} for '{automation.slug}'")
+        setup.set_connection(db.session, automation, key)
+        return _back(automation)
 
     @app.route("/utilities/automations/<slug>/sync/device-code", methods=["POST"])
     def sync_device_code(slug: str):
         automation = _require_sync(slug)
         adapter = setup.adapter_of(db.session, automation)
         config = sync_repository.load_sync(automation).config
-        if adapter.preset is None:
+        if adapter.preset is None or not adapter.preset.is_oauth2:
             abort(400)
         scopes = _sign_in_scopes(db.session, adapter, config, request.form.get("fresh") == "1")
         try:

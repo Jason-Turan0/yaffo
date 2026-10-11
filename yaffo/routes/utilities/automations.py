@@ -47,6 +47,7 @@ from yaffo.distance_units import (
 from yaffo.site_agents import llm_config
 from yaffo.routes.utilities.common import automations_sidebar_context
 from yaffo.routes.utilities.run_history import RunView, run_views
+from yaffo.db.repositories import service_builder_repository as services
 from yaffo.routes.utilities import sync_views
 from yaffo.sync import connections
 from yaffo.sync.schemas import SELECTION_SCRIPT
@@ -252,6 +253,9 @@ def init_automations_routes(app: Flask):
         if not name:
             return _error(gettext("Automation name is required"), "automation_name_required", 400)
         kind = request.form.get("kind") or "custom"
+        if kind == "service":
+            service = services.create_service(db.session, name)
+            return redirect(url_for("sync_service", slug=service.slug))
         if kind != "custom":
             automation = sync_views.create_from_form(db.session, name, kind, request.form.get("adapter_id"))
             if automation is None:

@@ -8,6 +8,9 @@ nothing about an adapter has to be learned by running it:
   hooks as their names.
 - The contract rules: `contract == CURRENT_CONTRACT`, required and known hooks per
   role, options ↔ `choices`, capabilities ↔ hooks, and no top-level host calls.
+- `reads`: endpoints, as "METHOD url_pattern", that only read although their
+  method isn't GET (a search sent as POST). Each must name a call site the checker
+  found; it's then `read` risk, so Test and the pickers may call it.
 - The endpoint manifest: every `web_request` / `web_upload_media` call site, with
   the connection the literal `CONNECTION`, a literal method, and a URL that's a
   literal, a module constant, or `url_template(<literal>, ...)` (concatenations of
@@ -34,13 +37,16 @@ from jsonschema import Draft202012Validator
 from yaffo.background_tasks.automation_sandbox.starlark_runner import validate_starlark
 from yaffo.db.models import SYNC_ROLE_SOURCE, SYNC_ROLE_TARGET
 from yaffo.sync.options import OPTION_REMOTE_COLLECTION, OPTION_REMOTE_FOLDER, OPTION_TYPES
-from yaffo.sync.providers import get_provider, is_base_url
+from yaffo.sync.providers import (
+    BASE_URL_PLACEHOLDER, CUSTOM_PREFIX, SECRET_PLACEHOLDER, ConnectionBlockError, get_provider, is_base_url,
+    provider_from_block,
+)
 from yaffo.sync.schemas import GRANT_ENDPOINT, GRANT_FOLLOWUP, RISK_READ, RISK_WRITE
 
 CURRENT_CONTRACT = 1
 
 WEB_FUNCTIONS = ("web_request", "web_upload_media")
-HOST_FUNCTIONS = (*WEB_FUNCTIONS, "url_template", "print")
+HOST_FUNCTIONS = (*WEB_FUNCTIONS, "url_template", "hex_from_base64", "print")
 CONNECTION_NAME = "CONNECTION"
 
 REQUIRED_HOOKS = {SYNC_ROLE_SOURCE: {"list_page"}, SYNC_ROLE_TARGET: {"push"}}
@@ -83,6 +89,7 @@ METADATA_SCHEMA: dict[str, Any] = {
         "hooks": {"type": "object", "additionalProperties": {"type": "string"}},
         "capabilities": {"type": "object"},
         "connection": {"type": "object"},
+        "reads": {"type": "array", "items": {"type": "string", "pattern": "^[A-Z]+ \\S+$"}},
     },
 }
 _METADATA_VALIDATOR = Draft202012Validator(METADATA_SCHEMA)
@@ -224,9 +231,19 @@ class _Analyzer:
         if role not in REQUIRED_HOOKS:
             return
         provider = metadata.get("provider")
-        if provider == "custom" or "connection" in metadata:
-            self.problem("custom_not_supported", "custom adapters with their own connection block "
-                         "aren't supported yet", self.adapter_node)
+        if provider == "custom":
+            if "connection" not in metadata:
+                self.problem("connection_missing", "a custom adapter declares its connection block",
+                             self.adapter_node)
+            else:
+                try:
+                    provider_from_block(CUSTOM_PREFIX + "check", str(metadata.get("title") or ""),
+                                        metadata["connection"])
+                except ConnectionBlockError as e:
+                    self.problem("connection_invalid", f"connection: {e}", self.adapter_node)
+        elif "connection" in metadata:
+            self.problem("connection_on_preset", f"provider {provider!r} brings its own connection; only a "
+                         "custom adapter declares one", self.adapter_node)
         elif get_provider(str(provider)) is None:
             self.problem("unknown_provider", f"unknown provider {provider!r}", self.adapter_node)
         hooks = set(metadata.get("hooks", {}))
@@ -323,8 +340,18 @@ class _Analyzer:
             return call.args[index]
         return next((k.value for k in call.keywords if k.arg == keyword), None)
 
+    def provider(self):
+        metadata = self.analysis.metadata
+        if metadata.get("provider") == "custom":
+            try:
+                return provider_from_block(CUSTOM_PREFIX + "check", str(metadata.get("title") or ""),
+                                           metadata.get("connection"))
+            except ConnectionBlockError:
+                return None
+        return get_provider(str(metadata.get("provider", "")))
+
     def detect_endpoints(self) -> None:
-        provider = get_provider(str(self.analysis.metadata.get("provider", "")))
+        provider = self.provider()
         seen: set[tuple[str, str | None, str]] = set()
         for scope in self.defs.values():
             for node in ast.walk(scope):
@@ -374,6 +401,22 @@ class _Analyzer:
                                                        "grant_kind": entry[2], "risk": risk,
                                                        "line": node.lineno})
 
+    def apply_reads(self) -> None:
+        """Mark the endpoints `reads` declares as read-only."""
+        reads = self.analysis.metadata.get("reads") or []
+        if not isinstance(reads, list):
+            return
+        for declared in reads:
+            if not isinstance(declared, str) or " " not in declared:
+                continue
+            method, pattern = declared.split(" ", 1)
+            matches = [entry for entry in self.analysis.manifest
+                       if entry["method"] == method and entry["url_pattern"] == pattern]
+            if not matches:
+                self.problem("read_not_called", f"reads: no call site makes {declared!r}", self.adapter_node)
+            for entry in matches:
+                entry["risk"] = RISK_READ
+
     def check_template_call(self, node: ast.Call, scope: ast.FunctionDef) -> None:
         if not node.args:
             self.problem("template_missing", "url_template() needs a template", node)
@@ -386,9 +429,29 @@ class _Analyzer:
             self.problem("template_not_literal", "url_template() needs a literal template", node)
 
     def check_url(self, url: str, provider, node: ast.AST) -> bool:
+        """A literal URL must be https on the provider's hosts. A self-hosted
+        provider's URLs start with {base_url} instead (the server the user signs in
+        to), and only a key placed in the path may use {secret}."""
+        if SECRET_PLACEHOLDER in url and not (provider is not None and provider.api_key is not None
+                                              and provider.api_key.kind == "path"):
+            self.problem("secret_placeholder", f"{url!r}: only a path-placed key may use {SECRET_PLACEHOLDER}", node)
+            return False
+        if url.startswith(BASE_URL_PLACEHOLDER):
+            if provider is None or not provider.instance:
+                self.problem("base_url_not_instance",
+                             f"{url!r}: {BASE_URL_PLACEHOLDER} is only for self-hosted services", node)
+                return False
+            if not url[len(BASE_URL_PLACEHOLDER):].startswith("/"):
+                self.problem("base_url_path", f"{url!r}: {BASE_URL_PLACEHOLDER} must be followed by a path", node)
+                return False
+            return True
         parts = urlsplit(url)
         if parts.scheme != "https" or not parts.netloc or _PLACEHOLDER.search(parts.netloc):
             self.problem("url_not_https", f"{url!r} must be an https URL with a literal host", node)
+            return False
+        if provider is not None and provider.instance:
+            self.problem("url_outside_provider", f"{url!r}: {provider.label} URLs start with {BASE_URL_PLACEHOLDER}",
+                         node)
             return False
         if provider is not None and not is_base_url(provider, url):
             self.problem("url_outside_provider", f"{url!r} isn't on {provider.label}'s hosts", node)
@@ -419,6 +482,7 @@ def analyze_adapter(code: str) -> AdapterAnalysis:
     analyzer.check_rules()
     if analysis.metadata:
         analyzer.detect_endpoints()
+        analyzer.apply_reads()
     return analysis
 
 

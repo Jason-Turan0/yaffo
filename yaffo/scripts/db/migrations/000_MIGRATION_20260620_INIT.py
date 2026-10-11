@@ -480,6 +480,7 @@ def migrate(conn: sqlite3.Connection) -> None:
                       id INTEGER PRIMARY KEY AUTOINCREMENT,
                       version_id INTEGER,
                       automation_id INTEGER,
+                      sync_adapter_id INTEGER,
                       type TEXT NOT NULL,
                       content TEXT NOT NULL,
                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

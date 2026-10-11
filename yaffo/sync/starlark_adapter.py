@@ -23,7 +23,7 @@ from yaffo.background_tasks.automation_sandbox.starlark_runner import RunLimits,
 from yaffo.common import MEDIA_EXTENSIONS
 from yaffo.sync.convert import Accepts
 from yaffo.sync.handlers import ERROR_CODES, ERROR_CHANGED, HookContext, SourceHandler, TargetCapabilities, TargetHandler, PRESENT, MISSING
-from yaffo.sync.web import CONNECTION_TOKEN, DownloadError, WebClient, url_template
+from yaffo.sync.web import CONNECTION_TOKEN, DownloadError, WebClient, hex_from_base64, url_template
 
 HOOK_LIMITS = RunLimits(timeout_seconds=60.0, max_host_calls=1000)
 UNTIMED = frozenset({"web_request", "web_upload_media"})
@@ -61,6 +61,9 @@ ADAPTER_HOST_API: tuple[AdapterHostFunction, ...] = (
         "web_upload_media", "web_upload_media(connection, method, url, media_item_id, encoding='raw', "
         "field=None, fields=None, headers=None, offset=0, length=None)",
         "Upload a prepared batch item's bytes. A bounded offset and length support upload sessions."),
+    AdapterHostFunction(
+        "hex_from_base64", "hex_from_base64(text)",
+        "A base64 digest as lowercase hex (for a record's hash), or None if it isn't base64."),
     AdapterHostFunction("print", "print(*values)", "Captured into the run's output."),
 )
 
@@ -83,7 +86,8 @@ class HookCall:
                    f"ADAPTER[\"hooks\"][{hook_name!r}]("
                    + ", ".join(f"__args__[{i}]" for i in range(len(args))) + ")\n")
         functions = {"web_request": self.client.web_request,
-                     "web_upload_media": self.client.web_upload_media, "url_template": url_template}
+                     "web_upload_media": self.client.web_upload_media, "url_template": url_template,
+                     "hex_from_base64": hex_from_base64}
         result = run_starlark(program, inputs={"__args__": list(args), "CONNECTION": CONNECTION_TOKEN},
                               functions=functions, filename="adapter.star", limits=HOOK_LIMITS,
                               should_cancel=self.should_cancel, untimed_functions=UNTIMED)

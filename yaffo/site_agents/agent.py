@@ -32,6 +32,8 @@ from yaffo.site_agents.assistant.redact import Redactor
 from yaffo.site_agents.assistant.tool_providers.script_tool import ScriptToolProvider
 from yaffo.site_agents.assistant.settings import DIAG_LIBRARY
 from yaffo.site_agents.assistant.tool_providers.knowledge.tools import KnowledgeToolProvider
+from yaffo.site_agents.adapter.prompt_generator.adapter_system_prompt import build_adapter_builder_system_prompt
+from yaffo.site_agents.adapter.tool_providers.adapter_tool import AdapterToolProvider
 from yaffo.site_agents.automation.tool_providers.automation_tool import AutomationToolProvider
 from yaffo.site_agents.automation.tool_providers.automation_trigger_tool import AutomationTriggerToolProvider
 from yaffo.site_agents.common.tool_providers.tool_provider_types import ContentBlock
@@ -288,6 +290,30 @@ def create_automation_builder_agent(
         model=model,
         system_prompt=prompt,
         log_feature="automation",
+        providers=providers,
+        api_key=api_key,
+    )
+    client.load_history(list(history))
+    return Agent(client, providers, max_iterations=max_iterations)
+
+
+def create_adapter_builder_agent(
+    adapter_id: int,
+    *,
+    model: ModelAlias,
+    api_key: str,
+    session: Session,
+    max_iterations: int = _MAX_ITERATIONS,
+    history: Sequence[tuple[str, str]] = (),
+) -> Agent:
+    """Wire the service builder for one custom adapter: write_adapter_code and
+    test_adapter, scoped to `adapter_id`, and the adapter contract as the system
+    prompt. No data-query tool: an adapter never reads the library."""
+    providers: list[ToolProvider] = [AdapterToolProvider(adapter_id, session=session)]
+    client = create_model_client(
+        model=model,
+        system_prompt=build_adapter_builder_system_prompt(),
+        log_feature="adapter",
         providers=providers,
         api_key=api_key,
     )

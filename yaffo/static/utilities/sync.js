@@ -274,6 +274,103 @@ const initDeviceCode = (root, i18n) => {
     });
 };
 
+/**
+ * A self-hosted server's address field: the http confirmation shows only while the
+ * address starts with http://, and is unticked whenever it's hidden, so it can't
+ * approve an address the user no longer sees.
+ * @param {ParentNode} root
+ */
+const initServerAddress = (root) => {
+    root.querySelectorAll('[data-server-address]').forEach((group) => {
+        const input = /** @type {HTMLInputElement | null} */ (group.querySelector('[data-base-url]'));
+        const confirm = /** @type {HTMLElement | null} */ (group.querySelector('[data-allow-http]'));
+        const box = /** @type {HTMLInputElement | null} */ (confirm && confirm.querySelector('input[type="checkbox"]'));
+        if (!input || !confirm || !box) return;
+        const update = () => {
+            confirm.hidden = !/^\s*http:\/\//i.test(input.value);
+            if (confirm.hidden) box.checked = false;
+        };
+        input.addEventListener('input', update);
+        update();
+    });
+};
+
+/**
+ * One of the service builder's permission requests, as a card: reading pages from
+ * new domains (each can be left unticked) or reading the test account live. An
+ * answered request is one line saying what was decided.
+ * @param {ChatMessage} message
+ * @param {Pick<I18nService, 't'>} i18n
+ * @param {(id: number, answer: { decision: string, domains?: string[] }) => Promise<void>} respond
+ */
+const syncPermissionCard = (message, i18n, respond) => {
+    /** @type {{ kind?: string, status?: string, domains?: Record<string, string[]>, allowed?: string[], denied?: string[], account?: string }} */
+    let request;
+    try {
+        request = JSON.parse(message.content);
+    } catch {
+        request = {};
+    }
+    const card = syncEl('div', undefined, 'chat-message chat-message-permission service-permission');
+    const id = Number(message.id);
+    const live = request.kind === 'live_reads';
+    if (request.status !== 'pending') {
+        const decided = request.status === 'superseded' ? i18n.t('utilities:sync.service.superseded')
+            : live ? i18n.t(request.status === 'allowed' ? 'utilities:sync.service.liveAllowed' : 'utilities:sync.service.liveDenied',
+                { account: request.account || '' })
+                : [request.allowed && request.allowed.length
+                    ? i18n.t('utilities:sync.service.docsAllowed', { domains: request.allowed.join(', ') }) : '',
+                request.denied && request.denied.length
+                    ? i18n.t('utilities:sync.service.docsDenied', { domains: request.denied.join(', ') }) : '']
+                    .filter(Boolean).join(' ');
+        card.classList.add('is-answered');
+        card.append(syncEl('p', decided));
+        return card;
+    }
+    /** @param {string} label @param {string} className @param {() => void} onClick */
+    const button = (label, className, onClick) => {
+        const element = /** @type {HTMLButtonElement} */ (syncEl('button', label, className));
+        element.type = 'button';
+        element.addEventListener('click', () => {
+            card.querySelectorAll('button').forEach((b) => { /** @type {HTMLButtonElement} */ (b).disabled = true; });
+            onClick();
+        });
+        return element;
+    };
+    const actions = syncEl('div', undefined, 'service-permission-actions');
+    if (live) {
+        card.append(syncEl('p', i18n.t('utilities:sync.service.liveAsk', { account: request.account || '' })));
+        actions.append(button(i18n.t('utilities:sync.service.allow'), 'btn-primary btn-sm', () => void respond(id, { decision: 'allow' })),
+            button(i18n.t('utilities:sync.service.dontAllow'), 'btn-secondary btn-sm', () => void respond(id, { decision: 'deny' })));
+    } else {
+        const domains = Object.entries(request.domains || {});
+        card.append(syncEl('p', i18n.t('utilities:sync.service.docsAsk', { count: domains.length })));
+        const list = syncEl('ul', undefined, 'service-permission-domains');
+        for (const [domain, urls] of domains) {
+            const item = syncEl('li');
+            const label = syncEl('label', undefined, 'checkbox-label');
+            const box = /** @type {HTMLInputElement} */ (syncEl('input'));
+            box.type = 'checkbox';
+            box.checked = true;
+            box.value = domain;
+            label.append(box, syncEl('span', i18n.t('utilities:sync.service.docsDomain', { domain, count: urls.length })));
+            const pages = syncEl('ul', undefined, 'service-permission-urls');
+            for (const url of urls) pages.append(syncEl('li', url));
+            item.append(label, pages);
+            list.append(item);
+        }
+        card.append(list, syncEl('p', i18n.t('utilities:sync.service.docsNote'), 'hint-text'));
+        actions.append(
+            button(i18n.t('utilities:sync.service.allowSelected'), 'btn-primary btn-sm', () => {
+                const chosen = [...list.querySelectorAll('input:checked')].map((box) => /** @type {HTMLInputElement} */ (box).value);
+                void respond(id, chosen.length ? { decision: 'allow', domains: chosen } : { decision: 'deny' });
+            }),
+            button(i18n.t('utilities:sync.service.denyAll'), 'btn-secondary btn-sm', () => void respond(id, { decision: 'deny' })));
+    }
+    card.append(actions);
+    return card;
+};
+
 /** @type {SyncNamespace} */
 const syncNamespace = {
     renderTestResult: (container, result, i18n, config) => {
@@ -387,6 +484,7 @@ const syncNamespace = {
     initDeviceCode,
 
     initSyncPage: (i18n, config) => {
+        initServerAddress(document);
         const selection = document.querySelector('[data-sync-selection]');
         if (selection instanceof HTMLFormElement) initSyncSelection(selection);
         document.querySelectorAll('[data-remote-option]').forEach((element) => {
@@ -487,6 +585,90 @@ const syncNamespace = {
             });
         }
         void config;
+    },
+
+    /**
+     * The service builder page: its chat (the shared chat dialog, polling the
+     * builder's status), the Publish review, and Delete behind the confirm dialog.
+     */
+    initServicePage: (slug, startStatus, i18n, config) => {
+        initServerAddress(document);
+        const components = window.PHOTO_ORGANIZER.COMPONENTS;
+        /** @type {ChatDialogApi | null} */
+        let chat = null;
+        // Reload (to refresh the tabs) only when a builder run this page followed has
+        // ended: not on the first poll that just draws the transcript, which finds the
+        // builder idle and would otherwise reload forever.
+        let following = startStatus === 'IN_PROGRESS';
+        /** @param {number} id @param {{ decision: string, domains?: string[] }} answer */
+        const respond = async (id, answer) => {
+            const response = await fetch(config.buildUrl('sync_service_permission', { slug, message_id: id }), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(answer),
+            });
+            const body = await response.json().catch(() => ({}));
+            if (!response.ok) window.notification.error(body.error || i18n.t('utilities:sync.service.answerFailed'));
+            if (chat) {
+                following = Boolean(body.started);
+                if (body.started) chat.enterRunning();
+                else chat.load();
+            }
+        };
+        if (components && components.initChatDialog) {
+            chat = components.initChatDialog('service-chat', {
+                renderMessages: (messages) => messages.map((message) => (message.type === 'permission'
+                    ? syncPermissionCard(message, i18n, respond)
+                    : syncEl('div', message.content, `chat-message chat-message-${message.type}`))),
+                startStatus,
+                statusUrl: () => config.buildUrl('sync_service_status', { slug }),
+                onSend: async (message) => {
+                    const response = await fetch(config.buildUrl('sync_service_chat', { slug }), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message }),
+                    });
+                    if (response.ok) {
+                        following = true;
+                        return { ok: true };
+                    }
+                    const body = await response.json().catch(() => ({}));
+                    return { ok: false, error: body.error };
+                },
+                onStatus: (body) => {
+                    if (body.status === 'IN_PROGRESS') following = true;
+                },
+                onCancel: () => fetch(config.buildUrl('sync_service_cancel', { slug }), { method: 'POST' }),
+                onSettled: (body) => {
+                    const ended = following;
+                    following = false;
+                    if (ended && body.status !== 'FAILED') window.location.reload();
+                },
+                cancelConfirm: {
+                    title: i18n.t('components:chat.cancelGeneration'),
+                    message: i18n.t('utilities:sync.service.cancelMessage'),
+                    confirmText: i18n.t('components:chat.cancelGeneration'),
+                },
+            });
+            if (chat) chat.load();  // draw the builder's requests as cards
+        }
+        const publish = document.getElementById('service-publish');
+        if (publish && components && components.modal && document.getElementById('servicePublishModal')) {
+            publish.addEventListener('click', components.modal.init('servicePublishModal').open);
+        }
+        const remove = /** @type {HTMLFormElement | null} */ (document.querySelector('[data-confirm-delete]'));
+        if (remove) {
+            remove.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
+                    title: i18n.t('utilities:sync.service.deleteTitle'),
+                    message: i18n.t('utilities:sync.service.deleteMessage'),
+                    confirmText: i18n.t('common:delete'),
+                    confirmClass: 'btn-danger',
+                });
+                if (confirmed) remove.submit();
+            });
+        }
     },
 };
 

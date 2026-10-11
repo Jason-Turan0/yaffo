@@ -91,7 +91,7 @@ def test_metadata_rules():
         '"options": {"f": {"type": "string", "label": "F", "create": True}}, "hooks": {"list_page": list_page}}')
     assert "unknown_provider" in check(
         '{"contract": 1, "role": "source", "provider": "dropbox", "title": "T", "hooks": {"list_page": list_page}}')
-    assert "custom_not_supported" in check(
+    assert "connection_missing" in check(
         '{"contract": 1, "role": "source", "provider": "custom", "title": "T", "hooks": {"list_page": list_page}}')
     assert "metadata_invalid" in check(
         '{"contract": 1, "role": "source", "provider": "onedrive", "title": "T", "hooks": {"list_page": list_page}, '

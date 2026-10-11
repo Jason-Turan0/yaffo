@@ -112,16 +112,17 @@ def find_for_provider(session: Session, provider: str) -> list[tuple[str, SyncCo
 
 
 def upsert_after_sign_in(session: Session, provider: str, account_id: str, account_label: str | None,
-                         scopes: list[str], secret: dict) -> str:
-    """Store a fresh sign-in: the token in the keychain, the row ready. Signing in
-    to an account that already has a row updates it in place, so every sync using
-    it is fixed at once. Commits."""
+                         scopes: list[str], secret: dict, instance: dict | None = None) -> str:
+    """Store a fresh sign-in: the token (or key) in the keychain, the row ready.
+    Signing in to an account that already has a row updates it in place, so every
+    sync using it is fixed at once. `instance` is a self-hosted server's address.
+    Commits."""
     key = connection_key(provider, account_id)
     ref = secret_ref(provider, account_id)
     secrets_store.store_secret(ref, secret)
     connection = SyncConnection(provider=provider, account_id=account_id, account_label=account_label,
                                 scopes=sorted(set(scopes)), status=CONNECTION_READY, secret_ref=ref,
-                                instance={}, refreshing_until=None)
+                                instance=dict(instance or {}), refreshing_until=None)
     row = _row(session, key)
     if row is None:
         session.add(ApplicationSettings(name=key, type=SETTING_TYPE, value=_encode(connection)))

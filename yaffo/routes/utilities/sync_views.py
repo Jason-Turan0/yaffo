@@ -44,7 +44,7 @@ from yaffo.routes.filter_panel import (
 from yaffo.routes.utilities import sync_text
 from yaffo.routes.utilities.sync_account import AccountView, account_view, init_sync_account_routes
 from yaffo.routes.utilities.common import automations_sidebar_context
-from yaffo.sync import connections, guards, setup
+from yaffo.sync import access, connections, guards, setup
 from yaffo.sync.adapters import AdapterUnavailable, LoadedAdapter, runnable_adapters
 from yaffo.sync.consent import has_consent
 from yaffo.sync.folder_target import CONVERT_FRAME, CONVERT_OFF, ON_LEAVE_KEEP
@@ -334,7 +334,7 @@ def _web_source_terms(session: Session, config, adapter: LoadedAdapter) -> list[
                                                                (config.import_root or {}).get("layout"))),
         ConsentTerm(gettext("Already in your library"), gettext("Linked, not copied again")),
         ConsentTerm(gettext("Deleted in %(service)s", service=service), gettext("Kept in your library")),
-        ConsentTerm(gettext("Yaffo talks to"), ", ".join(adapter.hosts)),
+        ConsentTerm(gettext("Yaffo talks to"), ", ".join(access.hosts(session, adapter, config.connection_key))),
         ConsentTerm(gettext("In %(service)s", service=service), gettext("Nothing is changed or deleted")),
     ]
 
@@ -383,7 +383,7 @@ def _web_target_terms(session: Session, config, adapter: LoadedAdapter) -> list[
         ConsentTerm(gettext("Sends"), what),
         ConsentTerm(gettext("To"), adapter.handler.describe_destination(config.options)),
         ConsentTerm(gettext("Signed in as"), connection.account_label or connection.account_id),
-        ConsentTerm(gettext("Yaffo talks to"), ", ".join(adapter.hosts)),
+        ConsentTerm(gettext("Yaffo talks to"), ", ".join(access.hosts(session, adapter, config.connection_key))),
     ]
     if adapter.provider == "google_photos":
         terms.append(ConsentTerm(gettext("If a photo leaves the selection"),
@@ -391,8 +391,14 @@ def _web_target_terms(session: Session, config, adapter: LoadedAdapter) -> list[
     elif adapter.provider == "onedrive":
         terms.append(ConsentTerm(gettext("If a photo leaves the selection"),
                                  gettext("Yaffo deletes its unchanged copy from OneDrive")))
-    terms.append(ConsentTerm(gettext("Cloud filenames"),
-                             gettext("Include a Yaffo id so an interrupted upload is not duplicated")))
+    elif adapter.provider == "immich":
+        terms.append(ConsentTerm(gettext("If a photo leaves the selection"),
+                                 gettext("Taken out of the album; a photo Yaffo uploaded also goes to Immich's trash")))
+        terms.append(ConsentTerm(gettext("Photos Immich already has"),
+                                 gettext("Added to the album, not uploaded again")))
+    if adapter.provider in ("google_photos", "onedrive"):
+        terms.append(ConsentTerm(gettext("Cloud filenames"),
+                                 gettext("Include a Yaffo id so an interrupted upload is not duplicated")))
     return terms
 
 
@@ -454,7 +460,7 @@ def build_page(session: Session, automation: Automation) -> SyncPage | None:
         missing=setup.missing_setup(session, automation) + [o.key for o in options if o.problem],
         counts=sync_repository.status_counts(session, automation.id),
         folder_target=adapter.handler_key == SYNC_HANDLER_FOLDER_TARGET,
-        account=account, hosts=adapter.hosts,
+        account=account, hosts=access.hosts(session, adapter, config.connection_key),
         peer_source=adapter.handler_key == SYNC_HANDLER_PEER_SOURCE,
         shown_options=shown_options(session, adapter, config.options),
     )
@@ -903,7 +909,7 @@ def render_sync_page(automation: Automation, recent_runs: list, trigger_context:
     return render_template(
         "utilities/sync_detail.html", selected=automation, selected_slug=automation.slug, sync=page,
         recent_runs=recent_runs, sync_error=request.args.get("sync_error"),
-        sync_error_text=_error_text(request.args.get("sync_error")),
+        sync_error_text=error_text(request.args.get("sync_error")),
         **trigger_context,
         **automations_sidebar_context(),
     )
@@ -927,7 +933,7 @@ def _preview_problem_text(code: str | None) -> str | None:
     return sync_text.pause_text(code)
 
 
-def _error_text(code: str | None) -> str | None:
+def error_text(code: str | None) -> str | None:
     if not code:
         return None
     return {
@@ -941,4 +947,20 @@ def _error_text(code: str | None) -> str | None:
         "unknown_layout": gettext("Choose how to arrange the photos."),
         "sign_in_failed": gettext("The sign-in didn't complete. Try again."),
         "account_unknown": gettext("That account isn't available any more."),
+        "instance_missing": gettext("Enter the server's address."),
+        "instance_invalid": gettext("That isn't a server address. Enter one like https://photos.example.com."),
+        "instance_has_path": gettext("Enter only the server's address, without a path."),
+        "instance_http_public": gettext("A server on the internet must use https."),
+        "instance_http_unconfirmed": gettext("This server uses http. Confirm the warning to connect to it anyway."),
+        "api_key_missing": gettext("Enter the key."),
+        "api_key_invalid": gettext("That key can't be right: it's too long or has line breaks."),
+        "username_missing": gettext("Enter the username."),
+        "password_missing": gettext("Enter the password."),
+        "username_invalid": gettext("That username can't be right."),
+        "password_invalid": gettext("That password can't be right."),
+        "rejected": gettext("The service refused that key or password."),
+        "unreachable": gettext("Yaffo couldn't reach the server. Check the address and that it's running."),
+        "tls_failed": gettext("The server didn't answer a secure (https) connection. If it uses http on your home "
+                              "network, enter its address starting with http://."),
+        "whoami_failed": gettext("The server answered, but not as expected. Check the address."),
     }.get(code) or sync_text.guard_text(code)

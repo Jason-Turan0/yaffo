@@ -1,0 +1,270 @@
+{% extends "utilities/_base.html" %}
+{% from "components/chat_dialog.html" import chat_dialog %}
+{% from "components/page_header.html" import page_header %}
+{% from "components/modal.html" import render_modal with context %}
+{% from "utilities/_sign_in_fields.html" import api_key_field, server_address_field %}
+
+{# The service builder: a chat that writes a custom sync adapter, beside five tabs
+   (plain links, so each tab is its own page load): Overview, Test account, Web access,
+   Code, Test. Publish approves the endpoint list on Web access. #}
+
+{% block title %}{{ _("%(name)s - Services - Yaffo", name=row.name) }}{% endblock %}
+
+{% block utility_styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='utilities/automations.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='utilities/sync.css') }}">
+{% endblock %}
+
+{% set draft = service.draft %}
+{% set provider = service.provider %}
+{% set metadata = draft.metadata if draft else {} %}
+
+{% macro tab_link(key, label) %}
+    <a href="{{ url_for('sync_service', slug=row.slug, tab=key) }}" class="service-tab{{ ' is-active' if tab == key }}"
+       {{ 'aria-current="page"' | safe if tab == key }}>{{ label }}</a>
+{% endmacro %}
+
+{# An info hover, a section heading (with an optional hover and status chip), and a field
+   label (with an optional hover): explanations live in hovers, not paragraphs. #}
+{% macro help_tip(text) %}<button type="button" class="help-tip" data-icon="info" aria-label="{{ text }}" data-tooltip="{{ text }}"></button>{% endmacro %}
+
+{% macro section_heading(title, help=none, status=none) %}
+    <div class="service-heading">
+        <h3 class="automation-section-title">{{ title }}</h3>
+        {% if help %}{{ help_tip(help) }}{% endif %}
+        {% if status %}<span class="chip chip-success">{{ status }}</span>{% endif %}
+    </div>
+{% endmacro %}
+
+{% macro field_label(for_id, text, help=none) %}
+    <div class="sync-option-label">
+        <label for="{{ for_id }}">{{ text }}</label>
+        {% if help %}{{ help_tip(help) }}{% endif %}
+    </div>
+{% endmacro %}
+
+{% macro render_publish_review() %}
+    <p class="section-description">{{ _("Publishing makes this draft the version syncs run. It may call only these:") }}</p>
+    <ul class="service-endpoint-list">
+        {% for endpoint in service.endpoints %}
+            <li><span class="service-method">{{ endpoint.method }}</span> <code>{{ endpoint.url }}</code>
+                <span class="chip {{ 'chip-warning' if endpoint.risk != 'read' else '' }}">{{ _("reads") if endpoint.risk == 'read' else _("changes things") }}</span></li>
+        {% endfor %}
+    </ul>
+    {% if service.used_by %}
+        <p class="hint-text">{{ ngettext("%(num)d sync uses this service. If the new version can call more than before, it asks for your approval again before it runs.", "%(num)d syncs use this service. If the new version can call more than before, they ask for your approval again before they run.", service.used_by) }}</p>
+    {% endif %}
+{% endmacro %}
+
+{% block utility_content %}
+    {% set header_actions %}
+        {% if service.regenerate %}
+            <form method="POST" action="{{ url_for('sync_service_regenerate', slug=row.slug) }}" class="sync-inline-action">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="btn-primary">{{ _("Regenerate") }}</button>
+            </form>
+        {% endif %}
+        {% if service.can_publish %}
+            <button type="button" class="btn-primary" id="service-publish">{{ _("Publish") }}</button>
+        {% endif %}
+        <form method="POST" action="{{ url_for('sync_service_delete', slug=row.slug) }}" class="sync-inline-action"
+              data-confirm-delete="{{ _('Delete this service? Syncs can no longer use it.') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="btn-danger" data-icon="delete" {{ "disabled" if service.used_by }}>{{ _("Delete") }}</button>
+        </form>
+    {% endset %}
+    {% call page_header(row.name, actions=header_actions) %}
+        {% if service.regenerate %}<span class="chip chip-warning">{{ _("Needs updating") }}</span>
+        {% elif row.published %}<span class="chip chip-success">{{ _("Published") }}</span>
+        {% else %}<span class="chip">{{ _("Draft") }}</span>{% endif %}
+        {{ _("A service Yaffo can import from or send to. Describe it in the chat; the builder writes and tests it, and you publish it.") }}
+    {% endcall %}
+
+    {% if service_error %}
+        <div class="alert alert-error" role="alert"><span class="alert-message">{{ service_error }}</span></div>
+    {% elif notice == 'published' %}
+        <div class="alert alert-success" role="status"><span class="alert-message">{{ _("Published. Choose it under Import from… or Send to… in New automation.") }}</span></div>
+    {% elif notice == 'app_saved' %}
+        <div class="alert alert-success" role="status"><span class="alert-message">{{ _("App credentials saved.") }}</span></div>
+    {% endif %}
+    {% if service.regenerate %}
+        <div class="alert alert-warning" role="status"><span class="alert-message">{{ _("This service needs updating: it doesn't pass the current version's checks, so syncs using it are paused. Regenerate asks the builder to fix it.") }}</span></div>
+    {% endif %}
+
+    <div class="automation-edit-screen service-builder">
+        <section class="chat-card automation-conversation">
+            {{ chat_dialog('service-chat', _('Service builder'),
+                           _("Say which service it is and whether photos go to it or come from it."),
+                           _('Describe the service…'), messages=messages,
+                           empty_text=_('No conversation yet. For example: "Import photos from my Immich server" or "Send albums to Flickr as sets".')) }}
+        </section>
+
+        <section class="service-panel">
+            <nav class="service-tabs" aria-label="{{ _('Service') }}">
+                {{ tab_link('overview', _('Overview')) }}
+                {{ tab_link('account', _('Account')) }}
+                {{ tab_link('web', _('Access')) }}
+                {{ tab_link('code', _('Code')) }}
+                {{ tab_link('test', _('Test')) }}
+            </nav>
+
+            {% if service.problems %}
+                <div class="alert alert-warning" role="status">
+                    <span class="alert-message">{{ _("The draft doesn't pass its check yet:") }}</span>
+                    <ul class="service-problems">{% for problem in service.problems %}<li>{{ problem }}</li>{% endfor %}</ul>
+                </div>
+            {% endif %}
+
+            {% if tab == 'overview' %}
+                {% if draft %}
+                    {% set caps = metadata.capabilities or {} %}
+                    <dl class="sync-review-terms service-facts">
+                        <div class="sync-review-term"><dt>{{ _("Name") }}</dt><dd>{{ metadata.title }}</dd></div>
+                        <div class="sync-review-term"><dt>{{ _("Direction") }}</dt>
+                            <dd>{{ _("Imports photos") if draft.role == 'source' else _("Sends photos") }}</dd></div>
+                        <div class="sync-review-term"><dt>{{ _("Sign-in") }}</dt>
+                            <dd>{{ {'oauth2': _("Service sign-in page"), 'oauth1a': _("Service sign-in page"), 'api_key': _("API key"),
+                                    'basic': _("Username and password")}.get(provider.auth_kind, provider.auth_kind) }}</dd></div>
+                        <div class="sync-review-term"><dt>{{ _("Hosts") }}</dt>
+                            <dd>{% if provider.instance %}{{ _("Your server") }}{% else %}{{ provider.base_urls | map('replace', 'https://', '') | join(', ') }}{% endif %}</dd></div>
+                        {% if draft.options %}
+                        <div class="sync-review-term"><dt>{{ _("Options") }}</dt>
+                            <dd>{% for key, spec in draft.options.items() %}{{ spec.label }}{{ ", " if not loop.last }}{% endfor %}</dd></div>
+                        {% endif %}
+                        {% if draft.role == 'target' %}
+                        <div class="sync-review-term"><dt>{{ _("Can") }}</dt>
+                            <dd>{{ _("Add") }}{% if caps.remove %} · {{ _("Remove") }}{% endif %}{% if caps.update %} · {{ _("Captions") }}{% endif %}{% if caps.reconcile %} · {{ _("Recover") }}{% endif %}</dd></div>
+                        <div class="sync-review-term"><dt>{{ _("Batch size") }}</dt><dd>{{ caps.max_batch or 50 }}</dd></div>
+                        {% endif %}
+                        <div class="sync-review-term"><dt>{{ _("Used by") }}</dt><dd>{{ ngettext("%(num)d sync", "%(num)d syncs", service.used_by) }}</dd></div>
+                    </dl>
+                {% else %}
+                    <p class="no-data">{{ _("Nothing yet. The builder fills this in as it writes the service.") }}</p>
+                {% endif %}
+
+            {% elif tab == 'account' %}
+                {% if not provider %}
+                    <p class="no-data">{{ _("Appears once the builder knows how this service signs in.") }}</p>
+                {% else %}
+                    {% if service.needs_app %}
+                        {{ section_heading(_("App credentials"),
+                                           _("%(service)s needs to know which app is asking: register Yaffo with it once, and every sync using this service reuses it. Kept in your system's keychain, never in Yaffo's database, never sent to the AI model. Saving new ones signs every sync using this service out.", service=provider.label),
+                                           _("Saved") if service.app_saved else none) }}
+                        <form method="POST" action="{{ url_for('sync_service_app', slug=row.slug) }}" class="sync-form" autocomplete="off">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            {% if service.return_address %}
+                                <div class="form-group">
+                                    {{ field_label('service-return-address', service.app_labels.redirect,
+                                                   _("Paste this into the service's app form.")) }}
+                                    <input type="text" id="service-return-address" class="service-readonly" value="{{ service.return_address }}" readonly>
+                                </div>
+                            {% endif %}
+                            <div class="form-group">
+                                {{ field_label('service-client-id', service.app_labels.client_id) }}
+                                <input type="text" id="service-client-id" name="client_id" required>
+                            </div>
+                            <div class="form-group">
+                                {{ field_label('service-client-secret', service.app_labels.client_secret) }}
+                                <input type="password" id="service-client-secret" name="client_secret">
+                            </div>
+                            <div class="sync-form-actions"><button type="submit" class="btn-secondary">{{ _("Save credentials") }}</button></div>
+                        </form>
+                    {% endif %}
+
+                    {{ section_heading(_("Test account"),
+                                       _("The account Test reads from while you build. It's saved like any sign-in, so a sync set up with this service finds it already signed in.")) }}
+                    {% if service.test_account %}
+                        <div class="service-account-row">
+                            <strong>{{ service.test_account }}</strong>
+                            {% if service.test_account_problem %}<span class="chip chip-warning">{{ _("Needs sign-in") }}</span>{% else %}<span class="chip chip-success">{{ _("Signed in") }}</span>{% endif %}
+                        </div>
+                    {% endif %}
+                    {% if live_reads %}
+                        <form method="POST" action="{{ url_for('sync_service_revoke_live_reads', slug=row.slug) }}" class="service-account-row">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <span class="chip">{{ _("Live reads allowed") }}</span>
+                            {{ help_tip(_("The builder may make read-only calls to this account while building; the responses go to the AI model.")) }}
+                            <button type="submit" class="btn-secondary btn-sm">{{ _("Revoke") }}</button>
+                        </form>
+                    {% endif %}
+                    <form method="POST" action="{{ url_for('sync_service_test_account', slug=row.slug) }}" class="sync-form" autocomplete="off">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        {% if provider.is_oauth %}
+                            <div class="sync-form-actions"><button type="submit" class="btn-primary" {{ "disabled" if service.needs_app and not service.app_saved }}>{{ _("Sign in again") if service.test_account else _("Sign in to %(service)s", service=provider.label) }}</button></div>
+                        {% else %}
+                            {% if provider.instance %}
+                                {{ server_address_field('service-base-url') }}
+                            {% endif %}
+                            {% if provider.auth_kind == 'basic' %}
+                                <div class="form-group">{{ field_label('service-username', _("Username")) }}<input type="text" id="service-username" name="username" required></div>
+                                <div class="form-group">{{ field_label('service-password', _("App password"), _("Yaffo keeps it in your system's keychain to sign in again. Use an app password or a dedicated user if the service offers one.")) }}<input type="password" id="service-password" name="password" required></div>
+                            {% else %}
+                                {{ api_key_field('service-api-key', provider.key_label, provider.key_help) }}
+                            {% endif %}
+                            <div class="sync-form-actions"><button type="submit" class="btn-primary">{{ _("Connect") }}</button></div>
+                        {% endif %}
+                    </form>
+                {% endif %}
+
+            {% elif tab == 'web' %}
+                {% if service.endpoints %}
+                    {{ section_heading(_("Endpoints"), _("Found in the code. Nothing else can be called. You approve this list when you publish.")) }}
+                    <ul class="service-endpoint-rows">
+                        {% for endpoint in service.endpoints %}
+                            <li>
+                                <span class="service-method">{{ endpoint.method }}</span>
+                                <code>{{ endpoint.url }}</code>
+                                <span class="chip {{ 'chip-warning' if endpoint.risk != 'read' else '' }}">{{ _("Reads") if endpoint.risk == 'read' else _("Writes") }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="no-data">{{ _("No web calls yet.") }}</p>
+                {% endif %}
+
+            {% elif tab == 'code' %}
+                {% if row.working_code %}
+                    {% if row.published and row.published_code != row.working_code %}<p class="hint-text">{{ _("Differs from the published version.") }}</p>{% endif %}
+                    <pre class="automation-code thin-scrollbar"><code>{{ row.working_code }}</code></pre>
+                {% else %}
+                    <p class="no-data">{{ _("No code yet.") }}</p>
+                {% endif %}
+
+            {% elif tab == 'test' %}
+                {% if draft %}
+                    {{ section_heading(_("Test the draft"), _("Runs the draft once: reads go to the test account for real, and nothing is ever sent or changed. The builder sees the result with your next message.")) }}
+                    <form class="sync-form" hx-post="{{ url_for('sync_service_test', slug=row.slug) }}" hx-target="#service-test-result" hx-swap="innerHTML">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        {% for key, spec in draft.options.items() %}
+                            <div class="form-group">
+                                {{ field_label('service-option-' ~ key, spec.label,
+                                               _("An id from the choices a Test lists. Leave it empty to see them.") if key in service.remote_options else spec.help) }}
+                                <input type="text" id="service-option-{{ key }}" name="option_{{ key }}" value="{{ spec.default if spec.default is not none else '' }}">
+                            </div>
+                        {% endfor %}
+                        <div class="sync-form-actions"><button type="submit" class="btn-primary" id="service-test">{{ _("Test") }}</button></div>
+                    </form>
+                    <div id="service-test-result" class="service-test-result" aria-live="polite"></div>
+                {% else %}
+                    <p class="no-data">{{ _("Nothing to test yet.") }}</p>
+                {% endif %}
+            {% endif %}
+        </section>
+    </div>
+
+    {% if service.can_publish %}
+        {{ render_modal('servicePublishModal', _('Publish this service?'), url_for('sync_service_publish', slug=row.slug),
+                        render_publish_review, _('Publish')) }}
+    {% endif %}
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='utilities/sync.js') }}"></script>
+    <script>
+        document.addEventListener('yaffo:app-init-complete', (event) => {
+            const app = event.detail.app;
+            app.sync.initServicePage({{ row.slug | tojson }}, {{ (row.builder_status or 'READY') | tojson }},
+                                     app.i18n, window.APP_CONFIG);
+        });
+    </script>
+{% endblock %}

@@ -379,3 +379,194 @@ describe('device-code sign-in', () => {
     expect(reload).toHaveBeenCalled();
   });
 });
+
+describe('the service builder page', () => {
+  const pageWith = (html) => {
+    document.body.innerHTML = html;
+    const chat = [];
+    window.PHOTO_ORGANIZER.COMPONENTS = {
+      initChatDialog: (id, options) => {
+        const api = { load: vi.fn(), enterRunning: vi.fn() };
+        chat.push({ id, options, api });
+        return api;
+      },
+      modal: { init: () => ({ open: vi.fn() }) },
+    };
+    return chat;
+  };
+
+  it('polls and posts to the service builder routes', async () => {
+    const PO = await loadModule('utilities/sync.js');
+    const chat = pageWith('<div id="service-chat"></div>');
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+
+    PO.sync.initServicePage('custom.my-immich', 'READY', i18n, window.APP_CONFIG);
+
+    expect(chat).toHaveLength(1);
+    const { options } = chat[0];
+    expect(chat[0].id).toBe('service-chat');
+    expect(options.statusUrl()).toBe('/sync_service_status/slug/custom.my-immich');
+    expect(await options.onSend('Import from my Immich')).toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledWith('/sync_service_chat/slug/custom.my-immich', expect.objectContaining({
+      method: 'POST', body: JSON.stringify({ message: 'Import from my Immich' }),
+    }));
+    vi.unstubAllGlobals();
+  });
+
+  it('reloads only after a run it followed, never on the first poll of an idle builder', async () => {
+    const PO = await loadModule('utilities/sync.js');
+    const chat = pageWith('<div id="service-chat"></div>');
+    const reload = vi.fn();
+    vi.stubGlobal('location', { ...window.location, reload });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }));
+    PO.sync.initServicePage('s', 'READY', i18n, window.APP_CONFIG);
+    const { options } = chat[0];
+
+    options.onStatus({ status: 'READY', messages: [] });
+    options.onSettled({ status: 'READY', messages: [] });
+    expect(reload).not.toHaveBeenCalled();
+
+    await options.onSend('Send albums to Flickr');
+    options.onStatus({ status: 'IN_PROGRESS', messages: [] });
+    options.onSettled({ status: 'READY', messages: [] });
+    expect(reload).toHaveBeenCalledTimes(1);
+
+    options.onSettled({ status: 'READY', messages: [] });        // a later idle poll
+    expect(reload).toHaveBeenCalledTimes(1);
+    vi.unstubAllGlobals();
+  });
+
+  it('reports a refused message', async () => {
+    const PO = await loadModule('utilities/sync.js');
+    const chat = pageWith('<div id="service-chat"></div>');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: async () => ({ error: 'busy' }) }));
+
+    PO.sync.initServicePage('s', 'READY', i18n, window.APP_CONFIG);
+
+    expect(await chat[0].options.onSend('x')).toEqual({ ok: false, error: 'busy' });
+    vi.unstubAllGlobals();
+  });
+
+  it('opens the publish review', async () => {
+    const PO = await loadModule('utilities/sync.js');
+    pageWith('<button id="service-publish"></button><div id="servicePublishModal"></div>');
+    const open = vi.fn();
+    window.PHOTO_ORGANIZER.COMPONENTS.modal = { init: () => ({ open }) };
+
+    PO.sync.initServicePage('s', 'READY', i18n, window.APP_CONFIG);
+    document.getElementById('service-publish').click();
+
+    expect(open).toHaveBeenCalled();
+  });
+
+  it('deletes only after the confirm dialog agrees', async () => {
+    const PO = await loadModule('utilities/sync.js');
+    pageWith('<form data-confirm-delete="x"><button type="submit">Delete</button></form>');
+    const form = document.querySelector('form');
+    const submit = vi.spyOn(form, 'submit').mockImplementation(() => {});
+    window.PHOTO_ORGANIZER.confirmDialog = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+
+    PO.sync.initServicePage('s', 'READY', i18n, window.APP_CONFIG);
+    form.dispatchEvent(new Event('submit', { cancelable: true }));
+    await Promise.resolve(); await Promise.resolve();
+    expect(submit).not.toHaveBeenCalled();
+    form.dispatchEvent(new Event('submit', { cancelable: true }));
+    await Promise.resolve(); await Promise.resolve();
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(window.PHOTO_ORGANIZER.confirmDialog).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'utilities:sync.service.deleteTitle', confirmClass: 'btn-danger',
+    }));
+  });
+
+  const docsRequest = (status = 'pending', extra = {}) => ({
+    id: 7, type: 'permission',
+    content: JSON.stringify({ kind: 'docs', status, domains: {
+      'immich.app': ['https://immich.app/docs', 'https://immich.app/openapi.json'],
+      'example.org': ['https://example.org/x'] }, allowed: [], denied: [], ...extra }),
+  });
+
+  it('draws a docs request as a card and sends only the ticked domains', async () => {
+    const PO = await loadModule('utilities/sync.js');
+    const chat = pageWith('<div id="service-chat"></div>');
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ started: true }) });
+    vi.stubGlobal('fetch', fetchMock);
+    PO.sync.initServicePage('s', 'READY', i18n, window.APP_CONFIG);
+    const { options, api } = chat[0];
+    expect(api.load).toHaveBeenCalled();
+
+    const [card] = options.renderMessages([docsRequest()]);
+    document.body.append(card);
+    const boxes = [...card.querySelectorAll('input[type="checkbox"]')];
+    expect(boxes.map((box) => box.value)).toEqual(['immich.app', 'example.org']);
+    expect(card.querySelectorAll('.service-permission-urls li')).toHaveLength(3);
+    boxes[1].checked = false;
+    card.querySelector('.btn-primary').click();
+    await vi.waitFor(() => expect(api.enterRunning).toHaveBeenCalled());
+
+    expect(fetchMock).toHaveBeenCalledWith('/sync_service_permission/slug/s/message_id/7', expect.objectContaining({
+      body: JSON.stringify({ decision: 'allow', domains: ['immich.app'] }),
+    }));
+    expect([...card.querySelectorAll('button')].every((button) => button.disabled)).toBe(true);
+    vi.unstubAllGlobals();
+  });
+
+  it('answers a live-reads request and reloads when nothing started', async () => {
+    const PO = await loadModule('utilities/sync.js');
+    const chat = pageWith('<div id="service-chat"></div>');
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ started: false }) });
+    vi.stubGlobal('fetch', fetchMock);
+    PO.sync.initServicePage('s', 'READY', i18n, window.APP_CONFIG);
+    const { options, api } = chat[0];
+
+    const [card] = options.renderMessages([{ id: 9, type: 'permission',
+      content: JSON.stringify({ kind: 'live_reads', status: 'pending', account: 'jason@example.com' }) }]);
+    card.querySelector('.btn-secondary').click();
+    await vi.waitFor(() => expect(api.load).toHaveBeenCalledTimes(2));
+
+    expect(card.textContent).toContain('utilities:sync.service.liveAsk');
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ decision: 'deny' });
+    vi.unstubAllGlobals();
+  });
+
+  it('shows an answered request as one line, and other entries as bubbles', async () => {
+    const PO = await loadModule('utilities/sync.js');
+    const chat = pageWith('<div id="service-chat"></div>');
+    PO.sync.initServicePage('s', 'READY', i18n, window.APP_CONFIG);
+
+    const [answered, bubble] = chat[0].options.renderMessages([
+      docsRequest('partial', { allowed: ['immich.app'], denied: ['example.org'] }),
+      { id: 8, type: 'assistant', content: 'Drafted.' }]);
+
+    expect(answered.classList.contains('is-answered')).toBe(true);
+    expect(answered.querySelector('button')).toBeNull();
+    expect(answered.textContent).toBe('utilities:sync.service.docsAllowed utilities:sync.service.docsDenied');
+    expect(bubble.className).toBe('chat-message chat-message-assistant');
+    expect(bubble.textContent).toBe('Drafted.');
+  });
+});
+
+describe('a server address', () => {
+  it('asks to confirm http only for an http:// address', async () => {
+    const PO = await loadModule('utilities/sync.js');
+    document.body.innerHTML = `<div data-server-address><input data-base-url value="">
+      <label data-allow-http><input type="checkbox" name="allow_http"></label></div>`;
+    window.PHOTO_ORGANIZER.COMPONENTS = {};
+    const input = document.querySelector('[data-base-url]');
+    const confirm = document.querySelector('[data-allow-http]');
+    const box = confirm.querySelector('input');
+
+    PO.sync.initServicePage('s', 'READY', { t: (k) => k }, window.APP_CONFIG);
+    expect(confirm.hidden).toBe(true);
+
+    input.value = 'HTTP://192.168.1.20:2283';
+    input.dispatchEvent(new Event('input'));
+    expect(confirm.hidden).toBe(false);
+    box.checked = true;
+
+    input.value = 'photos.example.com';
+    input.dispatchEvent(new Event('input'));
+    expect(confirm.hidden).toBe(true);
+    expect(box.checked).toBe(false);
+  });
+});

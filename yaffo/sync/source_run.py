@@ -107,7 +107,7 @@ class Counters:
         return dict(self.__dict__)
 
 
-def _validate_record(record: Any, builtin: bool) -> dict:
+def validate_record(record: Any, builtin: bool) -> dict:
     if not isinstance(record, dict):
         raise HookOutputError("a record must be an object")
     allowed = _RECORD_FIELDS | (_BUILTIN_RECORD_FIELDS if builtin else set())
@@ -450,7 +450,7 @@ class SourceRun:
         records = []
         for row in rows:
             try:
-                records.append(_validate_record(row.details["record"], builtin=False))
+                records.append(validate_record(row.details["record"], builtin=False))
             except HookOutputError:
                 continue
         self.run_page(records, ctx)
@@ -572,7 +572,7 @@ class SourceRun:
                     self.session.rollback()
                     return pause(self.session, self.automation, self.runtime, PAUSE_OPTION_MISSING)
                 first_call = False
-                records = [_validate_record(r, self.adapter.is_builtin) for r in envelope.get("records") or []]
+                records = [validate_record(r, self.adapter.is_builtin) for r in envelope.get("records") or []]
                 self.run_page(records, ctx)
                 next_cursor = envelope.get("next_cursor")
                 if error is None and next_cursor is None:

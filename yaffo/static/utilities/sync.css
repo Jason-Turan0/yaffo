@@ -64,7 +64,8 @@
     margin-bottom: 0;
 }
 
-.sync-detail .help-tip[data-icon]::before {
+.sync-detail .help-tip[data-icon]::before,
+.service-panel .help-tip[data-icon]::before {
     display: block;
 }
 
@@ -581,4 +582,233 @@ span.sync-picker-name[data-icon]::before {
         grid-template-columns: 1fr;
         gap: 2px;
     }
+}
+
+/* The service builder (sync_service.html): the chat beside a tabbed panel. */
+.service-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+.service-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 4px;
+    border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.service-tab {
+    padding: 8px 10px;
+    white-space: nowrap;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: calc(-1 * var(--border-width));
+}
+
+.service-tab:hover {
+    color: var(--color-text);
+}
+
+.service-tab.is-active {
+    color: var(--color-text);
+    border-bottom-color: var(--color-accent);
+}
+
+.service-problems {
+    margin: 8px 0 0;
+    padding-left: 20px;
+}
+
+.service-method {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    white-space: nowrap;
+}
+
+.service-endpoint-list {
+    list-style: none;
+    margin: 0 0 16px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.service-endpoints code,
+.service-test-calls code,
+.service-endpoint-list code,
+.service-return-address {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    overflow-wrap: anywhere;
+}
+
+.service-test-report {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.service-permission {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border: var(--border-width) solid var(--color-accent);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    background: var(--color-surface);
+}
+
+.service-permission.is-answered {
+    border-color: var(--color-border);
+    color: var(--color-text-muted);
+    padding: 6px 12px;
+}
+
+.service-permission p {
+    margin: 0;
+}
+
+.service-permission-domains,
+.service-permission-urls {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.service-permission-urls {
+    padding-left: 24px;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    overflow-wrap: anywhere;
+}
+
+.service-permission-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* The http confirmation under a server address: spaced from the field, its box level
+   with the first line of its (two-line) text. */
+.sync-allow-http {
+    margin-top: 10px;
+    align-items: flex-start;
+    font-size: var(--font-size-sm);
+    line-height: 1.4;
+}
+
+.sync-allow-http input[type="checkbox"] {
+    margin-top: 1px;
+}
+
+/* The service builder's two columns: the chat keeps at least 360px and ~60% of the
+   width; the tab panel takes the rest and scrolls its own wide content (code, tables)
+   instead of squeezing the chat. Overrides .automation-edit-screen's flex row, sized
+   for the automation builder's narrower code panel. */
+.automation-edit-screen.service-builder {
+    display: grid;
+    grid-template-columns: minmax(360px, 3fr) minmax(0, 2fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.service-builder > .automation-conversation {
+    min-width: 360px;
+}
+
+/* The tab panel is a card like the chat's (components/chat_dialog.css .chat-card). */
+.service-builder > .service-panel {
+    min-width: 0;
+    overflow-x: auto;
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    padding: 8px 16px 16px;
+}
+
+.service-builder .automation-code {
+    max-height: 70vh;
+}
+
+@media (max-width: 900px) {
+    .automation-edit-screen.service-builder {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .service-builder > .automation-conversation {
+        min-width: 0;
+    }
+}
+
+
+/* One body size for the whole tab panel (the theme's base, as form labels use
+   everywhere): text, labels, hints, terms and cells. Navigation and headings (tabs,
+   section titles, table headers) stay at the small size, code at extra-small. */
+.service-panel {
+    font-size: var(--font-size-base);
+}
+
+.service-panel .sync-review-term dt,
+.service-panel .sync-review-term dd,
+.service-panel label,
+.service-panel .hint-text,
+.service-panel .no-data,
+.service-panel td,
+.service-panel p {
+    font-size: var(--font-size-base);
+}
+
+.service-heading {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 20px 0 10px;
+}
+
+.service-heading:first-of-type {
+    margin-top: 4px;
+}
+
+.service-heading .automation-section-title {
+    margin: 0;
+}
+
+.service-account-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.service-readonly {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+}
+
+.service-endpoint-rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.service-endpoint-rows li {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.service-endpoint-rows code {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    overflow-wrap: anywhere;
 }

@@ -4,7 +4,9 @@ and the engine's downloads.
 Every call is checked here, at the host boundary, in this order:
 
 1. The URL is https and on the connection's hosts: `base_urls`, which get the
-   account's credentials, or `followup_hosts`, which never do.
+   account's credentials, or `followup_hosts`, which never do. A self-hosted
+   server's address is the one exception to https: http is allowed for it when the
+   user accepted that at sign-in, which is only possible on a private network.
 2. A grant authorizes it: an **endpoint** grant whose method matches and whose URL
    pattern matches the URL's scheme, host and path (query strings aren't part of a
    grant), or, for a URL no pattern matches, a **follow-up** grant for the method
@@ -14,6 +16,10 @@ Every call is checked here, at the host boundary, in this order:
    Grants only count when they were approved for the adapter's current code.
 3. Read-only clients (Test, the option pickers) allow only `read`-risk calls.
 
+Connection placeholders in a URL are the host's to fill: `{base_url}` (a self-hosted
+server's address) before any check, and `{secret}` (a key placed in the path) only as
+the request leaves, so the secret never appears in a check, a log, or a denial.
+
 Denials and failures come back to the script as data, `{"status": 0, "error": ...}`,
 never as exceptions. Redirects are followed by hand, only to allowed hosts, and
 credentials are only ever sent to `base_urls`. Responses expose a short allowlist of
@@ -22,6 +28,8 @@ headers. See docs/development/automation-sync-adapters.md and automation-web-cal
 """
 from __future__ import annotations
 
+import base64
+import binascii
 import hashlib
 import json as jsonlib
 import re
@@ -34,8 +42,12 @@ import requests
 
 from yaffo.logging_config import get_logger
 from yaffo.sync.adapter_static import placeholder_names, pattern_regex
+from yaffo.sync.credentials import Credentials, OAuthCredentials
 from yaffo.sync.oauth import TokenSource, TokenUnavailable
-from yaffo.sync.providers import ProviderPreset, allowed_url, incoming_url, is_base_url, outgoing_url
+from yaffo.sync.providers import (
+    BASE_URL_PLACEHOLDER, CONNECTION_PLACEHOLDERS, SECRET_PLACEHOLDER, ProviderPreset, allowed_url, incoming_url,
+    is_base_url, outgoing_url,
+)
 from yaffo.sync.schemas import GRANT_ENDPOINT, GRANT_FOLLOWUP, RISK_READ, WebGrant
 
 logger = get_logger(__name__)
@@ -74,10 +86,11 @@ def url_hash(url: str) -> str:
 def url_template(template: str, **values: Any) -> str:
     """Fill a URL template's `{placeholders}`, encoding each value: one path segment,
     or several for `{path}` / `{..._path}`. Every placeholder needs a value, and
-    every value a placeholder."""
+    every value a placeholder, except the connection's own (`{base_url}`,
+    `{secret}`), which are left for the host to fill."""
     if not isinstance(template, str):
         raise ValueError("url_template needs a template string")
-    names = placeholder_names(template)
+    names = [n for n in placeholder_names(template) if n not in CONNECTION_PLACEHOLDERS]
     missing = [n for n in names if n not in values]
     extra = [k for k in values if k not in names]
     if missing or extra:
@@ -90,6 +103,17 @@ def url_template(template: str, **values: Any) -> str:
         multi = name == "path" or name.endswith("_path")
         result = result.replace("{" + name + "}", quote(str(value), safe="/" if multi else ""), 1)
     return result
+
+
+def hex_from_base64(text: Any) -> str | None:
+    """A base64 digest (Immich's asset checksums) as lowercase hex, the form record
+    hashes use. None for anything that isn't base64."""
+    if not isinstance(text, str) or not text or len(text) > 512:
+        return None
+    try:
+        return base64.b64decode(text, validate=True).hex()
+    except (ValueError, binascii.Error):
+        return None
 
 
 @dataclass
@@ -106,6 +130,11 @@ class WebClient:
     code_hash: str
     tokens: TokenSource | None
     read_only: bool = False
+    # How the connection's secret goes into requests to its base_urls; defaults to
+    # `tokens` (OAuth 2). None: nothing is added.
+    credentials: Credentials | None = None
+    # A self-hosted server's address, for {base_url}.
+    base_url: str | None = None
     vouched_hashes: set[str] = field(default_factory=set)
     http: requests.Session = field(default_factory=requests.Session)
     limits: WebLimits = field(default_factory=WebLimits)
@@ -119,6 +148,31 @@ class WebClient:
     _seen: set[str] = field(default_factory=set)
     upload_paths: dict[int, Path] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        if self.credentials is None and self.tokens is not None:
+            self.credentials = OAuthCredentials(self.tokens)
+
+    # ---- connection placeholders ----------------------------------------------
+
+    def expand(self, url: str) -> str:
+        """Fill {base_url}. Left as is when the connection has no server address, so
+        the URL fails the host check."""
+        if self.base_url and url.startswith(BASE_URL_PLACEHOLDER):
+            return self.base_url + url[len(BASE_URL_PLACEHOLDER):]
+        return url
+
+    def _outgoing(self, url: str) -> str:
+        """The URL as sent: on a base URL, the key's query parameter and path secret
+        filled in."""
+        if self.credentials is not None and is_base_url(self.provider, url):
+            secret = self.credentials.path_secret()
+            if secret is not None:
+                url = url.replace(SECRET_PLACEHOLDER, quote(secret, safe=""))
+            extra = self.credentials.query()
+            if extra:
+                url = url + ("&" if "?" in url else "?") + urlencode(extra)
+        return outgoing_url(url)
+
     # ---- grants --------------------------------------------------------------
 
     def _valid_grants(self) -> list[WebGrant]:
@@ -127,7 +181,8 @@ class WebClient:
     def authorize(self, method: str, url: str) -> str | None:
         """None when the call may go ahead, otherwise why not."""
         parts = urlsplit(url)
-        if parts.scheme != "https" or not parts.hostname:
+        own_http = parts.scheme == "http" and self.base_url is not None and is_base_url(self.provider, url)
+        if (parts.scheme != "https" and not own_http) or not parts.hostname:
             return "only https URLs can be called"
         if not allowed_url(self.provider, url):
             return f"{parts.hostname} isn't one of {self.provider.label}'s hosts"
@@ -135,7 +190,7 @@ class WebClient:
         grants = [g for g in self._valid_grants() if g.method == method]
         if self.read_only:
             grants = [g for g in grants if g.risk == RISK_READ]
-        if any(g.grant_kind == GRANT_ENDPOINT and g.url_pattern and pattern_regex(g.url_pattern).match(bare)
+        if any(g.grant_kind == GRANT_ENDPOINT and g.url_pattern and pattern_regex(self.expand(g.url_pattern)).match(bare)
                for g in grants):
             return None
         if any(g.grant_kind == GRANT_FOLLOWUP for g in grants) and self.vouches(url):
@@ -157,23 +212,30 @@ class WebClient:
 
     # ---- requests ------------------------------------------------------------
 
-    def _headers(self, url: str, extra: dict | None, token: str | None) -> dict[str, str]:
+    def _headers(self, url: str, extra: dict | None, method: str = "GET", form: Any = ()) -> dict[str, str]:
+        """The adapter's own headers, checked, plus the connection's credentials on a
+        base URL (signed for this method, URL and form fields when the connection
+        signs each request). Raises TokenUnavailable when they can't be had."""
         headers = {}
         for name, value in (extra or {}).items():
             if not isinstance(name, str) or not ALLOWED_REQUEST_HEADERS.match(name):
                 raise ValueError(f"header {name!r} can't be set by an adapter")
             headers[name] = str(value)
-        if token and is_base_url(self.provider, url):
-            headers["Authorization"] = f"Bearer {token}"
+        if self.credentials is not None and is_base_url(self.provider, url):
+            headers.update(self.credentials.request_headers(method, url, form, self.mid_page))
         return headers
+
 
     def _send(self, method: str, url: str, headers: dict, body: Any, stream: bool) -> requests.Response:
         current, current_method, current_body = url, method, body
+        secret_headers = self.credentials.header_names() if self.credentials is not None else {"authorization"}
         for _ in range(MAX_REDIRECTS + 1):
             send_headers = dict(headers)
             if not is_base_url(self.provider, current):
-                send_headers.pop("Authorization", None)
-            response = self.http.request(current_method, outgoing_url(current), headers=send_headers,
+                send_headers = {k: v for k, v in send_headers.items() if k.lower() not in secret_headers}
+            elif current != url and self.credentials is not None and self.credentials.per_request:
+                send_headers.update(self.credentials.request_headers(current_method, current, (), self.mid_page))
+            response = self.http.request(current_method, self._outgoing(current), headers=send_headers,
                                          data=current_body, allow_redirects=False, stream=stream,
                                          timeout=(CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS))
             if response.status_code not in _REDIRECTS or "location" not in response.headers:
@@ -191,13 +253,6 @@ class WebClient:
             current = target
         raise PermissionError("too many redirects")
 
-    def _token(self) -> str | None:
-        if self.tokens is None:
-            return None
-        if self.mid_page and self.tokens.cached():
-            return self.tokens.cached()
-        return self.tokens.token()
-
     def web_request(self, connection: Any, method: str, url: str, json: Any = None, headers: dict | None = None,
                     query: dict | None = None) -> dict[str, Any]:
         """The adapter host function. `connection` is the CONNECTION the host bound."""
@@ -206,6 +261,7 @@ class WebClient:
         if not isinstance(method, str) or not isinstance(url, str):
             return {"status": 0, "error": "method and url must be text"}
         method = method.upper()
+        url = self.expand(url)
         if query:
             if not isinstance(query, dict):
                 return {"status": 0, "error": "query must be a dict"}
@@ -223,16 +279,18 @@ class WebClient:
             if json is not None:
                 body = jsonlib.dumps(json).encode("utf-8")
                 extra.setdefault("Content-Type", "application/json")
-            token = self._token()
-            response = self._send(method, url, self._headers(url, extra, token), body, stream=True)
-            if response.status_code == 401 and self.mid_page:
-                self.needs_refresh = True
-            elif response.status_code == 401 and self.tokens is not None and is_base_url(self.provider, url):
-                response.close()
-                token = self.tokens.refresh()
-                response = self._send(method, url, self._headers(url, extra, token), body, stream=True)
-                if response.status_code == 401:
-                    self.auth_failed = True
+            response = self._send(method, url, self._headers(url, extra, method), body, stream=True)
+            if response.status_code == 401 and self.credentials is not None and is_base_url(self.provider, url):
+                if not self.credentials.can_refresh:
+                    self.auth_failed = True      # a key or password: retrying can't help
+                elif self.mid_page:
+                    self.needs_refresh = True
+                else:
+                    response.close()
+                    self.credentials.refresh()
+                    response = self._send(method, url, self._headers(url, extra, method), body, stream=True)
+                    if response.status_code == 401:
+                        self.auth_failed = True
             return self._result(response)
         except TokenUnavailable as e:
             self.auth_failed = True
@@ -253,6 +311,7 @@ class WebClient:
         if not isinstance(method, str) or not isinstance(url, str) or encoding not in ("raw", "multipart"):
             return {"status": 0, "error": "invalid upload request"}
         method = method.upper()
+        url = self.expand(url)
         problem = self.authorize(method, url)
         if problem:
             self.denied.append(f"{method} {url.split('?', 1)[0]}")
@@ -270,13 +329,13 @@ class WebClient:
             if offset and length is None:
                 raise ValueError("an upload offset needs a bounded length")
             extra = dict(headers or {})
-            token = self._token()
             if encoding == "multipart":
                 if length is not None or offset or not field or not isinstance(fields, dict):
                     raise ValueError("multipart needs a field and fields, without a byte range")
                 with path.open("rb") as source:
-                    response = self.http.request(method, outgoing_url(url),
-                                                 headers=self._headers(url, extra, token), data=fields,
+                    signed = fields.items() if self.provider.sign_multipart_fields else ()
+                    response = self.http.request(method, self._outgoing(url),
+                                                 headers=self._headers(url, extra, method, signed), data=fields,
                                                  files={field: (path.name, source)}, stream=True,
                                                  allow_redirects=False,
                                                  timeout=(CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS))
@@ -285,9 +344,9 @@ class WebClient:
                     source.seek(offset)
                     body = source.read(length) if length is not None else source
                     extra.setdefault("Content-Type", "application/octet-stream")
-                    response = self._send(method, url, self._headers(url, extra, token), body, stream=True)
+                    response = self._send(method, url, self._headers(url, extra, method), body, stream=True)
             if response.status_code == 401 and is_base_url(self.provider, url):
-                self.needs_refresh = True
+                self.needs_refresh = self.credentials is not None and self.credentials.can_refresh
                 self.auth_failed = True
             return self._result(response)
         except (OSError, requests.RequestException, PermissionError, ValueError, TokenUnavailable) as e:
@@ -325,19 +384,20 @@ class WebClient:
         """Stream a record's file to `destination`. The URL must be on the
         connection's hosts; credentials go only to base_urls. Doesn't refresh the
         token (it's mid-page): a 401 raises CredentialsRejected."""
+        url = self.expand(url) if isinstance(url, str) else url
         if not isinstance(url, str) or not allowed_url(self.provider, url):
             raise DownloadError(f"download URL isn't on {self.provider.label}'s hosts")
         limit = max_bytes or MAX_DOWNLOAD_BYTES
         try:
-            token = self.tokens.cached() if self.tokens is not None else None
-            if self.tokens is not None and token is None:
-                token = self.tokens.token()
-            response = self._send("GET", url, self._headers(url, headers, token), None, stream=True)
+            response = self._send("GET", url, self._headers(url, headers), None, stream=True)
         except (requests.RequestException, PermissionError, ValueError, TokenUnavailable) as e:
             raise DownloadError(str(e)) from e
         try:
             if response.status_code == 401:
-                self.needs_refresh = True
+                if self.credentials is not None and self.credentials.can_refresh:
+                    self.needs_refresh = True
+                else:
+                    self.auth_failed = True
                 raise CredentialsRejected("the provider refused the token")
             if response.status_code != 200:
                 raise DownloadError(f"download answered {response.status_code}")
@@ -355,9 +415,9 @@ class WebClient:
 
     def boundary(self) -> None:
         """At a page boundary: refresh the token if a download was refused."""
-        if self.needs_refresh and self.tokens is not None:
+        if self.needs_refresh and self.credentials is not None and self.credentials.can_refresh:
             self.needs_refresh = False
             try:
-                self.tokens.refresh()
+                self.credentials.refresh()
             except TokenUnavailable:
                 self.auth_failed = True

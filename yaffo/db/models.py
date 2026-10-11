@@ -605,6 +605,12 @@ class SyncAdapter(db.Model):
     app_secret_ref = db.Column(db.String, nullable=True)
     test_connection_key = db.Column(db.String, nullable=True)
     status = db.Column(db.String, nullable=False, default=SYNC_ADAPTER_STATUS_READY)
+    # A custom adapter's builder run (AUTOMATION_STATUS_*: IN_PROGRESS / READY /
+    # FAILED); NULL for built-ins and presets.
+    builder_status = db.Column(db.String, nullable=True)
+    # The test account the user let the builder read through live (its connection
+    # key); NULL until they allow it. See the service builder's permissions.
+    live_reads_key = db.Column(db.String, nullable=True)
     created_at = db.Column(db.DateTime, default=utcnow)
     updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
 
@@ -667,6 +673,12 @@ CONVERSATION_TYPE_USER = "user"
 CONVERSATION_TYPE_ASSISTANT = "assistant"
 CONVERSATION_TYPE_STATUS = "status"
 CONVERSATION_TYPE_ERROR = "error"
+# The service builder: a Test the user ran (with live reads). Shown in the chat, and the
+# latest one goes to the model with the next request; not replayed as a turn.
+CONVERSATION_TYPE_TEST = "test"
+# The service builder asking the user for a permission (reading docs from new
+# domains, live reads); the content is JSON with its state. Shown as a card.
+CONVERSATION_TYPE_PERMISSION = "permission"
 
 # Kinds that are real conversational turns (rebuilt as model context on a follow-up
 # / copied on fork); the rest are display-only annotations.
@@ -887,10 +899,12 @@ class Conversation(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     # A conversation message belongs to exactly one owner: a page version (the page
-    # builder) or an automation (the automation builder). Both FKs are nullable;
+    # builder), an automation (the automation builder) or a custom sync adapter (the
+    # service builder). Every FK is nullable;
     # the owning feature sets one.
     version_id = db.Column(db.Integer, db.ForeignKey("page_versions.id", ondelete="CASCADE"), nullable=True)
     automation_id = db.Column(db.Integer, db.ForeignKey("automations.id", ondelete="CASCADE"), nullable=True)
+    sync_adapter_id = db.Column(db.Integer, db.ForeignKey("sync_adapters.id", ondelete="CASCADE"), nullable=True)
     # CONVERSATION_TYPE_*: user | assistant | status | error. `status`/`error` are
     # display-only; only user/assistant are replayed to the model.
     type = db.Column(db.String, nullable=False)

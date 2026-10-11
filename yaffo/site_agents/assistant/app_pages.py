@@ -71,6 +71,8 @@ NOT_PAGES: frozenset[str] = frozenset({
     "automations_status", "automations_runs", "automations_validate_cron",
     # A sync's Items fragment, and its filter screen (needs a sync to send to).
     "sync_items", "sync_filter", "sync_peer_filter",
+    # The service builder, and its chat status poll (need a service to build).
+    "sync_service", "sync_service_status",
     "utilities_index_photos_scan",
     # The internal P2P API serves sync workers, never people.
     "internal_p2p.status", "internal_p2p.devices", "internal_p2p.scopes", "internal_p2p.files",

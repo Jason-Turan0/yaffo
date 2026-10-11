@@ -21,7 +21,8 @@ from yaffo.db.models import (
 from yaffo.sync import folder_source, folder_target, peer_source
 from yaffo.sync.adapter_static import CURRENT_CONTRACT
 from yaffo.sync.handlers import SourceHandler, TargetHandler
-from yaffo.sync.providers import ProviderPreset, get_provider
+from yaffo.sync import secrets_store
+from yaffo.sync.providers import CUSTOM_PREFIX, ConnectionBlockError, ProviderPreset, get_provider, provider_from_block
 from yaffo.sync.schemas import AdapterVersion, SyncSchemaError, WebGrant
 from yaffo.sync.starlark_adapter import StarlarkSourceHandler, StarlarkTargetHandler
 
@@ -93,45 +94,97 @@ class LoadedAdapter:
         return "choices" in (self.metadata.get("hooks") or {})
 
 
-def grants_hash(grants: list[WebGrant], provider: str, scopes: list[str]) -> str:
+def grants_hash(grants: list[WebGrant], provider: str, scopes: list[str], connection: dict | None = None) -> str:
     """The part of an adapter a sync's consent covers: what it may call, with which
-    account kind and scopes. Code changes that keep these leave the consent valid
-    (the grants themselves are pinned to the code hash)."""
+    account kind and scopes, and a custom adapter's connection block (its hosts and
+    sign-in). Code changes that keep these leave the consent valid (the grants
+    themselves are pinned to the code hash)."""
     payload = {
         "provider": provider,
         "scopes": sorted(scopes),
         "grants": sorted([g.method, g.url_pattern or "", g.grant_kind, g.risk] for g in grants),
     }
+    if connection is not None:
+        payload["connection"] = connection
     return hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
 
 
-def _starlark(row: SyncAdapter) -> LoadedAdapter:
-    if row.status == SYNC_ADAPTER_STATUS_INVALID or not row.published or not row.published_code:
+def custom_provider(row: SyncAdapter, metadata: dict[str, Any]) -> ProviderPreset:
+    """A custom adapter's provider, from its connection block. Its OAuth app (client id
+    and secret) is the user's own, in the keychain under the adapter."""
+    ref = row.app_secret_ref
+    try:
+        return provider_from_block(CUSTOM_PREFIX + row.slug, row.name, metadata.get("connection"),
+                                   app_credentials=lambda: (secrets_store.load_secret(ref) or {}) if ref else {})
+    except ConnectionBlockError as e:
+        raise AdapterUnavailable(f"adapter {row.slug!r} has an invalid connection block: {e}") from e
+
+
+def provider_for_key(session: Session, key: str) -> ProviderPreset | None:
+    """The provider a connection names: a preset, or a custom adapter's (from its
+    draft while it's being built, so its test account can sign in)."""
+    if not key.startswith(CUSTOM_PREFIX):
+        return get_provider(key)
+    row = session.query(SyncAdapter).filter(SyncAdapter.slug == key[len(CUSTOM_PREFIX):]).first()
+    version = (row.working or row.published) if row is not None else None
+    if not version:
+        return None
+    try:
+        return custom_provider(row, version.get("metadata") or {})
+    except AdapterUnavailable:
+        return None
+
+
+def _starlark(row: SyncAdapter, working: bool = False) -> LoadedAdapter:
+    """A Starlark adapter's published version, or, for the builder's Test, its draft
+    with every endpoint the static check found granted (Test never sends a write)."""
+    stored, code = (row.working, row.working_code) if working else (row.published, row.published_code)
+    if not working and row.status == SYNC_ADAPTER_STATUS_INVALID or not stored or not code:
         raise AdapterUnavailable(f"adapter {row.slug!r} isn't published or failed its check")
     try:
-        version = AdapterVersion.from_dict(row.published)
-        grants = [WebGrant.from_dict(g) for g in row.grants or []]
+        version = AdapterVersion.from_dict(stored)
+        grants = [WebGrant.from_dict(g) for g in (_draft_grants(version) if working else row.grants or [])]
     except SyncSchemaError as e:
         raise AdapterUnavailable(f"adapter {row.slug!r} has invalid stored JSON: {e}") from e
     if version.contract != CURRENT_CONTRACT:
         raise AdapterUnavailable(f"adapter {row.slug!r} is on contract {version.contract}, not {CURRENT_CONTRACT}")
-    if version.metadata.get("role") != row.role:
+    if version.metadata.get("role") != row.role and not working:
         raise AdapterUnavailable(f"adapter {row.slug!r} has a mismatched role")
-    preset = get_provider(row.provider)
+    role = version.metadata.get("role")
+    connection = None
+    if version.metadata.get("provider") == "custom":
+        connection = version.metadata.get("connection")
+        preset = custom_provider(row, version.metadata)
+    else:
+        preset = get_provider(row.provider)
     if preset is None:
         raise AdapterUnavailable(f"adapter {row.slug!r} needs provider {row.provider!r}, which this build lacks")
-    if row.role == SYNC_ROLE_SOURCE:
-        handler = StarlarkSourceHandler(row.published_code, version.metadata, preset.label)
-    elif row.role == SYNC_ROLE_TARGET:
-        handler = StarlarkTargetHandler(row.published_code, version.metadata, preset.label)
+    if role == SYNC_ROLE_SOURCE:
+        handler = StarlarkSourceHandler(code, version.metadata, preset.label)
+    elif role == SYNC_ROLE_TARGET:
+        handler = StarlarkTargetHandler(code, version.metadata, preset.label)
     else:
         raise AdapterUnavailable(f"Starlark {row.role} adapters can't run in this version")
     scopes = list(version.metadata.get("scopes") or [])
-    return LoadedAdapter(id=row.id, slug=row.slug, name=row.name, role=row.role, provider=row.provider,
-                         handler_key=None, code_hash=grants_hash(grants, row.provider, scopes),
+    return LoadedAdapter(id=row.id, slug=row.slug, name=row.name, role=role, provider=preset.key,
+                         handler_key=None, code_hash=grants_hash(grants, preset.key, scopes, connection),
                          options=dict(version.metadata.get("options") or {}), handler=handler,
                          metadata=version.metadata, grants=tuple(grants), published_code_hash=version.code_hash,
                          preset=preset)
+
+
+def _draft_grants(version: AdapterVersion) -> list[dict]:
+    return [{"method": entry["method"], "url_pattern": entry["url_pattern"], "grant_kind": entry["grant_kind"],
+             "followup_of": None, "risk": entry["risk"], "granted_code_hash": version.code_hash,
+             "granted_at": "draft"} for entry in version.manifest]
+
+
+def load_working(session: Session, adapter_id: int) -> LoadedAdapter:
+    """A custom adapter's draft, for the builder's Test."""
+    row = session.get(SyncAdapter, adapter_id)
+    if row is None or row.handler or row.is_preset:
+        raise AdapterUnavailable(f"adapter {adapter_id} isn't a custom adapter")
+    return _starlark(row, working=True)
 
 
 def _from_row(row: SyncAdapter) -> LoadedAdapter:

@@ -38,6 +38,8 @@ DEMO_PUBLIC_READ_ENDPOINTS = frozenset(
         "sync_choices",
         "sync_filter",
         "sync_peer_filter",
+        "sync_service",
+        "sync_service_status",
         "sync_items",
         "face_thumbnail",
         "faces_index",

@@ -22,6 +22,7 @@ from yaffo.background_tasks.tasks.dispatch_event import dispatch_event_task
 from yaffo.background_tasks.tasks.run_automation import run_automation_code_task
 from yaffo.background_tasks.tasks.sync_run import sync_run_task
 from yaffo.background_tasks.tasks.generate_automation import generate_automation_task
+from yaffo.background_tasks.tasks.generate_adapter import generate_adapter_task
 from yaffo.background_tasks.tasks.assign_faces_to_person import assign_faces_to_person
 from yaffo.background_tasks.tasks.assistant_run import assistant_run_task
 
@@ -40,6 +41,7 @@ __all__ = [
     'complete_job_task',
     'complete_job_callback',
     'sweep_orphaned_jobs',
+    'generate_adapter_task',
     'finalize_job',
     'start_index_stage',
     'regenerate_thumbnails_task',

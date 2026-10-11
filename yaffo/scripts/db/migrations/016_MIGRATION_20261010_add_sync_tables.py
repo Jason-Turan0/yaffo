@@ -35,6 +35,8 @@ SYNC_ADAPTERS_DDL = """
         app_secret_ref TEXT,
         test_connection_key TEXT,
         status TEXT NOT NULL DEFAULT 'ready',
+        builder_status TEXT,
+        live_reads_key TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )

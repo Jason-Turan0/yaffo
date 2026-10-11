@@ -1,0 +1,70 @@
+{# The user's Test of a service draft (sync_services.sync_service_test): what each hook
+   returned and every web call, with whether it went out. Styled like the panel it sits
+   in: section headings with info hovers, the web calls as the Access tab's rows. #}
+{% macro help_tip(text) %}<button type="button" class="help-tip" data-icon="info" aria-label="{{ text }}" data-tooltip="{{ text }}"></button>{% endmacro %}
+{% macro heading(title, help=none) %}
+    <div class="service-heading">
+        <h3 class="automation-section-title">{{ title }}</h3>
+        {% if help %}{{ help_tip(help) }}{% endif %}
+    </div>
+{% endmacro %}
+
+<div class="service-test-report">
+    <div class="service-account-row">
+        {% if report.ok %}<span class="chip chip-success">{{ _("Passed") }}</span>{% else %}<span class="chip chip-warning">{{ _("Problems") }}</span>{% endif %}
+        <span>{{ _("Live reads") if report.live else _("No live reads") }}</span>
+        {{ help_tip(_("Reads went to the test account for real; nothing was sent or changed.") if report.live
+                    else _("Connect a test account to read live. Nothing was sent or changed.")) }}
+    </div>
+    {% if report.problems %}
+        <ul class="service-problems">{% for problem in report.problems %}<li>{{ problem }}</li>{% endfor %}</ul>
+    {% endif %}
+
+    {% for option, items in report.choices.items() %}
+        {{ heading(_("Choices for %(option)s", option=option), _("Copy an id into the field above to test with it.")) }}
+        {% if items %}
+            <table class="data-table"><thead><tr><th>{{ _("Label") }}</th><th>{{ _("Id") }}</th></tr></thead><tbody>
+            {% for item in items %}<tr><td>{{ item.label }}</td><td><code>{{ item.id }}</code></td></tr>{% endfor %}
+            </tbody></table>
+        {% else %}<p class="no-data">{{ _("None listed.") }}</p>{% endif %}
+    {% endfor %}
+
+    {% if report.role == 'source' %}
+        {{ heading(ngettext("First page: %(num)d record", "First page: %(num)d records", report.record_count),
+                   _("More pages follow; a run lists them all.") if report.more else none) }}
+        {% if report.records %}
+            <table class="data-table"><thead><tr><th>{{ _("File") }}</th><th>{{ _("Size") }}</th><th>{{ _("Taken") }}</th><th>{{ _("Hash") }}</th></tr></thead><tbody>
+            {% for record in report.records %}
+                <tr><td>{{ record.filename }}</td><td>{{ record.size or '' }}</td>
+                    <td>{{ (record.taken_at or {}).get('local') or (record.taken_at or {}).get('utc') or '' }}</td>
+                    <td>{{ _("yes") if record.hash else _("no") }}</td></tr>
+            {% endfor %}
+            </tbody></table>
+        {% endif %}
+    {% elif report.role %}
+        {{ heading(ngettext("Push of %(num)d photo", "Push of %(num)d photos", report.results | length),
+                   _("Uploads in a Test are recorded, not sent, so the service's real replies are missing; errors here can come from that.")) }}
+        <table class="data-table"><thead><tr><th>{{ _("Key") }}</th><th>{{ _("Result") }}</th></tr></thead><tbody>
+        {% for result in report.results %}
+            <tr><td>{{ result.key }}</td><td>{{ result.remote_id or (result.error or {}).get('code') or '' }}</td></tr>
+        {% endfor %}
+        </tbody></table>
+    {% endif %}
+
+    {{ heading(_("Web calls")) }}
+    {% if report.calls %}
+        <ul class="service-endpoint-rows">
+            {% for call in report.calls %}
+                <li>
+                    <span class="service-method">{{ call.method }}</span>
+                    <code>{{ call.url }}</code>
+                    {% if call.mode == 'live' %}<span class="chip">{{ _("Read · %(status)s", status=call.status) }}</span>
+                    {% elif call.mode == 'denied' %}<span class="chip chip-warning">{{ _("Refused") }}</span>
+                    {% else %}<span class="chip">{{ _("Recorded") }}</span>{% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="no-data">{{ _("None.") }}</p>
+    {% endif %}
+</div>

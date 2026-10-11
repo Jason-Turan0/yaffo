@@ -35,9 +35,15 @@
     align-items: flex-start;
 }
 
+/* The code column is a card like the conversation's (components/chat_dialog.css
+   .chat-card), as the service builder's tab panel is. */
 .automation-code-section {
     flex: 1;
     min-width: 280px;
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    padding: 14px 16px 16px;
 }
 
 .automation-section-title {

@@ -5,6 +5,7 @@
 {% from "components/switch.html" import switch %}
 {% from "macros/automation_forms.html" import render_edit_automation_form with context %}
 {% from "macros/local_datetime.html" import local_datetime %}
+{% from "utilities/_sign_in_fields.html" import api_key_field, server_address_field %}
 
 {# A sync automation's page. The setup steps are Settings-style cards; a finished
    step folds to its heading and a one-line summary, so a running sync shows what it
@@ -149,6 +150,29 @@
     <div class="alert alert-warning" role="status"><span class="alert-message">{{ sync.status_text }}</span></div>
 {% endif %}
 
+{% macro secret_form(account, submit_label) %}
+    <form method="POST" action="{{ url_for('sync_sign_in_with_secret', slug=selected.slug) }}" class="sync-form sync-secret-form" autocomplete="off">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        {% if account.instance %}
+            {{ server_address_field('sync-base-url', account.instance_url) }}
+        {% endif %}
+        {% if account.auth_kind == 'basic' %}
+            <div class="form-group">
+                <label for="sync-username">{{ _("Username") }}</label>
+                <input type="text" id="sync-username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="sync-password">{{ _("App password") }}</label>
+                <input type="password" id="sync-password" name="password" required>
+                <p class="hint-text">{{ _("Yaffo keeps it in your system's keychain to sign in again. Use an app password or a dedicated user if the service offers one.") }}</p>
+            </div>
+        {% else %}
+            {{ api_key_field('sync-api-key', account.key_label, account.key_help) }}
+        {% endif %}
+        <div class="sync-form-actions"><button type="submit" class="btn-primary" id="sync-connect">{{ submit_label }}</button></div>
+    </form>
+{% endmacro %}
+
 <div class="sync-detail">
     {% if sync.account %}
     {% set account = sync.account %}
@@ -166,6 +190,7 @@
                             {% if account.shared_with %}<span class="sync-account-shared">· {{ ngettext("Also used by %(num)d other sync", "Also used by %(num)d other syncs", account.shared_with) }}</span>{% endif %}
                         </span>
                     </div>
+                    {% if not account.uses_form %}
                     <div class="sync-account-actions">
                         <form method="POST" action="{{ url_for('sync_sign_in', slug=selected.slug) }}" class="sync-inline-action">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -177,8 +202,18 @@
                             <button type="submit" class="btn-secondary">{{ _("Use a different account") }}</button>
                         </form>
                     </div>
+                    {% endif %}
                 </div>
                 {% if account.problem_text %}<p class="form-error" role="alert">{{ account.problem_text }}</p>{% endif %}
+                {% if account.uses_form %}
+                    <details class="sync-secret-again" {{ "open" if not account.done }}>
+                        <summary>{{ _("Enter a new key or a different account") if account.auth_kind == 'api_key' else _("Enter the password again or use a different account") }}</summary>
+                        {{ secret_form(account, _("Connect")) }}
+                    </details>
+                {% endif %}
+            {% elif account.uses_form %}
+                <p class="section-description">{{ _("Connect Yaffo to %(service)s with a key from your account. Yaffo only uses it for this service.", service=account.provider_label) if account.auth_kind == 'api_key' else _("Sign in to %(service)s with a username and password.", service=account.provider_label) }}</p>
+                {{ secret_form(account, _("Connect to %(service)s", service=account.provider_label)) }}
             {% else %}
                 <p class="section-description">{{ _("Sign in to %(service)s in your browser. Yaffo only reads from it; your password never reaches Yaffo.", service=account.provider_label) }}</p>
                 <div class="sync-account-actions">

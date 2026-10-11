@@ -418,6 +418,27 @@
         "waiting": "Waiting for you to enter the code…",
         "done": "Signed in.",
         "failed": "Couldn't start the sign-in. Try again."
+      },
+      "service": {
+        "cancelMessage": "Stop the builder? The draft it has saved so far stays.",
+        "deleteTitle": "Delete this service?",
+        "deleteMessage": "Its draft, its conversation and its test account sign-in go too. No sync uses it.",
+        "answerFailed": "Couldn't record your answer. Try again.",
+        "superseded": "Replaced by a newer request.",
+        "liveAsk": "Let the builder make read-only calls to {{account}} while building? The responses are sent to the AI model.",
+        "liveAllowed": "✓ Live read-only tests allowed for {{account}}.",
+        "liveDenied": "Live read-only tests not allowed.",
+        "allow": "Allow",
+        "dontAllow": "Don't allow",
+        "docsAsk_one": "The builder wants to read pages from a new site:",
+        "docsAsk_other": "The builder wants to read pages from {{count}} new sites:",
+        "docsDomain_one": "{{domain}} · {{count}} page",
+        "docsDomain_other": "{{domain}} · {{count}} pages",
+        "docsNote": "Allowed sites aren't asked about again while building this service. Yaffo fetches only the pages' text.",
+        "allowSelected": "Allow selected",
+        "denyAll": "Deny all",
+        "docsAllowed": "✓ Allowed: {{domains}}.",
+        "docsDenied": "Not allowed: {{domains}}."
       }
     }
   },
