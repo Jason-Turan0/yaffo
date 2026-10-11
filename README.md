@@ -42,6 +42,9 @@ pip install -e .
 ```
 
 This installs pre-commit hooks that prevent accidental commit of API keys and secrets.
+The hook scans staged changes with [gitleaks](https://github.com/gitleaks/gitleaks)
+(`brew install gitleaks`), configured in `.gitleaks.toml`; without it, a smaller
+built-in scan runs instead.
 
 ### 3. Configure the Data Directory
 

@@ -35,8 +35,8 @@ def test_a_request_is_signed_as_oauthlib_signs_it():
         body=[("status", "Hello Ladies + Gentlemen, a signed OAuth request!")],
         nonce="kYjzVBB8Y0ZFabxSWbWovY3uYSQ2pTgmZeNu2VS4cg", timestamp="1318622958")
 
-    assert 'oauth_signature="hCtSmYh%2BiHYCEqBWrE7C7hYmtUk%3D"' in header
-    assert header.startswith('OAuth oauth_consumer_key="xvz1evFS4wEEPTGEFPHBog"')
+    assert 'oauth_signature="hCtSmYh%2BiHYCEqBWrE7C7hYmtUk%3D"' in header  # gitleaks:allow (Twitter's published example)
+    assert header.startswith('OAuth oauth_consumer_key="xvz1evFS4wEEPTGEFPHBog"')  # gitleaks:allow (Twitter's published example)
 
 
 def test_the_signature_base_normalizes_the_url_and_parameters():

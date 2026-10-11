@@ -31,7 +31,7 @@ def test_key_like_tokens_are_masked(redact, secret):
 
 
 def test_secret_assignments_and_bearer_tokens_are_masked(redact):
-    assert redact('api_key="abcd1234efgh"') == f'api_key="{MASK}"'
+    assert redact('api_key="abcd1234efgh"') == f'api_key="{MASK}"'  # gitleaks:allow
     assert redact("password: hunter22") == f"password: {MASK}"
     assert redact("Authorization: Bearer abc.def.ghijklmnop") == f"Authorization: Bearer {MASK}"
 

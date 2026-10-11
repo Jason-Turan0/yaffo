@@ -1,0 +1,18 @@
+# gitleaks config: the built-in rules, plus allowlists for known non-secrets.
+# Used by hooks/pre-commit. Allow a single line with a trailing "gitleaks:allow".
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Content hashes keyed by file path (e.g. tokens.css), and vendored minified code"
+paths = [
+  '''yaffo_ui_tests/user_doc_automation/.*\.lock\.json$''',
+  '''yaffo/static/vendor/''',
+]
+
+# The built-in rules catch this only through the generic high-entropy rule.
+[[rules]]
+id = "google-oauth-client-secret"
+description = "Google OAuth client secret"
+regex = '''GOCSPX-[A-Za-z0-9_-]{20,}'''
+keywords = ["gocspx"]
