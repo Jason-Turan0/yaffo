@@ -251,7 +251,7 @@ Registered values:
 |---|---|
 | `YAFFO_OAUTH_MICROSOFT_CLIENT_ID` | `de78c8bb-c682-4f8c-853c-979edc53a42c` |
 | `YAFFO_OAUTH_GOOGLE_CLIENT_ID` | `150163256384-1mduv8hmpulmc4tmu4nhquu19rcsp5ff.apps.googleusercontent.com` (project `yaffo-511203`, client *Yaffo desktop*) |
-| `YAFFO_OAUTH_GOOGLE_CLIENT_SECRET` | shipped with the desktop client in `yaffo/sync/oauth_clients.py`; this variable overrides it for development |
+| `YAFFO_OAUTH_GOOGLE_CLIENT_SECRET` | not committed (secret scanners reject it on push). Set it when building: `packaging/bump_version.py` stamps it into the generated `yaffo/_build_info.py`, and the release workflow reads it from the repository secret of the same name. In a dev checkout, export it before running the app. It is still not confidential: it ships inside every build |
 
 `scripts/oauth_probe.py` reads the same variables. Until Phase 2 adds the
 module, the variables are the record.

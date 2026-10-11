@@ -2,13 +2,16 @@
 
 By default this increments the patch version in the committed `VERSION` file
 (e.g. 0.0.1 -> 0.0.2) and writes the generated, gitignored
-`yaffo/_build_info.py` with the resulting version, a UTC build timestamp, and
-the short git sha. The release workflow can choose the bump part or set an exact
+`yaffo/_build_info.py` with the resulting version, a UTC build timestamp, the
+short git sha, and the Google OAuth desktop-client secret from
+`YAFFO_OAUTH_GOOGLE_CLIENT_SECRET` (kept out of the repository; see
+yaffo/sync/oauth_clients.py). The release workflow can choose the bump part or set an exact
 version, then `build_dmg.sh` can stamp that same version without bumping again.
 """
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -43,13 +46,18 @@ def _stamp(version: str) -> None:
     except Exception:
         sha = None
 
+    google_secret = os.environ.get("YAFFO_OAUTH_GOOGLE_CLIENT_SECRET") or None
     BUILD_INFO.write_text(
         '"""Generated at build time by packaging/bump_version.py. Do not edit."""\n'
         f'VERSION = "{version}"\n'
         f'BUILD_TIME = "{build_time}"\n'
         f"GIT_SHA = {sha!r}\n"
+        f"OAUTH_GOOGLE_CLIENT_SECRET = {google_secret!r}\n"
     )
     print(f"stamped {version}  ({build_time}, {sha})")
+    if not google_secret:
+        print("warning: YAFFO_OAUTH_GOOGLE_CLIENT_SECRET is not set; "
+              "Google Photos sign-in will not work in this build")
 
 
 def main() -> None:
