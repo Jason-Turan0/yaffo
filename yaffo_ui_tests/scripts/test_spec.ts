@@ -54,6 +54,7 @@ async function main(): Promise<void> {
             withPeer,
             preseeded: !fresh,
             copyPreseeded: !fresh,
+            withFakeFlickr: entry.spec.includes("generated_tests/sync_services/"),
         });
     } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
@@ -70,6 +71,9 @@ async function main(): Promise<void> {
             SUITE: entry.id,
             BASE_URL: environment.baseUrl,
             PEER_URL: environment.peer?.baseUrl ?? "",
+            FAKE_FLICKR_URL: environment.fakeFlickrUrl ?? "",
+            YAFFO_DATA_DIR: environment.tempDir,
+            PATH: `${resolve(process.cwd(), "../venv/bin")}:${process.env.PATH ?? ""}`,
         });
         process.exitCode = code;
     } finally {

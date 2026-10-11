@@ -11,18 +11,40 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
-from yaffo.db.models import PLAN_STATUS_PENDING, AssistantChangePlan, AssistantConversation, AssistantEvent
+from yaffo.db.models import (
+    ASSISTANT_EVENT_WEB_PERMISSION, PLAN_STATUS_PENDING, AssistantChangePlan, AssistantConversation,
+    AssistantEvent,
+)
 from yaffo.site_agents.assistant import plans
 from yaffo.site_agents.assistant.run_queue import RunQueueStatus
 
 
 @dataclass(frozen=True)
 class DocSource:
-    """A doc section the assistant used, linked on the published docs site."""
+    """A bundled documentation section or approved public page used by the assistant."""
     title: str
     heading: str
     url: str
     scope: str
+
+
+@dataclass(frozen=True)
+class WebPermission:
+    """A conversation's request to read pages on new public domains."""
+    domains: dict[str, list[str]]
+    status: str = "pending"
+    allowed: list[str] = field(default_factory=list)
+    denied: list[str] = field(default_factory=list)
+    id: Optional[int] = None
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_event(cls, event: AssistantEvent) -> "WebPermission":
+        payload = json.loads(event.payload or "{}")
+        return cls(domains=payload["domains"], status=payload.get("status", "pending"),
+                   allowed=payload.get("allowed", []), denied=payload.get("denied", []), id=event.id)
 
 
 @dataclass(frozen=True)
@@ -200,6 +222,8 @@ class TranscriptEvent:
     @classmethod
     def from_model(cls, event: AssistantEvent, plans: Optional[dict[int, "PlanView"]] = None) -> "TranscriptEvent":
         payload = json.loads(event.payload) if event.payload else None
+        if event.kind == ASSISTANT_EVENT_WEB_PERMISSION:
+            payload = WebPermission.from_event(event).to_dict()
         # A tool event that recorded a plan carries the plan's current state, so
         # the card follows approval, replay and undo without a transcript rewrite.
         if isinstance(payload, dict) and plans and payload.get("plan_id") in plans:

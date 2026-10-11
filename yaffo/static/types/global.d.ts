@@ -753,6 +753,14 @@ type AssistantDocSource = {
     scope: string;
 };
 
+type AssistantWebPermission = {
+    id: number;
+    domains: Record<string, string[]>;
+    status: 'pending' | 'allowed' | 'denied' | 'partial';
+    allowed: string[];
+    denied: string[];
+};
+
 type AssistantAppLink = {
     title: string;
     url: string;

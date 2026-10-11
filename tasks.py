@@ -365,13 +365,18 @@ def i18n_update(c, prune=False):
 
 
 @task
-def i18n_translate(c, locale, dry_run=False, keys_only=False, overwrite=False, batch_size=20, engine="auto"):
-    """Translate entries from English with the configured LLM or deep-translator."""
+def i18n_translate(c, locale, dry_run=False, keys_only=False, overwrite=False, batch_size=20, engine="auto",
+                   llm_cli="auto", llm_model="", llm_timeout=120):
+    """Translate entries with an authenticated LLM CLI or deep-translator."""
     options = [
         f"--locale {shlex.quote(locale)}",
         f"--batch-size {int(batch_size)}",
         f"--engine {shlex.quote(engine)}",
+        f"--llm-cli {shlex.quote(llm_cli)}",
+        f"--llm-timeout {int(llm_timeout)}",
     ]
+    if llm_model:
+        options.append(f"--llm-model {shlex.quote(llm_model)}")
     if dry_run:
         options.append("--dry-run")
     if keys_only:
@@ -391,7 +396,7 @@ def _translation_locales():
 
 @task(help={"prune": "Also remove browser catalog keys that en.json no longer has"})
 def i18n_translate_all(c, dry_run=False, keys_only=False, overwrite=False, batch_size=20, engine="deep-translator",
-                       prune=False):
+                       prune=False, llm_cli="auto", llm_model="", llm_timeout=120):
     """Extract, update, translate all configured locales, then compile catalogs."""
     c.run("pybabel extract -F babel.cfg -o messages.pot .", pty=True)
     c.run("pybabel update -N --ignore-obsolete -i messages.pot -d yaffo/translations", pty=True)
@@ -402,7 +407,11 @@ def i18n_translate_all(c, dry_run=False, keys_only=False, overwrite=False, batch
             f"--locale {shlex.quote(locale)}",
             f"--batch-size {int(batch_size)}",
             f"--engine {shlex.quote(engine)}",
+            f"--llm-cli {shlex.quote(llm_cli)}",
+            f"--llm-timeout {int(llm_timeout)}",
         ]
+        if llm_model:
+            options.append(f"--llm-model {shlex.quote(llm_model)}")
         if dry_run:
             options.append("--dry-run")
         if keys_only:

@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 import argparse
-import importlib
 import json
 import re
 import time
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from babel.messages.catalog import Catalog, Message
 from babel.messages.pofile import read_po, write_po
 from deep_translator.exceptions import TooManyRequests, TranslationNotFound
 from tqdm import tqdm
+
+from scripts.i18n_llm_cli import CliOptions, CliUnavailableError, DEFAULT_TIMEOUT_SECONDS, translate_with_cli
 
 from yaffo.common import BUNDLE_ROOT
 from yaffo.logging_config import get_logger
@@ -290,13 +291,6 @@ def _missing_gettext_entries(locale: str) -> list[TranslationEntry]:
     return _gettext_entries(locale)
 
 
-def _extract_json(text: str) -> dict:
-    stripped = text.strip()
-    if stripped.startswith("```"):
-        stripped = re.sub(r"^```(?:json)?\s*|\s*```$", "", stripped, flags=re.DOTALL)
-    return json.loads(stripped)
-
-
 def _mask_protected_text(value: str, pattern: re.Pattern[str]) -> tuple[str, dict[str, str]]:
     protected: dict[str, str] = {}
     token_index = 0
@@ -412,52 +406,23 @@ def _translate_batch_with_engine(
     locale: str,
     *,
     engine: str,
+    llm: CliOptions = CliOptions(),
 ) -> dict[str, str | list[str]]:
     if engine == "deep-translator":
         return _translate_batch_with_deep_translator(entries, locale)
-
-    create_app = importlib.import_module("yaffo.app").create_app
-    llm_config = importlib.import_module("yaffo.site_agents.llm_config")
-    create_model_client = importlib.import_module(
-        "yaffo.site_agents.model_clients.factory"
-    ).create_model_client
-    app = create_app()
-    with app.app_context():
-        model = llm_config.get_model()
-        api_key = llm_config.get_api_key_for_selected_model()
-        if not api_key:
-            if engine == "llm":
-                raise ValueError("No API key configured for the selected model")
+    if engine not in {"llm", "auto"}:
+        raise ValueError(f"Unknown translation engine: {engine}")
+    try:
+        return translate_with_cli([asdict(entry) for entry in entries], locale, llm)
+    except CliUnavailableError:
+        if engine == "auto" and llm.cli == "auto":
             return _translate_batch_with_deep_translator(entries, locale)
-        client = create_model_client(
-            model=model,
-            system_prompt=(
-                "You translate application UI text. Return only valid JSON with this shape: "
-                '{"translations":[{"id":"unchanged id","value":"translation or array"}]}. '
-                "Preserve every placeholder, HTML tag, and array shape exactly. "
-                "Every placeholder such as {{formattedCount}} must appear in the translation, "
-                "including singular plural forms; never replace a count placeholder with a word. "
-                "Do not translate product names, identifiers, or placeholders."
-            ),
-            providers=[],
-            api_key=api_key,
-            max_tokens=8000,
-        )
-        client.add_user_message(json.dumps({
-            "target_locale": locale,
-            "entries": [
-                {"id": entry.id, "source": entry.source, "context": entry.context}
-                for entry in entries
-            ],
-        }, ensure_ascii=False))
-        response = client.call_model_api()
-        if response is None or not response.text:
-            raise ValueError("The selected model returned no translation")
-    payload = _extract_json(response.text)
-    return {item["id"]: item["value"] for item in payload["translations"]}
+        raise
 
 
 def _validate_translation(entry: TranslationEntry, translated: str | list[str]) -> None:
+    if isinstance(entry.source, list) != isinstance(translated, list):
+        raise ValueError(f"{entry.id}: plural/value shape changed")
     source_parts = entry.source if isinstance(entry.source, list) else [entry.source]
     target_parts = translated if isinstance(translated, list) else [translated]
     if len(source_parts) != len(target_parts):
@@ -479,8 +444,13 @@ def translate_missing(
     overwrite: bool = False,
     batch_size: int = 20,
     engine: str = "deep-translator",
+    llm_cli: str = "auto",
+    llm_model: str | None = None,
+    llm_timeout: int = DEFAULT_TIMEOUT_SECONDS,
 ) -> list[str]:
     locale = _validate_locale(locale)
+    if batch_size <= 0 or llm_timeout <= 0:
+        raise ValueError("Batch size and LLM CLI timeout must be greater than zero.")
     sync_browser_locale(locale)
     entries = _missing_browser_entries(locale) + _missing_gettext_entries(locale)
     if overwrite:
@@ -492,10 +462,12 @@ def translate_missing(
     batches = [entries[i: i + batch_size] for i in range(0, len(entries), batch_size)]
     logger.info(f"Translating {len(batches)} batches for {locale}")
     skipped: list[str] = []
-    for batch in batches:
+    for batch_index, batch in enumerate(batches, start=1):
+        logger.info(f"Translating batch {batch_index}/{len(batches)} for {locale} with {engine}")
         pending = batch
         for attempt in range(TRANSLATION_MAX_ATTEMPTS):
-            batch_values = _translate_batch_with_engine(pending, locale, engine=engine)
+            batch_values = _translate_batch_with_engine(
+                pending, locale, engine=engine, llm=CliOptions(llm_cli, llm_model, llm_timeout))
             rejected = []
             for entry in pending:
                 try:
@@ -563,6 +535,11 @@ def main() -> None:
         choices=("auto", "llm", "deep-translator"),
         default="auto",
     )
+    translate_parser.add_argument("--llm-cli", choices=("auto", "codex", "claude"), default="auto",
+                                  help="LLM CLI to use; auto prefers Codex, then Claude Code")
+    translate_parser.add_argument("--llm-model", help="Override the CLI's configured model")
+    translate_parser.add_argument("--llm-timeout", type=int, default=DEFAULT_TIMEOUT_SECONDS,
+                                  help="Maximum seconds per LLM batch")
     args = parser.parse_args()
 
     if args.command == "sync":
@@ -580,6 +557,9 @@ def main() -> None:
             overwrite=args.overwrite,
             batch_size=args.batch_size,
             engine=args.engine,
+            llm_cli=args.llm_cli,
+            llm_model=args.llm_model,
+            llm_timeout=args.llm_timeout,
         )
         print("\n".join(result) if result else "No missing translations")
 

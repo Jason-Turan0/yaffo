@@ -28,6 +28,15 @@ const optionTexts = () =>
   Array.from(document.querySelectorAll('.searchable-select-option')).map((el) => el.textContent);
 
 describe('SearchableSelect', () => {
+  it('treats provider-supplied model labels as text', async () => {
+    const select = fixture();
+    const label = '<img src=x onerror="window.bad=true"> Model';
+    select.selectedOptions[0].textContent = label;
+    await loadSearchableSelect();
+    expect(document.querySelector('.searchable-select-text').textContent).toBe(label);
+    expect(document.querySelector('.searchable-select-display img')).toBeNull();
+  });
+
   it('auto-initializes searchable selects and hides the original select', async () => {
     const select = fixture();
 

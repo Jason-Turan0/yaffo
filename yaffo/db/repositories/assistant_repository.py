@@ -154,7 +154,7 @@ def latest_user_context(session: Session, conversation_id: int) -> Optional[dict
     return context if isinstance(context, dict) else None
 
 
-def start_run(session: Session, conversation_id: int, model_id: str) -> bool:
+def start_run(session: Session, conversation_id: int, model_id: str, *, commit: bool = True) -> bool:
     """Mark the conversation RUNNING unless a run is already active. Conditional in
     one UPDATE, so two quick sends can't both start a run."""
     updated = (
@@ -170,7 +170,8 @@ def start_run(session: Session, conversation_id: int, model_id: str) -> bool:
             "updated_at": utcnow(),
         })
     )
-    session.commit()
+    if commit:
+        session.commit()
     return bool(updated)
 
 

@@ -686,6 +686,17 @@
       "done_one": "Deleted {{count}} conversation.",
       "done_other": "Deleted {{count}} conversations.",
       "failed": "Couldn't delete the conversations."
+    },
+    "web": {
+      "readPages_one": "Read {{count}} web page",
+      "readPages_other": "Read {{count}} web pages",
+      "title": "Allow web page reads?",
+      "explanation": "Allow selected domains for this conversation. Yaffo reads the pages and sends their contents to your AI provider.",
+      "allow": "Allow selected",
+      "deny": "Deny",
+      "domainAllowed": "{{domain}}: allowed",
+      "domainDenied": "{{domain}}: denied",
+      "failed": "Could not save the web access decision."
     }
   }
 }

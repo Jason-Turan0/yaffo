@@ -1,5 +1,5 @@
 feature: sync_automations
-description: User can set up sync automations — "Send to… › Folder" keeps an album (or the photos matching a filter) copied to a folder outside the library, and "Import from… › Folder" copies new photos from a folder or SD card into the library — through setup sections, Enable/Disable, Test, Items, and run history
+description: User can set up source and target sync automations — local folders and cloud services — choose albums, filters, or selector rules, and manage consent, previews, items, and run history
 
 tags:
   - core
@@ -7,6 +7,7 @@ tags:
 preconditions:
   - Application is running
   - The task-queue host is running, so Run now completes
+  - Service account interactions use the UI test sandbox's provider fixtures; no real account is required
 
 context:
   - tag: sync-detail-template
@@ -32,7 +33,9 @@ context:
     description: The design (Phase 1 is the Folder target and source)
 
 data:
-  - The Folder target and Folder source are built-in services; no account or sign-in is needed
+  - Folder source and target are built-in services; they need no provider account
+  - OneDrive and Immich presets, plus Google Photos as a target, appear in the direction their adapters support
+  - A sync connection is shared by syncs for the same provider account
   - A Folder target's folder must be outside the library's media folders; one inside is refused with an explanation
   - Enabling a sync records consent to its current setup; changing the folder, options, album, or filter disables it until it is enabled again
   - Test shows what a run would do and changes nothing
@@ -126,3 +129,124 @@ scenarios:
       - The photos appear in the gallery
     cleanup:
       - Delete the 'Camera card' automation (the imported photos stay in the library)
+
+  - name: new_automation_lists_services_by_direction
+    goal: Import and Send offer only services that support the selected direction
+    priority: high
+    steps:
+      - Open New automation and choose Import from…
+      - Review the available services, then choose Send to…
+    verify:
+      - Import offers Folder, OneDrive, and Immich
+      - Send offers Folder, Google Photos, OneDrive, and Immich
+      - Presets are listed before any custom services
+      - Choosing Custom hides the service choices
+    cleanup:
+      - Close the dialog without creating anything
+
+  - name: cloud_sync_uses_shared_account_and_reconsents_for_scopes
+    goal: Syncs share one provider connection and ask again when an added sync needs broader access
+    priority: high
+    steps:
+      - Create and sign in to a OneDrive import using the provider fixture
+      - Create another OneDrive sync and open its Account section
+      - Add a target sync that requires write access on the same account
+    verify:
+      - The existing account is offered and shown as shared by multiple syncs
+      - The target asks to extend access before continuing when its required scope is missing
+      - Completing sign-in updates the shared account and leaves both syncs connected
+      - Test reads live provider data but does not download files or send writes
+
+  - name: self_hosted_immich_sync_checks_server_and_api_key
+    goal: The Immich preset collects its server address and API key before options become available
+    priority: high
+    steps:
+      - Create an Import from… › Immich sync
+      - Enter the sandbox Immich server address and API key and connect
+      - Choose an album or library option and save
+    verify:
+      - The Account section asks for the server address and API key
+      - Invalid or unreachable server details show an inline error and leave options unavailable
+      - A successful connection enables the remote collection picker and displays the account/server
+      - Changing the server address requires setup consent again
+    cleanup:
+      - Delete the Immich sync
+
+  - name: target_album_change_triggers_sync
+    goal: Album targets run when membership changes and keep scheduled reconciliation
+    priority: high
+    steps:
+      - Create and enable a target sync for an album
+      - Add a photo to the album
+      - Wait for the album_changed run and inspect Items and Run history
+    verify:
+      - The When section includes an album-changed trigger scoped to the selected album and a nightly schedule
+      - A burst of album edits is coalesced into one run
+      - The new member is sent once and appears in the item ledger
+      - Editing album membership does not ask for setup consent again
+    cleanup:
+      - Delete the sync and test album
+
+  - name: web_target_enable_reviews_destination_and_deletions
+    goal: A web target explains where photos go and how removals are handled before enabling
+    priority: high
+    steps:
+      - Configure a target sync for the provider fixture and select an album
+      - Click Enable and review the confirmation
+      - Confirm, then change the selected album and save
+    verify:
+      - The review names the selected photos, account, and remote destination
+      - The review explains that removing a photo from the album or deleting it from Yaffo removes it from the remote album when supported
+      - Confirming enables the sync
+      - Changing the selection requires a new review before the next run
+
+  - name: sync_status_is_available_in_photo_details_and_filters
+    goal: Photo details and library filters expose sync provenance and failures
+    priority: medium
+    steps:
+      - Import one fixture photo and send another through configured syncs
+      - Open each photo's details and the gallery Filters panel
+    verify:
+      - Details identify the source sync for imported photos and target sync for sent photos
+      - Filters offer Imported by and Sync failed
+      - Selecting a sync in Imported by limits results to items from that sync
+
+  - name: selector_rule_routes_to_target_collections
+    goal: A selector rule can route photos to named target collections with generated captions
+    priority: medium
+    steps:
+      - Create a target sync for a service that supports multiple collections
+      - Open What to send and choose Custom rule
+      - Use the selector builder to route a small fixture set to two named destinations
+      - Test the rule
+    verify:
+      - Selector editing opens the automation's builder chat
+      - Test shows the desired destination and caption for each selected photo
+      - A routing rule forces per-target folder layout where applicable
+      - Publishing a changed selector causes the sync to require consent again
+    cleanup:
+      - Delete the sync and selector automation
+
+  - name: deleting_or_removing_selection_updates_supported_targets
+    goal: Photos removed from a selection or deleted in Yaffo are removed remotely when supported
+    priority: high
+    steps:
+      - Enable a target sync whose service supports removal and send two fixture photos
+      - Remove one photo from the selected album and delete the other from Yaffo
+      - Run the sync again and inspect the remote fixture and Items
+    verify:
+      - Both removed photos are removed from the remote target according to its capabilities
+      - Target results and removal failures appear in Items with a reason
+      - For Folder targets, edited or untracked destination files are left in place and marked as unable to remove
+
+  - name: service_attention_and_retry_are_visible
+    goal: Shared authentication failures and item retry controls are visible to the user
+    priority: medium
+    steps:
+      - Configure two syncs with the same provider account
+      - Expire the provider fixture token and run either sync
+      - Restore the account and retry the failed items
+    verify:
+      - The connection is marked as needing sign-in and both sync pages show the attention message
+      - Signing in again fixes the shared connection for both syncs
+      - Items offers Retry failed when failures exist and updates the ledger after retry

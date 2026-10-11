@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-27 19:02-0500\n"
+"POT-Creation-Date: 2026-10-11 12:15-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ar\n"
@@ -19,15 +19,15 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: yaffo/demo.py:327 yaffo/demo.py:388
+#: yaffo/demo.py:333 yaffo/demo.py:394
 msgid "The public demo is busy. Please wait a moment and try again."
 msgstr "العرض العام مشغول. الرجاء الانتظار لحظة وحاول مرة أخرى."
 
-#: yaffo/demo.py:398 yaffo/demo.py:406 yaffo/demo.py:414
+#: yaffo/demo.py:404 yaffo/demo.py:412 yaffo/demo.py:420
 msgid "This action is disabled in the public demo."
 msgstr "تم تعطيل هذا الإجراء في العرض التوضيحي العام."
 
-#: yaffo/demo.py:419 yaffo/security.py:37
+#: yaffo/demo.py:425 yaffo/security.py:83 yaffo/security.py:98
 msgid "This request could not be verified. Refresh the page and try again."
 msgstr "لا يمكن التحقق من هذا الطلب. قم بتحديث الصفحة وحاول مرة أخرى."
 
@@ -265,37 +265,37 @@ msgstr "الحد الأقصى للتسميات لكل صورة"
 msgid "At most this many labels are kept per photo (the highest-scoring ones)."
 msgstr "على الأكثر، يتم الاحتفاظ بهذا العدد من التصنيفات لكل صورة (أعلى الدرجات)."
 
-#: yaffo/db/models.py:377 yaffo/routes/utilities/run_history.py:102
+#: yaffo/db/models.py:392 yaffo/routes/utilities/run_history.py:103
 msgid "File sync"
 msgstr "مزامنة الملفات"
 
-#: yaffo/db/models.py:378
+#: yaffo/db/models.py:393
 msgid "Reconcile the photo index with the files on disk."
 msgstr "التوفيق بين فهرس الصور والملفات الموجودة على القرص."
 
-#: yaffo/db/models.py:381
+#: yaffo/db/models.py:396
 msgid "Auto-assign faces"
 msgstr "تعيين الوجوه تلقائيًا"
 
-#: yaffo/db/models.py:383
+#: yaffo/db/models.py:398
 msgid ""
 "When a photo is indexed, assign each detected face to the one person it matches above the "
 "threshold."
 msgstr "عند فهرسة صورة، يتم تعيين كل وجه مكتشف للشخص الواحد الذي يتطابق معه فوق العتبة."
 
-#: yaffo/db/models.py:388
+#: yaffo/db/models.py:403
 msgid "Export photo tag"
 msgstr "تصدير علامة الصورة"
 
-#: yaffo/db/models.py:390
+#: yaffo/db/models.py:405
 msgid "When a photo is modified, write its people and/or location tags back into the photo file."
 msgstr "عندما يتم تعديل صورة ما، قم بكتابة الأشخاص و/أو علامات الموقع مرة أخرى في ملف الصورة."
 
-#: yaffo/db/models.py:395
+#: yaffo/db/models.py:410
 msgid "Assign location name"
 msgstr "تعيين اسم الموقع"
 
-#: yaffo/db/models.py:397
+#: yaffo/db/models.py:412
 msgid ""
 "When a photo is indexed, name its location from GPS — reuse a nearby named photo's name, then "
 "fall back to an OpenStreetMap lookup."
@@ -303,11 +303,11 @@ msgstr ""
 "عند فهرسة صورة ما، قم بتسمية موقعها من نظام تحديد المواقع العالمي (GPS) - أعد استخدام اسم صورة "
 "مجاورة مسماة، ثم ارجع إلى بحث OpenStreetMap."
 
-#: yaffo/db/models.py:402
+#: yaffo/db/models.py:417
 msgid "Geotag from neighbors"
 msgstr "علامة جغرافية من الجيران"
 
-#: yaffo/db/models.py:404
+#: yaffo/db/models.py:419
 msgid ""
 "When a photo is indexed, give a GPS-less photo the coordinates of the closest-in-time photo that "
 "has GPS (e.g. a camera shot taken alongside phone shots)."
@@ -316,11 +316,11 @@ msgstr ""
 "في الوقت المناسب تحتوي على نظام تحديد المواقع العالمي (على سبيل المثال، لقطة كاميرا تم التقاطها "
 "جنبًا إلى جنب مع لقطات الهاتف)."
 
-#: yaffo/db/models.py:410
+#: yaffo/db/models.py:425
 msgid "Classify labels"
 msgstr "تصنيف التسميات"
 
-#: yaffo/db/models.py:412
+#: yaffo/db/models.py:427
 msgid ""
 "When a photo is indexed, label it with the subjects, scenes, and activities it matches from your "
 "label vocabulary (offline CLIP image recognition)."
@@ -328,11 +328,11 @@ msgstr ""
 "عندما تتم فهرسة صورة ما، قم بتسميتها بالموضوعات والمشاهد والأنشطة التي تطابقها من مفردات التسمية "
 "الخاصة بك (التعرف على الصور بـ CLIP دون اتصال)."
 
-#: yaffo/db/models.py:418
+#: yaffo/db/models.py:433
 msgid "Duplicate scan"
 msgstr "مسح مكرر"
 
-#: yaffo/db/models.py:420
+#: yaffo/db/models.py:435
 msgid ""
 "Scan your indexed photos for duplicates on a schedule — results appear in the Remove Duplicates "
 "tool."
@@ -340,21 +340,107 @@ msgstr ""
 "قم بمسح صورك المفهرسة ضوئيًا بحثًا عن التكرارات وفقًا لجدول زمني - تظهر النتائج في أداة إزالة "
 "التكرارات."
 
-#: yaffo/routes/assistant.py:94 yaffo/routes/pages.py:250 yaffo/routes/themes_page.py:239
-#: yaffo/routes/utilities/automations.py:599
+#: yaffo/routes/api.py:56
+msgid "Send the request body as JSON."
+msgstr "أرسل نص الطلب بتنسيق JSON."
+
+#: yaffo/routes/api.py:72 yaffo/routes/media.py:51 yaffo/routes/media.py:201 yaffo/routes/media.py:221
+msgid "Photo not found"
+msgstr "لم يتم العثور على الصورة"
+
+#: yaffo/routes/api.py:76
+msgid "Favorite must be true or false"
+msgstr "يجب أن تكون قيمة المفضلة true أو false"
+
+#: yaffo/routes/api.py:115 yaffo/routes/api.py:118 yaffo/routes/faces.py:382 yaffo/routes/people.py:95
+#: yaffo/routes/people.py:154 yaffo/routes/people.py:177 yaffo/routes/people.py:255
+msgid "Person not found"
+msgstr "لم يتم العثور على الشخص"
+
+#: yaffo/routes/api.py:120 yaffo/routes/api.py:160
+msgid "One or more faces are no longer available"
+msgstr "لم يعد وجه واحد أو أكثر متاحًا"
+
+#: yaffo/routes/api.py:133
+#, python-format
+msgid "Successfully assigned %(count)s face to %(person)s"
+msgid_plural "Successfully assigned %(count)s faces to %(person)s"
+msgstr[0] "تم التعيين بنجاح %(count)s وجها لوجه %(person)s"
+msgstr[1] "تم التعيين بنجاح %(count)s يواجه ل %(person)s"
+msgstr[2] "تم التعيين بنجاح %(count)s يواجه ل %(person)s"
+msgstr[3] "تم التعيين بنجاح %(count)s يواجه ل %(person)s"
+msgstr[4] "تم التعيين بنجاح %(count)s يواجه ل %(person)s"
+msgstr[5] "تم التعيين بنجاح %(count)s يواجه ل %(person)s"
+
+#: yaffo/routes/api.py:146
+msgid "This face isn't assigned to anyone"
+msgstr "هذا الوجه غير مُسند إلى أي شخص"
+
+#: yaffo/routes/api.py:150
+#, python-format
+msgid "Cleared %(count)s face"
+msgid_plural "Cleared %(count)s faces"
+msgstr[0] "تم مسح %(count)s وجه"
+msgstr[1] "تم مسح وجه واحد"
+msgstr[2] "تم مسح وجهين"
+msgstr[3] "تم مسح %(count)s وجوه"
+msgstr[4] "تم مسح %(count)s وجهًا"
+msgstr[5] "تم مسح %(count)s وجه"
+
+#: yaffo/routes/api.py:166
+#, python-format
+msgid "Successfully ignored %(count)s face"
+msgid_plural "Successfully ignored %(count)s faces"
+msgstr[0] "تم التجاهل بنجاح %(count)s وجه"
+msgstr[1] "تم التجاهل بنجاح %(count)s وجوه"
+msgstr[2] "تم التجاهل بنجاح %(count)s وجوه"
+msgstr[3] "تم التجاهل بنجاح %(count)s وجوه"
+msgstr[4] "تم التجاهل بنجاح %(count)s وجوه"
+msgstr[5] "تم التجاهل بنجاح %(count)s وجوه"
+
+#: yaffo/routes/api.py:187
+msgid "Faces must contain numeric identifiers"
+msgstr "يجب أن تحتوي الوجوه على معرفات رقمية"
+
+#: yaffo/routes/api.py:192
+msgid "Faces, person, and face status are required"
+msgstr "الوجوه والشخص وحالة الوجه مطلوبة"
+
+#: yaffo/routes/api.py:203
+msgid "Could not process faces"
+msgstr "لا يمكن معالجة الوجوه"
+
+#: yaffo/routes/api.py:279
+msgid "That file or folder isn't available. It may have moved, or its drive isn't connected."
+msgstr "هذا الملف أو المجلد غير متاح. ربما نُقل، أو أن محرّك الأقراص الخاص به غير متصل."
+
+#: yaffo/routes/api.py:284
+msgid "Couldn't open it on this computer."
+msgstr "تعذّر فتحه على هذا الجهاز."
+
+#: yaffo/routes/assistant.py:92 yaffo/routes/pages.py:250 yaffo/routes/themes_page.py:239
+#: yaffo/routes/utilities/automations.py:614 yaffo/routes/utilities/sync_services.py:281
 msgid "Message is required."
 msgstr "الرسالة مطلوبة."
 
-#: yaffo/routes/assistant.py:97
+#: yaffo/routes/assistant.py:95
 #, python-format
 msgid "Messages can be at most %(count)s characters."
 msgstr "يمكن أن تحتوي الرسائل على %(count)s حرفًا كحد أقصى."
 
-#: yaffo/routes/assistant.py:103 yaffo/routes/pages.py:254 yaffo/routes/themes_page.py:243
-#: yaffo/routes/utilities/automations.py:603
+#: yaffo/routes/assistant.py:101 yaffo/routes/pages.py:254 yaffo/routes/themes_page.py:243
+#: yaffo/routes/utilities/automations.py:618 yaffo/routes/utilities/sync_services.py:283
 #, python-format
 msgid "No API key configured. Add your %(provider)s API key in Settings → AI Generation."
 msgstr "لم يتم تكوين مفتاح API. أضف الخاص بك %(provider)s مفتاح API في الإعدادات → إنشاء الذكاء الاصطناعي."
+
+#: yaffo/routes/assistant.py:143
+msgid ""
+"Before reading a new website, Ask Yaffo asks you to allow its domain for that conversation. Page "
+"contents are sent to your AI provider."
+msgstr ""
+"قبل قراءة موقع جديد، يطلب منك Ask Yaffo السماح بنطاقه لهذه المحادثة. يُرسل محتوى الصفحات إلى مزود"
+" الذكاء الاصطناعي الخاص بك."
 
 #: yaffo/routes/assistant.py:146
 msgid "Reads a photo's capture date from its file when checking a date problem, never the image itself."
@@ -652,147 +738,128 @@ msgstr "تغيير وحدة المسافة"
 msgid "Arrange the sidebar filters"
 msgstr "ترتيب مرشحات الشريط الجانبي"
 
-#: yaffo/routes/assistant.py:384 yaffo/routes/assistant.py:389
+#: yaffo/routes/assistant.py:282
+msgid "Read public websites"
+msgstr "قراءة المواقع العامة"
+
+#: yaffo/routes/assistant.py:387 yaffo/routes/assistant.py:392 yaffo/routes/assistant.py:426
 msgid "The assistant is still answering."
 msgstr "لا يزال المساعد يجيب."
 
-#: yaffo/routes/assistant.py:403
+#: yaffo/routes/assistant.py:405 yaffo/routes/assistant.py:447
 msgid "Wait for the assistant to finish answering."
 msgstr "انتظر حتى ينتهي المساعد من الإجابة."
 
-#: yaffo/routes/assistant.py:444
-msgid "That file or folder isn't available. It may have moved, or its drive isn't connected."
-msgstr "هذا الملف أو المجلد غير متاح. ربما نُقل، أو أن محرّك الأقراص الخاص به غير متصل."
+#: yaffo/routes/assistant.py:407
+msgid "Web page reads are disabled in Assistant settings."
+msgstr "قراءة صفحات الويب معطلة في إعدادات المساعد."
 
-#: yaffo/routes/assistant.py:449
-msgid "Couldn't open it on this computer."
-msgstr "تعذّر فتحه على هذا الجهاز."
+#: yaffo/routes/assistant.py:410
+msgid "Choose Allow or Deny."
+msgstr "اختر السماح أو الرفض."
 
-#: yaffo/routes/assistant.py:465
+#: yaffo/routes/assistant.py:414 yaffo/routes/assistant.py:421
+msgid "Choose domains from the permission request."
+msgstr "اختر نطاقات من طلب الإذن."
+
+#: yaffo/routes/assistant.py:416
+msgid "Configure your AI Generation key before continuing."
+msgstr "اضبط مفتاح توليد المحتوى بالذكاء الاصطناعي قبل المتابعة."
+
+#: yaffo/routes/assistant.py:423 yaffo/routes/utilities/sync_services.py:379
+msgid "That request was already answered."
+msgstr "تم الرد على هذا الطلب بالفعل."
+
+#: yaffo/routes/assistant.py:429
+#, python-format
+msgid "I allowed reading pages from %(domains)s for this conversation."
+msgstr "سمحت بقراءة صفحات من %(domains)s لهذه المحادثة."
+
+#: yaffo/routes/assistant.py:432
+#, python-format
+msgid "I did not allow reading pages from %(domains)s."
+msgstr "لم أسمح بقراءة صفحات من %(domains)s."
+
+#: yaffo/routes/assistant.py:434
+msgid "Continue with my question."
+msgstr "تابع الإجابة عن سؤالي."
+
+#: yaffo/routes/assistant.py:491
 msgid "Title is required."
 msgstr "العنوان مطلوب."
 
-#: yaffo/routes/assistant.py:484
+#: yaffo/routes/assistant.py:510
 msgid "Assistant turned on."
 msgstr "تم تشغيل المساعد."
 
-#: yaffo/routes/assistant.py:484
+#: yaffo/routes/assistant.py:510
 msgid "Assistant turned off."
 msgstr "تم إيقاف المساعد."
 
-#: yaffo/routes/assistant.py:495 yaffo/routes/assistant.py:502 yaffo/routes/assistant.py:515
+#: yaffo/routes/assistant.py:521 yaffo/routes/assistant.py:528 yaffo/routes/assistant.py:535
+#: yaffo/routes/assistant.py:548
 msgid "Assistant settings saved."
 msgstr "تم حفظ إعدادات المساعد."
 
-#: yaffo/routes/assistant.py:511 yaffo/routes/assistant.py:513
+#: yaffo/routes/assistant.py:544 yaffo/routes/assistant.py:546
 msgid "Enter a whole number."
 msgstr "أدخل عددًا صحيحًا."
 
-#: yaffo/routes/base.py:144
+#: yaffo/routes/base.py:142
 msgid "The library database is out of date. Restart Yaffo to update it."
 msgstr "قاعدة بيانات المكتبة قديمة. أعد تشغيل Yaffo لتحديثه."
 
-#: yaffo/routes/base.py:145
+#: yaffo/routes/base.py:143
 msgid "Something went wrong"
 msgstr "حدث خطأ ما"
 
-#: yaffo/routes/base.py:166
+#: yaffo/routes/base.py:164
 msgid "Folder name is required"
 msgstr "اسم المجلد مطلوب"
 
-#: yaffo/routes/base.py:168
+#: yaffo/routes/base.py:166
 msgid "Folder name cannot contain path separators"
 msgstr "لا يمكن أن يحتوي اسم المجلد على فواصل المسار"
 
-#: yaffo/routes/base.py:171
+#: yaffo/routes/base.py:169
 msgid "Choose an existing parent folder"
 msgstr "اختر مجلدًا أصلًا موجودًا"
 
-#: yaffo/routes/base.py:174
+#: yaffo/routes/base.py:172
 msgid "A file or folder with that name already exists"
 msgstr "يوجد ملف أو مجلد بهذا الاسم بالفعل"
 
-#: yaffo/routes/base.py:178
+#: yaffo/routes/base.py:176
 #, python-format
 msgid "Could not create folder: %(reason)s"
 msgstr "لا يمكن إنشاء المجلد: %(reason)s"
 
-#: yaffo/routes/faces.py:184
+#: yaffo/routes/faces.py:176
 #, python-format
 msgid "Cluster %(number)s"
 msgstr "تَجَمَّع %(number)s"
 
-#: yaffo/routes/faces.py:216 yaffo/templates/sharing/_device_content.html:14
+#: yaffo/routes/faces.py:208 yaffo/templates/sharing/_device_content.html:14
 #: yaffo/templates/sharing/_device_panel.html:18
 msgid "Unknown"
 msgstr "مجهول"
 
-#: yaffo/routes/faces.py:247
+#: yaffo/routes/faces.py:239
 msgid " OR "
 msgstr " أو "
 
-#: yaffo/routes/faces.py:368 yaffo/routes/filter_config.py:151
+#: yaffo/routes/faces.py:360 yaffo/routes/filter_config.py:151
 msgid "Items must be a list"
 msgstr "يجب أن تكون العناصر قائمة"
 
-#: yaffo/routes/faces.py:390 yaffo/routes/faces.py:497 yaffo/routes/faces.py:508
-#: yaffo/routes/people.py:125 yaffo/routes/people.py:184 yaffo/routes/people.py:207
-#: yaffo/routes/people.py:285
-msgid "Person not found"
-msgstr "لم يتم العثور على الشخص"
+#: yaffo/routes/faces.py:399 yaffo/routes/people.py:68 yaffo/routes/people.py:100
+msgid "Name is required"
+msgstr "الاسم مطلوب"
 
-#: yaffo/routes/faces.py:411 yaffo/routes/faces.py:447 yaffo/routes/faces.py:456
-msgid "Faces must contain numeric identifiers"
-msgstr "يجب أن تحتوي الوجوه على معرفات رقمية"
-
-#: yaffo/routes/faces.py:419
-msgid "This face isn't assigned to anyone"
-msgstr "هذا الوجه غير مُسند إلى أي شخص"
-
-#: yaffo/routes/faces.py:427
+#: yaffo/routes/faces.py:406 yaffo/routes/people.py:74 yaffo/routes/people.py:109
 #, python-format
-msgid "Cleared %(count)s face"
-msgid_plural "Cleared %(count)s faces"
-msgstr[0] "تم مسح %(count)s وجه"
-msgstr[1] "تم مسح وجه واحد"
-msgstr[2] "تم مسح وجهين"
-msgstr[3] "تم مسح %(count)s وجوه"
-msgstr[4] "تم مسح %(count)s وجهًا"
-msgstr[5] "تم مسح %(count)s وجه"
-
-#: yaffo/routes/faces.py:470
-msgid "One or more faces are no longer available"
-msgstr "لم يعد وجه واحد أو أكثر متاحًا"
-
-#: yaffo/routes/faces.py:482
-#, python-format
-msgid "Successfully ignored %(count)s face"
-msgid_plural "Successfully ignored %(count)s faces"
-msgstr[0] "تم التجاهل بنجاح %(count)s وجه"
-msgstr[1] "تم التجاهل بنجاح %(count)s وجوه"
-msgstr[2] "تم التجاهل بنجاح %(count)s وجوه"
-msgstr[3] "تم التجاهل بنجاح %(count)s وجوه"
-msgstr[4] "تم التجاهل بنجاح %(count)s وجوه"
-msgstr[5] "تم التجاهل بنجاح %(count)s وجوه"
-
-#: yaffo/routes/faces.py:528
-#, python-format
-msgid "Successfully assigned %(count)s face to %(person)s"
-msgid_plural "Successfully assigned %(count)s faces to %(person)s"
-msgstr[0] "تم التعيين بنجاح %(count)s وجها لوجه %(person)s"
-msgstr[1] "تم التعيين بنجاح %(count)s يواجه ل %(person)s"
-msgstr[2] "تم التعيين بنجاح %(count)s يواجه ل %(person)s"
-msgstr[3] "تم التعيين بنجاح %(count)s يواجه ل %(person)s"
-msgstr[4] "تم التعيين بنجاح %(count)s يواجه ل %(person)s"
-msgstr[5] "تم التعيين بنجاح %(count)s يواجه ل %(person)s"
-
-#: yaffo/routes/faces.py:540
-msgid "Faces, person, and face status are required"
-msgstr "الوجوه والشخص وحالة الوجه مطلوبة"
-
-#: yaffo/routes/faces.py:549
-msgid "Could not process faces"
-msgstr "لا يمكن معالجة الوجوه"
+msgid "Person '%(name)s' already exists"
+msgstr "شخص '%(name)s\"موجود بالفعل"
 
 #: yaffo/routes/filter_panel.py:34 yaffo/templates/people/list.html:40
 #: yaffo/templates/people/list.html:92
@@ -804,14 +871,15 @@ msgstr "ذكر"
 msgid "Female"
 msgstr "أنثى"
 
-#: yaffo/routes/home.py:80 yaffo/templates/albums/add.html:74
+#: yaffo/routes/home.py:77 yaffo/templates/albums/add.html:74
 #: yaffo/templates/components/photo_card.html:46 yaffo/templates/components/photo_card.html:70
 #: yaffo/templates/people/faces.html:73 yaffo/templates/sharing/files.html:118
-#: yaffo/templates/sharing/files.html:133
+#: yaffo/templates/sharing/files.html:133 yaffo/templates/utilities/sync_filter.html:64
+#: yaffo/templates/utilities/sync_peer_filter.html:67
 msgid "Unknown date"
 msgstr "تاريخ غير معروف"
 
-#: yaffo/routes/home.py:334
+#: yaffo/routes/home.py:331
 #, python-format
 msgid ""
 "Media folders are not available: %(directories)s. If they are on an external drive, make sure the"
@@ -819,10 +887,6 @@ msgid ""
 msgstr ""
 "مجلدات الوسائط غير متوفرة: %(directories)s. إذا كانت موجودة على محرك أقراص خارجي، فتأكد من توصيل "
 "محرك الأقراص."
-
-#: yaffo/routes/home.py:374 yaffo/routes/sharing.py:630
-msgid "The tag_name parameter is required"
-msgstr "المعلمة tag_name مطلوبة"
 
 #: yaffo/routes/locations.py:133
 msgid "Media item IDs and location name are required"
@@ -840,45 +904,28 @@ msgstr "خطوط الطول والعرض مطلوبة"
 msgid "Could not determine a location name"
 msgstr "لا يمكن تحديد اسم الموقع"
 
-#: yaffo/routes/media.py:54 yaffo/routes/media.py:204 yaffo/routes/media.py:265
-#: yaffo/routes/media.py:282
-msgid "Photo not found"
-msgstr "لم يتم العثور على الصورة"
-
-#: yaffo/routes/media.py:58 yaffo/routes/media.py:92 yaffo/routes/media.py:106
-#: yaffo/routes/media.py:210 yaffo/routes/media.py:224
+#: yaffo/routes/media.py:55 yaffo/routes/media.py:89 yaffo/routes/media.py:103
+#: yaffo/routes/media.py:207
 msgid "File not found"
 msgstr "لم يتم العثور على الملف"
 
-#: yaffo/routes/media.py:70 yaffo/routes/media.py:73
+#: yaffo/routes/media.py:67 yaffo/routes/media.py:70
 msgid "Poster not found"
 msgstr "لم يتم العثور على الملصق"
 
-#: yaffo/routes/media.py:102
+#: yaffo/routes/media.py:99
 msgid "Face not found"
 msgstr "لم يتم العثور على الوجه"
 
-#: yaffo/routes/media.py:233
-msgid "Could not open file"
-msgstr "لا يمكن فتح الملف"
-
-#: yaffo/routes/media.py:244
-msgid "Folder not found"
-msgstr "لم يتم العثور على المجلد"
-
-#: yaffo/routes/media.py:253
-msgid "Could not open folder"
-msgstr "لا يمكن فتح المجلد"
-
-#: yaffo/routes/media.py:290
+#: yaffo/routes/media.py:229
 msgid "Tags must be a list"
 msgstr "يجب أن تكون العلامات قائمة"
 
-#: yaffo/routes/media.py:298
+#: yaffo/routes/media.py:237
 msgid "Each tag must be an object"
 msgstr "يجب أن تكون كل علامة كائنًا"
 
-#: yaffo/routes/media.py:305
+#: yaffo/routes/media.py:244
 msgid "Tag name is required"
 msgstr "اسم العلامة مطلوب"
 
@@ -886,7 +933,7 @@ msgstr "اسم العلامة مطلوب"
 msgid "Untitled Page"
 msgstr "صفحة بلا عنوان"
 
-#: yaffo/routes/pages.py:268 yaffo/routes/themes_page.py:235 yaffo/routes/utilities/automations.py:596
+#: yaffo/routes/pages.py:268 yaffo/routes/themes_page.py:235 yaffo/routes/utilities/automations.py:611
 msgid "A generation is already running."
 msgstr "هناك جيل قيد التشغيل بالفعل."
 
@@ -898,74 +945,65 @@ msgstr "النسخة ليست جاهزة للنشر."
 msgid "Gender must be male, female, or not specified"
 msgstr "يجب أن يكون الجنس ذكراً أو أنثى أو غير محدد"
 
-#: yaffo/routes/people.py:68 yaffo/routes/people.py:99 yaffo/routes/people.py:130
-msgid "Name is required"
-msgstr "الاسم مطلوب"
-
-#: yaffo/routes/people.py:74 yaffo/routes/people.py:106 yaffo/routes/people.py:139
-#, python-format
-msgid "Person '%(name)s' already exists"
-msgstr "شخص '%(name)s\"موجود بالفعل"
-
 #: yaffo/routes/people.py:87
 #, python-format
 msgid "Added %(name)s"
 msgstr "تمت الإضافة %(name)s"
 
-#: yaffo/routes/people.py:159
+#: yaffo/routes/people.py:129
 msgid "Birthdate must be YYYY-MM-DD"
 msgstr "يجب أن يكون تاريخ الميلاد YYYY-MM-DD"
 
-#: yaffo/routes/people.py:172
+#: yaffo/routes/people.py:142
 #, python-format
 msgid "Updated '%(name)s'"
 msgstr "تم التحديث '%(name)s'"
 
-#: yaffo/routes/people.py:174
+#: yaffo/routes/people.py:144
 #, python-format
 msgid "Renamed '%(old_name)s' to '%(name)s'"
 msgstr "تمت إعادة تسميته \"%(old_name)s' ل '%(name)s'"
 
-#: yaffo/routes/people.py:191
+#: yaffo/routes/people.py:161
 #, python-format
 msgid "Deleted %(name)s"
 msgstr "تم الحذف %(name)s"
 
-#: yaffo/routes/people.py:289
+#: yaffo/routes/people.py:259
 msgid "No faces selected"
 msgstr "لم يتم تحديد أي وجوه"
 
-#: yaffo/routes/people.py:295
+#: yaffo/routes/people.py:265
 msgid "Person updated"
 msgstr "تم تحديث الشخص"
 
-#: yaffo/routes/settings.py:94 yaffo/templates/settings/index.html:19
+#: yaffo/routes/settings.py:96 yaffo/templates/settings/index.html:19
 #: yaffo/templates/settings/index.html:53
 msgid "Media and thumbnail directories cannot be changed while importing or indexing is in progress."
 msgstr "لا يمكن تغيير مجلدات الوسائط والصور المصغرة أثناء تنفيذ الاستيراد أو الفهرسة."
 
-#: yaffo/routes/settings.py:192 yaffo/routes/utilities/automations.py:374
+#: yaffo/routes/settings.py:194 yaffo/routes/utilities/automations.py:379
 msgid "Unsupported distance unit"
 msgstr "وحدة مسافة غير مدعومة"
 
-#: yaffo/routes/settings.py:228
+#: yaffo/routes/settings.py:230
 msgid "Label name is required."
 msgstr "اسم التصنيف مطلوب."
 
-#: yaffo/routes/settings.py:231
+#: yaffo/routes/settings.py:233
 #, python-format
 msgid "Label '%(name)s' already exists."
 msgstr "ملصق '%(name)s\"موجود بالفعل."
 
-#: yaffo/routes/settings.py:247
+#: yaffo/routes/settings.py:249
 msgid "Classify-labels automation is not installed."
 msgstr "لم يتم تثبيت أتمتة التصنيفات."
 
-#: yaffo/routes/settings.py:253
+#: yaffo/routes/settings.py:255
 msgid "No indexed photos to classify yet."
 msgstr "لا توجد صور مفهرسة لتصنيفها حتى الآن."
 
-#: yaffo/routes/settings.py:259
+#: yaffo/routes/settings.py:261
 #, python-format
 msgid "Re-classifying %(count)s photo in the background…"
 msgid_plural "Re-classifying %(count)s photos in the background…"
@@ -976,214 +1014,247 @@ msgstr[3] "إعادة التصنيف %(count)s الصور في الخلفية…
 msgstr[4] "إعادة التصنيف %(count)s الصور في الخلفية…"
 msgstr[5] "إعادة التصنيف %(count)s الصور في الخلفية…"
 
-#: yaffo/routes/settings.py:278
+#: yaffo/routes/settings.py:279
+msgid "Check the API key."
+msgstr "تحقق من مفتاح API."
+
+#: yaffo/routes/settings.py:280
+msgid "The provider could not be reached."
+msgstr "تعذر الاتصال بالمزود."
+
+#: yaffo/routes/settings.py:281
+msgid "The provider returned an invalid model list."
+msgstr "أعاد المزود قائمة نماذج غير صالحة."
+
+#: yaffo/routes/settings.py:282
+msgid "The provider's model list exceeded the lookup limit."
+msgstr "تجاوزت قائمة نماذج المزود حد الاستعلام."
+
+#: yaffo/routes/settings.py:283
+msgid "The provider returned no compatible text models."
+msgstr "لم يُرجع المزود نماذج نصية متوافقة."
+
+#: yaffo/routes/settings.py:284
+msgid "The API key changed during the lookup. Choose the provider again."
+msgstr "تغيّر مفتاح API أثناء البحث. اختر المزوّد مرة أخرى."
+
+#: yaffo/routes/settings.py:298
+msgid "Choose a model from the available list."
+msgstr "اختر نموذجًا من القائمة المتاحة."
+
+#: yaffo/routes/settings.py:303
 msgid "AI model updated."
 msgstr "تم تحديث نموذج الذكاء الاصطناعي."
 
-#: yaffo/routes/settings.py:310 yaffo/routes/settings.py:411
+#: yaffo/routes/settings.py:339 yaffo/routes/settings.py:440
 msgid "Directory path is required"
 msgstr "مسار الدليل مطلوب"
 
-#: yaffo/routes/settings.py:318
+#: yaffo/routes/settings.py:347
 msgid "Could not create the directory"
 msgstr "لا يمكن إنشاء الدليل"
 
-#: yaffo/routes/settings.py:324
+#: yaffo/routes/settings.py:353
 msgid "Directory is already configured"
 msgstr "تم تكوين الدليل بالفعل"
 
-#: yaffo/routes/settings.py:341
+#: yaffo/routes/settings.py:370
 msgid "Media directory not found"
 msgstr "لم يتم العثور على دليل الوسائط"
 
-#: yaffo/routes/settings.py:390
+#: yaffo/routes/settings.py:419
 msgid "Could not count thumbnail files"
 msgstr "لا يمكن حساب الملفات المصغرة"
 
-#: yaffo/routes/settings.py:428
+#: yaffo/routes/settings.py:457
 msgid "The new directory is the same as the current directory"
 msgstr "الدليل الجديد هو نفس الدليل الحالي"
 
-#: yaffo/routes/settings.py:498
+#: yaffo/routes/settings.py:527
 msgid "Could not move thumbnail files"
 msgstr "لا يمكن نقل الملفات المصغرة"
 
-#: yaffo/routes/sharing.py:151
+#: yaffo/routes/sharing.py:157
 msgid "Choose a download directory for shared files."
 msgstr "اختر دليل التنزيل للملفات المشتركة."
 
-#: yaffo/routes/sharing.py:154
+#: yaffo/routes/sharing.py:160
 msgid "Choose a directory, not a file."
 msgstr "اختر دليلاً وليس ملفًا."
 
-#: yaffo/routes/sharing.py:158
+#: yaffo/routes/sharing.py:164
 #, python-format
 msgid "Could not create the download directory: %(reason)s"
 msgstr "لا يمكن إنشاء دليل التنزيل: %(reason)s"
 
-#: yaffo/routes/sharing.py:171 yaffo/routes/sharing.py:180
+#: yaffo/routes/sharing.py:178 yaffo/routes/sharing.py:187
 msgid "Unknown share"
 msgstr "حصة غير معروفة"
 
-#: yaffo/routes/sharing.py:173 yaffo/templates/components/photo_card.html:41
-#: yaffo/templates/sharing/_device_panel.html:60 yaffo/templates/sharing/_device_panel.html:77
+#: yaffo/routes/sharing.py:180 yaffo/templates/components/photo_card.html:41
+#: yaffo/templates/sharing/_device_panel.html:73 yaffo/templates/sharing/_device_panel.html:90
 #: yaffo/templates/sharing/files.html:128
 msgid "Folder"
 msgstr "مجلد"
 
-#: yaffo/routes/sharing.py:178
+#: yaffo/routes/sharing.py:185
 msgid "Deleted album"
 msgstr "الألبوم المحذوف"
 
-#: yaffo/routes/sharing.py:193
+#: yaffo/routes/sharing.py:242
 msgid "Shared folder"
 msgstr "المجلد المشترك"
 
-#: yaffo/routes/sharing.py:203 yaffo/routes/sharing.py:355 yaffo/routes/sharing.py:372
-#: yaffo/routes/sharing.py:394 yaffo/routes/sharing.py:545 yaffo/routes/sharing.py:671
-#: yaffo/routes/sharing.py:792 yaffo/routes/sharing.py:805 yaffo/routes/sharing.py:819
+#: yaffo/routes/sharing.py:252 yaffo/routes/sharing.py:404 yaffo/routes/sharing.py:421
+#: yaffo/routes/sharing.py:443 yaffo/routes/sharing.py:594 yaffo/routes/sharing.py:707
+#: yaffo/routes/sharing.py:828 yaffo/routes/sharing.py:841 yaffo/routes/sharing.py:855
+#: yaffo/routes/utilities/sync_views.py:788
 msgid "Device sharing is not running."
 msgstr "مشاركة الجهاز لا تعمل."
 
-#: yaffo/routes/sharing.py:234
+#: yaffo/routes/sharing.py:283
 msgid "Some shared folders could not be loaded."
 msgstr "تعذر تحميل بعض المجلدات المشتركة."
 
-#: yaffo/routes/sharing.py:246
+#: yaffo/routes/sharing.py:295
 msgid "Choose a folder inside a configured media directory."
 msgstr "اختر مجلدًا داخل دليل الوسائط الذي تم تكوينه."
 
-#: yaffo/routes/sharing.py:339
+#: yaffo/routes/sharing.py:388
 msgid "Share grant is no longer active."
 msgstr "منحة المشاركة لم تعد نشطة."
 
-#: yaffo/routes/sharing.py:341
+#: yaffo/routes/sharing.py:390
 msgid "Share grant revoked."
 msgstr "تم إلغاء منحة الأسهم."
 
-#: yaffo/routes/sharing.py:375
+#: yaffo/routes/sharing.py:424
 msgid "Paste a pairing code first."
 msgstr "الصق رمز الاقتران أولاً."
 
-#: yaffo/routes/sharing.py:379
+#: yaffo/routes/sharing.py:428
 #, python-format
 msgid "Pairing failed: %(reason)s"
 msgstr "فشل الاقتران: %(reason)s"
 
-#: yaffo/routes/sharing.py:381
+#: yaffo/routes/sharing.py:430
 #, python-format
 msgid "Could not reach the other device: %(reason)s"
 msgstr "لا يمكن الوصول إلى الجهاز الآخر: %(reason)s"
 
-#: yaffo/routes/sharing.py:383
+#: yaffo/routes/sharing.py:432
 msgid "Pairing timed out — is the other device online?"
 msgstr "انتهت مهلة الاقتران — هل الجهاز الآخر متصل بالإنترنت؟"
 
-#: yaffo/routes/sharing.py:386
+#: yaffo/routes/sharing.py:435
 #, python-format
 msgid "Paired with %(device)s."
 msgstr "يقترن مع %(device)s."
 
-#: yaffo/routes/sharing.py:403
+#: yaffo/routes/sharing.py:452
 msgid "Device revoked. The other device was notified."
 msgstr "تم إبطال الجهاز. تم إخطار الجهاز الآخر."
 
-#: yaffo/routes/sharing.py:405
+#: yaffo/routes/sharing.py:454
 msgid "Device revoked. The other device is offline and will find out when it next tries to connect."
 msgstr "تم إبطال الجهاز. الجهاز الآخر غير متصل بالإنترنت وسيكتشف ذلك عندما يحاول الاتصال في المرة التالية."
 
-#: yaffo/routes/sharing.py:428
+#: yaffo/routes/sharing.py:477
 msgid "Revoke this device before deleting it."
 msgstr "قم بإبطال هذا الجهاز قبل حذفه."
 
-#: yaffo/routes/sharing.py:429
+#: yaffo/routes/sharing.py:478
 msgid "Device deleted."
 msgstr "تم حذف الجهاز."
 
-#: yaffo/routes/sharing.py:438
+#: yaffo/routes/sharing.py:487
 msgid "Device name cannot be empty."
 msgstr "لا يمكن أن يكون اسم الجهاز فارغًا."
 
-#: yaffo/routes/sharing.py:440 yaffo/routes/sharing.py:462 yaffo/routes/sharing.py:674
+#: yaffo/routes/sharing.py:489 yaffo/routes/sharing.py:511 yaffo/routes/sharing.py:710
 #, python-format
 msgid "%(device)s is not a known device."
 msgstr "%(device)s ليس جهاز معروف."
 
-#: yaffo/routes/sharing.py:441
+#: yaffo/routes/sharing.py:490
 msgid "Device renamed."
 msgstr "تمت إعادة تسمية الجهاز."
 
-#: yaffo/routes/sharing.py:453
+#: yaffo/routes/sharing.py:502
 msgid "Download directory saved."
 msgstr "تم حفظ دليل التنزيل."
 
-#: yaffo/routes/sharing.py:464
+#: yaffo/routes/sharing.py:513
 msgid "Pair this device again before sharing with it."
 msgstr "قم بإقران هذا الجهاز مرة أخرى قبل المشاركة معه."
 
-#: yaffo/routes/sharing.py:471
+#: yaffo/routes/sharing.py:520
 msgid "Choose a configured media directory."
 msgstr "اختر دليل الوسائط الذي تم تكوينه."
 
-#: yaffo/routes/sharing.py:481
+#: yaffo/routes/sharing.py:530
 msgid "Choose a folder to share."
 msgstr "اختر مجلدًا لمشاركته."
 
-#: yaffo/routes/sharing.py:501
+#: yaffo/routes/sharing.py:550
 msgid "Choose an album to share."
 msgstr "اختر ألبومًا لمشاركته."
 
-#: yaffo/routes/sharing.py:506
+#: yaffo/routes/sharing.py:555
 msgid "Choose what to share."
 msgstr "اختر ما تريد مشاركته."
 
-#: yaffo/routes/sharing.py:509
+#: yaffo/routes/sharing.py:558
 msgid "Share grant added."
 msgstr "تمت إضافة منحة المشاركة."
 
-#: yaffo/routes/sharing.py:547
+#: yaffo/routes/sharing.py:596
 msgid "This device is revoked. Pair it again before browsing shared files."
 msgstr "تم إبطال هذا الجهاز. قم بإقرانه مرة أخرى قبل تصفح الملفات المشتركة."
 
-#: yaffo/routes/sharing.py:561
+#: yaffo/routes/sharing.py:610
 #, python-format
 msgid "Could not load shared files: %(reason)s"
 msgstr "لا يمكن تحميل الملفات المشتركة: %(reason)s"
 
-#: yaffo/routes/sharing.py:563
+#: yaffo/routes/sharing.py:612
 msgid "Loading shared files timed out — is the other device online?"
 msgstr "انتهت مهلة تحميل الملفات المشتركة — هل الجهاز الآخر متصل بالإنترنت؟"
 
-#: yaffo/routes/sharing.py:676
+#: yaffo/routes/sharing.py:665
+msgid "The tag_name parameter is required"
+msgstr "المعلمة tag_name مطلوبة"
+
+#: yaffo/routes/sharing.py:712
 msgid "Pair this device again before pulling files from it."
 msgstr "قم بإقران هذا الجهاز مرة أخرى قبل سحب الملفات منه."
 
-#: yaffo/routes/sharing.py:679
+#: yaffo/routes/sharing.py:715
 msgid "Choose a download directory for shared files first."
 msgstr "اختر دليل التنزيل للملفات المشتركة أولاً."
 
-#: yaffo/routes/sharing.py:741
+#: yaffo/routes/sharing.py:777
 msgid "Could not start the download: the shared scope is missing."
 msgstr "تعذر بدء التنزيل: النطاق المشترك مفقود."
 
-#: yaffo/routes/sharing.py:753
+#: yaffo/routes/sharing.py:789
 msgid "Select the files to pull first."
 msgstr "حدد الملفات المراد سحبها أولاً."
 
-#: yaffo/routes/sharing.py:773
+#: yaffo/routes/sharing.py:809
 #, python-format
 msgid "Could not start the download: %(reason)s"
 msgstr "تعذر بدء التنزيل: %(reason)s"
 
-#: yaffo/routes/sharing.py:775
+#: yaffo/routes/sharing.py:811
 msgid "Queuing the transfer timed out — is device sharing running?"
 msgstr "انتهت مهلة انتظار النقل — هل مشاركة الجهاز قيد التشغيل؟"
 
-#: yaffo/routes/sharing.py:778
+#: yaffo/routes/sharing.py:814
 msgid "Download queued — everything selected in this view will be pulled."
 msgstr "التنزيل في قائمة الانتظار - سيتم سحب كل شيء محدد في طريقة العرض هذه."
 
-#: yaffo/routes/sharing.py:781
+#: yaffo/routes/sharing.py:817
 #, python-format
 msgid "Pull of %(count)s file queued."
 msgid_plural "Pull of %(count)s files queued."
@@ -1194,19 +1265,19 @@ msgstr[3] "سحب %(count)s الملفات في قائمة الانتظار."
 msgstr[4] "سحب %(count)s الملفات في قائمة الانتظار."
 msgstr[5] "سحب %(count)s الملفات في قائمة الانتظار."
 
-#: yaffo/routes/sharing.py:797
+#: yaffo/routes/sharing.py:833
 msgid "Transfer cancelled."
 msgstr "تم إلغاء النقل."
 
-#: yaffo/routes/sharing.py:797 yaffo/routes/sharing.py:811
+#: yaffo/routes/sharing.py:833 yaffo/routes/sharing.py:847
 msgid "Transfer is no longer active."
 msgstr "النقل لم يعد نشطا."
 
-#: yaffo/routes/sharing.py:811
+#: yaffo/routes/sharing.py:847
 msgid "Continuing over the relay."
 msgstr "الاستمرار على التتابع."
 
-#: yaffo/routes/sharing.py:828
+#: yaffo/routes/sharing.py:864
 msgid "Cancel or finish this transfer before deleting it."
 msgstr "قم بإلغاء هذا النقل أو إنهائه قبل حذفه."
 
@@ -1235,101 +1306,142 @@ msgstr "لا يمكن حذف سمات النظام"
 msgid "System themes cannot be generated."
 msgstr "لا يمكن إنشاء سمات النظام."
 
-#: yaffo/routes/utilities/automations.py:144
+#: yaffo/routes/utilities/automations.py:132
 msgid "Media imported"
 msgstr "الوسائط مستوردة"
 
-#: yaffo/routes/utilities/automations.py:145
+#: yaffo/routes/utilities/automations.py:133
 msgid "Media indexed"
 msgstr "فهرسة وسائل الإعلام"
 
-#: yaffo/routes/utilities/automations.py:146
+#: yaffo/routes/utilities/automations.py:134
 msgid "Duplicates found"
 msgstr "تم العثور على التكرارات"
 
-#: yaffo/routes/utilities/automations.py:147
+#: yaffo/routes/utilities/automations.py:135
 msgid "Media modified"
 msgstr "تم تعديل الوسائط"
 
-#: yaffo/routes/utilities/automations.py:148
+#: yaffo/routes/utilities/automations.py:136
 msgid "Media labeled"
 msgstr "وسائل الإعلام المسمى"
 
-#: yaffo/routes/utilities/automations.py:261 yaffo/routes/utilities/automations.py:320
+#: yaffo/routes/utilities/automations.py:137
+msgid "Album changed"
+msgstr "تم تغيير الألبوم"
+
+#: yaffo/routes/utilities/automations.py:138
+msgid "Media deleted"
+msgstr "تم حذف الوسائط"
+
+#: yaffo/routes/utilities/automations.py:254 yaffo/routes/utilities/automations.py:325
 msgid "Automation name is required"
 msgstr "مطلوب اسم الأتمتة"
 
-#: yaffo/routes/utilities/automations.py:317 yaffo/routes/utilities/automations.py:594
+#: yaffo/routes/utilities/automations.py:262
+msgid "Choose a service"
+msgstr "اختر خدمة"
+
+#: yaffo/routes/utilities/automations.py:322 yaffo/routes/utilities/automations.py:609
 msgid "System automations cannot be edited."
 msgstr "لا يمكن تحرير أتمتة النظام."
 
-#: yaffo/routes/utilities/automations.py:339
+#: yaffo/routes/utilities/automations.py:344
 msgid "This automation has no configurable settings."
 msgstr "لا تحتوي هذه الأتمتة على إعدادات قابلة للتكوين."
 
-#: yaffo/routes/utilities/automations.py:355 yaffo/routes/utilities/automations.py:385
+#: yaffo/routes/utilities/automations.py:360 yaffo/routes/utilities/automations.py:390
 #, python-format
 msgid "%(label)s must be a number."
 msgstr "%(label)s يجب أن يكون رقما."
 
-#: yaffo/routes/utilities/automations.py:363 yaffo/routes/utilities/automations.py:393
+#: yaffo/routes/utilities/automations.py:368 yaffo/routes/utilities/automations.py:398
 #, python-format
 msgid "%(label)s must be between %(min)s and %(max)s."
 msgstr "%(label)s يجب أن يكون بين %(min)s و %(max)s."
 
-#: yaffo/routes/utilities/automations.py:404
+#: yaffo/routes/utilities/automations.py:409
 #, python-format
 msgid "%(label)s is required."
 msgstr "%(label)s مطلوب."
 
-#: yaffo/routes/utilities/automations.py:413
+#: yaffo/routes/utilities/automations.py:418
 #, python-format
 msgid "%(label)s has an unsupported value."
 msgstr "%(label)s يحتوي على قيمة غير مدعومة."
 
-#: yaffo/routes/utilities/automations.py:431
+#: yaffo/routes/utilities/automations.py:436
 msgid "System automations cannot be deleted"
 msgstr "لا يمكن حذف أتمتة النظام"
 
-#: yaffo/routes/utilities/automations.py:475
+#: yaffo/routes/utilities/automations.py:454
+msgid "Review the setup and turn the sync on from its page."
+msgstr "راجِع الإعدادات وفعّل المزامنة من صفحتها."
+
+#: yaffo/routes/utilities/automations.py:490
 msgid "A file sync is already running. Wait for it to finish, then run it again."
 msgstr "مزامنة الملفات قيد التشغيل بالفعل. انتظر حتى تنتهي، ثم شغّلها مرة أخرى."
 
-#: yaffo/routes/utilities/automations.py:486
+#: yaffo/routes/utilities/automations.py:501
 msgid "No indexed photos found under that path."
 msgstr "لم يتم العثور على صور مفهرسة ضمن هذا المسار."
 
-#: yaffo/routes/utilities/automations.py:494
+#: yaffo/routes/utilities/automations.py:509
 msgid "Nothing to run yet — publish the automation's code first."
 msgstr "لا يوجد شيء للتشغيل حتى الآن — قم بنشر كود التشغيل الآلي أولاً."
 
-#: yaffo/routes/utilities/automations.py:558
+#: yaffo/routes/utilities/automations.py:573
 msgid "Enter a valid 5-field cron expression (e.g. */30 * * * *)."
 msgstr "أدخل تعبير cron صالحًا مكونًا من 5 حقول (على سبيل المثال، */30 * * * *)."
 
-#: yaffo/routes/utilities/automations.py:560
+#: yaffo/routes/utilities/automations.py:575
 msgid "Choose at least one configured media directory or a folder inside one."
 msgstr "اختر دليل وسائط مُهيأ واحدًا على الأقل أو مجلدًا داخله."
 
-#: yaffo/routes/utilities/automations.py:571
+#: yaffo/routes/utilities/automations.py:586
 msgid "Choose an event type."
 msgstr "اختر نوع الحدث."
 
-#: yaffo/routes/utilities/automations.py:584
+#: yaffo/routes/utilities/automations.py:599
 msgid "Unknown trigger action."
 msgstr "إجراء تشغيل غير معروف."
 
-#: yaffo/routes/utilities/automations.py:639
+#: yaffo/routes/utilities/automations.py:654
 msgid "No code to test yet."
 msgstr "لا يوجد رمز لاختباره حتى الآن."
 
-#: yaffo/routes/utilities/automations.py:643
+#: yaffo/routes/utilities/automations.py:658
 msgid "No path selected."
 msgstr "لم يتم تحديد أي مسار."
 
-#: yaffo/routes/utilities/automations.py:654
+#: yaffo/routes/utilities/automations.py:669
 msgid "No draft to publish."
 msgstr "لا توجد مسودة للنشر."
+
+#: yaffo/routes/utilities/common.py:43
+msgid "A folder on this computer, a drive, or a card."
+msgstr "مجلد على هذا الكمبيوتر أو محرك أقراص أو بطاقة."
+
+#: yaffo/routes/utilities/common.py:44
+msgid "A folder a desktop app syncs, a drive, a network share, or a card for a photo frame."
+msgstr "مجلد تتم مزامنته بواسطة تطبيق سطح مكتب، أو محرك أقراص، أو مشاركة على الشبكة، أو بطاقة لإطار صور."
+
+#: yaffo/routes/utilities/common.py:46
+msgid "New photos and videos in a OneDrive folder. Sign in with your Microsoft account."
+msgstr "صور ومقاطع فيديو جديدة في مجلد OneDrive. سجّل الدخول باستخدام حساب Microsoft الخاص بك."
+
+#: yaffo/routes/utilities/common.py:48
+msgid "New photos and videos in an Immich album or library. Connect with an API key from your server."
+msgstr "صور ومقاطع فيديو جديدة في ألبوم أو مكتبة Immich. اتصل باستخدام مفتاح API من خادمك."
+
+#: yaffo/routes/utilities/common.py:50
+msgid "Keep photos in an Immich album. Connect with an API key from your server."
+msgstr "احتفظ بالصور في ألبوم Immich. اتصل باستخدام مفتاح API من خادمك."
+
+#: yaffo/routes/utilities/common.py:53
+#, python-format
+msgid "%(description)s A service you added."
+msgstr "%(description)s خدمة أضفتها."
 
 #: yaffo/routes/utilities/index_failures.py:22
 msgid "Damaged or incomplete file"
@@ -1454,71 +1566,71 @@ msgstr[3] "بدأت في الإزالة %(count)s التكرارات"
 msgstr[4] "بدأت في الإزالة %(count)s التكرارات"
 msgstr[5] "بدأت في الإزالة %(count)s التكرارات"
 
-#: yaffo/routes/utilities/run_history.py:98
+#: yaffo/routes/utilities/run_history.py:99
 msgid "Import photos"
 msgstr "استيراد الصور"
 
-#: yaffo/routes/utilities/run_history.py:99
+#: yaffo/routes/utilities/run_history.py:100
 msgid "Index photos"
 msgstr "فهرسة الصور"
 
-#: yaffo/routes/utilities/run_history.py:100
+#: yaffo/routes/utilities/run_history.py:101
 msgid "Find duplicates"
 msgstr "البحث عن التكرارات"
 
-#: yaffo/routes/utilities/run_history.py:101
+#: yaffo/routes/utilities/run_history.py:102
 msgid "Remove duplicates"
 msgstr "إزالة التكرارات"
 
-#: yaffo/routes/utilities/run_history.py:103 yaffo/templates/utilities/index_photos.html:92
+#: yaffo/routes/utilities/run_history.py:104 yaffo/templates/utilities/index_photos.html:92
 msgid "Regenerate thumbnails"
 msgstr "إعادة إنشاء الصور المصغرة"
 
-#: yaffo/routes/utilities/run_history.py:127
+#: yaffo/routes/utilities/run_history.py:128
 #, python-format
 msgid "Imported %(done)s/%(total)s photos"
 msgstr "تم استيراد %(done)s/%(total)s من الصور"
 
-#: yaffo/routes/utilities/run_history.py:129
+#: yaffo/routes/utilities/run_history.py:130
 #, python-format
 msgid "Indexed %(done)s/%(total)s photos"
 msgstr "تمت فهرسة %(done)s/%(total)s من الصور"
 
-#: yaffo/routes/utilities/run_history.py:131
+#: yaffo/routes/utilities/run_history.py:132
 #, python-format
 msgid "Processed %(done)s/%(total)s media items"
 msgstr "تمت معالجة %(done)s/%(total)s من عناصر الوسائط"
 
-#: yaffo/routes/utilities/run_history.py:133
+#: yaffo/routes/utilities/run_history.py:134
 #, python-format
 msgid "Regenerated %(done)s/%(total)s thumbnails"
 msgstr "تم إعادة إنشاء %(done)s/%(total)s من الصور المصغرة"
 
-#: yaffo/routes/utilities/run_history.py:138
+#: yaffo/routes/utilities/run_history.py:139
 #, python-format
 msgid "Moved %(done)s/%(total)s files to the trash"
 msgstr "تم نقل %(done)s/%(total)s من الملفات إلى سلة المحذوفات"
 
-#: yaffo/routes/utilities/run_history.py:140
+#: yaffo/routes/utilities/run_history.py:141
 #, python-format
 msgid "Deleted %(done)s/%(total)s files"
 msgstr "تم حذف %(done)s/%(total)s من الملفات"
 
-#: yaffo/routes/utilities/run_history.py:142
+#: yaffo/routes/utilities/run_history.py:143
 #, python-format
 msgid "Moved %(done)s/%(total)s files to %(destination)s"
 msgstr "تم نقل %(done)s/%(total)s من الملفات إلى %(destination)s"
 
-#: yaffo/routes/utilities/run_history.py:144
+#: yaffo/routes/utilities/run_history.py:145
 #, python-format
 msgid "Processed %(done)s/%(total)s files"
 msgstr "تمت معالجة %(done)s/%(total)s من الملفات"
 
-#: yaffo/routes/utilities/run_history.py:154
+#: yaffo/routes/utilities/run_history.py:155
 msgid "Already in sync"
 msgstr "متزامن بالفعل"
 
-#: yaffo/routes/utilities/run_history.py:159
+#: yaffo/routes/utilities/run_history.py:160
 #, python-format
 msgid "Indexing %(count)s new file"
 msgid_plural "Indexing %(count)s new files"
@@ -1529,7 +1641,7 @@ msgstr[3] "جارٍ فهرسة %(count)s ملفات جديدة"
 msgstr[4] "جارٍ فهرسة %(count)s ملفات جديدة"
 msgstr[5] "جارٍ فهرسة %(count)s ملفات جديدة"
 
-#: yaffo/routes/utilities/run_history.py:162
+#: yaffo/routes/utilities/run_history.py:163
 #, python-format
 msgid "removed %(count)s missing item"
 msgid_plural "removed %(count)s missing items"
@@ -1540,35 +1652,35 @@ msgstr[3] "تمت إزالة %(count)s عناصر مفقودة"
 msgstr[4] "تمت إزالة %(count)s عناصر مفقودة"
 msgstr[5] "تمت إزالة %(count)s عناصر مفقودة"
 
-#: yaffo/routes/utilities/run_history.py:166
+#: yaffo/routes/utilities/run_history.py:167
 msgid "Skipped: no media folders are configured"
 msgstr "تم التخطي: لم يتم تهيئة أي مجلد وسائط"
 
-#: yaffo/routes/utilities/run_history.py:168
+#: yaffo/routes/utilities/run_history.py:169
 msgid "Skipped: no thumbnail folder is configured"
 msgstr "تم التخطي: لم يتم تهيئة مجلد الصور المصغرة"
 
-#: yaffo/routes/utilities/run_history.py:170
+#: yaffo/routes/utilities/run_history.py:171
 msgid "Skipped: no media folder is connected"
 msgstr "تم التخطي: لا يوجد مجلد وسائط متصل"
 
-#: yaffo/routes/utilities/run_history.py:172
+#: yaffo/routes/utilities/run_history.py:173
 msgid "The sync failed"
 msgstr "فشلت المزامنة"
 
-#: yaffo/routes/utilities/run_history.py:174
+#: yaffo/routes/utilities/run_history.py:175
 msgid "Cancelled before changing anything"
 msgstr "تم الإلغاء قبل تغيير أي شيء"
 
-#: yaffo/routes/utilities/run_history.py:175 yaffo/routes/utilities/run_history.py:360
+#: yaffo/routes/utilities/run_history.py:176 yaffo/routes/utilities/run_history.py:364
 msgid "Running"
 msgstr "جري"
 
-#: yaffo/routes/utilities/run_history.py:189
+#: yaffo/routes/utilities/run_history.py:190
 msgid "No indexed media to process"
 msgstr "لا توجد وسائط مفهرسة للمعالجة"
 
-#: yaffo/routes/utilities/run_history.py:191
+#: yaffo/routes/utilities/run_history.py:192
 #, python-format
 msgid "Labeled %(labeled)s of %(num)d photo"
 msgid_plural "Labeled %(labeled)s of %(num)d photos"
@@ -1579,7 +1691,7 @@ msgstr[3] "تم وسم %(labeled)s من %(num)d صور"
 msgstr[4] "تم وسم %(labeled)s من %(num)d صور"
 msgstr[5] "تم وسم %(labeled)s من %(num)d صور"
 
-#: yaffo/routes/utilities/run_history.py:195
+#: yaffo/routes/utilities/run_history.py:196
 #, python-format
 msgid "Assigned %(num)d face"
 msgid_plural "Assigned %(num)d faces"
@@ -1590,7 +1702,7 @@ msgstr[3] "تم تعيين %(num)d وجوه"
 msgstr[4] "تم تعيين %(num)d وجوه"
 msgstr[5] "تم تعيين %(num)d وجوه"
 
-#: yaffo/routes/utilities/run_history.py:197
+#: yaffo/routes/utilities/run_history.py:198
 #, python-format
 msgid "Named the location of %(named)s of %(num)d photo"
 msgid_plural "Named the location of %(named)s of %(num)d photos"
@@ -1601,7 +1713,7 @@ msgstr[3] "تم تسمية موقع %(named)s من %(num)d صور"
 msgstr[4] "تم تسمية موقع %(named)s من %(num)d صور"
 msgstr[5] "تم تسمية موقع %(named)s من %(num)d صور"
 
-#: yaffo/routes/utilities/run_history.py:200
+#: yaffo/routes/utilities/run_history.py:201
 #, python-format
 msgid "Geotagged %(geotagged)s of %(num)d photo"
 msgid_plural "Geotagged %(geotagged)s of %(num)d photos"
@@ -1612,7 +1724,7 @@ msgstr[3] "تمت إضافة بيانات الموقع الجغرافي إلى %
 msgstr[4] "تمت إضافة بيانات الموقع الجغرافي إلى %(geotagged)s من %(num)d صور"
 msgstr[5] "تمت إضافة بيانات الموقع الجغرافي إلى %(geotagged)s من %(num)d صور"
 
-#: yaffo/routes/utilities/run_history.py:203
+#: yaffo/routes/utilities/run_history.py:204
 #, python-format
 msgid "Wrote metadata to %(written)s of %(num)d file"
 msgid_plural "Wrote metadata to %(written)s of %(num)d files"
@@ -1623,11 +1735,11 @@ msgstr[3] "تمت كتابة البيانات الوصفية إلى %(written)s 
 msgstr[4] "تمت كتابة البيانات الوصفية إلى %(written)s من %(num)d ملفات"
 msgstr[5] "تمت كتابة البيانات الوصفية إلى %(written)s من %(num)d ملفات"
 
-#: yaffo/routes/utilities/run_history.py:214
+#: yaffo/routes/utilities/run_history.py:215
 msgid "No thumbnails were missing"
 msgstr "لم تكن هناك صور مصغرة مفقودة"
 
-#: yaffo/routes/utilities/run_history.py:216
+#: yaffo/routes/utilities/run_history.py:217
 #, python-format
 msgid "Regenerated %(num)d thumbnail"
 msgid_plural "Regenerated %(num)d thumbnails"
@@ -1638,7 +1750,7 @@ msgstr[3] "تم إعادة إنشاء %(num)d صور مصغرة"
 msgstr[4] "تم إعادة إنشاء %(num)d صورة مصغرة"
 msgstr[5] "تم إعادة إنشاء %(num)d صورة مصغرة"
 
-#: yaffo/routes/utilities/run_history.py:217
+#: yaffo/routes/utilities/run_history.py:218
 #, python-format
 msgid "Regenerated %(written)s of %(num)d thumbnail"
 msgid_plural "Regenerated %(written)s of %(num)d thumbnails"
@@ -1649,12 +1761,12 @@ msgstr[3] "تم إعادة إنشاء %(written)s من %(num)d صور مصغرة
 msgstr[4] "تم إعادة إنشاء %(written)s من %(num)d صورة مصغرة"
 msgstr[5] "تم إعادة إنشاء %(written)s من %(num)d صورة مصغرة"
 
-#: yaffo/routes/utilities/run_history.py:261
+#: yaffo/routes/utilities/run_history.py:262
 #, python-format
 msgid "%(completed)s of %(total)s processed"
 msgstr "%(completed)s ل %(total)s معالجتها"
 
-#: yaffo/routes/utilities/run_history.py:267 yaffo/templates/fragments/job_status_fragment.html:67
+#: yaffo/routes/utilities/run_history.py:268 yaffo/templates/fragments/job_status_fragment.html:67
 #, python-format
 msgid "%(count)s error"
 msgid_plural "%(count)s errors"
@@ -1665,7 +1777,7 @@ msgstr[3] "%(count)s أخطاء"
 msgstr[4] "%(count)s أخطاء"
 msgstr[5] "%(count)s أخطاء"
 
-#: yaffo/routes/utilities/run_history.py:274
+#: yaffo/routes/utilities/run_history.py:275
 #, python-format
 msgid "%(count)s cancelled"
 msgid_plural "%(count)s cancelled"
@@ -1676,7 +1788,7 @@ msgstr[3] "%(count)s تم الإلغاء"
 msgstr[4] "%(count)s تم الإلغاء"
 msgstr[5] "%(count)s تم الإلغاء"
 
-#: yaffo/routes/utilities/run_history.py:299
+#: yaffo/routes/utilities/run_history.py:300
 #, python-format
 msgid ""
 "These media folders hold no files, so %(num)d item under them was left alone: %(roots)s. Check "
@@ -1703,7 +1815,7 @@ msgstr[5] ""
 "لا تحتوي مجلدات الوسائط هذه على أي ملفات، لذا تم ترك %(num)d عناصر تحتها دون تغيير: %(roots)s. "
 "تحقق من توصيل محرك الأقراص، أو قم بإزالة المجلد في الإعدادات."
 
-#: yaffo/routes/utilities/run_history.py:306
+#: yaffo/routes/utilities/run_history.py:307
 #, python-format
 msgid "%(num)d item was never processed because a background worker stopped unexpectedly."
 msgid_plural "%(num)d items were never processed because a background worker stopped unexpectedly."
@@ -1714,73 +1826,74 @@ msgstr[3] "لم تتم معالجة %(num)d عناصر أبدًا لأن عام�
 msgstr[4] "لم تتم معالجة %(num)d عناصر أبدًا لأن عامل خلفية توقف بشكل غير متوقع."
 msgstr[5] "لم تتم معالجة %(num)d عناصر أبدًا لأن عامل خلفية توقف بشكل غير متوقع."
 
-#: yaffo/routes/utilities/run_history.py:310
+#: yaffo/routes/utilities/run_history.py:311
 msgid "The background worker stopped unexpectedly."
 msgstr "توقف عامل الخلفية بشكل غير متوقع."
 
-#: yaffo/routes/utilities/run_history.py:312 yaffo/routes/utilities/run_history.py:326
+#: yaffo/routes/utilities/run_history.py:313 yaffo/routes/utilities/run_history.py:330
 msgid "The run stopped with an error."
 msgstr "توقف التشغيل بسبب خطأ."
 
-#: yaffo/routes/utilities/run_history.py:314
+#: yaffo/routes/utilities/run_history.py:315
 msgid "The script stopped with an error."
 msgstr "توقف البرنامج النصي بسبب خطأ."
 
-#: yaffo/routes/utilities/run_history.py:316
+#: yaffo/routes/utilities/run_history.py:317
 msgid "The script ran past its time limit."
 msgstr "تجاوز النص البرمجي الحد الزمني المسموح به."
 
-#: yaffo/routes/utilities/run_history.py:318
+#: yaffo/routes/utilities/run_history.py:319
 msgid "The script made too many calls."
 msgstr "أجرى النص البرمجي عددًا كبيرًا جدًا من الاستدعاءات."
 
-#: yaffo/routes/utilities/run_history.py:320
+#: yaffo/routes/utilities/run_history.py:321
 msgid ""
 "The scheduled scope is no longer valid. Edit the trigger to choose a configured media directory "
 "or a folder inside one."
 msgstr "لم يعد النطاق المجدول صالحًا. حرّر المشغّل لاختيار دليل وسائط مُهيأ أو مجلد داخله."
 
-#: yaffo/routes/utilities/run_history.py:323
+#: yaffo/routes/utilities/run_history.py:327
 msgid "The scheduled run could not start."
 msgstr "تعذّر بدء التشغيل المجدول."
 
-#: yaffo/routes/utilities/run_history.py:324
+#: yaffo/routes/utilities/run_history.py:328
 msgid "The run could not start."
 msgstr "تعذّر بدء التشغيل."
 
-#: yaffo/routes/utilities/run_history.py:359
+#: yaffo/routes/utilities/run_history.py:363
 msgid "Pending"
 msgstr "قيد الانتظار"
 
-#: yaffo/routes/utilities/run_history.py:361 yaffo/templates/sharing/_transfers_panel.html:29
+#: yaffo/routes/utilities/run_history.py:365 yaffo/templates/sharing/_transfers_panel.html:29
 msgid "Completed"
 msgstr "مكتمل"
 
-#: yaffo/routes/utilities/run_history.py:362 yaffo/templates/sharing/_transfers_panel.html:32
+#: yaffo/routes/utilities/run_history.py:366 yaffo/templates/sharing/_transfers_panel.html:32
 msgid "Cancelled"
 msgstr "تم الإلغاء"
 
-#: yaffo/routes/utilities/run_history.py:363 yaffo/templates/sharing/_transfers_panel.html:31
+#: yaffo/routes/utilities/run_history.py:367 yaffo/routes/utilities/sync_text.py:206
+#: yaffo/templates/sharing/_transfers_panel.html:31
 msgid "Failed"
 msgstr "فشل"
 
-#: yaffo/routes/utilities/run_history.py:390
+#: yaffo/routes/utilities/run_history.py:394 yaffo/routes/utilities/sync_text.py:202
 msgid "Skipped"
 msgstr "تم التخطي"
 
-#: yaffo/routes/utilities/run_history.py:392
+#: yaffo/routes/utilities/run_history.py:396
 msgid "Stopping"
 msgstr "جارٍ الإيقاف"
 
-#: yaffo/routes/utilities/run_history.py:394 yaffo/templates/sharing/_transfers_panel.html:30
+#: yaffo/routes/utilities/run_history.py:398 yaffo/templates/sharing/_transfers_panel.html:30
 msgid "Completed with errors"
 msgstr "اكتمل مع وجود أخطاء"
 
-#: yaffo/routes/utilities/run_history.py:457
+#: yaffo/routes/utilities/run_history.py:461
 msgid "less than a minute left"
 msgstr "أقل من دقيقة متبقية"
 
-#: yaffo/routes/utilities/run_history.py:459
+#: yaffo/routes/utilities/run_history.py:463
 #, python-format
 msgid "about %(num)d minute left"
 msgid_plural "about %(num)d minutes left"
@@ -1791,12 +1904,12 @@ msgstr[3] "تبقّت حوالي %(num)d دقيقة"
 msgstr[4] "تبقّت حوالي %(num)d دقيقة"
 msgstr[5] "تبقّت حوالي %(num)d دقيقة"
 
-#: yaffo/routes/utilities/run_history.py:464
+#: yaffo/routes/utilities/run_history.py:468
 #, python-format
 msgid "about %(hours)d h %(minutes)d min left"
 msgstr "تبقّت حوالي %(hours)d س و%(minutes)d د"
 
-#: yaffo/routes/utilities/run_history.py:465 yaffo/routes/utilities/run_history.py:467
+#: yaffo/routes/utilities/run_history.py:469 yaffo/routes/utilities/run_history.py:471
 #, python-format
 msgid "about %(num)d hour left"
 msgid_plural "about %(num)d hours left"
@@ -1807,23 +1920,986 @@ msgstr[3] "تبقّت حوالي %(num)d ساعة"
 msgstr[4] "تبقّت حوالي %(num)d ساعة"
 msgstr[5] "تبقّت حوالي %(num)d ساعة"
 
-#: yaffo/routes/utilities/run_history.py:483
+#: yaffo/routes/utilities/run_history.py:487
 msgid "Importing"
 msgstr "جارٍ الاستيراد"
 
-#: yaffo/routes/utilities/run_history.py:483
+#: yaffo/routes/utilities/run_history.py:487
 msgid "Indexing"
 msgstr "جارٍ الفهرسة"
 
-#: yaffo/site_agents/llm_config.py:189
+#: yaffo/routes/utilities/sync_account.py:87
+#, python-format
+msgid "%(service)s needs you to sign in to %(account)s again."
+msgstr "تحتاج %(service)s إلى تسجيل الدخول إلى %(account)s مرة أخرى."
+
+#: yaffo/routes/utilities/sync_account.py:90
+#, python-format
+msgid "This sync needs more access to %(account)s than it has. Sign in again to allow it."
+msgstr ""
+"تحتاج هذه المزامنة إلى صلاحيات أكثر مما لديها للوصول إلى %(account)s. سجّل الدخول مرة أخرى للسماح"
+" بذلك."
+
+#: yaffo/routes/utilities/sync_account.py:274
+#, python-format
+msgid "%(service)s didn't start the sign-in. Try again."
+msgstr "لم تبدأ %(service)s عملية تسجيل الدخول. حاول مرة أخرى."
+
+#: yaffo/routes/utilities/sync_account.py:287
+msgid "The code expired. Start again."
+msgstr "انتهت صلاحية الرمز. ابدأ من جديد."
+
+#: yaffo/routes/utilities/sync_account.py:288
+msgid "The sign-in was refused."
+msgstr "رُفض تسجيل الدخول."
+
+#: yaffo/routes/utilities/sync_account.py:319 yaffo/routes/utilities/sync_views.py:930
+msgid "Sign in first."
+msgstr "سجّل الدخول أولاً."
+
+#: yaffo/routes/utilities/sync_account.py:328
+#, python-format
+msgid "Couldn't list what's in %(service)s."
+msgstr "تعذّر عرض محتويات %(service)s."
+
+#: yaffo/routes/utilities/sync_account.py:331
+msgid "Sign in again first."
+msgstr "سجّل الدخول مرة أخرى أولاً."
+
+#: yaffo/routes/utilities/sync_account.py:334
+msgid "That folder no longer exists."
+msgstr "لم يعد هذا المجلد موجودًا."
+
+#: yaffo/routes/utilities/sync_account.py:335
+#, python-format
+msgid "%(service)s didn't answer. Try again."
+msgstr "لم تستجب %(service)s. حاول مرة أخرى."
+
+#: yaffo/routes/utilities/sync_services.py:100
+msgid "Client ID"
+msgstr "معرّف العميل"
+
+#: yaffo/routes/utilities/sync_services.py:101
+msgid "Client secret"
+msgstr "سر العميل"
+
+#: yaffo/routes/utilities/sync_services.py:102
+msgid "redirect address"
+msgstr "عنوان إعادة التوجيه"
+
+#: yaffo/routes/utilities/sync_services.py:140
+msgid "The draft can't run yet."
+msgstr "لا يمكن تشغيل المسودة بعد."
+
+#: yaffo/routes/utilities/sync_services.py:143
+msgid "(a link the service returned)"
+msgstr "(رابط أعادته الخدمة)"
+
+#: yaffo/routes/utilities/sync_services.py:166
+msgid "The draft doesn't pass its check yet, so its sign-in isn't known."
+msgstr "لم تجتز المسودة الفحص بعد، لذا لم تُعرف طريقة تسجيل الدخول إليها."
+
+#: yaffo/routes/utilities/sync_services.py:167
+msgid "Save the app credentials first."
+msgstr "احفظ بيانات اعتماد التطبيق أولاً."
+
+#: yaffo/routes/utilities/sync_services.py:168
+msgid "Enter the client ID."
+msgstr "أدخل معرّف العميل."
+
+#: yaffo/routes/utilities/sync_services.py:169
+msgid "There's no passing draft to publish."
+msgstr "لا توجد مسودة اجتازت الفحص لنشرها."
+
+#: yaffo/routes/utilities/sync_services.py:170
+msgid "A sync still uses this service. Delete that sync first."
+msgstr "لا تزال هناك مزامنة تستخدم هذه الخدمة. احذف تلك المزامنة أولاً."
+
+#: yaffo/routes/utilities/sync_services.py:171
+msgid "That didn't work. Try again."
+msgstr "لم ينجح ذلك. حاول مرة أخرى."
+
+#: yaffo/routes/utilities/sync_services.py:191
+#, python-format
+msgid "The builder asks to make read-only calls to %(account)s while building."
+msgstr "يطلب المنشئ إجراء استدعاءات للقراءة فقط إلى %(account)s أثناء الإنشاء."
+
+#: yaffo/routes/utilities/sync_services.py:193
+#, python-format
+msgid "Live read-only tests allowed for %(account)s."
+msgstr "يُسمح بإجراء اختبارات مباشرة للقراءة فقط على %(account)s."
+
+#: yaffo/routes/utilities/sync_services.py:194
+msgid "Live read-only tests not allowed."
+msgstr "لا يُسمح بإجراء اختبارات مباشرة للقراءة فقط."
+
+#: yaffo/routes/utilities/sync_services.py:197
+#, python-format
+msgid "The builder asks to read pages from: %(domains)s"
+msgstr "يطلب المنشئ قراءة صفحات من: %(domains)s"
+
+#: yaffo/routes/utilities/sync_services.py:198
+#, python-format
+msgid "Allowed: %(domains)s"
+msgstr "مسموح: %(domains)s"
+
+#: yaffo/routes/utilities/sync_services.py:200
+#, python-format
+msgid "Not allowed: %(domains)s"
+msgstr "غير مسموح: %(domains)s"
+
+#: yaffo/routes/utilities/sync_services.py:278
+msgid "The builder is already working."
+msgstr "المنشئ يعمل بالفعل."
+
+#: yaffo/routes/utilities/sync_text.py:49
+#, python-format
+msgid "Wrote %(num)d photo to the folder"
+msgid_plural "Wrote %(num)d photos to the folder"
+msgstr[0] "تمت كتابة %(num)d صورة في المجلد"
+msgstr[1] "تمت كتابة %(num)d صورتين في المجلد"
+msgstr[2] "تمت كتابة %(num)d صور في المجلد"
+msgstr[3] "تمت كتابة %(num)d صورة في المجلد"
+msgstr[4] "تمت كتابة %(num)d صورة في المجلد"
+msgstr[5] "تمت كتابة %(num)d صورة في المجلد"
+
+#: yaffo/routes/utilities/sync_text.py:50
+#, python-format
+msgid "Sent %(num)d photo"
+msgid_plural "Sent %(num)d photos"
+msgstr[0] "تم إرسال %(num)d صورة"
+msgstr[1] "تم إرسال %(num)d صورتين"
+msgstr[2] "تم إرسال %(num)d صور"
+msgstr[3] "تم إرسال %(num)d صورة"
+msgstr[4] "تم إرسال %(num)d صورة"
+msgstr[5] "تم إرسال %(num)d صورة"
+
+#: yaffo/routes/utilities/sync_text.py:53
+#, python-format
+msgid "removed %(num)d"
+msgid_plural "removed %(num)d"
+msgstr[0] "تمت إزالة %(num)d"
+msgstr[1] "تمت إزالة %(num)d"
+msgstr[2] "تمت إزالة %(num)d"
+msgstr[3] "تمت إزالة %(num)d"
+msgstr[4] "تمت إزالة %(num)d"
+msgstr[5] "تمت إزالة %(num)d"
+
+#: yaffo/routes/utilities/sync_text.py:56
+#, python-format
+msgid "kept %(num)d copy that left the selection"
+msgid_plural "kept %(num)d copies that left the selection"
+msgstr[0] "تم الاحتفاظ بنسخة واحدة %(num)d غادرت التحديد"
+msgstr[1] "تم الاحتفاظ بنسختين %(num)d غادرتا التحديد"
+msgstr[2] "تم الاحتفاظ بـ %(num)d نسخ غادرت التحديد"
+msgstr[3] "تم الاحتفاظ بـ %(num)d نسخة غادرت التحديد"
+msgstr[4] "تم الاحتفاظ بـ %(num)d نسخة غادرت التحديد"
+msgstr[5] "تم الاحتفاظ بـ %(num)d نسخة غادرت التحديد"
+
+#: yaffo/routes/utilities/sync_text.py:60
+#, python-format
+msgid "%(num)d was deleted there and won't be sent again"
+msgid_plural "%(num)d were deleted there and won't be sent again"
+msgstr[0] "تم حذف %(num)d هناك ولن يُرسل مرة أخرى"
+msgstr[1] "تم حذف %(num)d هناك ولن يُرسل مرة أخرى"
+msgstr[2] "تم حذف %(num)d هناك ولن يُرسل مرة أخرى"
+msgstr[3] "تم حذف %(num)d هناك ولن يُرسل مرة أخرى"
+msgstr[4] "تم حذف %(num)d هناك ولن يُرسل مرة أخرى"
+msgstr[5] "تم حذف %(num)d هناك ولن يُرسل مرة أخرى"
+
+#: yaffo/routes/utilities/sync_text.py:64
+#, python-format
+msgid "%(num)d couldn't be removed"
+msgid_plural "%(num)d couldn't be removed"
+msgstr[0] "تعذّر حذف %(num)d"
+msgstr[1] "تعذّر حذف %(num)d"
+msgstr[2] "تعذّر حذف %(num)d"
+msgstr[3] "تعذّر حذف %(num)d"
+msgstr[4] "تعذّر حذف %(num)d"
+msgstr[5] "تعذّر حذف %(num)d"
+
+#: yaffo/routes/utilities/sync_text.py:66
+msgid "Up to date"
+msgstr "محدّث بالكامل"
+
+#: yaffo/routes/utilities/sync_text.py:75
+#, python-format
+msgid "Imported %(num)d new photo"
+msgid_plural "Imported %(num)d new photos"
+msgstr[0] "تم استيراد صورة جديدة واحدة: %(num)d"
+msgstr[1] "تم استيراد %(num)d صورتين جديدتين"
+msgstr[2] "تم استيراد %(num)d صور جديدة"
+msgstr[3] "تم استيراد %(num)d صورة جديدة"
+msgstr[4] "تم استيراد %(num)d صورة جديدة"
+msgstr[5] "تم استيراد %(num)d صورة جديدة"
+
+#: yaffo/routes/utilities/sync_text.py:78
+#, python-format
+msgid "%(num)d was already in your library"
+msgid_plural "%(num)d were already in your library"
+msgstr[0] "كانت %(num)d موجودة بالفعل في مكتبتك"
+msgstr[1] "كان %(num)d موجودًا بالفعل في مكتبتك"
+msgstr[2] "كان %(num)d موجودًا بالفعل في مكتبتك"
+msgstr[3] "كانت %(num)d موجودة بالفعل في مكتبتك"
+msgstr[4] "كانت %(num)d موجودة بالفعل في مكتبتك"
+msgstr[5] "كانت %(num)d موجودة بالفعل في مكتبتك"
+
+#: yaffo/routes/utilities/sync_text.py:82
+#, python-format
+msgid "updated %(num)d edited photo"
+msgid_plural "updated %(num)d edited photos"
+msgstr[0] "تم تحديث %(num)d صورة معدّلة"
+msgstr[1] "تم تحديث %(num)d صورتين معدّلتين"
+msgstr[2] "تم تحديث %(num)d صور معدّلة"
+msgstr[3] "تم تحديث %(num)d صورة معدّلة"
+msgstr[4] "تم تحديث %(num)d صورة معدّلة"
+msgstr[5] "تم تحديث %(num)d صورة معدّلة"
+
+#: yaffo/routes/utilities/sync_text.py:85
+#, python-format
+msgid "%(num)d deleted at the source and kept in your library"
+msgid_plural "%(num)d deleted at the source and kept in your library"
+msgstr[0] "حُذفت %(num)d من المصدر وأُبقيت في مكتبتك"
+msgstr[1] "حُذفت %(num)d من المصدر وأُبقيت في مكتبتك"
+msgstr[2] "حُذفت %(num)d من المصدر وأُبقيت في مكتبتك"
+msgstr[3] "حُذفت %(num)d من المصدر وأُبقيت في مكتبتك"
+msgstr[4] "حُذفت %(num)d من المصدر وأُبقيت في مكتبتك"
+msgstr[5] "حُذفت %(num)d من المصدر وأُبقيت في مكتبتك"
+
+#: yaffo/routes/utilities/sync_text.py:88
+msgid "Nothing new"
+msgstr "لا شيء جديد"
+
+#: yaffo/routes/utilities/sync_text.py:93
+#, python-format
+msgid "%(outcome)s (%(path)s)"
+msgstr "%(outcome)s (%(path)s)"
+
+#: yaffo/routes/utilities/sync_text.py:99
+msgid "on your network"
+msgstr "على شبكتك"
+
+#: yaffo/routes/utilities/sync_text.py:100
+msgid "over a direct connection"
+msgstr "عبر اتصال مباشر"
+
+#: yaffo/routes/utilities/sync_text.py:101
+msgid "through Yaffo's relay"
+msgstr "عبر مرحّل Yaffo"
+
+#: yaffo/routes/utilities/sync_text.py:106
+msgid "the device"
+msgstr "الجهاز"
+
+#: yaffo/routes/utilities/sync_text.py:108
+#, python-format
+msgid "Waiting for %(device)s: it isn't reachable right now"
+msgstr "بانتظار %(device)s: يتعذّر الوصول إليه الآن"
+
+#: yaffo/routes/utilities/sync_text.py:110
+#, python-format
+msgid "Waiting for a direct connection to %(device)s (copying through the relay is off)"
+msgstr "بانتظار اتصال مباشر بـ %(device)s (النسخ عبر المرحّل متوقف)"
+
+#: yaffo/routes/utilities/sync_text.py:113
+msgid "Stopped at this run's relay limit. The next run carries on."
+msgstr "توقّف عند حدّ المرحّل لهذه الجولة. ستتابع الجولة التالية."
+
+#: yaffo/routes/utilities/sync_text.py:115
+msgid "Waiting for device sharing to start"
+msgstr "بانتظار بدء مشاركة الجهاز"
+
+#: yaffo/routes/utilities/sync_text.py:126
+msgid "Waiting for the folder: it isn't connected"
+msgstr "بانتظار المجلد: إنه غير متصل"
+
+#: yaffo/routes/utilities/sync_text.py:128
+msgid "Didn't run"
+msgstr "لم يتم التشغيل"
+
+#: yaffo/routes/utilities/sync_text.py:136
+msgid "The selected album was deleted. Choose another to send."
+msgstr "حُذف الألبوم المحدد. اختر ألبومًا آخر للإرسال."
+
+#: yaffo/routes/utilities/sync_text.py:138
+msgid ""
+"The destination isn't available (an unplugged drive or a removed folder?). The sync carries on "
+"when it's back."
+msgstr "الوجهة غير متاحة (هل محرك الأقراص مفصول أو المجلد محذوف؟). ستتابع المزامنة عند عودتها."
+
+#: yaffo/routes/utilities/sync_text.py:141
+msgid ""
+"The device isn't paired with this one any more. Pair it again on the Sharing page, or choose "
+"another device."
+msgstr "لم يعد الجهاز مقترنًا بهذا الجهاز. أقرنه مجددًا من صفحة Sharing، أو اختر جهازًا آخر."
+
+#: yaffo/routes/utilities/sync_text.py:144
+msgid "The chosen folder or album no longer exists at the service. Choose another."
+msgstr "لم يعد المجلد أو الألبوم المحدد موجودًا على الخدمة. اختر غيره."
+
+#: yaffo/routes/utilities/sync_text.py:145
+msgid "Paused."
+msgstr "متوقف مؤقتًا."
+
+#: yaffo/routes/utilities/sync_text.py:150
+msgid "The setup changed since this sync was turned on. Review it and turn it on again."
+msgstr "تغيّر الإعداد منذ تشغيل هذه المزامنة. راجعه وشغّلها مجددًا."
+
+#: yaffo/routes/utilities/sync_text.py:152
+msgid "This sync's setup can't be used. Open it to check the folder and options."
+msgstr "لا يمكن استخدام إعداد هذه المزامنة. افتحها للتحقق من المجلد والخيارات."
+
+#: yaffo/routes/utilities/sync_text.py:157
+#, python-format
+msgid "%(num)d item didn't go through. See Items for why."
+msgid_plural "%(num)d items didn't go through. See Items for why."
+msgstr[0] "لم يكتمل نقل عنصر واحد (%(num)d). راجع قسم Items لمعرفة السبب."
+msgstr[1] "لم يكتمل نقل عنصرين (%(num)d). راجع قسم Items لمعرفة السبب."
+msgstr[2] "لم يكتمل نقل %(num)d عناصر. راجع قسم Items لمعرفة السبب."
+msgstr[3] "لم يكتمل نقل %(num)d عنصرًا. راجع قسم Items لمعرفة السبب."
+msgstr[4] "لم يكتمل نقل %(num)d عنصرًا. راجع قسم Items لمعرفة السبب."
+msgstr[5] "لم يكتمل نقل %(num)d عنصر. راجع قسم Items لمعرفة السبب."
+
+#: yaffo/routes/utilities/sync_text.py:162
+msgid "The service asked Yaffo to slow down. The next run carries on."
+msgstr "طلبت الخدمة من Yaffo الإبطاء. ستُستأنف العملية في التشغيل التالي."
+
+#: yaffo/routes/utilities/sync_text.py:164
+msgid "The account needs to sign in again."
+msgstr "يجب تسجيل الدخول إلى الحساب مجددًا."
+
+#: yaffo/routes/utilities/sync_text.py:166
+msgid "The run stopped because of an error in the service's code."
+msgstr "توقفت العملية بسبب خطأ في شفرة الخدمة."
+
+#: yaffo/routes/utilities/sync_text.py:168
+msgid "Something the sync reads from is gone at the service. It tries again later."
+msgstr "أحد المصادر التي تقرأ منها المزامنة لم يعد موجودًا على الخدمة. ستعيد المحاولة لاحقًا."
+
+#: yaffo/routes/utilities/sync_text.py:169 yaffo/routes/utilities/sync_text.py:180
+msgid "The run stopped early. The next run carries on."
+msgstr "توقفت العملية قبل اكتمالها. ستُستأنف في التشغيل التالي."
+
+#: yaffo/routes/utilities/sync_text.py:172
+msgid "The account needs to allow more access. Open the sync and sign in again."
+msgstr "يجب أن يسمح الحساب بوصول أوسع. افتح المزامنة وسجّل الدخول مجددًا."
+
+#: yaffo/routes/utilities/sync_text.py:174
+msgid "The sync has no account. Open it and sign in."
+msgstr "لا يوجد حساب مرتبط بالمزامنة. افتحها وسجّل الدخول."
+
+#: yaffo/routes/utilities/sync_text.py:175
+msgid "The account needs to sign in again. Open the sync and sign in."
+msgstr "يجب تسجيل الدخول إلى الحساب مجددًا. افتح المزامنة وسجّل الدخول."
+
+#: yaffo/routes/utilities/sync_text.py:177
+msgid "There isn't enough free space left to keep copying."
+msgstr "لم تعد هناك مساحة خالية كافية لمتابعة النسخ."
+
+#: yaffo/routes/utilities/sync_text.py:186
+msgid "Finish the setup below, then turn it on."
+msgstr "أكمل الإعداد أدناه، ثم شغّل المزامنة."
+
+#: yaffo/routes/utilities/sync_text.py:190
+msgid "This sync's setup can't be used. Check the folder and options."
+msgstr "لا يمكن استخدام إعداد هذه المزامنة. تحقق من المجلد والخيارات."
+
+#: yaffo/routes/utilities/sync_text.py:192
+msgid "Sign in again to continue."
+msgstr "سجّل الدخول مجددًا للمتابعة."
+
+#: yaffo/routes/utilities/sync_text.py:194
+msgid "Turned off."
+msgstr "متوقف."
+
+#: yaffo/routes/utilities/sync_text.py:195
+msgid "On."
+msgstr "قيد التشغيل."
+
+#: yaffo/routes/utilities/sync_text.py:200
+msgid "Imported"
+msgstr "تم الاستيراد"
+
+#: yaffo/routes/utilities/sync_text.py:201
+msgid "Already in library"
+msgstr "موجودة بالفعل في المكتبة"
+
+#: yaffo/routes/utilities/sync_text.py:203
+msgid "Deleted at source"
+msgstr "حُذف من المصدر"
+
+#: yaffo/routes/utilities/sync_text.py:204
+msgid "Sending"
+msgstr "جارٍ الإرسال"
+
+#: yaffo/routes/utilities/sync_text.py:205
+msgid "Written to folder"
+msgstr "كُتب في المجلد"
+
+#: yaffo/routes/utilities/sync_text.py:205
+msgid "Sent"
+msgstr "تم الإرسال"
+
+#: yaffo/routes/utilities/sync_text.py:207
+msgid "Removing"
+msgstr "جارٍ الإزالة"
+
+#: yaffo/routes/utilities/sync_text.py:208
+msgid "Removed"
+msgstr "تمت الإزالة"
+
+#: yaffo/routes/utilities/sync_text.py:209
+msgid "Deleted there"
+msgstr "حُذف هناك"
+
+#: yaffo/routes/utilities/sync_text.py:210
+msgid "Can't remove"
+msgstr "تعذّرت الإزالة"
+
+#: yaffo/routes/utilities/sync_text.py:218
+msgid "Not attempted yet; tried again on the next run."
+msgstr "لم تتم المحاولة بعد؛ ستُعاد المحاولة عند التشغيل التالي."
+
+#: yaffo/routes/utilities/sync_text.py:219
+msgid "The photo's file is missing."
+msgstr "ملف الصورة مفقود."
+
+#: yaffo/routes/utilities/sync_text.py:220
+msgid "This target doesn't take this kind of file."
+msgstr "هذا الهدف لا يقبل هذا النوع من الملفات."
+
+#: yaffo/routes/utilities/sync_text.py:221
+msgid "Couldn't convert it to JPEG."
+msgstr "تعذّر تحويله إلى JPEG."
+
+#: yaffo/routes/utilities/sync_text.py:222
+msgid "Couldn't copy the file."
+msgstr "تعذّر نسخ الملف."
+
+#: yaffo/routes/utilities/sync_text.py:223
+msgid "The device no longer shares this file."
+msgstr "لم يعد الجهاز يشارك هذا الملف."
+
+#: yaffo/routes/utilities/sync_text.py:224
+msgid "The copy was changed after Yaffo wrote it, so Yaffo left it alone."
+msgstr "تم تغيير النسخة بعد أن كتبها Yaffo، لذا تركها Yaffo كما هي."
+
+#: yaffo/routes/utilities/sync_text.py:225
+msgid "The service refused it."
+msgstr "رفضت الخدمة ذلك."
+
+#: yaffo/routes/utilities/sync_text.py:233
+msgid "That folder is inside your library. Choose one outside it."
+msgstr "هذا المجلد داخل مكتبتك. اختر مجلدًا خارجها."
+
+#: yaffo/routes/utilities/sync_text.py:234
+msgid "That folder contains your library. Choose a smaller one."
+msgstr "يحتوي هذا المجلد على مكتبتك. اختر مجلدًا أصغر."
+
+#: yaffo/routes/utilities/sync_text.py:235
+msgid "That folder is Yaffo's thumbnail folder. Choose another."
+msgstr "هذا المجلد هو مجلد الصور المصغّرة في Yaffo. اختر مجلدًا آخر."
+
+#: yaffo/routes/utilities/sync_text.py:236
+msgid "That folder is where a sync imports to. Choose another."
+msgstr "هذا هو المجلد الذي يستورد إليه المزامنة. اختر مجلدًا آخر."
+
+#: yaffo/routes/utilities/sync_text.py:237
+msgid "The import folder must be inside the media folder."
+msgstr "يجب أن يكون مجلد الاستيراد داخل مجلد الوسائط."
+
+#: yaffo/routes/utilities/sync_text.py:238
+msgid "Choose one of your media folders."
+msgstr "اختر أحد مجلدات الوسائط لديك."
+
+#: yaffo/routes/utilities/sync_text.py:239
+msgid "That media folder isn't connected."
+msgstr "مجلد الوسائط هذا غير متصل."
+
+#: yaffo/routes/utilities/sync_text.py:246
+msgid "Keep the source's folders"
+msgstr "الاحتفاظ بمجلدات المصدر"
+
+#: yaffo/routes/utilities/sync_text.py:247
+msgid "By year and month taken"
+msgstr "حسب سنة وشهر الالتقاط"
+
+#: yaffo/routes/utilities/sync_text.py:248
+msgid "By year taken"
+msgstr "حسب سنة الالتقاط"
+
+#: yaffo/routes/utilities/sync_text.py:249
+msgid "All in one folder"
+msgstr "كل الملفات في مجلد واحد"
+
+#: yaffo/routes/utilities/sync_text.py:260
+#, python-format
+msgid "%(root)s, in the same folders as at the source"
+msgstr "%(root)s، في المجلدات نفسها الموجودة في المصدر"
+
+#: yaffo/routes/utilities/sync_text.py:262
+#, python-format
+msgid "%(root)s, in a folder per year taken"
+msgstr "%(root)s، في مجلد لكل سنة التقاط"
+
+#: yaffo/routes/utilities/sync_text.py:264
+#, python-format
+msgid "%(root)s, all in one folder"
+msgstr "%(root)s، كلها في مجلد واحد"
+
+#: yaffo/routes/utilities/sync_text.py:265
+#, python-format
+msgid "%(root)s, in a folder per year and month taken"
+msgstr "%(root)s، في مجلد لكل سنة وشهر التقاط"
+
+#: yaffo/routes/utilities/sync_views.py:185
+#, python-format
+msgid "%(name)s (new)"
+msgstr "%(name)s (جديد)"
+
+#: yaffo/routes/utilities/sync_views.py:257
+msgid "When the album changes (after a minute's quiet)"
+msgstr "عند تغيّر الألبوم (بعد دقيقة من الهدوء)"
+
+#: yaffo/routes/utilities/sync_views.py:260
+msgid "When a sent photo is deleted from Yaffo"
+msgstr "عند حذف صورة مرسلة من Yaffo"
+
+#: yaffo/routes/utilities/sync_views.py:263
+msgid "When the device comes online (after a minute's quiet)"
+msgstr "عندما يصبح الجهاز متصلًا بالإنترنت (بعد دقيقة من الهدوء)"
+
+#: yaffo/routes/utilities/sync_views.py:292
+msgid "Copies new photos from"
+msgstr "ينسخ الصور الجديدة من"
+
+#: yaffo/routes/utilities/sync_views.py:293 yaffo/routes/utilities/sync_views.py:333
+#: yaffo/routes/utilities/sync_views.py:359
+msgid "Into"
+msgstr "إلى"
+
+#: yaffo/routes/utilities/sync_views.py:295 yaffo/routes/utilities/sync_views.py:335
+#: yaffo/routes/utilities/sync_views.py:361
+msgid "Already in your library"
+msgstr "موجودة بالفعل في مكتبتك"
+
+#: yaffo/routes/utilities/sync_views.py:295 yaffo/routes/utilities/sync_views.py:335
+#: yaffo/routes/utilities/sync_views.py:361
+msgid "Linked, not copied again"
+msgstr "مرتبط، ولا يُنسخ مرة أخرى"
+
+#: yaffo/routes/utilities/sync_views.py:296
+msgid "The originals"
+msgstr "الملفات الأصلية"
+
+#: yaffo/routes/utilities/sync_views.py:296
+msgid "Never changed or deleted"
+msgstr "لم تتغير أو تُحذف مطلقًا"
+
+#: yaffo/routes/utilities/sync_views.py:302 yaffo/routes/utilities/sync_views.py:377
+#, python-format
+msgid "The photos in the album %(album)s"
+msgstr "الصور في الألبوم %(album)s"
+
+#: yaffo/routes/utilities/sync_views.py:304 yaffo/routes/utilities/sync_views.py:379
+msgid "The photos selected by your custom rule"
+msgstr "الصور التي اختارتها قاعدتك المخصصة"
+
+#: yaffo/routes/utilities/sync_views.py:306 yaffo/routes/utilities/sync_views.py:381
+msgid "The photos matching your filter"
+msgstr "الصور المطابقة لمرشحك"
+
+#: yaffo/routes/utilities/sync_views.py:308
+msgid "JPEG copies, sized for a photo frame"
+msgstr "نسخ JPEG، بأحجام مناسبة لإطار الصور"
+
+#: yaffo/routes/utilities/sync_views.py:309
+msgid "JPEG copies"
+msgstr "نسخ JPEG"
+
+#: yaffo/routes/utilities/sync_views.py:309
+msgid "Copies of the originals"
+msgstr "نسخ من الملفات الأصلية"
+
+#: yaffo/routes/utilities/sync_views.py:311
+msgid "Its copy stays in the folder"
+msgstr "تبقى نسخته في المجلد"
+
+#: yaffo/routes/utilities/sync_views.py:313
+msgid "Yaffo deletes its copy, to the trash (only copies it wrote and nobody changed)"
+msgstr "ينقل Yaffo نسخته إلى سلة المهملات (فقط النسخ التي أنشأها ولم يغيّرها أحد)"
+
+#: yaffo/routes/utilities/sync_views.py:315 yaffo/routes/utilities/sync_views.py:383
+msgid "Sends"
+msgstr "يرسل"
+
+#: yaffo/routes/utilities/sync_views.py:316 yaffo/routes/utilities/sync_views.py:384
+msgid "To"
+msgstr "إلى"
+
+#: yaffo/routes/utilities/sync_views.py:317
+msgid "As"
+msgstr "بصيغة"
+
+#: yaffo/routes/utilities/sync_views.py:318
+msgid "If a photo leaves or is deleted"
+msgstr "إذا غادرت صورة أو حُذفت"
+
+#: yaffo/routes/utilities/sync_views.py:331 yaffo/routes/utilities/sync_views.py:357
+msgid "Copies new photos and videos from"
+msgstr "ينسخ الصور ومقاطع الفيديو الجديدة من"
+
+#: yaffo/routes/utilities/sync_views.py:332 yaffo/routes/utilities/sync_views.py:385
+msgid "Signed in as"
+msgstr "تم تسجيل الدخول باسم"
+
+#: yaffo/routes/utilities/sync_views.py:336
+#, python-format
+msgid "Deleted in %(service)s"
+msgstr "محذوف في %(service)s"
+
+#: yaffo/routes/utilities/sync_views.py:336 yaffo/routes/utilities/sync_views.py:364
+msgid "Kept in your library"
+msgstr "محتفَظ به في مكتبتك"
+
+#: yaffo/routes/utilities/sync_views.py:337 yaffo/routes/utilities/sync_views.py:386
+msgid "Yaffo talks to"
+msgstr "يتواصل Yaffo مع"
+
+#: yaffo/routes/utilities/sync_views.py:338
+#, python-format
+msgid "In %(service)s"
+msgstr "في %(service)s"
+
+#: yaffo/routes/utilities/sync_views.py:338 yaffo/routes/utilities/sync_views.py:365
+msgid "Nothing is changed or deleted"
+msgstr "لم يتم تغيير أي شيء أو حذفه"
+
+#: yaffo/routes/utilities/sync_views.py:351
+#, python-format
+msgid "On your network, over a direct connection, or through Yaffo's relay (up to %(num)s GB per run)"
+msgstr "على شبكتك، عبر اتصال مباشر، أو من خلال مُرحِّل Yaffo (حتى %(num)s غيغابايت لكل عملية)"
+
+#: yaffo/routes/utilities/sync_views.py:354
+msgid "Only on your network or over a direct connection"
+msgstr "على شبكتك فقط أو عبر اتصال مباشر"
+
+#: yaffo/routes/utilities/sync_views.py:355
+msgid "Only those matching your filters"
+msgstr "فقط تلك التي تطابق عوامل التصفية لديك"
+
+#: yaffo/routes/utilities/sync_views.py:355
+msgid "All of them"
+msgstr "كلها"
+
+#: yaffo/routes/utilities/sync_views.py:358
+msgid "Which ones"
+msgstr "أيّها؟"
+
+#: yaffo/routes/utilities/sync_views.py:362
+msgid "Copied"
+msgstr "تم النسخ"
+
+#: yaffo/routes/utilities/sync_views.py:363
+#, python-format
+msgid "Deleted or no longer shared on %(device)s"
+msgstr "حُذف أو لم يعد مشاركًا على %(device)s"
+
+#: yaffo/routes/utilities/sync_views.py:365
+#, python-format
+msgid "On %(device)s"
+msgstr "على %(device)s"
+
+#: yaffo/routes/utilities/sync_views.py:389 yaffo/routes/utilities/sync_views.py:392
+#: yaffo/routes/utilities/sync_views.py:395
+msgid "If a photo leaves the selection"
+msgstr "إذا خرجت صورة من التحديد"
+
+#: yaffo/routes/utilities/sync_views.py:390
+msgid "Removed from Yaffo's album; the upload stays in your Google Photos library"
+msgstr "أُزيلت من ألبوم Yaffo؛ ويظل التحميل في مكتبة صور Google Photos لديك"
+
+#: yaffo/routes/utilities/sync_views.py:393
+msgid "Yaffo deletes its unchanged copy from OneDrive"
+msgstr "يحذف Yaffo نسخته التي لم تتغير من OneDrive"
+
+#: yaffo/routes/utilities/sync_views.py:396
+msgid "Taken out of the album; a photo Yaffo uploaded also goes to Immich's trash"
+msgstr "أُزيلت من الألبوم؛ وتُنقل أيضًا أي صورة رفعها Yaffo إلى سلة مهملات Immich"
+
+#: yaffo/routes/utilities/sync_views.py:397
+msgid "Photos Immich already has"
+msgstr "الصور الموجودة بالفعل في Immich"
+
+#: yaffo/routes/utilities/sync_views.py:398
+msgid "Added to the album, not uploaded again"
+msgstr "أُضيفت إلى الألبوم، ولم تُرفع مرة أخرى"
+
+#: yaffo/routes/utilities/sync_views.py:400
+msgid "Cloud filenames"
+msgstr "أسماء ملفات السحابة"
+
+#: yaffo/routes/utilities/sync_views.py:401
+msgid "Include a Yaffo id so an interrupted upload is not duplicated"
+msgstr "ضمّن معرّف Yaffo حتى لا يتكرر التحميل إذا انقطع"
+
+#: yaffo/routes/utilities/sync_views.py:410
+msgid "Sign in"
+msgstr "تسجيل الدخول"
+
+#: yaffo/routes/utilities/sync_views.py:413
+msgid "Choose where in your library the photos go"
+msgstr "اختر مكان حفظ الصور في مكتبتك"
+
+#: yaffo/routes/utilities/sync_views.py:415 yaffo/templates/utilities/sync_detail.html:327
+msgid "Choose what to send"
+msgstr "اختر ما تريد إرساله"
+
+#: yaffo/routes/utilities/sync_views.py:417
+msgid "Publish the custom rule"
+msgstr "انشر القاعدة المخصصة"
+
+#: yaffo/routes/utilities/sync_views.py:419
+msgid "Choose a folder to import from"
+msgstr "اختر مجلدًا للاستيراد منه"
+
+#: yaffo/routes/utilities/sync_views.py:420
+msgid "Choose a destination folder"
+msgstr "اختر مجلد الوجهة"
+
+#: yaffo/routes/utilities/sync_views.py:422
+msgid "Choose a folder to copy from"
+msgstr "اختر مجلدًا للنسخ منه"
+
+#: yaffo/routes/utilities/sync_views.py:423
+msgid "Choose a folder outside your library"
+msgstr "اختر مجلدًا خارج مكتبتك"
+
+#: yaffo/routes/utilities/sync_views.py:425
+msgid "Choose a paired device"
+msgstr "اختر جهازًا مقترنًا"
+
+#: yaffo/routes/utilities/sync_views.py:427
+msgid "Choose what to import from the device"
+msgstr "اختر ما تريد استيراده من الجهاز"
+
+#: yaffo/routes/utilities/sync_views.py:429
+msgid "Finish the folder and options"
+msgstr "أكمل إعداد المجلد والخيارات"
+
+#: yaffo/routes/utilities/sync_views.py:511 yaffo/templates/utilities/sync_detail.html:303
+#: yaffo/templates/utilities/sync_detail.html:352
+msgid "Photos matching a filter"
+msgstr "الصور المطابقة لمرشح"
+
+#: yaffo/routes/utilities/sync_views.py:513
+#, python-format
+msgid "Everything in %(scope)s"
+msgstr "كل ما في %(scope)s"
+
+#: yaffo/routes/utilities/sync_views.py:513
+msgid "Everything it shares"
+msgstr "كل ما يشاركه"
+
+#: yaffo/routes/utilities/sync_views.py:527
+#, python-format
+msgid "The album %(album)s"
+msgstr "الألبوم %(album)s"
+
+#: yaffo/routes/utilities/sync_views.py:527
+msgid "A deleted album"
+msgstr "ألبوم محذوف"
+
+#: yaffo/routes/utilities/sync_views.py:529
+msgid "Custom rule"
+msgstr "قاعدة مخصصة"
+
+#: yaffo/routes/utilities/sync_views.py:530
+#, python-format
+msgid "Photos matching a filter (%(num)d now)"
+msgid_plural "Photos matching a filter (%(num)d now)"
+msgstr[0] "الصور المطابقة لمرشح (الآن %(num)d)"
+msgstr[1] "الصور المطابقة لمرشح (الآن %(num)d)"
+msgstr[2] "الصور المطابقة لمرشح (الآن %(num)d)"
+msgstr[3] "الصور المطابقة لمرشح (الآن %(num)d)"
+msgstr[4] "الصور المطابقة لمرشح (الآن %(num)d)"
+msgstr[5] "الصور المطابقة لمرشح (الآن %(num)d)"
+
+#: yaffo/routes/utilities/sync_views.py:539 yaffo/routes/utilities/sync_views.py:544
+#: yaffo/routes/utilities/sync_views.py:555
+#, python-format
+msgid "Imports new photos from %(source)s"
+msgstr "يستورد الصور الجديدة من %(source)s"
+
+#: yaffo/routes/utilities/sync_views.py:540
+msgid "Copies new photos from a paired device into your library."
+msgstr "ينسخ الصور الجديدة من جهاز مقترن إلى مكتبتك."
+
+#: yaffo/routes/utilities/sync_views.py:546
+#, python-format
+msgid "Imports new photos from %(service)s into your library."
+msgstr "يستورد الصور الجديدة من %(service)s إلى مكتبتك."
+
+#: yaffo/routes/utilities/sync_views.py:550
+#, python-format
+msgid "%(what)s → %(destination)s"
+msgstr "%(what)s → %(destination)s"
+
+#: yaffo/routes/utilities/sync_views.py:550
+msgid "Selected photos"
+msgstr "الصور المحددة"
+
+#: yaffo/routes/utilities/sync_views.py:556
+msgid "Copies new photos from a folder into your library."
+msgstr "ينسخ الصور الجديدة من مجلد إلى مكتبتك."
+
+#: yaffo/routes/utilities/sync_views.py:558
+#, python-format
+msgid "%(what)s → %(folder)s"
+msgstr "%(what)s → %(folder)s"
+
+#: yaffo/routes/utilities/sync_views.py:559
+msgid "Keeps an album or a filter's photos copied to a folder."
+msgstr "يُبقي صور ألبوم أو عامل تصفية منسوخة إلى مجلد."
+
+#: yaffo/routes/utilities/sync_views.py:637
+msgid "sent as JPEG"
+msgstr "أُرسلت بصيغة JPEG"
+
+#: yaffo/routes/utilities/sync_views.py:794
+#, python-format
+msgid "Could not ask the device: %(reason)s"
+msgstr "تعذّر طلب الجهاز: %(reason)s"
+
+#: yaffo/routes/utilities/sync_views.py:796
+msgid "The device didn't answer. Is it online?"
+msgstr "لم يستجب الجهاز. هل هو متصل بالإنترنت؟"
+
+#: yaffo/routes/utilities/sync_views.py:922 yaffo/routes/utilities/sync_views.py:942
+msgid "Finish the setup first."
+msgstr "أكمل الإعداد أولاً."
+
+#: yaffo/routes/utilities/sync_views.py:924
+msgid "This sync's setup can't be used."
+msgstr "لا يمكن استخدام إعدادات هذه المزامنة."
+
+#: yaffo/routes/utilities/sync_views.py:926
+msgid "The folder isn't connected."
+msgstr "المجلد غير متصل."
+
+#: yaffo/routes/utilities/sync_views.py:932
+msgid "The service didn't answer as expected. Try again in a while."
+msgstr "لم تستجب الخدمة كما هو متوقع. حاول مرة أخرى بعد قليل."
+
+#: yaffo/routes/utilities/sync_views.py:940
+msgid "Choose an album."
+msgstr "اختر ألبوماً."
+
+#: yaffo/routes/utilities/sync_views.py:941
+msgid "Set at least one filter first."
+msgstr "عيّن عاملاً واحداً على الأقل أولاً."
+
+#: yaffo/routes/utilities/sync_views.py:943
+msgid "Fill in the required fields."
+msgstr "املأ الحقول المطلوبة."
+
+#: yaffo/routes/utilities/sync_views.py:944
+msgid "Choose a folder with the folder picker."
+msgstr "اختر مجلداً باستخدام أداة اختيار المجلدات."
+
+#: yaffo/routes/utilities/sync_views.py:945
+msgid "Use Choose… to select a device, folder, or album."
+msgstr "استخدم «اختيار…» لتحديد جهاز أو مجلد أو ألبوم."
+
+#: yaffo/routes/utilities/sync_views.py:946
+msgid "Give the new album a name of at most 200 characters."
+msgstr "امنح الألبوم الجديد اسماً لا يتجاوز 200 حرف."
+
+#: yaffo/routes/utilities/sync_views.py:947
+msgid "Choose how to arrange the photos."
+msgstr "اختر طريقة ترتيب الصور."
+
+#: yaffo/routes/utilities/sync_views.py:948
+msgid "The sign-in didn't complete. Try again."
+msgstr "لم يكتمل تسجيل الدخول. حاول مرة أخرى."
+
+#: yaffo/routes/utilities/sync_views.py:949
+msgid "That account isn't available any more."
+msgstr "لم يعد هذا الحساب متاحاً."
+
+#: yaffo/routes/utilities/sync_views.py:950
+msgid "Enter the server's address."
+msgstr "أدخل عنوان الخادم."
+
+#: yaffo/routes/utilities/sync_views.py:951
+msgid "That isn't a server address. Enter one like https://photos.example.com."
+msgstr "هذا ليس عنوان خادم. أدخل عنوانًا مثل https://photos.example.com."
+
+#: yaffo/routes/utilities/sync_views.py:952
+msgid "Enter only the server's address, without a path."
+msgstr "أدخل عنوان الخادم فقط، من دون مسار."
+
+#: yaffo/routes/utilities/sync_views.py:953
+msgid "A server on the internet must use https."
+msgstr "يجب أن يستخدم الخادم المتصل بالإنترنت بروتوكول https."
+
+#: yaffo/routes/utilities/sync_views.py:954
+msgid "This server uses http. Confirm the warning to connect to it anyway."
+msgstr "يستخدم هذا الخادم بروتوكول http. أكّد التحذير للاتصال به على أي حال."
+
+#: yaffo/routes/utilities/sync_views.py:955
+msgid "Enter the key."
+msgstr "أدخل المفتاح."
+
+#: yaffo/routes/utilities/sync_views.py:956
+msgid "That key can't be right: it's too long or has line breaks."
+msgstr "لا يمكن أن يكون هذا المفتاح صحيحًا: فهو طويل جدًا أو يحتوي على فواصل أسطر."
+
+#: yaffo/routes/utilities/sync_views.py:957
+msgid "Enter the username."
+msgstr "أدخل اسم المستخدم."
+
+#: yaffo/routes/utilities/sync_views.py:958
+msgid "Enter the password."
+msgstr "أدخل كلمة المرور."
+
+#: yaffo/routes/utilities/sync_views.py:959
+msgid "That username can't be right."
+msgstr "لا يمكن أن يكون اسم المستخدم هذا صحيحًا."
+
+#: yaffo/routes/utilities/sync_views.py:960
+msgid "That password can't be right."
+msgstr "لا يمكن أن تكون كلمة المرور هذه صحيحة."
+
+#: yaffo/routes/utilities/sync_views.py:961
+msgid "The service refused that key or password."
+msgstr "رفضت الخدمة هذا المفتاح أو كلمة المرور."
+
+#: yaffo/routes/utilities/sync_views.py:962
+msgid "Yaffo couldn't reach the server. Check the address and that it's running."
+msgstr "تعذّر على Yaffo الوصول إلى الخادم. تحقّق من العنوان ومن أن الخادم يعمل."
+
+#: yaffo/routes/utilities/sync_views.py:963
+msgid ""
+"The server didn't answer a secure (https) connection. If it uses http on your home network, enter"
+" its address starting with http://."
+msgstr ""
+"لم يستجب الخادم لاتصال آمن (https). إذا كان يستخدم http على شبكتك المنزلية، فأدخل عنوانه بدءًا بـ"
+" http://."
+
+#: yaffo/routes/utilities/sync_views.py:965
+msgid "The server answered, but not as expected. Check the address."
+msgstr "استجاب الخادم، لكن ليس بالشكل المتوقع. تحقّق من العنوان."
+
+#: yaffo/site_agents/llm_config.py:198
 msgid "Claude Opus 4.8 — most capable"
 msgstr "كلود أوبوس 4.8 – الأكثر قدرة"
 
-#: yaffo/site_agents/llm_config.py:190
+#: yaffo/site_agents/llm_config.py:199
 msgid "Claude Sonnet 4.6 — balanced"
 msgstr "كلود سونيت 4.6 – متوازن"
 
-#: yaffo/site_agents/llm_config.py:191
+#: yaffo/site_agents/llm_config.py:200
 msgid "Claude Haiku 4.5 — fastest"
 msgstr "كلود هايكو 4.5 – الأسرع"
 
@@ -1866,6 +2942,38 @@ msgstr[5] "%(num)d مهمة قبلها."
 #, python-format
 msgid "Starts in about %(time)s."
 msgstr "يبدأ خلال %(time)s تقريبًا."
+
+#: yaffo/sync/peer_source.py:153
+msgid "No paired devices yet. Pair one on the Sharing page first."
+msgstr "لا توجد أجهزة مقترنة بعد. أقرن جهازًا أولًا من صفحة المشاركة."
+
+#: yaffo/sync/peer_source.py:159
+msgid "Choose a device first."
+msgstr "اختر جهازًا أولًا."
+
+#: yaffo/sync/peer_source.py:162
+msgid "This device doesn't share anything with this one yet."
+msgstr "هذا الجهاز لا يشارك أي شيء مع هذا الجهاز بعد."
+
+#: yaffo/sync/peer_source.py:167
+msgid "Device sharing is off."
+msgstr "مشاركة الأجهزة متوقفة."
+
+#: yaffo/sync/peer_source.py:169
+msgid "This device isn't paired with this one any more."
+msgstr "لم يعد هذا الجهاز مقترنًا بهذا الجهاز."
+
+#: yaffo/sync/peer_source.py:171
+msgid "The device isn't reachable. Open Yaffo on it and try again."
+msgstr "يتعذّر الوصول إلى الجهاز. افتح Yaffo عليه وحاول مرة أخرى."
+
+#: yaffo/sync/peer_source.py:172
+msgid "Couldn't ask the device. Try again."
+msgstr "تعذّر إرسال الطلب إلى الجهاز. حاول مرة أخرى."
+
+#: yaffo/sync/peer_source.py:173
+msgid "Nothing to choose here."
+msgstr "لا يوجد شيء للاختيار هنا."
 
 #: yaffo/templates/404.html:3
 msgid "Page not found - Yaffo"
@@ -1942,7 +3050,7 @@ msgstr[5] "%(shown)s أغراض"
 msgid "Type to search…"
 msgstr "اكتب للبحث..."
 
-#: yaffo/templates/base.html:4 yaffo/templates/faces/index.html:284
+#: yaffo/templates/base.html:4 yaffo/templates/faces/index.html:283
 #: yaffo/templates/pages/widget_frame.html:4
 msgid "No results found"
 msgstr "لم يتم العثور على نتائج"
@@ -1989,8 +3097,8 @@ msgstr "الناس"
 msgid "Locations"
 msgstr "المواقع"
 
-#: yaffo/templates/base.html:145 yaffo/templates/utilities/_base.html:34
-#: yaffo/templates/utilities/_base.html:42
+#: yaffo/templates/base.html:145 yaffo/templates/utilities/_base.html:79
+#: yaffo/templates/utilities/_base.html:87
 msgid "Library"
 msgstr "المكتبة"
 
@@ -2022,7 +3130,7 @@ msgstr "صفحة جديدة"
 
 #: yaffo/templates/assistant/_panel.html:31 yaffo/templates/base.html:209
 #: yaffo/templates/components/info_modal.html:6 yaffo/templates/components/info_modal.html:12
-#: yaffo/templates/components/modal.html:9
+#: yaffo/templates/components/modal.html:9 yaffo/templates/utilities/sync_detail.html:427
 msgid "Close"
 msgstr "يغلق"
 
@@ -2038,8 +3146,10 @@ msgstr "أعلى"
 #: yaffo/templates/components/chat_dialog.html:39 yaffo/templates/components/modal.html:17
 #: yaffo/templates/components/run_history.html:40 yaffo/templates/fragments/job_status_fragment.html:46
 #: yaffo/templates/sharing/_transfers_panel.html:41
-#: yaffo/templates/utilities/automations_triggers.html:119
-#: yaffo/templates/utilities/automations_triggers.html:139
+#: yaffo/templates/utilities/automations_triggers.html:125
+#: yaffo/templates/utilities/automations_triggers.html:145
+#: yaffo/templates/utilities/sync_detail.html:79 yaffo/templates/utilities/sync_filter.html:31
+#: yaffo/templates/utilities/sync_peer_filter.html:33
 msgid "Cancel"
 msgstr "يلغي"
 
@@ -2088,6 +3198,7 @@ msgid "Photo Library"
 msgstr "مكتبة الصور"
 
 #: yaffo/templates/albums/add.html:97 yaffo/templates/index.html:50 yaffo/templates/index.html:145
+#: yaffo/templates/utilities/sync_filter.html:71 yaffo/templates/utilities/sync_peer_filter.html:74
 msgid "No photos found"
 msgstr "لم يتم العثور على صور"
 
@@ -2122,11 +3233,11 @@ msgid "Try adjusting your filters or check back later."
 msgstr "حاول تعديل عوامل التصفية أو التحقق مرة أخرى لاحقًا."
 
 #: yaffo/templates/albums/_base.html:13 yaffo/templates/albums/album.html:33
-#: yaffo/templates/components/photo_card.html:36 yaffo/templates/people/list.html:24
-#: yaffo/templates/people/list.html:35 yaffo/templates/people/list.html:85
-#: yaffo/templates/sharing/files.html:124 yaffo/templates/themes_page/index.html:124
-#: yaffo/templates/themes_page/index.html:136 yaffo/templates/utilities/_base.html:11
-#: yaffo/templates/utilities/automations.html:8
+#: yaffo/templates/components/photo_card.html:36 yaffo/templates/macros/automation_forms.html:4
+#: yaffo/templates/people/list.html:24 yaffo/templates/people/list.html:35
+#: yaffo/templates/people/list.html:85 yaffo/templates/sharing/files.html:124
+#: yaffo/templates/themes_page/index.html:124 yaffo/templates/themes_page/index.html:136
+#: yaffo/templates/utilities/_base.html:53 yaffo/templates/utilities/sync_service.html:122
 msgid "Name"
 msgstr "اسم"
 
@@ -2135,7 +3246,7 @@ msgid "e.g. Summer 2024, Grandma’s 80th"
 msgstr "على سبيل المثال صيف 2024، الذكرى الثمانون للجدة"
 
 #: yaffo/templates/albums/_base.html:18 yaffo/templates/albums/album.html:37
-#: yaffo/templates/utilities/automations.html:12
+#: yaffo/templates/macros/automation_forms.html:8
 msgid "Description"
 msgstr "وصف"
 
@@ -2164,7 +3275,7 @@ msgid "New Album"
 msgstr "ألبوم جديد"
 
 #: yaffo/templates/albums/_base.html:68 yaffo/templates/themes_page/index.html:131
-#: yaffo/templates/utilities/_base.html:91
+#: yaffo/templates/utilities/_base.html:158
 msgid "Create"
 msgstr "يخلق"
 
@@ -2174,6 +3285,7 @@ msgid "Add photos to %(album)s - Yaffo"
 msgstr "إضافة الصور إلى %(album)s - يافا"
 
 #: yaffo/templates/albums/add.html:31 yaffo/templates/albums/album.html:88
+#: yaffo/templates/components/collapsible_panel.html:7
 msgid "Done"
 msgstr "منتهي"
 
@@ -2213,13 +3325,13 @@ msgid "Add photos"
 msgstr "إضافة الصور"
 
 #: yaffo/templates/albums/add.html:66 yaffo/templates/albums/album.html:110
-#: yaffo/templates/components/photo_card.html:16
+#: yaffo/templates/components/photo_card.html:16 yaffo/templates/utilities/sync_filter.html:56
 #, python-format
 msgid "Video from %(date)s"
 msgstr "فيديو من %(date)s"
 
 #: yaffo/templates/albums/add.html:70 yaffo/templates/albums/album.html:114
-#: yaffo/templates/components/photo_card.html:32
+#: yaffo/templates/components/photo_card.html:32 yaffo/templates/utilities/sync_filter.html:60
 #, python-format
 msgid "Photo from %(date)s"
 msgstr "صورة من %(date)s"
@@ -2233,6 +3345,7 @@ msgid "Every photo matching these filters is already in this album. Adjust the f
 msgstr "كل صورة تطابق هذه المرشحات موجودة بالفعل في هذا الألبوم. اضبط المرشحات للعثور على المزيد."
 
 #: yaffo/templates/albums/add.html:98 yaffo/templates/people/faces.html:109
+#: yaffo/templates/utilities/sync_filter.html:72 yaffo/templates/utilities/sync_peer_filter.html:75
 msgid "Try adjusting your filters."
 msgstr "حاول تعديل المرشحات الخاصة بك."
 
@@ -2263,17 +3376,18 @@ msgid "Delete %(album)s? The album and its contents list go away — the photos 
 msgstr "يمسح %(album)s؟ يختفي الألبوم وقائمة محتوياته — ولا يتم حذف الصور نفسها."
 
 #: yaffo/templates/albums/album.html:50 yaffo/templates/people/list.html:61
-#: yaffo/templates/utilities/automations.html:92 yaffo/templates/utilities/automations_edit.html:15
-#: yaffo/templates/utilities/automations_triggers.html:37
+#: yaffo/templates/utilities/automations.html:83 yaffo/templates/utilities/automations_edit.html:15
+#: yaffo/templates/utilities/automations_triggers.html:46
 msgid "Edit"
 msgstr "يحرر"
 
-#: yaffo/templates/albums/album.html:53 yaffo/templates/utilities/automations.html:101
+#: yaffo/templates/albums/album.html:53 yaffo/templates/utilities/automations.html:86
+#: yaffo/templates/utilities/sync_detail.html:133
 msgid "Edit details"
 msgstr "تحرير التفاصيل"
 
 #: yaffo/templates/albums/album.html:56 yaffo/templates/albums/album.html:148
-#: yaffo/templates/sharing/_device_panel.html:106
+#: yaffo/templates/sharing/_device_panel.html:119
 msgid "Share"
 msgstr "يشارك"
 
@@ -2284,9 +3398,9 @@ msgstr "هل تريد حذف الألبوم؟"
 #: yaffo/templates/albums/album.html:61 yaffo/templates/albums/album.html:62
 #: yaffo/templates/people/list.html:65 yaffo/templates/sharing/_device_content.html:35
 #: yaffo/templates/sharing/_device_content.html:37 yaffo/templates/themes_page/index.html:75
-#: yaffo/templates/utilities/automations.html:104
-#: yaffo/templates/utilities/automations_triggers.html:46
+#: yaffo/templates/utilities/automations.html:89 yaffo/templates/utilities/automations_triggers.html:51
 #: yaffo/templates/utilities/remove_duplicates_form.html:49
+#: yaffo/templates/utilities/sync_detail.html:134 yaffo/templates/utilities/sync_service.html:73
 msgid "Delete"
 msgstr "يمسح"
 
@@ -2313,7 +3427,8 @@ msgid "Remove the selected photos from this album? The photos themselves are not
 msgstr "هل تريد إزالة الصور المحددة من هذا الألبوم؟ لا يتم حذف الصور نفسها."
 
 #: yaffo/templates/albums/album.html:86 yaffo/templates/settings/index.html:29
-#: yaffo/templates/utilities/automations_triggers.html:59
+#: yaffo/templates/utilities/automations_triggers.html:65
+#: yaffo/templates/utilities/sync_service.html:136
 msgid "Remove"
 msgstr "يزيل"
 
@@ -2349,8 +3464,10 @@ msgstr "تحرير الألبوم"
 #: yaffo/templates/filters/_config_modal.html:22 yaffo/templates/pages/design.html:38
 #: yaffo/templates/settings/_llm_api_key.html:19 yaffo/templates/settings/index.html:112
 #: yaffo/templates/settings/index.html:131 yaffo/templates/sharing/_download_directory_panel.html:18
-#: yaffo/templates/themes_page/index.html:143 yaffo/templates/utilities/automations.html:128
-#: yaffo/templates/utilities/automations.html:133
+#: yaffo/templates/themes_page/index.html:143 yaffo/templates/utilities/automations.html:110
+#: yaffo/templates/utilities/automations.html:124 yaffo/templates/utilities/sync_detail.html:275
+#: yaffo/templates/utilities/sync_detail.html:313 yaffo/templates/utilities/sync_detail.html:413
+#: yaffo/templates/utilities/sync_detail.html:486
 msgid "Save"
 msgstr "يحفظ"
 
@@ -2460,6 +3577,10 @@ msgstr "جارٍ الإنشاء…"
 msgid "Send"
 msgstr "يرسل"
 
+#: yaffo/templates/components/collapsible_panel.html:7
+msgid "To do"
+msgstr "المهام"
+
 #: yaffo/templates/components/distance_input.html:11
 msgid "Distance unit"
 msgstr "وحدة المسافة"
@@ -2482,8 +3603,9 @@ msgstr "أدخل مسار الدليل"
 msgid "Directory"
 msgstr "دليل"
 
-#: yaffo/templates/components/file_browser.html:14 yaffo/templates/sharing/_device_panel.html:87
+#: yaffo/templates/components/file_browser.html:14 yaffo/templates/sharing/_device_panel.html:100
 #: yaffo/templates/sharing/_download_directory_panel.html:16
+#: yaffo/templates/utilities/sync_detail.html:32
 msgid "Browse…"
 msgstr "تصفح…"
 
@@ -2498,13 +3620,13 @@ msgstr "العناصر لكل صفحة:"
 
 #: yaffo/templates/components/htmx_pagination.html:44
 #: yaffo/templates/components/htmx_pagination.html:52 yaffo/templates/components/pagination.html:52
-#: yaffo/templates/components/pagination.html:54 yaffo/templates/faces/index.html:268
+#: yaffo/templates/components/pagination.html:54 yaffo/templates/faces/index.html:267
 msgid "First"
 msgstr "أولاً"
 
 #: yaffo/templates/components/htmx_pagination.html:55
 #: yaffo/templates/components/htmx_pagination.html:63 yaffo/templates/components/pagination.html:59
-#: yaffo/templates/components/pagination.html:61 yaffo/templates/faces/index.html:270
+#: yaffo/templates/components/pagination.html:61 yaffo/templates/faces/index.html:269
 msgid "Previous"
 msgstr "سابق"
 
@@ -2515,13 +3637,13 @@ msgstr "صفحة %(page)s ل %(total)s"
 
 #: yaffo/templates/components/htmx_pagination.html:72
 #: yaffo/templates/components/htmx_pagination.html:80 yaffo/templates/components/pagination.html:72
-#: yaffo/templates/components/pagination.html:74 yaffo/templates/faces/index.html:273
+#: yaffo/templates/components/pagination.html:74 yaffo/templates/faces/index.html:272
 msgid "Next"
 msgstr "التالي"
 
 #: yaffo/templates/components/htmx_pagination.html:83
 #: yaffo/templates/components/htmx_pagination.html:91 yaffo/templates/components/pagination.html:79
-#: yaffo/templates/components/pagination.html:81 yaffo/templates/faces/index.html:275
+#: yaffo/templates/components/pagination.html:81 yaffo/templates/faces/index.html:274
 msgid "Last"
 msgstr "آخر"
 
@@ -2546,6 +3668,7 @@ msgid "Play video"
 msgstr "تشغيل الفيديو"
 
 #: yaffo/templates/components/photo_card.html:45 yaffo/templates/sharing/files.html:132
+#: yaffo/templates/utilities/_service_test_result.html:36
 msgid "Taken"
 msgstr "مأخوذ"
 
@@ -2579,9 +3702,17 @@ msgid "%(count)s selected"
 msgstr "%(count)s مختارة"
 
 #: yaffo/templates/components/selection_bar.html:29 yaffo/templates/components/selection_bar.html:30
-#: yaffo/templates/faces/index.html:242 yaffo/templates/people/faces.html:60
+#: yaffo/templates/faces/index.html:241 yaffo/templates/people/faces.html:60
 msgid "Clear selection"
 msgstr "مسح التحديد"
+
+#: yaffo/templates/components/switch.html:12 yaffo/templates/utilities/_base.html:70
+msgid "On"
+msgstr "على"
+
+#: yaffo/templates/components/switch.html:12
+msgid "Off"
+msgstr "متوقف"
 
 #: yaffo/templates/demo/feature_disabled.html:6
 msgid "Public demo · Yaffo"
@@ -2693,15 +3824,15 @@ msgstr "انقر"
 msgid "Select range of faces"
 msgstr "حدد مجموعة من الوجوه"
 
-#: yaffo/templates/faces/index.html:51 yaffo/templates/faces/index.html:200
+#: yaffo/templates/faces/index.html:51 yaffo/templates/faces/index.html:199
 msgid "Assign to selected person"
 msgstr "تعيين للشخص المحدد"
 
-#: yaffo/templates/faces/index.html:54 yaffo/templates/faces/index.html:203
+#: yaffo/templates/faces/index.html:54 yaffo/templates/faces/index.html:202
 msgid "or"
 msgstr "أو"
 
-#: yaffo/templates/faces/index.html:55 yaffo/templates/faces/index.html:204
+#: yaffo/templates/faces/index.html:55 yaffo/templates/faces/index.html:203
 msgid "Ignore selected faces"
 msgstr "تجاهل الوجوه المحددة"
 
@@ -2755,40 +3886,40 @@ msgstr "عتبة التشابه"
 msgid "Faces to analyze"
 msgstr "وجوه للتحليل"
 
-#: yaffo/templates/faces/index.html:162
+#: yaffo/templates/faces/index.html:161
 msgid "Assign to Person"
 msgstr "تعيين لشخص"
 
-#: yaffo/templates/faces/index.html:164
+#: yaffo/templates/faces/index.html:163
 msgid "Select person"
 msgstr "حدد الشخص"
 
-#: yaffo/templates/faces/index.html:170
+#: yaffo/templates/faces/index.html:169
 msgid "Assign Selected"
 msgstr "تعيين المحدد"
 
-#: yaffo/templates/faces/index.html:172
+#: yaffo/templates/faces/index.html:171
 msgid "Ignore Selected"
 msgstr "تجاهل المحدد"
 
-#: yaffo/templates/faces/index.html:184
+#: yaffo/templates/faces/index.html:183
 msgid "Create Person"
 msgstr "إنشاء شخص"
 
-#: yaffo/templates/faces/index.html:192 yaffo/templates/faces/index.html:194
-#: yaffo/templates/faces/index.html:195 yaffo/templates/faces/index.html:298
+#: yaffo/templates/faces/index.html:191 yaffo/templates/faces/index.html:193
+#: yaffo/templates/faces/index.html:194 yaffo/templates/faces/index.html:297
 msgid "Keyboard Shortcuts:"
 msgstr "اختصارات لوحة المفاتيح:"
 
-#: yaffo/templates/faces/index.html:209
+#: yaffo/templates/faces/index.html:208
 msgid "Press <kbd>?</kbd> for help"
 msgstr "يضعط <kbd>?</kbd> للمساعدة"
 
-#: yaffo/templates/faces/index.html:217
+#: yaffo/templates/faces/index.html:216
 msgid "Unassigned Faces"
 msgstr "وجوه غير مخصصة"
 
-#: yaffo/templates/faces/index.html:218
+#: yaffo/templates/faces/index.html:217
 #, python-format
 msgid "Showing %(shown)s of %(total)s unassigned face"
 msgid_plural "Showing %(shown)s of %(total)s unassigned faces"
@@ -2799,7 +3930,7 @@ msgstr[3] "عرض %(shown)s ل %(total)s وجوه غير مخصصة"
 msgstr[4] "عرض %(shown)s ل %(total)s وجوه غير مخصصة"
 msgstr[5] "عرض %(shown)s ل %(total)s وجوه غير مخصصة"
 
-#: yaffo/templates/faces/index.html:230
+#: yaffo/templates/faces/index.html:229
 #, python-format
 msgid "%(formatted_count)s face"
 msgid_plural "%(formatted_count)s faces"
@@ -2810,25 +3941,25 @@ msgstr[3] "%(formatted_count)s وجوه"
 msgstr[4] "%(formatted_count)s وجوه"
 msgstr[5] "%(formatted_count)s وجوه"
 
-#: yaffo/templates/faces/index.html:241
+#: yaffo/templates/faces/index.html:240
 #, python-format
 msgid "Select all %(count)s faces"
 msgstr "حدد الكل %(count)s وجوه"
 
-#: yaffo/templates/faces/index.html:244
+#: yaffo/templates/faces/index.html:243
 msgid "Shuffle"
 msgstr "خلط"
 
-#: yaffo/templates/faces/index.html:248
+#: yaffo/templates/faces/index.html:247
 #, python-format
 msgid "Assign to %(person)s"
 msgstr "تعيين ل %(person)s"
 
-#: yaffo/templates/faces/index.html:250
+#: yaffo/templates/faces/index.html:249
 msgid "Skip cluster"
 msgstr "تخطي الكتلة"
 
-#: yaffo/templates/faces/index.html:259
+#: yaffo/templates/faces/index.html:258
 #, python-format
 msgid "Showing <span class=\"sample-range\">0</span> of %(total)s face"
 msgid_plural "Showing <span class=\"sample-range\">0</span> of %(total)s faces"
@@ -2839,23 +3970,23 @@ msgstr[3] "عرض <span class=\"sample-range\">0</span> ل %(total)s وجوه"
 msgstr[4] "عرض <span class=\"sample-range\">0</span> ل %(total)s وجوه"
 msgstr[5] "عرض <span class=\"sample-range\">0</span> ل %(total)s وجوه"
 
-#: yaffo/templates/faces/index.html:271
+#: yaffo/templates/faces/index.html:270
 msgid "Page 1 of 1"
 msgstr "الصفحة 1 من 1"
 
-#: yaffo/templates/faces/index.html:285
+#: yaffo/templates/faces/index.html:284
 msgid "Double-check the applied filters or decrease the similarity threshold."
 msgstr "تحقق مرة أخرى من عوامل التصفية المطبقة أو قم بتقليل حد التشابه."
 
-#: yaffo/templates/faces/index.html:290
+#: yaffo/templates/faces/index.html:289
 msgid "All Faces Assigned!"
 msgstr "تم تعيين جميع الوجوه!"
 
-#: yaffo/templates/faces/index.html:291
+#: yaffo/templates/faces/index.html:290
 msgid "There isn't anything for you to do here."
 msgstr "ليس هناك أي شيء لتفعله هنا."
 
-#: yaffo/templates/faces/index.html:297
+#: yaffo/templates/faces/index.html:296
 msgid "Help"
 msgstr "يساعد"
 
@@ -2896,7 +4027,7 @@ msgstr "جنس"
 msgid "All Genders"
 msgstr "جميع الأجناس"
 
-#: yaffo/templates/filters/_labels.html:4
+#: yaffo/templates/filters/_labels.html:4 yaffo/templates/utilities/_service_test_result.html:26
 msgid "Label"
 msgstr "ملصق"
 
@@ -2979,7 +4110,7 @@ msgstr "كل الشهور"
 msgid "Page Size"
 msgstr "حجم الصفحة"
 
-#: yaffo/templates/filters/_path.html:2
+#: yaffo/templates/filters/_path.html:2 yaffo/templates/utilities/_service_test_result.html:36
 msgid "File"
 msgstr "ملف"
 
@@ -3032,7 +4163,7 @@ msgstr "مربع"
 msgid "Tag Name"
 msgstr "اسم العلامة"
 
-#: yaffo/templates/filters/_tags.html:5
+#: yaffo/templates/filters/_tags.html:5 yaffo/templates/utilities/sync_items.html:13
 msgid "All"
 msgstr "الجميع"
 
@@ -3076,6 +4207,10 @@ msgstr "مواقع الصور"
 #: yaffo/templates/locations/list.html:27
 msgid "Hold <kbd>Shift</kbd> and click or drag to select multiple clusters"
 msgstr "ضغط باستمرار على <kbd>Shift</kbd> وانقر أو اسحب لتحديد مجموعات متعددة"
+
+#: yaffo/templates/macros/automation_forms.html:10
+msgid "What does this automation do?"
+msgstr "ماذا تفعل هذه الأتمتة؟"
 
 #: yaffo/templates/media/view.html:16
 msgid "Photo Details"
@@ -3471,33 +4606,33 @@ msgid ""
 "What it reads is sent with your question, without your home folder, email addresses or keys. Turn"
 " everything off to answer from the documentation only."
 msgstr ""
-"ما يُقرأ يُرسل مع سؤالك، دون مجلدك الرئيسي أو عناوين البريد الإلكتروني أو المفاتيح. أوقف كل شيء "
-"للإجابة من الوثائق فقط."
+"تُرسل المعلومات التي يقرأها مع سؤالك، من دون مجلدك الرئيسي أو عناوين بريدك الإلكتروني أو مفاتيحك."
+" أوقف تشغيل كل الخيارات للإجابة بالاستناد إلى الوثائق فقط."
 
-#: yaffo/templates/settings/_assistant.html:50
+#: yaffo/templates/settings/_assistant.html:59
 msgid "Changes it can propose"
 msgstr "التغييرات التي يمكن أن يقترحها"
 
-#: yaffo/templates/settings/_assistant.html:52
+#: yaffo/templates/settings/_assistant.html:61
 msgid ""
 "Each change appears as a card you approve or decline, with the exact items and counts. Needs "
 "Library contents."
 msgstr "يظهر كل تغيير كبطاقة توافق عليها أو ترفضها، مع العناصر والأعداد الدقيقة. يتطلب محتويات المكتبة."
 
-#: yaffo/templates/settings/_assistant.html:60
+#: yaffo/templates/settings/_assistant.html:69
 #, python-format
 msgid "%(on)s of %(total)s on"
 msgstr "%(on)s من %(total)s مفعّل"
 
-#: yaffo/templates/settings/_assistant.html:74
+#: yaffo/templates/settings/_assistant.html:83
 msgid "Can't be undone"
 msgstr "لا يمكن التراجع عنه"
 
-#: yaffo/templates/settings/_assistant.html:82
+#: yaffo/templates/settings/_assistant.html:91
 msgid "When a change affects more items than this, Approve also asks you to confirm the count."
 msgstr "عندما يؤثر تغيير على عناصر أكثر من هذا، يطلب منك \"موافقة\" أيضًا تأكيد العدد."
 
-#: yaffo/templates/settings/_assistant.html:84
+#: yaffo/templates/settings/_assistant.html:93
 msgid "Confirm large changes"
 msgstr "تأكيد التغييرات الكبيرة"
 
@@ -3583,9 +4718,17 @@ msgstr ""
 "ميزات التخصيص القوى AI. يتم تخزين مفتاح واجهة برمجة التطبيقات (API) الخاص بموفر النموذج المحدد "
 "بشكل آمن في مخزن بيانات اعتماد نظام التشغيل."
 
-#: yaffo/templates/settings/_llm.html:8
-msgid "Model"
-msgstr "نموذج"
+#: yaffo/templates/settings/_llm.html:10
+msgid "Provider"
+msgstr "موفّر الخدمة"
+
+#: yaffo/templates/settings/_llm.html:14
+msgid "Choose a provider"
+msgstr "اختر موفّر خدمة"
+
+#: yaffo/templates/settings/_llm_active_model.html:2
+msgid "Active model:"
+msgstr "النموذج النشط:"
 
 #: yaffo/templates/settings/_llm_api_key.html:4
 #, python-format
@@ -3616,13 +4759,25 @@ msgstr "استبدال المفتاح"
 msgid "Set key"
 msgstr "تعيين المفتاح"
 
-#: yaffo/templates/settings/_llm_api_key.html:16
+#: yaffo/templates/settings/_llm_api_key.html:16 yaffo/templates/utilities/sync_service.html:126
 msgid "API key"
 msgstr "مفتاح واجهة برمجة التطبيقات"
 
 #: yaffo/templates/settings/_llm_api_key.html:24
 msgid "Clear"
 msgstr "واضح"
+
+#: yaffo/templates/settings/_llm_models.html:7
+msgid "Models are looked up using your saved provider keys. The last saved list is available offline."
+msgstr "يتم البحث عن النماذج باستخدام مفاتيح المزودين المحفوظة. تتوفر آخر قائمة محفوظة دون اتصال."
+
+#: yaffo/templates/settings/_llm_models.html:11
+msgid "Model"
+msgstr "نموذج"
+
+#: yaffo/templates/settings/_llm_models.html:18
+msgid "Choose a model"
+msgstr "اختر نموذجًا"
 
 #: yaffo/templates/settings/index.html:5
 msgid "Settings - Yaffo"
@@ -3842,6 +4997,7 @@ msgstr "هل تريد إلغاء الجهاز؟"
 
 #: yaffo/templates/sharing/_device_content.html:25 yaffo/templates/sharing/_device_content.html:28
 #: yaffo/templates/sharing/_sidebar.html:54 yaffo/templates/sharing/_sidebar.html:58
+#: yaffo/templates/utilities/sync_service.html:187
 msgid "Revoke"
 msgstr "إبطال"
 
@@ -3890,31 +5046,40 @@ msgstr "اسم الجهاز"
 msgid "Rename"
 msgstr "إعادة تسمية"
 
-#: yaffo/templates/sharing/_device_panel.html:48
+#: yaffo/templates/sharing/_device_panel.html:50
+msgid "These shares include photos imported from this device:"
+msgstr "تتضمن هذه المشاركات صورًا استُوردت من هذا الجهاز:"
+
+#: yaffo/templates/sharing/_device_panel.html:54
+msgid "If this device imports them from you, older versions may transfer the same photos again."
+msgstr "إذا استوردها هذا الجهاز منك، فقد تنقل الإصدارات الأقدم الصور نفسها مرة أخرى."
+
+#: yaffo/templates/sharing/_device_panel.html:61
 msgid "Add Shared"
 msgstr "أضف مشترك"
 
-#: yaffo/templates/sharing/_device_panel.html:55
+#: yaffo/templates/sharing/_device_panel.html:68
 msgid "Share type"
 msgstr "نوع المشاركة"
 
-#: yaffo/templates/sharing/_device_panel.html:59 yaffo/templates/sharing/_device_panel.html:66
+#: yaffo/templates/sharing/_device_panel.html:72 yaffo/templates/sharing/_device_panel.html:79
 msgid "Media Directory"
 msgstr "دليل الوسائط"
 
-#: yaffo/templates/sharing/_device_panel.html:61 yaffo/templates/sharing/_device_panel.html:95
+#: yaffo/templates/sharing/_device_panel.html:74 yaffo/templates/sharing/_device_panel.html:108
+#: yaffo/templates/utilities/sync_detail.html:337
 msgid "Album"
 msgstr "الألبوم"
 
-#: yaffo/templates/sharing/_device_panel.html:83
+#: yaffo/templates/sharing/_device_panel.html:96
 msgid "Choose a folder inside a media directory"
 msgstr "اختر مجلدًا داخل دليل الوسائط"
 
-#: yaffo/templates/sharing/_device_panel.html:111
+#: yaffo/templates/sharing/_device_panel.html:124
 msgid "Add a media directory in Settings before sharing folders with this device."
 msgstr "أضف دليل الوسائط في الإعدادات قبل مشاركة المجلدات مع هذا الجهاز."
 
-#: yaffo/templates/sharing/_device_panel.html:114
+#: yaffo/templates/sharing/_device_panel.html:127
 msgid "This device is revoked. Pair it again before sharing folders with it."
 msgstr "تم إبطال هذا الجهاز. قم بإقرانه مرة أخرى قبل مشاركة المجلدات معه."
 
@@ -4206,7 +5371,7 @@ msgstr "اختر دليل التنزيل قبل أن تتمكن من سحب ال
 msgid "Set download directory"
 msgstr "تعيين دليل التنزيل"
 
-#: yaffo/templates/sharing/files.html:142
+#: yaffo/templates/sharing/files.html:142 yaffo/templates/utilities/_service_test_result.html:36
 msgid "Size"
 msgstr "مقاس"
 
@@ -4234,7 +5399,7 @@ msgstr ""
 msgid "Themes - Yaffo"
 msgstr "المواضيع - يافا"
 
-#: yaffo/templates/themes_page/index.html:22 yaffo/templates/utilities/_base.html:60
+#: yaffo/templates/themes_page/index.html:22 yaffo/templates/utilities/_base.html:105
 msgid "System"
 msgstr "نظام"
 
@@ -4242,7 +5407,8 @@ msgstr "نظام"
 msgid "default"
 msgstr "تقصير"
 
-#: yaffo/templates/themes_page/index.html:35 yaffo/templates/utilities/_base.html:67
+#: yaffo/templates/themes_page/index.html:35 yaffo/templates/utilities/_base.html:23
+#: yaffo/templates/utilities/_base.html:119
 msgid "Custom"
 msgstr "مخصص"
 
@@ -4316,106 +5482,292 @@ msgstr "تؤدي عملية إعادة التسمية إلى تحديث عنوا
 msgid "Rename Theme"
 msgstr "إعادة تسمية الموضوع"
 
-#: yaffo/templates/utilities/_base.html:13
+#: yaffo/templates/utilities/_base.html:21
+msgid "What kind of automation?"
+msgstr "ما نوع الأتمتة؟"
+
+#: yaffo/templates/utilities/_base.html:23
+msgid "Describe what it should do, and Yaffo writes it."
+msgstr "صِف ما ينبغي أن تفعله، وسيكتبها Yaffo."
+
+#: yaffo/templates/utilities/_base.html:25
+msgid "Import from…"
+msgstr "استيراد من…"
+
+#: yaffo/templates/utilities/_base.html:25
+msgid "Bring new photos into your library from a folder, an SD card, or OneDrive."
+msgstr "أضف صورًا جديدة إلى مكتبتك من مجلد أو بطاقة SD أو OneDrive."
+
+#: yaffo/templates/utilities/_base.html:28
+msgid "Send to…"
+msgstr "إرسال إلى…"
+
+#: yaffo/templates/utilities/_base.html:28
+msgid "Keep an album, or the photos matching a filter, copied to a folder."
+msgstr "احتفظ بنسخة من ألبوم أو الصور المطابقة لمرشح في مجلد."
+
+#: yaffo/templates/utilities/_base.html:30
+msgid "Add a new service…"
+msgstr "إضافة خدمة جديدة…"
+
+#: yaffo/templates/utilities/_base.html:30
+msgid "Connect another photo service. Describe it, and Yaffo writes and tests the connection."
+msgstr "اربط خدمة صور أخرى. صِفها، وسيكتب Yaffo الاتصال ويختبره."
+
+#: yaffo/templates/utilities/_base.html:37 yaffo/templates/utilities/sync_service.html:103
+msgid "Service"
+msgstr "الخدمة"
+
+#: yaffo/templates/utilities/_base.html:55
 msgid "e.g. Tag beach photos, Weekly cleanup"
 msgstr "على سبيل المثال ضع علامة على صور الشاطئ والتنظيف الأسبوعي"
 
-#: yaffo/templates/utilities/_base.html:14
+#: yaffo/templates/utilities/_base.html:56
 msgid "Starts empty — build it through a conversation, then publish."
 msgstr "يبدأ فارغًا — قم ببنائه من خلال محادثة، ثم انشره."
 
-#: yaffo/templates/utilities/_base.html:25
-msgid "On"
-msgstr "على"
+#: yaffo/templates/utilities/_base.html:57
+msgid "e.g. Camera card. Next you choose the folder and where photos go."
+msgstr "مثال: بطاقة الكاميرا. بعد ذلك تختار المجلد ومكان حفظ الصور."
 
-#: yaffo/templates/components/switch.html:12
-msgid "Off"
-msgstr "متوقف"
+#: yaffo/templates/utilities/_base.html:58
+msgid "e.g. For Mom. Next you choose the folder and what to send."
+msgstr "مثال: لأمي. بعد ذلك تختار المجلد وما تريد إرساله."
 
-#: yaffo/templates/utilities/_base.html:35 yaffo/templates/utilities/_base.html:59
+#: yaffo/templates/utilities/_base.html:59
+msgid "e.g. Flickr sets. Next you describe the service in a chat."
+msgstr "مثال: مجموعات Flickr. بعد ذلك تصف الخدمة في محادثة."
+
+#: yaffo/templates/utilities/_base.html:80 yaffo/templates/utilities/_base.html:104
 msgid "Automations"
 msgstr "الأتمتة"
 
-#: yaffo/templates/utilities/_base.html:47 yaffo/templates/utilities/index_photos.html:19
+#: yaffo/templates/utilities/_base.html:92 yaffo/templates/utilities/index_photos.html:19
 msgid "Library Health"
 msgstr "سلامة المكتبة"
 
-#: yaffo/templates/utilities/_base.html:53 yaffo/templates/utilities/remove_duplicates.html:9
+#: yaffo/templates/utilities/_base.html:98 yaffo/templates/utilities/remove_duplicates.html:9
 msgid "Remove Duplicates"
 msgstr "إزالة التكرارات"
 
-#: yaffo/templates/utilities/_base.html:64
+#: yaffo/templates/utilities/_base.html:109
 msgid "None"
 msgstr "لا أحد"
 
-#: yaffo/templates/utilities/_base.html:71
+#: yaffo/templates/utilities/_base.html:112
+msgid "Syncs"
+msgstr "عمليات المزامنة"
+
+#: yaffo/templates/utilities/_base.html:116
+msgid "No syncs yet"
+msgstr "لا توجد عمليات مزامنة بعد"
+
+#: yaffo/templates/utilities/_base.html:123
 msgid "No custom automations yet"
 msgstr "لا توجد أتمتة مخصصة حتى الآن"
 
-#: yaffo/templates/utilities/_base.html:75
+#: yaffo/templates/utilities/_base.html:127
+msgid "Services"
+msgstr "الخدمات"
+
+#: yaffo/templates/utilities/_base.html:134 yaffo/templates/utilities/sync_service.html:79
+msgid "Draft"
+msgstr "مسودة"
+
+#: yaffo/templates/utilities/_base.html:142
 msgid "New automation"
 msgstr "أتمتة جديدة"
 
-#: yaffo/templates/utilities/_base.html:88
+#: yaffo/templates/utilities/_base.html:155
 msgid "New Automation"
 msgstr "أتمتة جديدة"
 
-#: yaffo/templates/utilities/automations.html:14
-msgid "What does this automation do?"
-msgstr "ماذا تفعل هذه الأتمتة؟"
+#: yaffo/templates/utilities/_service_test_result.html:14
+msgid "Passed"
+msgstr "ناجح"
 
-#: yaffo/templates/utilities/automations.html:69 yaffo/templates/utilities/automations_edit.html:5
+#: yaffo/templates/utilities/_service_test_result.html:14
+msgid "Problems"
+msgstr "مشكلات"
+
+#: yaffo/templates/utilities/_service_test_result.html:15
+msgid "Live reads"
+msgstr "عمليات القراءة المباشرة"
+
+#: yaffo/templates/utilities/_service_test_result.html:15
+msgid "No live reads"
+msgstr "لا توجد قراءات مباشرة"
+
+#: yaffo/templates/utilities/_service_test_result.html:16
+msgid "Reads went to the test account for real; nothing was sent or changed."
+msgstr "تمت القراءات فعليًا من حساب الاختبار؛ ولم يُرسل أي شيء أو يُغيّر."
+
+#: yaffo/templates/utilities/_service_test_result.html:17
+msgid "Connect a test account to read live. Nothing was sent or changed."
+msgstr "اربط حساب اختبار لإجراء قراءات مباشرة. لم يُرسل أي شيء أو يُغيّر."
+
+#: yaffo/templates/utilities/_service_test_result.html:24
+#, python-format
+msgid "Choices for %(option)s"
+msgstr "خيارات %(option)s"
+
+#: yaffo/templates/utilities/_service_test_result.html:24
+msgid "Copy an id into the field above to test with it."
+msgstr "انسخ معرّفًا إلى الحقل أعلاه لاختباره."
+
+#: yaffo/templates/utilities/_service_test_result.html:26
+msgid "Id"
+msgstr "المعرّف"
+
+#: yaffo/templates/utilities/_service_test_result.html:29
+msgid "None listed."
+msgstr "لا توجد عناصر مدرجة."
+
+#: yaffo/templates/utilities/_service_test_result.html:33
+#, python-format
+msgid "First page: %(num)d record"
+msgid_plural "First page: %(num)d records"
+msgstr[0] "الصفحة الأولى: سجل واحد (%(num)d)"
+msgstr[1] "الصفحة الأولى: %(num)d سجلات"
+msgstr[2] "الصفحة الأولى: %(num)d سجلات"
+msgstr[3] "الصفحة الأولى: %(num)d سجلًا"
+msgstr[4] "الصفحة الأولى: %(num)d سجلًا"
+msgstr[5] "الصفحة الأولى: %(num)d سجل"
+
+#: yaffo/templates/utilities/_service_test_result.html:34
+msgid "More pages follow; a run lists them all."
+msgstr "تليها صفحات أخرى؛ وتعرضها عملية تشغيل واحدة كلها."
+
+#: yaffo/templates/utilities/_service_test_result.html:36
+msgid "Hash"
+msgstr "التجزئة"
+
+#: yaffo/templates/utilities/_service_test_result.html:40
+msgid "yes"
+msgstr "نعم"
+
+#: yaffo/templates/utilities/_service_test_result.html:40
+msgid "no"
+msgstr "لا"
+
+#: yaffo/templates/utilities/_service_test_result.html:45
+#, python-format
+msgid "Push of %(num)d photo"
+msgid_plural "Push of %(num)d photos"
+msgstr[0] "إرسال %(num)d صورة"
+msgstr[1] "إرسال %(num)d صورتين"
+msgstr[2] "إرسال %(num)d صور"
+msgstr[3] "إرسال %(num)d صورة"
+msgstr[4] "إرسال %(num)d صورة"
+msgstr[5] "إرسال %(num)d صورة"
+
+#: yaffo/templates/utilities/_service_test_result.html:46
+msgid ""
+"Uploads in a Test are recorded, not sent, so the service's real replies are missing; errors here "
+"can come from that."
+msgstr ""
+"يتم تسجيل عمليات الرفع في الاختبار لا إرسالها، لذا لا تظهر الردود الحقيقية للخدمة؛ وقد يكون سبب "
+"الأخطاء هنا ذلك."
+
+#: yaffo/templates/utilities/_service_test_result.html:47
+msgid "Key"
+msgstr "المفتاح"
+
+#: yaffo/templates/utilities/_service_test_result.html:47
+msgid "Result"
+msgstr "النتيجة"
+
+#: yaffo/templates/utilities/_service_test_result.html:54
+msgid "Web calls"
+msgstr "مكالمات الويب"
+
+#: yaffo/templates/utilities/_service_test_result.html:61
+#, python-format
+msgid "Read · %(status)s"
+msgstr "قراءة · %(status)s"
+
+#: yaffo/templates/utilities/_service_test_result.html:62
+msgid "Refused"
+msgstr "مرفوض"
+
+#: yaffo/templates/utilities/_service_test_result.html:63
+msgid "Recorded"
+msgstr "مسجّل"
+
+#: yaffo/templates/utilities/_service_test_result.html:68
+msgid "None."
+msgstr "لا شيء."
+
+#: yaffo/templates/utilities/_sign_in_fields.html:8
+msgid ""
+"Your server's address, like photos.example.com. Yaffo uses https unless you type http://, which "
+"is only allowed for a server on your home network. Yaffo talks only to this server for this "
+"account."
+msgstr ""
+"عنوان خادمك، مثل photos.example.com. يستخدم Yaffo بروتوكول https ما لم تكتب http://، وهذا مسموح "
+"به فقط لخادم على شبكتك المنزلية. يتصل Yaffo بهذا الخادم فقط لهذا الحساب."
+
+#: yaffo/templates/utilities/_sign_in_fields.html:11
+msgid "Server address"
+msgstr "عنوان الخادم"
+
+#: yaffo/templates/utilities/_sign_in_fields.html:15
+msgid "photos.example.com or http://192.168.1.20:2283"
+msgstr "photos.example.com أو http://192.168.1.20:2283"
+
+#: yaffo/templates/utilities/_sign_in_fields.html:18
+msgid ""
+"This server is on my home network and uses http. I understand the key travels unencrypted on my "
+"network."
+msgstr "هذا الخادم على شبكتي المنزلية ويستخدم http. أفهم أن المفتاح ينتقل دون تشفير عبر شبكتي."
+
+#: yaffo/templates/utilities/_sign_in_fields.html:26
+msgid "Yaffo checks the key, then keeps it in your system's keychain. It's never shown again."
+msgstr "يتحقق Yaffo من المفتاح، ثم يحتفظ به في سلسلة مفاتيح النظام. لن يظهر مرة أخرى أبدًا."
+
+#: yaffo/templates/utilities/automations.html:60 yaffo/templates/utilities/automations_edit.html:5
+#: yaffo/templates/utilities/sync_detail.html:99
 msgid "Automations - Yaffo"
 msgstr "الأتمتة - يافا"
 
-#: yaffo/templates/utilities/automations.html:79
+#: yaffo/templates/utilities/automations.html:72
 msgid "No automation selected"
 msgstr "لم يتم تحديد الأتمتة"
 
-#: yaffo/templates/utilities/automations.html:80
+#: yaffo/templates/utilities/automations.html:73
 msgid "Pick one from the sidebar, or create one with “New automation”."
 msgstr "اختر واحدًا من الشريط الجانبي، أو أنشئ واحدًا باستخدام \"الأتمتة الجديدة\"."
 
-#: yaffo/templates/utilities/automations.html:87 yaffo/templates/utilities/automations_triggers.html:42
-msgid "Disable"
-msgstr "إبطال"
-
-#: yaffo/templates/utilities/automations.html:87 yaffo/templates/utilities/automations_triggers.html:42
-msgid "Enable"
-msgstr "يُمكَِن"
-
-#: yaffo/templates/utilities/automations.html:89
+#: yaffo/templates/utilities/automations.html:80
 msgid "Run…"
 msgstr "يجري…"
 
-#: yaffo/templates/utilities/automations.html:95
-msgid "Edit triggers"
-msgstr "تحرير المشغلات"
-
-#: yaffo/templates/utilities/automations.html:97
-msgid "Configure"
-msgstr "تكوين"
-
-#: yaffo/templates/utilities/automations.html:111
+#: yaffo/templates/utilities/automations.html:96
 msgid "A built-in automation that ships with Yaffo. System automations cannot be edited or deleted."
 msgstr "أتمتة مدمجة تأتي مع Yaffo. لا يمكن تحرير أو حذف عمليات أتمتة النظام."
 
-#: yaffo/templates/utilities/automations.html:113
+#: yaffo/templates/utilities/automations.html:98
 msgid "No description yet — use “Edit details” to add one."
 msgstr "لا يوجد وصف حتى الآن - استخدم \"تحرير التفاصيل\" لإضافة وصف."
 
-#: yaffo/templates/utilities/automations.html:126
+#: yaffo/templates/utilities/automations.html:105
+#: yaffo/templates/utilities/remove_duplicates_form.html:18
+msgid "Configuration"
+msgstr "إعدادات"
+
+#: yaffo/templates/utilities/automations.html:122 yaffo/templates/utilities/sync_detail.html:484
 msgid "Edit automation"
 msgstr "تحرير الأتمتة"
 
-#: yaffo/templates/utilities/automations.html:131
-msgid "Configure automation"
-msgstr "تكوين الأتمتة"
-
 #: yaffo/templates/utilities/automations_edit.html:13
-#: yaffo/templates/utilities/automations_triggers_edit.html:13
+#: yaffo/templates/utilities/automations_triggers_edit.html:14
 msgid "Back to automation"
 msgstr "العودة إلى الأتمتة"
+
+#: yaffo/templates/utilities/automations_edit.html:16
+#: yaffo/templates/utilities/automations_edit.html:24
+msgid "Describe which photos to send and where to send them."
+msgstr "صِف الصور التي تريد إرسالها والوجهة التي تريد إرسالها إليها."
 
 #: yaffo/templates/utilities/automations_edit.html:16
 #: yaffo/templates/utilities/automations_edit.html:24
@@ -4423,14 +5775,22 @@ msgid "Describe what this automation should do and the assistant will write it."
 msgstr "قم بوصف ما يجب أن تفعله هذه الأتمتة وسيقوم المساعد بكتابته."
 
 #: yaffo/templates/utilities/automations_edit.html:25
+msgid "Describe the photo rule…"
+msgstr "صِف قاعدة الصور…"
+
+#: yaffo/templates/utilities/automations_edit.html:25
 msgid "Describe what this automation should do…"
 msgstr "قم بوصف ما يجب أن تفعله هذه الأتمتة..."
+
+#: yaffo/templates/utilities/automations_edit.html:27
+msgid "No conversation yet — describe the photo rule you want."
+msgstr "لا توجد محادثة بعد — صِف قاعدة الصور التي تريدها."
 
 #: yaffo/templates/utilities/automations_edit.html:27
 msgid "No conversation yet — describe what you want and the assistant will build it."
 msgstr "لا توجد محادثة بعد - قم بوصف ما تريد وسيقوم المساعد ببنائه."
 
-#: yaffo/templates/utilities/automations_edit.html:34
+#: yaffo/templates/utilities/automations_edit.html:34 yaffo/templates/utilities/sync_service.html:107
 msgid "Code"
 msgstr "شفرة"
 
@@ -4462,25 +5822,30 @@ msgstr "امتحان…"
 msgid "Publish draft"
 msgstr "نشر المسودة"
 
-#: yaffo/templates/utilities/automations_runs.html:10 yaffo/templates/utilities/index_photos.html:128
+#: yaffo/templates/utilities/automations_runs.html:11 yaffo/templates/utilities/index_photos.html:128
 msgid "Run history"
 msgstr "تشغيل التاريخ"
 
-#: yaffo/templates/utilities/automations_runs.html:16
+#: yaffo/templates/utilities/automations_runs.html:17
 msgid "No runs yet."
 msgstr "لا يوجد أشواط حتى الآن."
 
-#: yaffo/templates/utilities/automations_runs.html:18
+#: yaffo/templates/utilities/automations_runs.html:19
 msgid "No runs yet — this automation is disabled."
 msgstr "لم يتم تشغيل أي شيء حتى الآن — تم تعطيل هذه الأتمتة."
 
-#: yaffo/templates/utilities/automations_triggers.html:19
-#: yaffo/templates/utilities/automations_triggers.html:69
-#: yaffo/templates/utilities/automations_triggers.html:70
+#: yaffo/templates/utilities/automations_trigger_panel.html:4
+msgid "When"
+msgstr "متى"
+
+#: yaffo/templates/utilities/automations_triggers.html:21
+#: yaffo/templates/utilities/automations_triggers.html:37
+#: yaffo/templates/utilities/automations_triggers.html:75
+#: yaffo/templates/utilities/automations_triggers.html:76
 msgid "Schedule"
 msgstr "جدول"
 
-#: yaffo/templates/utilities/automations_triggers.html:24
+#: yaffo/templates/utilities/automations_triggers.html:26
 #, python-format
 msgid "%(count)s media directory"
 msgid_plural "%(count)s media directories"
@@ -4491,7 +5856,7 @@ msgstr[3] "%(count)s مجلدات وسائط"
 msgstr[4] "%(count)s مجلدات وسائط"
 msgstr[5] "%(count)s مجلدات وسائط"
 
-#: yaffo/templates/utilities/automations_triggers.html:26
+#: yaffo/templates/utilities/automations_triggers.html:28
 #, python-format
 msgid "%(count)s path"
 msgid_plural "%(count)s paths"
@@ -4502,94 +5867,94 @@ msgstr[3] "%(count)s مسارات"
 msgstr[4] "%(count)s مسارات"
 msgstr[5] "%(count)s مسارات"
 
-#: yaffo/templates/utilities/automations_triggers.html:27
-#: yaffo/templates/utilities/automations_triggers.html:78
+#: yaffo/templates/utilities/automations_triggers.html:29
+#: yaffo/templates/utilities/automations_triggers.html:84
 msgid "Everything"
 msgstr "الكل"
 
-#: yaffo/templates/utilities/automations_triggers.html:30
-#: yaffo/templates/utilities/automations_triggers.html:127
+#: yaffo/templates/utilities/automations_triggers.html:32
+#: yaffo/templates/utilities/automations_triggers.html:133
 msgid "Event"
 msgstr "حدث"
 
-#: yaffo/templates/utilities/automations_triggers.html:51
+#: yaffo/templates/utilities/automations_triggers.html:57
 msgid "No triggers — this automation won't run until one is added."
 msgstr "لا توجد مشغلات - لن يتم تشغيل هذه الأتمتة حتى تتم إضافة مشغلات."
 
-#: yaffo/templates/utilities/automations_triggers.html:59
+#: yaffo/templates/utilities/automations_triggers.html:65
 msgid "Selected folder"
 msgstr "المجلد المحدد"
 
-#: yaffo/templates/utilities/automations_triggers.html:63
-#: yaffo/templates/utilities/automations_triggers.html:68
+#: yaffo/templates/utilities/automations_triggers.html:69
+#: yaffo/templates/utilities/automations_triggers.html:74
 msgid "Add a schedule"
 msgstr "إضافة جدول زمني"
 
-#: yaffo/templates/utilities/automations_triggers.html:64
+#: yaffo/templates/utilities/automations_triggers.html:70
 msgid "Add an event"
 msgstr "أضف حدثًا"
 
-#: yaffo/templates/utilities/automations_triggers.html:74
+#: yaffo/templates/utilities/automations_triggers.html:80
 msgid "Scope"
 msgstr "النطاق"
 
-#: yaffo/templates/utilities/automations_triggers.html:76
+#: yaffo/templates/utilities/automations_triggers.html:82
 msgid "Run on"
 msgstr "التشغيل على"
 
-#: yaffo/templates/utilities/automations_triggers.html:79
+#: yaffo/templates/utilities/automations_triggers.html:85
 msgid "Media directories"
 msgstr "مجلدات الوسائط"
 
-#: yaffo/templates/utilities/automations_triggers.html:80
+#: yaffo/templates/utilities/automations_triggers.html:86
 msgid "Paths"
 msgstr "المسارات"
 
-#: yaffo/templates/utilities/automations_triggers.html:85
+#: yaffo/templates/utilities/automations_triggers.html:91
 msgid "All indexed media in every configured media directory."
 msgstr "كل الوسائط المفهرسة في كل مجلد وسائط مُهيّأ."
 
-#: yaffo/templates/utilities/automations_triggers.html:88
+#: yaffo/templates/utilities/automations_triggers.html:94
 msgid "Include"
 msgstr "تضمين"
 
-#: yaffo/templates/utilities/automations_triggers.html:90
+#: yaffo/templates/utilities/automations_triggers.html:96
 msgid "Choose the media directories to include."
 msgstr "اختر مجلدات الوسائط المراد تضمينها."
 
-#: yaffo/templates/utilities/automations_triggers.html:98
+#: yaffo/templates/utilities/automations_triggers.html:104
 msgid "No media directories are configured."
 msgstr "لم يتم تهيئة أي مجلدات وسائط."
 
-#: yaffo/templates/utilities/automations_triggers.html:104
+#: yaffo/templates/utilities/automations_triggers.html:110
 msgid "Folders"
 msgstr "المجلدات"
 
-#: yaffo/templates/utilities/automations_triggers.html:106
+#: yaffo/templates/utilities/automations_triggers.html:112
 msgid "Choose one or more folders inside your media directories."
 msgstr "اختر مجلدًا واحدًا أو أكثر داخل أدلة الوسائط الخاصة بك."
 
-#: yaffo/templates/utilities/automations_triggers.html:109
+#: yaffo/templates/utilities/automations_triggers.html:115
 msgid "Choose folder"
 msgstr "اختر مجلدًا"
 
-#: yaffo/templates/utilities/automations_triggers.html:118
+#: yaffo/templates/utilities/automations_triggers.html:124
 msgid "Save schedule"
 msgstr "حفظ الجدول الزمني"
 
-#: yaffo/templates/utilities/automations_triggers.html:120
+#: yaffo/templates/utilities/automations_triggers.html:126
 msgid "Not a valid cron expression"
 msgstr "ليس تعبير كرون صالحًا"
 
-#: yaffo/templates/utilities/automations_triggers.html:125
+#: yaffo/templates/utilities/automations_triggers.html:131
 msgid "Add an event trigger"
 msgstr "إضافة مشغل الحدث"
 
-#: yaffo/templates/utilities/automations_triggers.html:128
+#: yaffo/templates/utilities/automations_triggers.html:134
 msgid "Event type"
 msgstr "نوع الحدث"
 
-#: yaffo/templates/utilities/automations_triggers.html:138
+#: yaffo/templates/utilities/automations_triggers.html:144
 msgid "Add event"
 msgstr "أضف حدثًا"
 
@@ -4598,12 +5963,12 @@ msgstr "أضف حدثًا"
 msgid "Triggers · %(name)s - Yaffo"
 msgstr "المشغلات · %(name)s - يافا"
 
-#: yaffo/templates/utilities/automations_triggers_edit.html:15
+#: yaffo/templates/utilities/automations_triggers_edit.html:16
 #, python-format
 msgid "Triggers · %(name)s"
 msgstr "المشغلات · %(name)s"
 
-#: yaffo/templates/utilities/automations_triggers_edit.html:16
+#: yaffo/templates/utilities/automations_triggers_edit.html:17
 msgid "Add, edit, enable, or remove the triggers that decide when this automation runs."
 msgstr "قم بإضافة أو تحرير أو تمكين أو إزالة المشغلات التي تحدد متى يتم تشغيل هذه الأتمتة."
 
@@ -4756,10 +6121,6 @@ msgstr "إجمالي وسائل الإعلام"
 msgid "Directories"
 msgstr "الدلائل"
 
-#: yaffo/templates/utilities/remove_duplicates_form.html:18
-msgid "Configuration"
-msgstr "إعدادات"
-
 #: yaffo/templates/utilities/remove_duplicates_form.html:20
 msgid "Select one or more directories to scan for duplicate photos and videos."
 msgstr "حدد دليلاً واحدًا أو أكثر للبحث عن الصور ومقاطع الفيديو المكررة."
@@ -4867,6 +6228,737 @@ msgstr "حدد المجلد الوجهة"
 msgid "Remove Selected Duplicates"
 msgstr "إزالة التكرارات المحددة"
 
-#: yaffo/templates/utilities/sync_detail.html:281
+#: yaffo/templates/utilities/sync_detail.html:22
+msgid "Want to keep these photos where they are? Add the folder as a media folder in Settings instead."
+msgstr "هل تريد إبقاء هذه الصور في مكانها؟ أضف المجلد كمجلد وسائط في الإعدادات بدلًا من ذلك."
+
+#: yaffo/templates/utilities/sync_detail.html:29
+msgid "Choose a folder"
+msgstr "اختر مجلدًا"
+
+#: yaffo/templates/utilities/sync_detail.html:62
+msgid "Nothing chosen yet"
+msgstr "لم يتم اختيار شيء بعد"
+
+#: yaffo/templates/utilities/sync_detail.html:63
+msgid "Choose…"
+msgstr "اختر…"
+
+#: yaffo/templates/utilities/sync_detail.html:66
+msgid "Folder path"
+msgstr "مسار المجلد"
+
+#: yaffo/templates/utilities/sync_detail.html:69
+msgid "Or name a new one"
+msgstr "أو أدخل اسمًا جديدًا"
+
+#: yaffo/templates/utilities/sync_detail.html:71
+msgid "Use this name"
+msgstr "استخدم هذا الاسم"
+
+#: yaffo/templates/utilities/sync_detail.html:77
+msgid "Load more"
+msgstr "تحميل المزيد"
+
+#: yaffo/templates/utilities/sync_detail.html:80
+msgid "Choose this folder"
+msgstr "اختر هذا المجلد"
+
+#: yaffo/templates/utilities/sync_detail.html:127
+msgid "Run now"
+msgstr "شغّل الآن"
+
+#: yaffo/templates/utilities/sync_detail.html:131 yaffo/templates/utilities/sync_service.html:108
+#: yaffo/templates/utilities/sync_service.html:245
+msgid "Test"
+msgstr "اختبار"
+
+#: yaffo/templates/utilities/sync_detail.html:141
+msgid "Since"
+msgstr "منذ"
+
+#: yaffo/templates/utilities/sync_detail.html:161 yaffo/templates/utilities/sync_service.html:199
+msgid "Username"
+msgstr "اسم المستخدم"
+
+#: yaffo/templates/utilities/sync_detail.html:165 yaffo/templates/utilities/sync_service.html:200
+msgid "App password"
+msgstr "كلمة مرور التطبيق"
+
+#: yaffo/templates/utilities/sync_detail.html:167 yaffo/templates/utilities/sync_service.html:200
+msgid ""
+"Yaffo keeps it in your system's keychain to sign in again. Use an app password or a dedicated "
+"user if the service offers one."
+msgstr ""
+"يحتفظ Yaffo بها في سلسلة مفاتيح النظام لتسجيل الدخول مجددًا. استخدم كلمة مرور تطبيق أو مستخدمًا "
+"مخصصًا إذا كانت الخدمة توفر ذلك."
+
+#: yaffo/templates/utilities/sync_detail.html:179 yaffo/templates/utilities/sync_service.html:105
+msgid "Account"
+msgstr "الحساب"
+
+#: yaffo/templates/utilities/sync_detail.html:188 yaffo/templates/utilities/sync_service.html:179
+msgid "Signed in"
+msgstr "تم تسجيل الدخول"
+
+#: yaffo/templates/utilities/sync_detail.html:189 yaffo/templates/utilities/sync_service.html:179
+msgid "Needs sign-in"
+msgstr "يتطلب تسجيل الدخول"
+
+#: yaffo/templates/utilities/sync_detail.html:190
+#, python-format
+msgid "Also used by %(num)d other sync"
+msgid_plural "Also used by %(num)d other syncs"
+msgstr[0] "يُستخدم أيضًا بواسطة عملية مزامنة أخرى واحدة (%(num)d)"
+msgstr[1] "يُستخدم أيضًا بواسطة عمليتي مزامنة أخريين (%(num)d)"
+msgstr[2] "يُستخدم أيضًا بواسطة %(num)d عمليات مزامنة أخرى"
+msgstr[3] "يُستخدم أيضًا بواسطة %(num)d عملية مزامنة أخرى"
+msgstr[4] "يُستخدم أيضًا بواسطة %(num)d عملية مزامنة أخرى"
+msgstr[5] "يُستخدم أيضًا بواسطة %(num)d عملية مزامنة أخرى"
+
+#: yaffo/templates/utilities/sync_detail.html:197 yaffo/templates/utilities/sync_service.html:193
+msgid "Sign in again"
+msgstr "تسجيل الدخول مجددًا"
+
+#: yaffo/templates/utilities/sync_detail.html:202
+msgid "Use a different account"
+msgstr "استخدم حسابًا مختلفًا"
+
+#: yaffo/templates/utilities/sync_detail.html:210
+msgid "Enter a new key or a different account"
+msgstr "أدخل مفتاحًا جديدًا أو استخدم حسابًا مختلفًا"
+
+#: yaffo/templates/utilities/sync_detail.html:210
+msgid "Enter the password again or use a different account"
+msgstr "أعد إدخال كلمة المرور أو استخدم حسابًا مختلفًا"
+
+#: yaffo/templates/utilities/sync_detail.html:211 yaffo/templates/utilities/sync_service.html:204
+msgid "Connect"
+msgstr "اتصال"
+
+#: yaffo/templates/utilities/sync_detail.html:215
+#, python-format
+msgid "Connect Yaffo to %(service)s with a key from your account. Yaffo only uses it for this service."
+msgstr "اربط Yaffo بـ %(service)s باستخدام مفتاح من حسابك. لا يستخدمه Yaffo إلا لهذه الخدمة."
+
+#: yaffo/templates/utilities/sync_detail.html:215
+#, python-format
+msgid "Sign in to %(service)s with a username and password."
+msgstr "سجّل الدخول إلى %(service)s باستخدام اسم المستخدم وكلمة المرور."
+
+#: yaffo/templates/utilities/sync_detail.html:216
+#, python-format
+msgid "Connect to %(service)s"
+msgstr "الاتصال بـ %(service)s"
+
+#: yaffo/templates/utilities/sync_detail.html:218
+#, python-format
+msgid ""
+"Sign in to %(service)s in your browser. Yaffo only reads from it; your password never reaches "
+"Yaffo."
+msgstr ""
+"سجّل الدخول إلى %(service)s في متصفحك. لا يقرأ Yaffo إلا البيانات منه؛ ولا تصل كلمة مرورك إلى "
+"Yaffo مطلقًا."
+
+#: yaffo/templates/utilities/sync_detail.html:222 yaffo/templates/utilities/sync_service.html:193
+#, python-format
+msgid "Sign in to %(service)s"
+msgstr "سجّل الدخول إلى %(service)s"
+
+#: yaffo/templates/utilities/sync_detail.html:229
+msgid "Or use an account Yaffo already has"
+msgstr "أو استخدم حسابًا لدى Yaffo بالفعل"
+
+#: yaffo/templates/utilities/sync_detail.html:234
+msgid "Use this account"
+msgstr "استخدم هذا الحساب"
+
+#: yaffo/templates/utilities/sync_detail.html:242
+msgid "Signing in on another device?"
+msgstr "هل تسجّل الدخول على جهاز آخر؟"
+
+#: yaffo/templates/utilities/sync_detail.html:244
+msgid ""
+"Use this when this browser can't reach Yaffo directly, such as when Yaffo runs on another "
+"computer."
+msgstr ""
+"استخدم هذا الخيار عندما يتعذر على هذا المتصفح الاتصال مباشرةً بـ Yaffo، مثلًا عندما يعمل Yaffo "
+"على كمبيوتر آخر."
+
+#: yaffo/templates/utilities/sync_detail.html:245
+msgid "Get a code"
+msgstr "الحصول على رمز"
+
+#: yaffo/templates/utilities/sync_detail.html:247
+msgid "Open this page and enter the code:"
+msgstr "افتح هذه الصفحة وأدخل الرمز:"
+
+#: yaffo/templates/utilities/sync_detail.html:258
+msgid "Device and options"
+msgstr "الجهاز والخيارات"
+
+#: yaffo/templates/utilities/sync_detail.html:258
+msgid "Folder and options"
+msgstr "المجلد والخيارات"
+
+#: yaffo/templates/utilities/sync_detail.html:262
+msgid "Sign in first: the folder is chosen from your account."
+msgstr "سجّل الدخول أولًا: يُختار المجلد من حسابك."
+
+#: yaffo/templates/utilities/sync_detail.html:265
+msgid "Where the copies go, and in what form."
+msgstr "مكان حفظ النسخ والصيغة التي تُحفظ بها."
+
+#: yaffo/templates/utilities/sync_detail.html:267
+msgid "Choose a paired device and one of its shared folders or albums."
+msgstr "اختر جهازًا مقترنًا وأحد مجلداته أو ألبوماته المشتركة."
+
+#: yaffo/templates/utilities/sync_detail.html:268
+msgid "Pair a device on the Sharing page"
+msgstr "إقران جهاز من صفحة المشاركة"
+
+#: yaffo/templates/utilities/sync_detail.html:283
+msgid "What to import"
+msgstr "ما الذي تريد استيراده؟"
+
+#: yaffo/templates/utilities/sync_detail.html:285
+msgid "Photos the device adds to the share later are imported too."
+msgstr "سيتم أيضًا استيراد الصور التي يضيفها الجهاز إلى المشاركة لاحقًا."
+
+#: yaffo/templates/utilities/sync_detail.html:289
+msgid "Choose what to import"
+msgstr "اختر ما تريد استيراده"
+
+#: yaffo/templates/utilities/sync_detail.html:293
+msgid "Everything in the share"
+msgstr "كل ما في المشاركة"
+
+#: yaffo/templates/utilities/sync_detail.html:296
+msgid "Every photo and video the device shares here."
+msgstr "كل صورة ومقطع فيديو يشاركه الجهاز هنا."
+
+#: yaffo/templates/utilities/sync_detail.html:306
+msgid "Choose filters on the next screen, from the device's own people, labels, and dates."
+msgstr "اختر عوامل التصفية في الشاشة التالية، من الأشخاص والتسميات والتواريخ الخاصة بالجهاز."
+
+#: yaffo/templates/utilities/sync_detail.html:307
+msgid "Change the filter"
+msgstr "تغيير عامل التصفية"
+
+#: yaffo/templates/utilities/sync_detail.html:313 yaffo/templates/utilities/sync_detail.html:371
+msgid "Choose filters"
+msgstr "اختر عوامل التصفية"
+
+#: yaffo/templates/utilities/sync_detail.html:320
+msgid "What to send"
+msgstr "ما الذي تريد إرساله؟"
+
+#: yaffo/templates/utilities/sync_detail.html:323
+msgid "Photos added later are sent too; photos taken out are removed."
+msgstr "سيتم إرسال الصور التي تُضاف لاحقًا أيضًا؛ وستُزال الصور التي تُسحب من المشاركة."
+
+#: yaffo/templates/utilities/sync_detail.html:333
+msgid "An album"
+msgstr "ألبوم"
+
+#: yaffo/templates/utilities/sync_detail.html:344
+msgid "You have no albums yet."
+msgstr "ليس لديك أي ألبومات بعد."
+
+#: yaffo/templates/utilities/sync_detail.html:344
+msgid "Create one"
+msgstr "أنشئ ألبومًا"
+
+#: yaffo/templates/utilities/sync_detail.html:355
+msgid "Choose filters on the next screen. New matching photos are sent too."
+msgstr "اختر عوامل التصفية في الشاشة التالية. وسيتم أيضًا إرسال الصور الجديدة المطابقة."
+
+#: yaffo/templates/utilities/sync_detail.html:362
+msgid "A custom rule"
+msgstr "قاعدة مخصصة"
+
+#: yaffo/templates/utilities/sync_detail.html:365
 msgid "Describe which photos to send, then publish the rule."
 msgstr "صِف الصور التي تريد إرسالها، ثم انشر القاعدة."
+
+#: yaffo/templates/utilities/sync_detail.html:371 yaffo/templates/utilities/sync_detail.html:372
+msgid "Save selection"
+msgstr "حفظ التحديد"
+
+#: yaffo/templates/utilities/sync_detail.html:372
+msgid "Save and edit rule"
+msgstr "حفظ القاعدة وتعديلها"
+
+#: yaffo/templates/utilities/sync_detail.html:377
+msgid "Where to put them"
+msgstr "أين تريد وضعها؟"
+
+#: yaffo/templates/utilities/sync_detail.html:383
+msgid "Media folder"
+msgstr "مجلد الوسائط"
+
+#: yaffo/templates/utilities/sync_detail.html:392
+msgid "Subfolder"
+msgstr "مجلد فرعي"
+
+#: yaffo/templates/utilities/sync_detail.html:394 yaffo/templates/utilities/sync_detail.html:395
+msgid "New photos go into this folder of your library."
+msgstr "تُحفَظ الصور الجديدة في هذا المجلد من مكتبتك."
+
+#: yaffo/templates/utilities/sync_detail.html:400
+msgid ""
+"How new photos are arranged in that folder. Keep the source's folders mirrors the folders inside "
+"the one you import from; the others go by each photo's capture date. Photos already imported stay"
+" where they are."
+msgstr ""
+"كيفية ترتيب الصور الجديدة في ذلك المجلد. اختر «مجلدات المصدر» لمطابقة المجلدات داخل المجلد الذي "
+"تستورد منه؛ أما الخيارات الأخرى فترتب الصور حسب تاريخ التقاطها. تبقى الصور التي استوردتها بالفعل "
+"في أماكنها."
+
+#: yaffo/templates/utilities/sync_detail.html:402
+msgid "Arrange by"
+msgstr "الترتيب حسب"
+
+#: yaffo/templates/utilities/sync_detail.html:424
+msgid "What a run would do now"
+msgstr "ما الذي ستفعله عملية التشغيل الآن"
+
+#: yaffo/templates/utilities/sync_detail.html:436
+msgid "Items"
+msgstr "العناصر"
+
+#: yaffo/templates/utilities/sync_detail.html:445
+msgid "Search by file name"
+msgstr "البحث باسم الملف"
+
+#: yaffo/templates/utilities/sync_detail.html:445
+msgid "Search items by file name"
+msgstr "البحث عن العناصر باسم الملف"
+
+#: yaffo/templates/utilities/sync_detail.html:453
+msgid "Loading…"
+msgstr "جارٍ التحميل…"
+
+#: yaffo/templates/utilities/sync_detail.html:469
+msgid "Turning this sync on lets Yaffo do this, on its schedule, until you turn it off:"
+msgstr "يتيح تشغيل هذه المزامنة لـ Yaffo تنفيذ ما يلي وفقًا لجدوله، حتى توقفها:"
+
+#: yaffo/templates/utilities/sync_detail.html:476
+msgid ""
+"Changing the device, what it shares, or where photos go turns the sync off until you review it "
+"again."
+msgstr "يؤدي تغيير الجهاز أو ما يشاركه أو وجهة الصور إلى إيقاف المزامنة إلى أن تراجعها مجددًا."
+
+#: yaffo/templates/utilities/sync_detail.html:478
+msgid "Changing the account, folder, or where photos go turns the sync off until you review it again."
+msgstr "يؤدي تغيير الحساب أو المجلد أو وجهة الصور إلى إيقاف المزامنة إلى أن تراجعها مجددًا."
+
+#: yaffo/templates/utilities/sync_detail.html:481
+msgid "Turn on this sync?"
+msgstr "هل تريد تشغيل هذه المزامنة؟"
+
+#: yaffo/templates/utilities/sync_detail.html:482
+msgid "Enable"
+msgstr "يُمكَِن"
+
+#: yaffo/templates/utilities/sync_filter.html:11 yaffo/templates/utilities/sync_peer_filter.html:12
+#, python-format
+msgid "Choose photos for %(name)s - Yaffo"
+msgstr "اختيار صور لـ %(name)s - Yaffo"
+
+#: yaffo/templates/utilities/sync_filter.html:36
+msgid "Send these photos"
+msgstr "إرسال هذه الصور"
+
+#: yaffo/templates/utilities/sync_filter.html:39 yaffo/templates/utilities/sync_peer_filter.html:41
+#, python-format
+msgid "Choose photos for %(name)s"
+msgstr "اختيار صور لـ %(name)s"
+
+#: yaffo/templates/utilities/sync_filter.html:40
+#, python-format
+msgid "%(num)d photo matches"
+msgid_plural "%(num)d photos match"
+msgstr[0] "تطابق %(num)d صورة"
+msgstr[1] "تطابق %(num)d صورتين"
+msgstr[2] "تطابق %(num)d صور"
+msgstr[3] "تطابق %(num)d صورًا"
+msgstr[4] "تطابق %(num)d صورة"
+msgstr[5] "تطابق %(num)d صورة"
+
+#: yaffo/templates/utilities/sync_filter.html:41
+msgid "Set the filters. Photos that match later are sent too, and photos that stop matching are removed."
+msgstr "عيّن عوامل التصفية. ستُرسل أيضًا الصور التي تطابقها لاحقًا، وستُزال الصور التي لم تعد تطابقها."
+
+#: yaffo/templates/utilities/sync_filter.html:45
+msgid "Choose at least one filter: sending your whole library isn't offered here."
+msgstr "اختر عامل تصفية واحدًا على الأقل؛ لا يتوفر هنا إرسال مكتبتك بالكامل."
+
+#: yaffo/templates/utilities/sync_items.html:10
+msgid "Show"
+msgstr "إظهار"
+
+#: yaffo/templates/utilities/sync_items.html:20
+msgid "Retry failed"
+msgstr "فشلت إعادة المحاولة"
+
+#: yaffo/templates/utilities/sync_items.html:29
+msgid "Photo"
+msgstr "صورة"
+
+#: yaffo/templates/utilities/sync_items.html:30
+msgid "Status"
+msgstr "الحالة"
+
+#: yaffo/templates/utilities/sync_items.html:31
+msgid "In your library"
+msgstr "في مكتبتك"
+
+#: yaffo/templates/utilities/sync_items.html:31
+msgid "Sent to"
+msgstr "أُرسل إلى"
+
+#: yaffo/templates/utilities/sync_items.html:32
+msgid "Updated"
+msgstr "تم التحديث"
+
+#: yaffo/templates/utilities/sync_items.html:55
+#, python-format
+msgid "No items match “%(search)s”."
+msgstr "لا توجد عناصر تطابق «%(search)s»."
+
+#: yaffo/templates/utilities/sync_items.html:57
+msgid "Nothing with this status."
+msgstr "لا شيء بهذه الحالة."
+
+#: yaffo/templates/utilities/sync_items.html:59
+msgid "Nothing yet. Items appear here after the first run."
+msgstr "لا شيء حتى الآن. تظهر العناصر هنا بعد التشغيل الأول."
+
+#: yaffo/templates/utilities/sync_peer_filter.html:38
+msgid "Import these photos"
+msgstr "استيراد هذه الصور"
+
+#: yaffo/templates/utilities/sync_peer_filter.html:43
+#, python-format
+msgid "%(num)d file matches"
+msgid_plural "%(num)d files match"
+msgstr[0] "ملف واحد يطابق"
+msgstr[1] "%(num)d ملفات تطابق"
+msgstr[2] "%(num)d ملفات تطابق"
+msgstr[3] "%(num)d ملفات تطابق"
+msgstr[4] "%(num)d ملفات تطابق"
+msgstr[5] "%(num)d ملفات تطابق"
+
+#: yaffo/templates/utilities/sync_peer_filter.html:45
+#, python-format
+msgid "From %(device)s › %(share)s. Photos the device adds later that match are imported too."
+msgstr "من %(device)s › %(share)s. تُستورد أيضًا الصور المطابقة التي يضيفها الجهاز لاحقًا."
+
+#: yaffo/templates/utilities/sync_peer_filter.html:51
+msgid "Choose at least one filter. To import the whole share, pick Everything in the share instead."
+msgstr "اختر فلترًا واحدًا على الأقل. لاستيراد المشاركة بالكامل، اختر «كل شيء في المشاركة» بدلًا من ذلك."
+
+#: yaffo/templates/utilities/sync_service.html:11
+#, python-format
+msgid "%(name)s - Services - Yaffo"
+msgstr "%(name)s - الخدمات - Yaffo"
+
+#: yaffo/templates/utilities/sync_service.html:47
+msgid "Publishing makes this draft the version syncs run. It may call only these:"
+msgstr "يؤدي النشر إلى جعل هذه المسودة الإصدار الذي تستخدمه عمليات المزامنة. وقد لا يستدعي سوى ما يلي:"
+
+#: yaffo/templates/utilities/sync_service.html:51
+msgid "reads"
+msgstr "يقرأ"
+
+#: yaffo/templates/utilities/sync_service.html:51
+msgid "changes things"
+msgstr "يُغيّر أشياء"
+
+#: yaffo/templates/utilities/sync_service.html:55
+#, python-format
+msgid ""
+"%(num)d sync uses this service. If the new version can call more than before, it asks for your "
+"approval again before it runs."
+msgid_plural ""
+"%(num)d syncs use this service. If the new version can call more than before, they ask for your "
+"approval again before they run."
+msgstr[0] ""
+"تستخدم عملية مزامنة واحدة هذه الخدمة. إذا كان الإصدار الجديد قادرًا على إجراء استدعاءات أكثر من "
+"السابق، فسيطلب موافقتك مجددًا قبل تشغيله."
+msgstr[1] ""
+"تستخدم %(num)d عمليات مزامنة هذه الخدمة. إذا كان الإصدار الجديد قادرًا على إجراء استدعاءات أكثر "
+"من السابق، فستطلب موافقتك مجددًا قبل تشغيلها."
+msgstr[2] ""
+"تستخدم %(num)d عمليات مزامنة هذه الخدمة. إذا كان الإصدار الجديد قادرًا على إجراء استدعاءات أكثر "
+"من السابق، فستطلب موافقتك مجددًا قبل تشغيلها."
+msgstr[3] ""
+"تستخدم %(num)d عمليات مزامنة هذه الخدمة. إذا كان الإصدار الجديد قادرًا على إجراء استدعاءات أكثر "
+"من السابق، فستطلب موافقتك مجددًا قبل تشغيلها."
+msgstr[4] ""
+"تستخدم %(num)d عمليات مزامنة هذه الخدمة. إذا كان الإصدار الجديد قادرًا على إجراء استدعاءات أكثر "
+"من السابق، فستطلب موافقتك مجددًا قبل تشغيلها."
+msgstr[5] ""
+"تستخدم %(num)d عمليات مزامنة هذه الخدمة. إذا كان الإصدار الجديد قادرًا على إجراء استدعاءات أكثر "
+"من السابق، فستطلب موافقتك مجددًا قبل تشغيلها."
+
+#: yaffo/templates/utilities/sync_service.html:64
+msgid "Regenerate"
+msgstr "إعادة الإنشاء"
+
+#: yaffo/templates/utilities/sync_service.html:68 yaffo/templates/utilities/sync_service.html:257
+msgid "Publish"
+msgstr "نشر"
+
+#: yaffo/templates/utilities/sync_service.html:71
+msgid "Delete this service? Syncs can no longer use it."
+msgstr "هل تريد حذف هذه الخدمة؟ لن تعود عمليات المزامنة قادرة على استخدامها."
+
+#: yaffo/templates/utilities/sync_service.html:77
+msgid "Needs updating"
+msgstr "بحاجة إلى تحديث"
+
+#: yaffo/templates/utilities/sync_service.html:78
+msgid "Published"
+msgstr "منشور"
+
+#: yaffo/templates/utilities/sync_service.html:80
+msgid ""
+"A service Yaffo can import from or send to. Describe it in the chat; the builder writes and tests"
+" it, and you publish it."
+msgstr ""
+"خدمة يمكن لـ Yaffo الاستيراد منها أو الإرسال إليها. صِفها في المحادثة؛ وسيُنشئها المُنشئ "
+"ويختبرها، ثم تنشرها."
+
+#: yaffo/templates/utilities/sync_service.html:86
+msgid "Published. Choose it under Import from… or Send to… in New automation."
+msgstr "تم النشر. اخترها ضمن «استيراد من…» أو «إرسال إلى…» في أتمتة جديدة."
+
+#: yaffo/templates/utilities/sync_service.html:88
+msgid "App credentials saved."
+msgstr "تم حفظ بيانات اعتماد التطبيق."
+
+#: yaffo/templates/utilities/sync_service.html:91
+msgid ""
+"This service needs updating: it doesn't pass the current version's checks, so syncs using it are "
+"paused. Regenerate asks the builder to fix it."
+msgstr ""
+"تحتاج هذه الخدمة إلى تحديث: فهي لا تجتاز فحوصات الإصدار الحالي، لذا أُوقفت عمليات المزامنة التي "
+"تستخدمها مؤقتًا. يطلب خيار «إعادة الإنشاء» من المُنشئ إصلاحها."
+
+#: yaffo/templates/utilities/sync_service.html:96
+msgid "Service builder"
+msgstr "منشئ الخدمة"
+
+#: yaffo/templates/utilities/sync_service.html:97
+msgid "Say which service it is and whether photos go to it or come from it."
+msgstr "اذكر اسم الخدمة وما إذا كانت الصور تُرسل إليها أم تُستورد منها."
+
+#: yaffo/templates/utilities/sync_service.html:98
+msgid "Describe the service…"
+msgstr "صِف الخدمة…"
+
+#: yaffo/templates/utilities/sync_service.html:99
+msgid ""
+"No conversation yet. For example: \"Import photos from my Immich server\" or \"Send albums to "
+"Flickr as sets\"."
+msgstr ""
+"لا توجد محادثة بعد. مثال: «استورد الصور من خادم Immich الخاص بي» أو «أرسل الألبومات إلى Flickr "
+"كمجموعات»."
+
+#: yaffo/templates/utilities/sync_service.html:104
+msgid "Overview"
+msgstr "نظرة عامة"
+
+#: yaffo/templates/utilities/sync_service.html:106
+msgid "Access"
+msgstr "الوصول"
+
+#: yaffo/templates/utilities/sync_service.html:113
+msgid "The draft doesn't pass its check yet:"
+msgstr "لم تجتز المسودة الفحص بعد:"
+
+#: yaffo/templates/utilities/sync_service.html:123
+msgid "Direction"
+msgstr "الاتجاه"
+
+#: yaffo/templates/utilities/sync_service.html:124
+msgid "Imports photos"
+msgstr "يستورد الصور"
+
+#: yaffo/templates/utilities/sync_service.html:124
+msgid "Sends photos"
+msgstr "يرسل الصور"
+
+#: yaffo/templates/utilities/sync_service.html:125
+msgid "Sign-in"
+msgstr "تسجيل الدخول"
+
+#: yaffo/templates/utilities/sync_service.html:126
+msgid "Service sign-in page"
+msgstr "صفحة تسجيل الدخول إلى الخدمة"
+
+#: yaffo/templates/utilities/sync_service.html:127
+msgid "Username and password"
+msgstr "اسم المستخدم وكلمة المرور"
+
+#: yaffo/templates/utilities/sync_service.html:128
+msgid "Hosts"
+msgstr "المضيفون"
+
+#: yaffo/templates/utilities/sync_service.html:129
+msgid "Your server"
+msgstr "خادمك"
+
+#: yaffo/templates/utilities/sync_service.html:131
+msgid "Options"
+msgstr "الخيارات"
+
+#: yaffo/templates/utilities/sync_service.html:135
+msgid "Can"
+msgstr "يمكن"
+
+#: yaffo/templates/utilities/sync_service.html:136
+msgid "Add"
+msgstr "إضافة"
+
+#: yaffo/templates/utilities/sync_service.html:136
+msgid "Captions"
+msgstr "التسميات التوضيحية"
+
+#: yaffo/templates/utilities/sync_service.html:136
+msgid "Recover"
+msgstr "استرداد"
+
+#: yaffo/templates/utilities/sync_service.html:137
+msgid "Batch size"
+msgstr "حجم الدفعة"
+
+#: yaffo/templates/utilities/sync_service.html:139
+msgid "Used by"
+msgstr "يستخدمه"
+
+#: yaffo/templates/utilities/sync_service.html:139
+#, python-format
+msgid "%(num)d sync"
+msgid_plural "%(num)d syncs"
+msgstr[0] "مزامنة واحدة (%(num)d)"
+msgstr[1] "مزامنتان (%(num)d)"
+msgstr[2] "%(num)d مزامنات"
+msgstr[3] "%(num)d مزامنة"
+msgstr[4] "%(num)d مزامنة"
+msgstr[5] "%(num)d مزامنة"
+
+#: yaffo/templates/utilities/sync_service.html:142
+msgid "Nothing yet. The builder fills this in as it writes the service."
+msgstr "لا شيء حتى الآن. يملأ المنشئ هذا أثناء كتابة الخدمة."
+
+#: yaffo/templates/utilities/sync_service.html:147
+msgid "Appears once the builder knows how this service signs in."
+msgstr "يظهر هذا بمجرد أن يعرف المنشئ كيفية تسجيل الدخول إلى هذه الخدمة."
+
+#: yaffo/templates/utilities/sync_service.html:150
+msgid "App credentials"
+msgstr "بيانات اعتماد التطبيق"
+
+#: yaffo/templates/utilities/sync_service.html:151
+#, python-format
+msgid ""
+"%(service)s needs to know which app is asking: register Yaffo with it once, and every sync using "
+"this service reuses it. Kept in your system's keychain, never in Yaffo's database, never sent to "
+"the AI model. Saving new ones signs every sync using this service out."
+msgstr ""
+"تحتاج خدمة %(service)s إلى معرفة التطبيق الذي يرسل الطلب: سجّل Yaffo لديها مرة واحدة، وستعيد كل "
+"مزامنة تستخدم هذه الخدمة استخدامه. تُحفظ بيانات الاعتماد في سلسلة مفاتيح نظامك، ولا تُخزّن مطلقًا"
+" في قاعدة بيانات Yaffo ولا تُرسل مطلقًا إلى نموذج الذكاء الاصطناعي. يؤدي حفظ بيانات اعتماد جديدة "
+"إلى تسجيل الخروج من كل مزامنة تستخدم هذه الخدمة."
+
+#: yaffo/templates/utilities/sync_service.html:152
+msgid "Saved"
+msgstr "تم الحفظ"
+
+#: yaffo/templates/utilities/sync_service.html:158
+msgid "Paste this into the service's app form."
+msgstr "الصق هذا في نموذج التطبيق الخاص بالخدمة."
+
+#: yaffo/templates/utilities/sync_service.html:170
+msgid "Save credentials"
+msgstr "حفظ بيانات الاعتماد"
+
+#: yaffo/templates/utilities/sync_service.html:174
+msgid "Test account"
+msgstr "حساب الاختبار"
+
+#: yaffo/templates/utilities/sync_service.html:175
+msgid ""
+"The account Test reads from while you build. It's saved like any sign-in, so a sync set up with "
+"this service finds it already signed in."
+msgstr ""
+"الحساب الذي يقرأ منه الاختبار أثناء الإنشاء. يُحفظ مثل أي تسجيل دخول، لذا ستجده أي مزامنة أُعدّت "
+"بهذه الخدمة مسجّل الدخول مسبقًا."
+
+#: yaffo/templates/utilities/sync_service.html:185
+msgid "Live reads allowed"
+msgstr "السماح بالقراءات المباشرة"
+
+#: yaffo/templates/utilities/sync_service.html:186
+msgid ""
+"The builder may make read-only calls to this account while building; the responses go to the AI "
+"model."
+msgstr ""
+"قد يُجري المُنشئ استدعاءات للقراءة فقط إلى هذا الحساب أثناء البناء؛ وتُرسل الاستجابات إلى نموذج "
+"الذكاء الاصطناعي."
+
+#: yaffo/templates/utilities/sync_service.html:211
+msgid "Endpoints"
+msgstr "نقاط النهاية"
+
+#: yaffo/templates/utilities/sync_service.html:211
+msgid "Found in the code. Nothing else can be called. You approve this list when you publish."
+msgstr "موجودة في الشيفرة. لا يمكن استدعاء أي شيء آخر. توافق على هذه القائمة عند النشر."
+
+#: yaffo/templates/utilities/sync_service.html:217
+msgid "Reads"
+msgstr "عمليات القراءة"
+
+#: yaffo/templates/utilities/sync_service.html:217
+msgid "Writes"
+msgstr "عمليات الكتابة"
+
+#: yaffo/templates/utilities/sync_service.html:222
+msgid "No web calls yet."
+msgstr "لا توجد استدعاءات ويب حتى الآن."
+
+#: yaffo/templates/utilities/sync_service.html:227
+msgid "Differs from the published version."
+msgstr "يختلف عن الإصدار المنشور."
+
+#: yaffo/templates/utilities/sync_service.html:230
+msgid "No code yet."
+msgstr "لا توجد شيفرة حتى الآن."
+
+#: yaffo/templates/utilities/sync_service.html:235
+msgid "Test the draft"
+msgstr "اختبر المسودة"
+
+#: yaffo/templates/utilities/sync_service.html:235
+msgid ""
+"Runs the draft once: reads go to the test account for real, and nothing is ever sent or changed. "
+"The builder sees the result with your next message."
+msgstr ""
+"يشغّل المسودة مرة واحدة: تُنفّذ عمليات القراءة فعليًا على حساب الاختبار، ولا يُرسل أي شيء أو "
+"يُغيّر أبدًا. يرى المُنشئ النتيجة مع رسالتك التالية."
+
+#: yaffo/templates/utilities/sync_service.html:241
+msgid "An id from the choices a Test lists. Leave it empty to see them."
+msgstr "معرّف من الخيارات التي يعرضها الاختبار. اتركه فارغًا لرؤيتها."
+
+#: yaffo/templates/utilities/sync_service.html:249
+msgid "Nothing to test yet."
+msgstr "لا شيء لاختباره حتى الآن."
+
+#: yaffo/templates/utilities/sync_service.html:256
+msgid "Publish this service?"
+msgstr "هل تريد نشر هذه الخدمة؟"
+

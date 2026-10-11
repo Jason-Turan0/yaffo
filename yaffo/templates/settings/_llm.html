@@ -4,22 +4,21 @@
         {{ _("Powers AI customization features. The API key for the selected model's provider is stored securely in the operating system's credential store.") }}
     </p>
 
+    {% include 'settings/_llm_active_model.html' %}
+
     <div class="form-group">
-        <label for="llm-model">{{ _("Model") }}</label>
-        <select id="llm-model" name="model" class="searchable-select" data-search-disabled
-                hx-post="{{ url_for('settings_llm_model') }}"
-                hx-target="#llm-api-key" hx-swap="outerHTML">
-            {% for p in llm.providers %}
-            <optgroup label="{{ p.label }}">
-                {% for m in llm.models if m.provider == p.id %}
-                <option value="{{ m.id }}" {% if m.id == llm.model %}selected{% endif %}>{{ m.label }}</option>
-                {% endfor %}
-            </optgroup>
+        <label for="llm-provider">{{ _("Provider") }}</label>
+        <select id="llm-provider" name="provider" class="searchable-select" data-search-disabled
+                hx-get="{{ url_for('settings_llm_models') }}" hx-trigger="change"
+                hx-target="#llm-provider-models" hx-swap="outerHTML">
+            <option value="" selected>{{ _("Choose a provider") }}</option>
+            {% for provider in llm.providers %}
+            <option value="{{ provider.id }}">{{ provider.label }}</option>
             {% endfor %}
         </select>
     </div>
 
-    {% with provider = llm.selected_provider_status %}
-    {% include 'settings/_llm_api_key.html' %}
+    {% with lookup_provider=None %}
+    {% include 'settings/_llm_models.html' %}
     {% endwith %}
 </div>

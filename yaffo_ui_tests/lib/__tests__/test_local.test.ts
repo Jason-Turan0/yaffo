@@ -32,7 +32,7 @@ describe("local interactive runner lifecycle", () => {
         const {suite, dependencies, cleanup} = setup(sharing);
         expect(await runLocalSuite(suite, {port: 5502, fresh: false, mode: "headed"}, dependencies)).toBe(1);
         expect(dependencies.startEnvironment).toHaveBeenCalledWith(5502, {
-            withPeer: sharing, preseeded: true, copyPreseeded: true,
+            withPeer: sharing, preseeded: true, copyPreseeded: true, withFakeFlickr: false,
         });
         expect(dependencies.runTests).toHaveBeenCalledWith("http://127.0.0.1:5502", suite.specs, expect.objectContaining({
             mode: "headed",
@@ -41,12 +41,28 @@ describe("local interactive runner lifecycle", () => {
         expect(cleanup).toHaveBeenCalledTimes(1);
     });
 
+    it("starts fake Flickr and forwards its URL for the sync-services suite", async () => {
+        const {dependencies, suite} = setup(false);
+        suite.id = "sync__services";
+        suite.directory = "generated_tests/sync_services";
+        suite.specs = ["generated_tests/sync_services/sync_services.spec.ts"];
+        dependencies.startEnvironment.mockResolvedValue({
+            tempDir: "/tmp/local-test", port: 5502, baseUrl: "http://127.0.0.1:5502",
+            flaskProcess: null, taskqProcess: null, fakeFlickrUrl: "http://127.0.0.1:5503",
+            cleanup: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
+        });
+        await runLocalSuite(suite, {port: 5502, fresh: false, mode: "headless"}, dependencies);
+        expect(dependencies.startEnvironment).toHaveBeenCalledWith(5502, expect.objectContaining({withFakeFlickr: true}));
+        expect(dependencies.runTests).toHaveBeenCalledWith("http://127.0.0.1:5502", suite.specs,
+            expect.objectContaining({environment: expect.objectContaining({FAKE_FLICKR_URL: "http://127.0.0.1:5503"})}));
+    });
+
     it("cleans up a fresh environment even when Playwright cannot start", async () => {
         const {suite, dependencies, cleanup} = setup(false);
         dependencies.runTests.mockRejectedValue(new Error("spawn failed"));
         await expect(runLocalSuite(suite, {port: 5502, fresh: true, mode: "ui"}, dependencies)).rejects.toThrow("spawn failed");
         expect(dependencies.startEnvironment).toHaveBeenCalledWith(5502, {
-            withPeer: false, preseeded: false, copyPreseeded: false,
+            withPeer: false, preseeded: false, copyPreseeded: false, withFakeFlickr: false,
         });
         expect(cleanup).toHaveBeenCalledTimes(1);
     });

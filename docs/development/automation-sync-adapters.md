@@ -1,10 +1,11 @@
 # Sync Adapters — Sources and Targets over a Host Sync Engine (Design Sketch)
 
-**Status: Phases 1 and 2 built; Phase 3 cloud target code, local tests, and a
-live Google Photos upload verified. Crash recovery and OAuth verification remain.
-Phase 4 (peer sync from paired devices) built and verified between two instances
-on one machine; the two-machine run, the user guide, translations, and browser
-specs remain. Phases 5–6 proposed. Alternative to
+**Status (2026-10-11): The sync feature is mostly implemented and is entering
+cleanup. Phases 1 and 2 are built; Phase 3 cloud targets and selector scripts
+have local coverage and a live Google Photos upload is verified. Phase 4 peer
+sync works between two instances on one machine. Remaining validation and
+release work is listed under the relevant phases below. Phase 5 is in progress;
+Phase 6 remains proposed. Alternative to
 [Automation Web Calls](automation-web-calls.md).**
 That doc has a custom automation do *everything* for an export (select, diff,
 upload, batch, record state) in one Starlark script. This sketch keeps its
@@ -2971,6 +2972,12 @@ path imported 2,160 photos (2 more linked by hash) and the next run found all
   against real NATs, then the user guide, translations, and Playwright specs.
 
 ### Phase 5: custom adapters and self-hosted servers
+
+**Status (2026-10-11): In progress; the feature is moving into cleanup.** The
+adapter builder and Immich code are present in the repository, but the exit
+criteria below have not yet been recorded as complete. Track cleanup findings
+and close them alongside the remaining validation and release work; avoid
+marking a phase complete until its exit criteria are verified.
 
 - The *Add a new service…* builder: `write_adapter_code`, `test_adapter`,
   the Overview / Test account / Web access / Code / Test panel, the publish

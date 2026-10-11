@@ -39,13 +39,14 @@ local until the user deletes the conversation.
 
 ## Knowledge and tools
 
-The assistant has three kinds of capability:
+The assistant has four kinds of capability:
 
 | Kind | Use |
 |---|---|
 | Bundled documentation | `search_docs` and `read_doc` answer product questions without reading local library data. |
 | Native diagnostic tools | Read bounded information about logs, library state, files and drives, background work, and one media item. Settings controls which groups are offered. |
 | `run_script` | Runs Starlark over the assistant profile of the shared automation host API. Reads run against the library; enabled mutations are recorded as a plan. |
+| Authorized web reads | `fetch_docs` reads public HTTPS pages using the service builder's existing fetcher. The capability is enabled by default; each new domain in a conversation requires a domain approval card. |
 
 `describe_data_source` exposes query schemas. The prompt includes the available
 data sources and enabled host functions, so it describes only capabilities the
@@ -136,20 +137,43 @@ external-drive probes have timeouts. File-opening buttons resolve an indexed
 media item or a path inside a configured media folder again when clicked; they
 do not store an unrestricted path supplied by the model.
 
-The assistant's only outbound connection is the selected model API. Its tools
-do not browse the web, contact the sharing hub, or upload photos, videos, the
-database, or diagnostics. The Starlark sandbox cannot make network calls. Code
-that adds an assistant tool or host function must preserve these boundaries.
+The assistant contacts the selected model API and, when **Read public websites** is
+enabled, public HTTPS domains the user approved in that conversation. `fetch_docs`
+reuses `yaffo/sync/fetch_docs.py`: domain matching uses the bundled Public Suffix
+List, private addresses are rejected, redirects to a new domain wait for
+approval, and input bytes and returned text are bounded. The tool caps reads per
+turn, redacts returned text, and shows the same text in its activity line. It
+does not add search-engine queries; `web_search` still needs a configured search
+backend (see [Sync Adapters](automation-sync-adapters.md#permissions)).
+
+Approvals and denials are `web_permission` transcript events, managed by
+`assistant_web_repository.py`. They start empty in each conversation and disappear
+when it is deleted. A URL in a message grants no access. The decision endpoint
+accepts only domains on a pending card for that conversation and continues the
+assistant with the recorded decision. Page text is untrusted data and cannot
+grant access or approve a library change. Disabling web reads removes the tool
+from new turns, blocks an already-constructed tool, and excludes its historical
+results from follow-up model context.
+
+The local diagnostic tools and library actions do not contact the sharing hub or
+upload photos, videos, the database, or diagnostics. The Starlark sandbox cannot
+make network calls.
 
 ## Settings and persistence
 
 **Settings → Assistant** controls the feature, diagnostic groups, individual
-actions, and the count confirmation threshold. Logs, library, files, and jobs
-diagnostics are enabled by default; capture-date metadata is off by default.
-With all diagnostic groups off, the assistant can still answer from the bundled
-docs. Low- and medium-risk actions are enabled by default; high-risk actions
-must be turned on explicitly. The selected AI Generation model is shared with
-the other builders; there is no assistant-specific model setting.
+actions, and the count confirmation threshold. **Read public websites** appears
+under **What it can look at** and is enabled by default. Logs, library, files,
+and jobs diagnostics are also enabled by default; capture-date metadata is off.
+With diagnostics and web reads off, the assistant can still answer from the
+bundled docs. Low- and medium-risk actions are enabled by default; high-risk
+actions must be turned on explicitly.
+
+The selected AI Generation model is shared with the other builders. Settings
+shows **Active model** separately from its initially empty provider selector.
+Choosing a provider looks up that provider's models; choosing a model saves the
+shared selection and updates the active-model label. See
+[Model discovery](ai-page-builder.md#model-discovery) for lookup and caching.
 
 Conversations, transcript events, and change plans live in assistant-specific
 database tables. The assistant does not use page-builder conversations. Model
@@ -178,7 +202,8 @@ repository tests, `tests/scripts/test_build_assistant_knowledge.py`, and
 - Approval replays frozen arguments and rejects expired or stale plans.
 - Undo preserves later edits and reports partial execution.
 - Filesystem diagnostics stay within named roots and network-blocked tests cover
-  the assistant's tools and actions.
+  the assistant's local tools and actions. Web reads require conversation-scoped
+  domain approval and reuse the service fetcher's network checks.
 - The bundled knowledge and page catalogs match their sources.
 
 For task queue behavior and scheduling, see [Task Queue Standards](task-queue.md).

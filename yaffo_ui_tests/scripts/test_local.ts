@@ -27,6 +27,7 @@ export async function runLocalSuite(
         withPeer: suite.withPeer,
         preseeded: !options.fresh,
         copyPreseeded: !options.fresh,
+        withFakeFlickr: suite.specs.some(spec => spec.includes("generated_tests/sync_services/")),
     });
     try {
         if (options.signal?.aborted) return 130;
@@ -46,6 +47,9 @@ export async function runLocalSuite(
                 CI: "",
                 SUITE: `local__${suite.id}`,
                 PEER_URL: environment.peer?.baseUrl ?? "",
+                FAKE_FLICKR_URL: environment.fakeFlickrUrl ?? "",
+                YAFFO_DATA_DIR: environment.tempDir,
+                PATH: `${join(resolve(process.cwd(), ".."), "venv", "bin")}:${process.env.PATH ?? ""}`,
                 PLAYWRIGHT_HTML_OUTPUT_DIR: `${reportRoot}/html`,
                 PLAYWRIGHT_HTML_OPEN: "never",
             },

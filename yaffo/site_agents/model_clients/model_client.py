@@ -24,7 +24,7 @@ import anthropic
 from yaffo.config import get_int as get_config_int
 from yaffo.logging_config import get_logger
 from yaffo.site_agents.model_clients.call_log import CallLogger
-from yaffo.site_agents.model_clients.providers import pricing_for
+from yaffo.site_agents.model_clients.providers import get_model, pricing_for
 from yaffo.site_agents.model_clients.model_client_types import (
     ModelAlias,
     ModelClient,
@@ -92,11 +92,13 @@ class AnthropicModelClient(ModelClient):
         log_feature: str = "unknown",
         api_key: str,
     ):
-        self.model: ModelAlias = model
+        resolved = get_model(model)
+        self.model: ModelAlias = resolved.id if resolved else model
+        self.model_selection = model
         self.system_prompt = system_prompt
         self.tools = tools or []
         self.output_schema = output_schema
-        self.max_tokens = max_tokens
+        self.max_tokens = min(max_tokens, resolved.max_output_tokens) if resolved and resolved.max_output_tokens else max_tokens
         self.messages: list[dict] = []
         self._client = anthropic.Anthropic(api_key=api_key)
         self._log = CallLogger(log_dir, persistent=persistent_log, feature=log_feature)
@@ -220,7 +222,7 @@ class AnthropicModelClient(ModelClient):
         )
 
     def _estimate_cost(self, usage: Usage) -> Optional[dict]:
-        pricing = pricing_for(self.model)
+        pricing = pricing_for(self.model_selection)
         if pricing is None:
             return None
         in_rate = pricing.input / 1_000_000
@@ -256,7 +258,7 @@ class AnthropicModelClient(ModelClient):
         else:
             response = None
         self._log.write(
-            model=self.model,
+            model=self.model_selection,
             timestamp=timestamp,
             duration_ms=duration_ms,
             success=message is not None,

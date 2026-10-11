@@ -928,6 +928,7 @@ ASSISTANT_STATUS_FAILED = "FAILED"
 ASSISTANT_EVENT_USER = "user"
 ASSISTANT_EVENT_ASSISTANT = "assistant"
 ASSISTANT_EVENT_TOOL = "tool"
+ASSISTANT_EVENT_WEB_PERMISSION = "web_permission"
 ASSISTANT_EVENT_ERROR = "error"
 # A change plan was decided or finished (approved, declined, undone, expired): the
 # chat's card follows the plan row, and the model sees the outcome on its next run.

@@ -5,6 +5,8 @@ the keychain anyway."""
 import pytest
 
 from yaffo.site_agents import llm_config
+from yaffo.site_agents import model_catalog
+from yaffo.site_agents.model_clients import providers
 
 pytestmark = pytest.mark.unit
 
@@ -13,6 +15,7 @@ pytestmark = pytest.mark.unit
 def _no_keychain(monkeypatch):
     # Never touch the real keyring (would prompt / vary by machine); env vars still win.
     monkeypatch.setattr(llm_config, "_read_keychain_key", lambda keychain_key: None)
+    monkeypatch.setattr(model_catalog, "cached_models", lambda session: providers.models())
 
 
 def _select(monkeypatch, model_id):

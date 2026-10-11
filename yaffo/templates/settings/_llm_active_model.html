@@ -1,0 +1,3 @@
+<p id="llm-active-model"{% if active_model_oob|default(false) %} hx-swap-oob="outerHTML"{% endif %}>
+    <strong>{{ _("Active model:") }}</strong> {{ llm.active_model_label }}
+</p>

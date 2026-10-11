@@ -48,7 +48,9 @@ pages:
     covers: >-
       Every term the rest of the guide uses without defining - library, media
       item, index, face, person, label, tag, favorite, album, custom page,
-      automation, theme. A new first-class concept in the model is a gap.
+      automation, sync, service, account, theme, paired device, and share. Explain
+      how importing, sending, and sharing relate to the local library. A new
+      first-class concept in the model is a gap.
     walkthrough: true
     also_depends_on:
       - yaffo/db/models.py    # the entities the glossary names
@@ -60,13 +62,21 @@ pages:
       sources, library questions answered by scripts, links and open buttons,
       troubleshooting checks and their activity lines, change cards (approve,
       decline, large and on-disk confirmations, expiry, undo), what it can change
-      by default, what is sent to the AI provider, and what it won't do.
+      by default, and reading public HTTPS pages by URL with conversation-scoped
+      domain approval cards (allow selected domains, deny, reuse an approval,
+      and start a fresh conversation). Cover website sources and expandable
+      redacted results, the default-on Read public websites switch, disabling
+      web access, what is sent to the AI provider, and what it won't do.
     walkthrough: true
     also_depends_on:
       - yaffo/background_tasks/automation_sandbox/automation_host.py  # what it can change
       - yaffo/site_agents/assistant/prompt_generator/prompt.py        # what it can check
       - yaffo/site_agents/assistant/redact.py                         # what is sent
       - yaffo/site_agents/assistant/plans.py                          # expiry, confirmations, undo
+      - yaffo/site_agents/assistant/settings.py                       # capability defaults
+      - yaffo/site_agents/assistant/tool_providers/web_tool.py         # bounded, redacted web reads
+      - yaffo/db/repositories/assistant_web_repository.py             # approval scope and denials
+      - yaffo/sync/fetch_docs.py                                      # HTTPS and redirect boundaries
 
   library-basics/indexing-library:
     covers: >-
@@ -186,18 +196,59 @@ pages:
 
   create-customize/automations:
     covers: >-
-      Every system automation, creating a custom automation, testing before
-      publishing, the trigger types, and running and reviewing runs. A newly
-      seeded system automation or trigger type is a gap.
+      Every system automation and the System, Syncs, Custom, and Services sidebar
+      groups. Cover all New automation choices: Custom, Import from, Send to,
+      and Add a new service. Custom rules need draft, test, publish, and trigger
+      workflows. Import and send syncs need account reuse and reauthentication,
+      source or destination options, import roots and layouts, album/filter/custom
+      selections, previews and paging, setup review and re-enabling after changes,
+      default schedules and album/device events, progress and item history, and
+      retrying failures. Cover Folder, OneDrive, Google Photos, and Immich in their
+      supported directions, hash deduplication and indexing, protected copies,
+      destination-specific removal policies, and keeping imports after source
+      deletions. Paired-device imports need pairing and share prerequisites,
+      device/share selection, remote filters, direct/relay paths and per-run
+      limits, and waiting for unavailable devices. Custom services need the
+      builder's Overview, Account, Access, Code, and Test tabs, app credentials
+      and test accounts, domain and live-read permissions, tests that record
+      writes, publish access review, draft versus published behavior, regeneration,
+      and deletion while in use. A newly seeded service, automation, or trigger
+      type is a gap.
     walkthrough: true
     also_depends_on:
       - yaffo/scripts/db/migrations/000_MIGRATION_20260620_INIT.py  # seeded system automations
+      - yaffo/sync/preset_seed.py                  # available cloud services and directions
+      - yaffo/sync/setup.py                        # default triggers and setup consent
+      - yaffo/sync/source_run.py                   # resumed imports, deduplication, indexing
+      - yaffo/sync/target_run.py                   # batching, removals, remote deletion policy
+      - yaffo/sync/folder_source.py                # copy-only import behavior and options
+      - yaffo/sync/folder_target.py                # layouts, conversion, protected-copy removal
+      - yaffo/sync/peer_source.py                  # sharing prerequisites, waiting, relay limits
+      - yaffo/sync/connections.py                  # shared accounts and sign-in status
+      - yaffo/sync/presets/google_photos_target.star # album membership removal
+      - yaffo/sync/presets/onedrive_target.star     # changed-copy protection
+      - yaffo/sync/presets/immich_target.star       # existing photos versus uploaded copies
+      - yaffo/db/repositories/service_builder_repository.py # drafts, publishing, permissions
+      - yaffo/sync/adapter_test.py                 # live reads and recorded writes in Test
 
   reference-maintenance/settings:
     covers: >-
       Every section of the Settings screen, in the order they appear on screen.
-      A new section is a gap.
+      AI Generation must show the active saved provider/model, an initially empty
+      provider dropdown, model lookup for only the chosen provider, searchable
+      model choices, the info icon beside Model, and that provider's key settings.
+      Cover updating the active model after selection, missing keys and lookup
+      failures, and the saved or starter list fallback. Assistant settings must
+      include Read public websites under What it can look at, enabled by default,
+      with per-conversation domain approval explained in its info tip. A new
+      section or capability switch is a gap.
     walkthrough: true
+    also_depends_on:
+      - yaffo/site_agents/llm_config.py               # saved model and key configuration
+      - yaffo/site_agents/model_catalog.py            # discovery filters, limits, and fallback
+      - yaffo/site_agents/model_clients/providers.py  # provider and starter-model registry
+      - yaffo/db/repositories/llm_model_repository.py  # catalog persistence and invalidation
+      - yaffo/site_agents/assistant/settings.py        # diagnostic, action, and web defaults
 
   reference-maintenance/comparison:
     covers: >-

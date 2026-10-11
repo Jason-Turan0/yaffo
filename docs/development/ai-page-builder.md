@@ -439,6 +439,42 @@ Shows **presence only** — "Key configured ✓ / Not set" with **Set / Replace 
 Clear**. The value is never sent to the browser. It deliberately does **not** go in
 `ApplicationSettings`, which holds only non-sensitive paths and renders verbatim.
 
+### Model discovery
+
+Settings uses `site_agents/model_catalog.py` to look up available text models from
+the provider chosen in Settings. The provider selector starts empty; selecting a
+provider asynchronously looks up only its models and displays its key settings.
+Model choices are searchable, with lookup details behind the info icon beside
+the label. **Active model** shows the saved provider and model even before a
+provider is chosen, and updates when a model is selected. Key changes invalidate
+that provider's listing. A failed lookup preserves the last successful list and the
+selected model. The shipped models in `model_clients/providers.py` bootstrap a
+provider until its first successful lookup.
+
+Endpoints: Anthropic `/v1/models`, OpenAI `/v1/models`, x.ai
+`/v1/language-models`, Gemini's native `/v1beta/models`, and the OpenAI-compatible
+`/v1/models` endpoints at Moonshot and DeepSeek. Lookups use fixed provider URLs,
+do not follow redirects, cap response bytes, rows and pagination, and use request
+timeouts. API keys stay in headers and are never stored in the catalog or returned
+to the browser. The supported text families are filtered where a provider also
+lists image, audio, embedding or incompatible API models. A model-list entry is
+not a complete guarantee of every feature; OpenAI's list provides only basic
+metadata.
+
+`db/repositories/llm_model_repository.py` stores non-secret catalogs as
+`llm_models:<provider>` application settings. Workers hydrate these before model
+selection. New selections are qualified as `<provider>:<model id>` to avoid
+provider collisions, while existing saved selections keep their original ids.
+Clients send only the API model id, apply output limits when available, and
+preserve the qualified selection in logs. Pricing remains unknown for models
+whose listing and bootstrap metadata do not supply it.
+
+Official references: [OpenAI](https://developers.openai.com/api/reference/resources/models/methods/list),
+[Anthropic](https://platform.claude.com/docs/en/api/models/list),
+[Gemini](https://ai.google.dev/api/models),
+[x.ai](https://docs.x.ai/developers/rest-api-reference/inference/models), and
+[DeepSeek](https://api-docs.deepseek.com/api/list-models/).
+
 ## Agent package organization
 
 `yaffo/site_agents/common/tool_providers/` owns shared tool contracts, result

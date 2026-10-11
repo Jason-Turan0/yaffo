@@ -1,0 +1,117 @@
+feature: sync_services
+description: User can add custom photo services through the service builder, test and publish adapter code, approve its web access, and manage app credentials and test accounts
+
+tags:
+  - core
+
+preconditions:
+  - The isolated application and task-queue host are running
+  - The sync-services Playwright runner starts scripts/fake_flickr.py and routes Flickr origins to its local URL with YAFFO_SYNC_ORIGIN_OVERRIDES
+  - OAuth credentials and tokens are stored in the disposable test data directory
+
+context:
+  - tag: service-builder-template
+    path: templates/utilities/sync_service.html
+    description: Custom service builder with chat and Overview, Account, Access, Code, and Test tabs
+  - tag: service-builder-routes
+    path: routes/utilities/sync_services.py
+    description: Routes for creating, generating, testing, publishing, regenerating, and deleting services
+  - tag: service-builder-test-result
+    path: templates/utilities/_service_test_result.html
+    description: Read results, recorded writes, and validation errors from a service Test
+  - tag: sync-design
+    path: ../docs/development/automation-sync-adapters.md
+    description: Custom adapter lifecycle, grants, connections, and builder permissions
+
+data:
+  - A custom service draft appears under Services in the Automations sidebar but is unavailable to sync creation until published
+  - The builder writes an adapter for one direction and includes its provider connection definition
+  - Publishing approves the statically detected endpoint list; writes in Test are recorded and never sent
+  - Live reads in Test require a signed-in test account and explicit permission; returned account data is shown to the model on the next request
+  - App credentials are stored in the system keychain and are not included in builder context
+
+scenarios:
+  - name: create_custom_service_and_generate_adapter
+    goal: The Add a new service flow creates a draft and generates a provider adapter
+    priority: high
+    steps:
+      - Open New automation and choose Add a new service…
+      - Name the service 'Flickr sets'
+      - Describe a target adapter that sends albums to Flickr sets
+      - Wait for generation to finish
+    verify:
+      - The service opens with Overview, Account, Access, Code, and Test tabs
+      - The conversation and busy state are visible while generation runs
+      - The generated Overview identifies the direction, sign-in method, options, and capabilities
+      - Draft appears under Services in the sidebar and is not offered in Send to… before publishing
+    cleanup:
+      - Delete the draft service
+
+  - name: service_test_records_writes_and_shows_live_read_controls
+    goal: Test makes no provider writes and clearly distinguishes recorded writes from permitted live reads
+    priority: high
+    steps:
+      - Open a generated target service draft and choose Test
+      - Run Test with fixture options
+      - Open the Account tab and sign in to the test account fixture
+      - Grant live reads and run Test again
+    verify:
+      - Test shows planned hooks and recorded web calls
+      - Write calls are represented with placeholder response ids and are not sent to the provider
+      - Live reads are unavailable until a test account is connected and permission is granted
+      - The Test result displays the returned records or validation error
+      - The Account tab identifies the connected test account and provides a way to revoke live-read permission
+
+  - name: publish_approves_detected_endpoint_grants
+    goal: Publish displays the exact endpoints and risks the service may use
+    priority: high
+    steps:
+      - Generate a valid adapter that lists and writes to the provider fixture
+      - Open the Access tab and review the detected endpoints
+      - Click Publish and inspect the confirmation modal
+      - Confirm publishing
+    verify:
+      - The Access tab lists each detected method and URL with its read or write risk
+      - The publish modal summarizes the endpoint list and distinguishes reads from changes
+      - The service status changes from Draft to Published
+      - The service becomes available under its supported Import from… or Send to… direction
+    cleanup:
+      - Delete the published service after removing any test syncs that use it
+
+  - name: republish_wider_access_requires_sync_consent
+    goal: A service update that widens its endpoint grants asks affected syncs to approve again
+    priority: high
+    steps:
+      - Create a sync using a published custom service
+      - Change the service draft to call an additional endpoint
+      - Review the Access tab and publish the updated version
+    verify:
+      - The publish review identifies the newly added endpoint and the number of syncs using the service
+      - The affected sync cannot run until its updated access is approved
+      - Syncs remain associated with the service and show the required review state
+    cleanup:
+      - Delete the test sync and custom service
+
+  - name: oauth_app_credentials_are_saved_outside_the_database
+    goal: A custom OAuth service can save developer app credentials once for its sign-in flow
+    priority: medium
+    steps:
+      - Create or open a custom OAuth service that declares app credentials
+      - Open Account, enter the app's client id and secret, and save
+      - Navigate away and return to the Account tab
+    verify:
+      - The form explains the app registration is reused by every sync using the service
+      - The saved state is indicated without showing the secret value again
+      - The credentials are not displayed in Code, the chat, Test results, or subsequent form values
+      - Replacing app credentials warns that existing syncs using the service will need to sign in again
+
+  - name: service_cannot_be_deleted_while_in_use
+    goal: A service used by a sync remains protected until that sync is deleted
+    priority: medium
+    steps:
+      - Create a published custom service and a sync that uses it
+      - Open the service page
+    verify:
+      - Delete is disabled while the service is in use
+      - The Overview shows the number of syncs using the service
+      - After deleting the sync, Delete asks for confirmation and removes the service after approval

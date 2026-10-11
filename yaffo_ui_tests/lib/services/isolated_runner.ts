@@ -25,6 +25,8 @@ export interface IsolatedInstance {
 export interface IsolatedEnvironment extends IsolatedInstance {
     /** Second instance ("instance B" in specs/sharing.yaml) when started with withPeer. */
     peer?: IsolatedInstance;
+    /** Local fake Flickr server when requested by an integration spec. */
+    fakeFlickrUrl?: string;
     cleanup: () => Promise<void>;
 }
 
@@ -57,6 +59,8 @@ export interface IsolatedEnvironmentOptions {
     copyPreseeded?: boolean;
     /** Serve the reproducible documentation fixture instead of the UI-test seed. */
     docsFixture?: boolean;
+    /** Start scripts/fake_flickr.py and route Flickr origins to it. */
+    withFakeFlickr?: boolean;
 }
 
 export interface TestResult {
@@ -216,6 +220,7 @@ const instanceEnv = (
 ): Record<string, string> => ({
     ...process.env,
     YAFFO_DATA_DIR: tempDir,
+    YAFFO_SYNC_SECRETS_FILE: join(tempDir, "sync-secrets.json"),
     YAFFO_SEED_PROFILE: seedProfile,
     FLASK_APP: "yaffo.app:create_app",
     FLASK_ENV: "testing",
@@ -556,6 +561,7 @@ export const startIsolatedEnvironment = async (
         preseeded = false,
         copyPreseeded = false,
         docsFixture = false,
+        withFakeFlickr = false,
     } = options;
     if (docsFixture && withPeer) {
         throw new Error("The documentation fixture does not have a peer instance");
@@ -588,6 +594,42 @@ export const startIsolatedEnvironment = async (
         tempDir = copySeedCache("primary", join(TEMP_ROOT, `yaffo_test_${runId}`));
     }
 
+    let fakeFlickrProcess: ChildProcess | null = null;
+    let fakeFlickrUrl: string | undefined;
+    let flaskOnlyEnv: Record<string, string> = withPeer ? p2pEnv(port) : {};
+    if (withFakeFlickr) {
+        const probe = createServer();
+        const fakePort = await new Promise<number>((resolvePort, reject) => {
+            probe.once("error", reject);
+            probe.listen(0, "127.0.0.1", () => {
+                const address = probe.address();
+                if (!address || typeof address === "string") return reject(new Error("Could not allocate fake Flickr port"));
+                probe.close((error) => error ? reject(error) : resolvePort(address.port));
+            });
+        });
+        fakeFlickrUrl = `http://127.0.0.1:${fakePort}`;
+        fakeFlickrProcess = spawn("python", ["-m", "scripts.fake_flickr", "--port", String(fakePort)], {
+            env: instanceEnv(tempDir, "bennett"), cwd: YAFFO_DIR, stdio: ["ignore", "pipe", "pipe"],
+        });
+        let fakeOutput = "";
+        fakeFlickrProcess.stdout?.on("data", data => { fakeOutput += data.toString(); });
+        fakeFlickrProcess.stderr?.on("data", data => { fakeOutput += data.toString(); });
+        if (!(await waitForServer(`${fakeFlickrUrl}/_admin/state`)) || fakeFlickrProcess.exitCode !== null) {
+            fakeFlickrProcess.kill();
+            await waitForExit(fakeFlickrProcess);
+            throw new Error(`Fake Flickr server failed to start: ${fakeOutput}`);
+        }
+        flaskOnlyEnv = {
+            ...flaskOnlyEnv,
+            YAFFO_SYNC_ORIGIN_OVERRIDES: JSON.stringify({
+                "https://www.flickr.com": fakeFlickrUrl,
+                "https://api.flickr.com": fakeFlickrUrl,
+                "https://up.flickr.com": fakeFlickrUrl,
+            }),
+        };
+        console.log(`\n🪞 Fake Flickr server ready at ${fakeFlickrUrl}`);
+    }
+
     let primary: IsolatedInstance;
     try {
         primary = await startInstance({
@@ -598,12 +640,16 @@ export const startIsolatedEnvironment = async (
             seedProfile: "bennett",
             includeVideos: true,
             demoRole: demoMode ? "source" : undefined,
-            flaskOnlyEnv: withPeer ? p2pEnv(port) : {},
+            flaskOnlyEnv,
             preseeded,
             disposableData: copyPreseeded,
             assetDir: copyPreseeded ? seedCacheDir("primary") : undefined,
         });
     } catch (error) {
+        if (fakeFlickrProcess) {
+            fakeFlickrProcess.kill();
+            await waitForExit(fakeFlickrProcess);
+        }
         if (copyPreseeded && existsSync(tempDir)) {
             rmSync(tempDir, {recursive: true, force: true, maxRetries: 5, retryDelay: 100});
         }
@@ -637,6 +683,10 @@ export const startIsolatedEnvironment = async (
                 rmSync(peerTempDir, {recursive: true, force: true, maxRetries: 5, retryDelay: 100});
             }
             await stopInstance(primary);
+            if (fakeFlickrProcess) {
+                fakeFlickrProcess.kill();
+                await waitForExit(fakeFlickrProcess);
+            }
             throw e;
         }
         console.log(`\n🔗 Sharing sandbox up: A=${primary.baseUrl} B=${peer.baseUrl} (hub unreachable, LAN pairing only)`);
@@ -645,12 +695,17 @@ export const startIsolatedEnvironment = async (
     const cleanup = async () => {
         console.log(`\n🧹 Cleaning up isolated environment...`);
         await Promise.all([stopInstance(primary), stopInstance(peer)]);
+        if (fakeFlickrProcess) {
+            fakeFlickrProcess.kill();
+            await waitForExit(fakeFlickrProcess);
+        }
         console.log(`   ✅ Stopped isolated process(es)`);
     };
 
     return {
         ...primary,
         peer,
+        fakeFlickrUrl,
         cleanup,
     };
 };

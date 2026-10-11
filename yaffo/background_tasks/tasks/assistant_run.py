@@ -86,8 +86,9 @@ def run_assistant_turn(
         return
 
     diagnostics = assistant_settings.enabled_diagnostics(session)
+    web = assistant_settings.web_enabled(session)
     redactor = redactor_for(session)
-    turns = transcript_turns(repo.list_events(session, conversation_id), diagnostics, redactor)
+    turns = transcript_turns(repo.list_events(session, conversation_id), diagnostics, redactor, web=web)
     if not turns or turns[-1][0] != ROLE_USER:
         repo.set_status(session, conversation_id, ASSISTANT_STATUS_IDLE)
         return
@@ -120,6 +121,7 @@ def run_assistant_turn(
             model_label=f"{assistant_settings.provider_label(session)} · {assistant_settings.model_label(session)}",
             conversation_id=conversation_id,
             actions=assistant_settings.enabled_actions(session),
+            web=web,
         )
         for event in agent.run_events(user_message, should_cancel=should_cancel):
             if event.type == "cancelled" or should_cancel():

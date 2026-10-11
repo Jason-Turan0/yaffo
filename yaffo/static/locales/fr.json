@@ -368,6 +368,78 @@
         "starting": "Démarrage…"
       },
       "thumbnailFolderUnavailable": "Le dossier des vignettes n'est pas disponible, donc les vignettes n'ont pas été vérifiées. Vérifiez que son lecteur est connecté."
+    },
+    "sync": {
+      "device": {
+        "done": "Connexion réussie.",
+        "failed": "Impossible de lancer la connexion. Réessayez.",
+        "waiting": "En attente de la saisie du code…"
+      },
+      "picker": {
+        "choose": "Choisir",
+        "empty": "Aucun dossier ici.",
+        "failed": "Impossible de charger les dossiers.",
+        "loading": "Chargement…",
+        "open": "Ouvrir",
+        "suggested": "Suggestions",
+        "top": "Haut"
+      },
+      "service": {
+        "allow": "Autoriser",
+        "allowSelected": "Autoriser la sélection",
+        "answerFailed": "Impossible d’enregistrer votre réponse. Réessayez.",
+        "cancelMessage": "Arrêter le générateur ? Le brouillon enregistré jusqu’ici sera conservé.",
+        "deleteMessage": "Son brouillon, sa conversation et sa connexion au compte de test seront également supprimés. Aucune synchronisation ne l’utilise.",
+        "deleteTitle": "Supprimer ce service ?",
+        "denyAll": "Tout refuser",
+        "docsAllowed": "✓ Autorisé : {{domains}}.",
+        "docsAsk_one": "Le générateur souhaite lire des pages d’un nouveau site :",
+        "docsAsk_other": "Le générateur souhaite lire des pages de {{count}} nouveaux sites :",
+        "docsDenied": "Non autorisé : {{domains}}.",
+        "docsDomain_one": "{{domain}} · {{count}} page",
+        "docsDomain_other": "{{domain}} · {{count}} pages",
+        "docsNote": "Les sites autorisés ne vous seront plus demandés pendant la création de ce service. Yaffo récupère uniquement le texte des pages.",
+        "dontAllow": "Ne pas autoriser",
+        "liveAllowed": "✓ Tests en lecture seule en direct autorisés pour {{account}}.",
+        "liveAsk": "Autoriser le créateur à effectuer des appels en lecture seule à {{account}} pendant la création ? Les réponses sont envoyées au modèle d’IA.",
+        "liveDenied": "Tests en lecture seule en direct non autorisés.",
+        "superseded": "Remplacé par une demande plus récente."
+      },
+      "test": {
+        "checked": "Vérifié à {{time}} · aperçu ; rien n’a été copié ni modifié",
+        "columns": {
+          "action": "Action",
+          "destination": "Destination",
+          "file": "Fichier",
+          "size": "Taille",
+          "state": "Ce qui se passe"
+        },
+        "failed": "Impossible d’exécuter le test.",
+        "nothingNew": "Rien de nouveau à importer.",
+        "nothingToDo": "Rien à faire : la cible est déjà à jour.",
+        "partial": "Les {{counted}} premiers fichiers ont été comptabilisés ; la liste des autres a pris trop de temps. Une exécution les importe tous.",
+        "partialOf": "{{counted}} fichiers sur {{total}} ont été comptabilisés ; la liste des autres a pris trop de temps. Une exécution les importe tous.",
+        "preview": {
+          "copy": "Copier",
+          "remove": "Supprimer",
+          "showing": "Affichage de {{shown}} sur {{total}}"
+        },
+        "running": "Vérification…",
+        "stat": {
+          "convert": "convertis en JPEG",
+          "copy": "à copier",
+          "remove": "à supprimer",
+          "unchanged": "déjà présents",
+          "unsupported": "ne peuvent pas être envoyés (cette destination n’accepte pas ce type de fichier)"
+        },
+        "state": {
+          "changed": "Modifié depuis la dernière importation",
+          "deleted_at_source": "Supprimé à la source",
+          "imported": "Déjà importé",
+          "in_library": "Déjà dans votre bibliothèque",
+          "new": "Nouveau"
+        }
+      }
     }
   },
   "assistant": {
@@ -614,6 +686,17 @@
     },
     "settings": {
       "groupCount": "{{on}} sur {{total}} activés"
+    },
+    "web": {
+      "readPages_one": "{{count}} page web lue",
+      "readPages_other": "{{count}} pages web lues",
+      "title": "Autoriser la lecture de pages web ?",
+      "explanation": "Autorisez les domaines sélectionnés pour cette conversation. Yaffo lit les pages et envoie leur contenu à votre fournisseur d’IA.",
+      "allow": "Autoriser la sélection",
+      "deny": "Refuser",
+      "domainAllowed": "{{domain}} : autorisé",
+      "domainDenied": "{{domain}} : refusé",
+      "failed": "Impossible d’enregistrer la décision d’accès au Web."
     }
   }
 }

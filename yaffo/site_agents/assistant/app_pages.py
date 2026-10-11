@@ -58,6 +58,7 @@ PAGES: dict[str, str] = {
 # GET routes that aren't pages: JSON APIs, htmx fragments and polls, files and
 # images, stylesheets, and pages that need context the assistant can't give.
 NOT_PAGES: frozenset[str] = frozenset({
+    "settings_llm_models",
     "assistant_conversations", "assistant_conversation", "fs_list", "api.locations_list",
     "settings_thumbnail_stats", "api.tag_values_list", "settings_thumbnail_stats_stream",
     "face_thumbnail", "favicon", "placeholder", "media", "media_poster", "media_by_path",
@@ -70,7 +71,7 @@ NOT_PAGES: frozenset[str] = frozenset({
     "themes_status", "theme_css", "theme_preview_css", "theme_tokens_css",
     "automations_status", "automations_runs", "automations_validate_cron",
     # A sync's Items fragment, and its filter screen (needs a sync to send to).
-    "sync_items", "sync_filter", "sync_peer_filter",
+    "sync_items", "sync_filter", "sync_peer_filter", "sync_choices",
     # The service builder, and its chat status poll (need a service to build).
     "sync_service", "sync_service_status",
     "utilities_index_photos_scan",

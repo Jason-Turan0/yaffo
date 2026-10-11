@@ -43,6 +43,15 @@
                 {{ help_tip(switch) }}
             </div>
             {% endfor %}
+            <div class="assistant-check-item">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="enabled" id="assistant-web-enabled"
+                           hx-post="{{ url_for('settings_assistant_web') }}" hx-swap="none"
+                           {% if assistant.web.on %}checked{% endif %}>
+                    {{ assistant.web.label }}
+                </label>
+                {{ help_tip(assistant.web) }}
+            </div>
         </div>
     </fieldset>
 

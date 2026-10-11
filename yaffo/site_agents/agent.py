@@ -32,6 +32,7 @@ from yaffo.site_agents.assistant.redact import Redactor
 from yaffo.site_agents.assistant.tool_providers.script_tool import ScriptToolProvider
 from yaffo.site_agents.assistant.settings import DIAG_LIBRARY
 from yaffo.site_agents.assistant.tool_providers.knowledge.tools import KnowledgeToolProvider
+from yaffo.site_agents.assistant.tool_providers.web_tool import WebToolProvider
 from yaffo.site_agents.adapter.prompt_generator.adapter_system_prompt import build_adapter_builder_system_prompt
 from yaffo.site_agents.adapter.tool_providers.adapter_tool import AdapterToolProvider
 from yaffo.site_agents.automation.tool_providers.automation_tool import AutomationToolProvider
@@ -334,6 +335,7 @@ def create_assistant_agent(
     max_iterations: int = _MAX_ITERATIONS,
     conversation_id: Optional[int] = None,
     actions: frozenset[str] = frozenset(),
+    web: bool = False,
 ) -> Agent:
     """Wire the in-app assistant: the docs tools (search_docs / read_doc over the
     bundled knowledge), plus the read-only diagnostic tools for the enabled
@@ -345,6 +347,11 @@ def create_assistant_agent(
     the caller resolves them from the assistant settings; `session` is required
     when any diagnostics group is enabled."""
     providers: list[ToolProvider] = [KnowledgeToolProvider()]
+    if web:
+        if session is None or conversation_id is None:
+            raise ValueError("Web reads need a database session and conversation")
+        redactor = redactor or Redactor()
+        providers.append(WebToolProvider(session, conversation_id, redactor))
     if DIAG_LIBRARY not in diagnostics or conversation_id is None:
         actions = frozenset()
     if diagnostics:
@@ -359,7 +366,7 @@ def create_assistant_agent(
             providers.append(LinkToolProvider(session))
     client = create_model_client(
         model=model,
-        system_prompt=build_assistant_system_prompt(diagnostics, actions),
+        system_prompt=build_assistant_system_prompt(diagnostics, actions, web=web),
         log_feature="assistant",
         log_dir=log_dir, persistent_log=log_dir is not None,
         providers=providers,

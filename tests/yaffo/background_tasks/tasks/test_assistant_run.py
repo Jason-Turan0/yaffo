@@ -49,10 +49,10 @@ def agent_factory(monkeypatch):
         agent = ScriptedAgent(events)
 
         def create(*, model, api_key, history, session=None, diagnostics=frozenset(), redactor=None, model_label="",
-                   log_dir=None, conversation_id=None, actions=frozenset()):
+                   log_dir=None, conversation_id=None, actions=frozenset(), web=False):
             calls.update(model=model, api_key=api_key, history=history, diagnostics=diagnostics,
                          redactor=redactor, model_label=model_label, conversation_id=conversation_id,
-                         actions=actions)
+                         actions=actions, web=web)
             return agent
 
         monkeypatch.setattr(run_module, "create_assistant_agent", create)
@@ -118,6 +118,18 @@ def test_missing_api_key_fails_with_a_code(session, agent_factory):
     assert kind == "error"
     assert payload == {"code": "api_key_missing", "provider": "Anthropic"}
     assert repo.get_conversation(session, conversation_id).status == ASSISTANT_STATUS_FAILED
+
+
+def test_web_tools_are_enabled_only_by_the_saved_setting(session, agent_factory):
+    agent_factory([])
+    conversation_id = _conversation(session, ("user", "Read this web page"))
+    run_module.run_assistant_turn(session, conversation_id, should_cancel=lambda: False)
+    assert agent_factory.calls["web"] is True
+    session.add(ApplicationSettings(name="assistant_web_enabled", type="string", value="false"))
+    session.commit()
+    conversation_id = _conversation(session, ("user", "Read this web page"))
+    run_module.run_assistant_turn(session, conversation_id, should_cancel=lambda: False)
+    assert agent_factory.calls["web"] is False
 
 
 @pytest.mark.parametrize("stop_reason, code", [
