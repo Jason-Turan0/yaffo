@@ -1,4 +1,5 @@
-"""Built-in source: copy new photos from a paired Yaffo device (docs/development/peer-sync.md).
+"""Built-in source: copy new photos from a paired Yaffo device (the Peer sync section of
+docs/development/automation-sync-adapters.md).
 
 "Copy new photos from *Mom's laptop › Vacation 2026* into *Pictures › Imports › Mom*."
 The other side is a scope the device has granted to this one: a media folder, a

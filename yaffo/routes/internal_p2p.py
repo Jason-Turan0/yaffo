@@ -1,4 +1,5 @@
-"""`/internal/p2p/v1`: the internal P2P API (docs/development/peer-sync.md).
+"""`/internal/p2p/v1`: the internal P2P API (the Peer sync section of
+docs/development/automation-sync-adapters.md).
 
 Sync workers can't run the P2P engine (it owns the device's hub socket, UDP port,
 and mDNS name), so they ask this web process to make peer calls through its one

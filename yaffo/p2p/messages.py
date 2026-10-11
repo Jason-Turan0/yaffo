@@ -22,8 +22,8 @@ from yaffo.p2p.pairing import sign_nonce, verify_nonce_signature
 SIGNED_MESSAGE_MAX_AGE_SECONDS = 300
 
 # The peer protocol version, carried by every signed request and every response
-# (docs/development/peer-sync.md, "Wire protocol changes"). A message without one
-# is from a version-1 peer. Each side adapts to the lower version; so far every
+# (docs/development/automation-sync-adapters.md, Peer sync, "Wire protocol
+# changes"). A message without one is from a version-1 peer. Each side adapts to the lower version; so far every
 # change is additive (version 2 adds `sha1` to manifests), so adapting means
 # treating new fields as optional. Deliberately NOT part of the signed payload:
 # a version-1 verifier recomputes the signature from its own field list, and the

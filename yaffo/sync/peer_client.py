@@ -1,4 +1,5 @@
-"""A client for the internal P2P API (`/internal/p2p/v1`, docs/development/peer-sync.md).
+"""A client for the internal P2P API (`/internal/p2p/v1`; the Peer sync section of
+docs/development/automation-sync-adapters.md).
 
 Sync workers can't run the P2P engine, so the peer source asks the web process,
 which owns it. Two transports, one interface:

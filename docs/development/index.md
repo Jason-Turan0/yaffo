@@ -23,9 +23,10 @@ Reference material for contributors and agents working in the Yaffo codebase.
 - [Automation Web Calls](automation-web-calls.md) - design sketch (proposed):
   authorized outbound HTTP for custom automations, detected from the script and
   approved at publish; first use case is sharing photos to a Google Photos album.
-- [Sync Adapters](automation-sync-adapters.md) - alternative design sketch
-  (proposed): a host sync engine for import/export with small Starlark Source
-  and Target adapters per provider, and the host/adapter hook contract.
+- [Sync Adapters](automation-sync-adapters.md) - a host sync engine for
+  import/export with small Starlark Source and Target adapters per provider, the
+  host/adapter hook contract, and peer sync: importing from paired devices through
+  the internal REST API sync workers use to reach the web process's P2P engine.
 - [OAuth App Registrations](oauth-app-registrations.md) - Phase 0 runbook for the
   Microsoft Entra and Google Cloud desktop clients the sync presets sign in with,
   and the probe that checks them.
@@ -34,9 +35,6 @@ Reference material for contributors and agents working in the Yaffo codebase.
 - [Icons](icons.md)
 - [P2P Device Pairing](p2p-sharing.md) - design sketch for peer trust without a
   login system.
-- [Peer Sync](peer-sync.md) - design sketch (proposed): importing from paired
-  devices through the sync engine, and the internal REST API sync workers use to
-  reach the web process's P2P engine.
 - [Video](video.md)
 - [Web Routes and Request Security](web-routes-and-request-security.md) - the
   app-wide `Host` and origin check, opening files by id, the small shared `/api/`

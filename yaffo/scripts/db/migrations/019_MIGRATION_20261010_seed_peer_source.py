@@ -1,6 +1,7 @@
 """Seed the built-in Peer source adapter: import from a paired Yaffo device
-(docs/development/peer-sync.md). Like the Folder adapters, it is a row with a
-`handler`; its code is in yaffo/sync/peer_source.py.
+(the Peer sync section of docs/development/automation-sync-adapters.md). Like the
+Folder adapters, it is a row with a `handler`; its code is in
+yaffo/sync/peer_source.py.
 
 Data only: no schema change, nothing to mirror in 000_INIT (the sync tables come
 from 016). Idempotent.

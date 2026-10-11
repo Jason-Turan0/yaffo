@@ -1,5 +1,5 @@
-"""The engine side of the internal P2P API (docs/development/peer-sync.md):
-sessions and pulls that local processes (sync workers) drive over
+"""The engine side of the internal P2P API (docs/development/automation-sync-adapters.md,
+Peer sync): sessions and pulls that local processes (sync workers) drive over
 `/internal/p2p/v1`, run on this web process's one P2P engine.
 
 A session is one pinned connection to one peer, shared by every owner that

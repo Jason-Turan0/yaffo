@@ -2,9 +2,10 @@
 checksums, and restart-on-change.
 
 Two callers share this: TransferManager (the remote gallery's batches) and the
-internal P2P API (peer syncs, docs/development/peer-sync.md). Neither batches,
-destination layout, nor the UI live here: a caller picks the destination and
-watches the entry's state.
+internal P2P API (peer syncs; the Peer sync section of
+docs/development/automation-sync-adapters.md). Neither batches, destination
+layout, nor the UI live here: a caller picks the destination and watches the
+entry's state.
 
 Per-file resume state lives in a `{name}.partial.json` sidecar next to the
 `.partial` file (scratch state that must not outlive the partial it describes).
