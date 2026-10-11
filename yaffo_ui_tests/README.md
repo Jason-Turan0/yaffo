@@ -293,6 +293,17 @@ npm run test:spec -- generated_tests/albums/albums.spec.ts --fresh
 Its report lands in `reports/<spec-id>/` (e.g. `reports/albums__albums/`), the
 same per-spec layout CI uploads.
 
+Sync-provider specs automatically start local OneDrive, Immich, and Flickr
+fixtures; provider API calls from both Flask and the task-queue host use their
+local origins. To replace or add origin mappings for a run, pass a JSON object
+whose keys are the provider's real origins and whose values are reachable
+`http://` or `https://` URLs:
+
+```bash
+npm run test:spec -- generated_tests/sync_automations/sync_automations.spec.ts \
+  --sync-origin-overrides '{"https://graph.microsoft.com":"http://127.0.0.1:5098"}'
+```
+
 ### 4. Self-Heal Failing Tests
 
 ```bash
@@ -373,6 +384,7 @@ See `playwright.config.ts`:
 | `npm run test:headed` | Run tests in headed browser |
 | `npm run seed:build` | Build the seed cache (seeds A + B once) for `--preseeded` runs |
 | `npm run test:spec -- <spec>` | Run one spec in its own cache-restored environment |
+| `npm run test:spec -- <spec> --sync-origin-overrides '<json>'` | Override/add provider origin mappings for Flask and task-queue requests |
 | `npm run validate:specs` | Verify all `specs/*.yaml` are valid YAML |
 | `npm run test:sandboxed [-- <directory-or-spec> ...]` | Run generated-test directories concurrently, each against a disposable copy of the seed sandbox |
 | `npm run isolatedEnvironment:start [-- --demo]` | Start a seeded isolated app, optionally in source demo mode |
@@ -518,8 +530,8 @@ Anthropic models support native structured output and prompt caching. Generation
 ## Docker
 
 Docker does two jobs here: it confines the parts of this harness that hand filesystem
-access to a model, and it pins screenshot rendering so a guide image does not depend on
-which machine captured it.
+access to a model, and it pins the whole documentation environment (the Yaffo sandbox
+and the browser) so a guide image does not depend on which machine captured it.
 
 ### What needs it
 
@@ -527,12 +539,14 @@ which machine captured it.
 |---|---|
 | `npm run generate` | Passes `useDocker: true`, so the MCP filesystem server the model reads source through runs in a container with the repo mounted **read-only** and `--network none` |
 | `npm run test:heal` | No. Runs the filesystem server directly via `npx` |
-| `npm run docs:capture:docker` | Runs the browser half in a container so screenshots are reproducible |
+| `npm run docs:sandbox:build` / `docs:sandbox:start` | Builds the docs fixture and serves the app from the pinned image |
+| `npm run docs:capture:docker` | Runs the browser in the same image, against that app container |
 | `npm run docs:capture` | No. Captures on the host — fine locally, but see the drift below |
 
-Everything except `generate` and `docs:capture:docker` works without Docker installed.
+Everything except `generate`, the `docs:sandbox:*` scripts, and `docs:capture:docker`
+works without Docker installed.
 
-### Why docs capture is containerized when the Playwright suite is not
+### Why the docs environment is containerized when the Playwright suite is not
 
 The test suite confines generated specs with `sandbox-exec` (macOS) or `bwrap` (Linux),
 which is cheaper and enough for *safety*. Docs capture has a second requirement the
@@ -551,6 +565,19 @@ Two container runs are byte-identical. The same page captured on the host is a
 different size, so every CI run would report every shot as reframed and the comparison
 would be noise. The container pins the whole rendering stack — Chromium build, fonts,
 freetype — so the two agree.
+
+Pinning only the browser is not enough, though. The app decides what the browser
+draws, and a macOS app differs from CI's Linux one in thumbnail pixels (Pillow and
+libwebp builds), face boxes and label scores (ONNX Runtime kernels), video poster
+frames (the ffmpeg build the seed downloads), and fixture paths (`/private/tmp` on
+macOS). So the fixture is built, and the app served, from the same image the browser
+runs in, everywhere.
+
+Everything runs as `linux/amd64`, CI's architecture, even on Apple Silicon: Skia and
+ONNX Runtime take different SIMD paths per architecture. Without Rosetta in the Docker
+VM that means QEMU emulation, so the fixture build and captures are noticeably slower
+locally. `DOCS_DOCKER_PLATFORM=linux/arm64` runs natively for a quick look, but those
+captures are not comparable with CI's and should not be promoted.
 
 Encoding and comparison stay on the host either way: they use Pillow and NumPy from the
 project virtualenv, which is not in the Playwright image and should not be.
@@ -588,12 +615,15 @@ npm run docker:build:docs-capture
 `yaffo-mcp-filesystem` is `node:22-slim` with `@modelcontextprotocol/server-filesystem`
 pinned, running as a non-root user. Rebuild it if that pin changes.
 
-`yaffo-docs-capture` is the official Playwright image with this project's
-`node_modules` installed inside it, pinned to the `@playwright/test` version in
-`package.json` — **bump both together**, or the browser in the image stops matching the
-one the harness expects. `node_modules` is built into the image rather than mounted
-because the host's is compiled for darwin and will not execute on Linux; the run masks
-the mounted one with an anonymous volume.
+`yaffo-docs-capture` is the official Playwright image with Python 3.13 (from `uv`),
+Yaffo's dependencies from `pyproject.toml`, and this project's `node_modules` installed
+inside it. It is pinned to the `@playwright/test` version in `package.json` — **bump
+both together**, or the browser in the image stops matching the one the harness
+expects. Rebuild it after changing a Python or npm dependency; source changes need no
+rebuild, because the repo is mounted read-only at run time. `node_modules` and the
+venv are built into the image rather than mounted because the host's are compiled for
+darwin and will not execute on Linux; runs mask the mounted `node_modules` with an
+anonymous volume and point the runner at `/opt/venv` with `YAFFO_VENV`.
 
 Verify:
 
@@ -603,11 +633,11 @@ docker image inspect yaffo-mcp-filesystem:latest yaffo-docs-capture:latest --for
 
 ### Running a containerized capture
 
-The container reaches the app through `host.docker.internal`, and **a container cannot
-see the host's loopback**. The sandbox therefore has to bind beyond `127.0.0.1`:
+Build the fixture once, then serve it. Both run in the docs image:
 
 ```bash
-YAFFO_SANDBOX_HOST=0.0.0.0 npm run isolatedEnvironment:start
+npm run docs:sandbox:build     # slow, especially emulated; reused until rebuilt
+npm run docs:sandbox:start     # Ctrl-C stops it; add -- --detach to background it
 ```
 
 ```bash
@@ -615,8 +645,21 @@ npm run docs:capture:docker
 npm run docs:capture:docker -- --promote library-basics/browsing-filtering
 ```
 
+The app container (`yaffo-docs-app`) and each capture container join a private Docker
+network, `yaffo-docs`, and the capture reaches the app by name. The app is also
+published on `127.0.0.1:5002` for the host's own tools: the healer's and generator's
+browser, `curl`, and your own browser. Nothing binds beyond loopback on the host.
+
+The fixture lives in Docker volumes (`yaffo-docs-data`, `yaffo-docs-assets`) mounted at
+`/tmp/yaffo-docs` and `/tmp/yaffo-assets` inside the container, so paths the guide shows
+are the same on every machine. Named volumes rather than bind mounts, because SQLite in
+WAL mode over a macOS bind mount is slow and its locking unreliable. CI sets
+`DOCS_DATA_MOUNT` and `DOCS_ASSET_MOUNT` to host paths instead, so `actions/cache` can
+save the built fixture. A `--docker` capture refuses to run unless `yaffo-docs-app` is
+up: a host sandbox would bring back every difference the container removes.
+
 Generation takes the same flag. It shells out to the capture above, so `--docker` makes
-the walkthrough it just wrote get verified *and* promoted from the same renderer CI
+the walkthrough it just wrote get verified *and* promoted from the same environment CI
 uses — otherwise the first CI run reframes every shot the generator produced:
 
 ```bash
@@ -626,17 +669,19 @@ npm run docs:generate -- --docker library-basics/photo-details
 `docs:heal` needs no flag: it reads the staging a prior capture produced rather than
 capturing itself.
 
-`YAFFO_SANDBOX_HOST` defaults to `127.0.0.1` and is opt-in because `0.0.0.0` puts the
-sandbox on your LAN. `--network host` is not an alternative on macOS: it joins the Linux
-VM's network namespace, not your Mac's.
+Both containers get the repo mounted **read-only**. The capture container has exactly
+one writable hole, at `.doc-staging/captures`. Walkthroughs are model-generated code
+and staging is the only place they have any business writing; images are promoted into
+`docs/guide/` by the host, after they have been compared. The app container writes only
+to its data and asset volumes. Neither gets a provider key, and the capture's
+environment is an allowlist (see `lib/user_doc_automation/env.ts`) that deliberately
+carries no `DOCKER_HOST` — the daemon socket is root on the host, and handing it to
+generated code would make the container pointless. The app uses keyring's null
+backend: the container has no OS keychain, and the docs sandbox stores no secrets.
 
-The container gets the repo mounted **read-only** with exactly one writable hole, at
-`user_doc_automation/.staging`. Walkthroughs are model-generated code and staging is the
-only place they have any business writing; images are promoted into `docs/guide/` by the
-host, after they have been compared. Its environment is an allowlist (see
-`lib/user_doc_automation/env.ts`) that carries no provider key and, deliberately, no
-`DOCKER_HOST` — the daemon socket is root on the host, and handing it to generated code
-would make the container pointless.
+`npm run isolatedEnvironment:start:docs` still serves a host-built fixture on
+`127.0.0.1:5002` for quick host-side work with `npm run docs:capture`. Never promote
+from it.
 
 ### How the filesystem container is run
 
@@ -662,8 +707,11 @@ docker run --rm -i --network none -v <hostDir>:/data/0:ro … yaffo-mcp-filesyst
 |---|---|
 | `dial unix /var/run/docker.sock` | Daemon not running — start Docker Desktop |
 | `Unable to find image 'yaffo-…:latest'` | Build it — see [Build the images](#build-the-images) |
-| Capture fails with `ECONNREFUSED` | Sandbox bound to loopback; restart it with `YAFFO_SANDBOX_HOST=0.0.0.0` |
-| Every shot reports `reframed` | Baselines were captured on the host; re-promote once from a container run |
+| `The yaffo-docs-app container is not running` | Start it: `npm run docs:sandbox:start` |
+| `Preseeded data dir has no yaffo.db` | Build the fixture first: `npm run docs:sandbox:build` |
+| `port is already allocated` on start | A host sandbox holds 5002; stop it (`isolatedEnvironment:start:docs`) |
+| Every shot reports `reframed` | Baselines came from another environment (host, or arm64); re-promote once from an amd64 container run |
+| `read-only file system` or `bad message` from the daemon | The Docker VM's disk hit an ext4 error and was remounted `emergency_ro`; restart Rancher/Docker Desktop |
 | Model reports a file missing that exists | A path outside `allowedDirectories` is not mounted, so it does not exist inside the container |
 | `permission denied` on the socket (Linux) | User not in the `docker` group |
 

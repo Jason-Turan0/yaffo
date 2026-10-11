@@ -250,7 +250,8 @@ def test_files_add_the_stable_source_id(client, service):
 
     assert service.list_files_calls == [("md1", "Vacation 2026", None, 0, 200)]
     assert body["files"][0]["source_id"] == "md1:Vacation 2026/a.jpg"
-    assert body["next_cursor"] == "1" and body["total"] == 3
+    assert body["next_cursor"] is None
+    assert body["total"] == 3
 
 
 def test_files_page_from_a_cursor_and_parse_album_keys(client, service):

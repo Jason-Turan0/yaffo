@@ -35,10 +35,11 @@ export default defineWalkthrough({
         "classify-labels-automation.webp": {
             viewport: {width: 1400, height: 1000},
             goto: "/utilities/automations/classify_labels",
-            clip: "#configureAutomationModal .modal-content",
+            clip: "#automation-configure-panel",
             setup: async (page) => {
-                await page.locator("#configure-automation-button").click();
-                await page.locator("#configureAutomationModal.active").waitFor();
+                await page.locator("#automation-configure-panel > summary").click();
+                await page.locator("#automation-configure-panel[open] #config-confidence_threshold").waitFor();
+                await page.mouse.move(0, 0);
             },
         },
         "media-labels.webp": {
@@ -111,9 +112,9 @@ export default defineWalkthrough({
 
         // The automation page exposes the Media indexed trigger and configuration.
         await visit("/utilities/automations/classify_labels");
-        await page.locator("#configure-automation-button").click();
-        await page.locator("#configureAutomationModal.active").waitFor();
-        await page.locator("#configureAutomationModal [name=cancel]").last().click();
+        await page.locator("#automation-configure-panel > summary").click();
+        await page.locator("#automation-configure-panel[open] #config-confidence_threshold").waitFor();
+        await page.locator("#automation-configure-panel > summary").click();
 
         // Select two stable labels in the real gallery UI, choose an ALL match,
         // and submit the read-only filter form.

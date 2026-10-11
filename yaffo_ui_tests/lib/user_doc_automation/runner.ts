@@ -123,7 +123,7 @@ const captureOne = async (
         // Relative URLs resolve against this, the same as `playwright.config.ts` does
         // for generated specs. Without it `page.waitForURL("/")` never matches — the
         // page really is at "/", but the pattern has nothing to resolve against, and
-        // under a containerized capture the address is `host.docker.internal` anyway.
+        // under a containerized capture the address is `yaffo-docs-app` anyway.
         // A walkthrough written in the idiom of the Playwright specs should just work.
         baseURL: baseUrl,
         // Fixed so a shot never changes because the machine's settings differ.
@@ -178,7 +178,11 @@ const captureOne = async (
                 });
                 console.log(`      captured ${filename}`);
             } finally {
-                await page.close();
+                try {
+                    if (shot.teardown) await shot.teardown(page);
+                } finally {
+                    await page.close();
+                }
             }
         }
 

@@ -15,14 +15,10 @@ Reference material for contributors and agents working in the Yaffo codebase.
 
 ## Systems
 
-- [AI Assistant](ai-assistant.md) - implementation plan (proposed): docs Q&A,
-  bounded diagnostics, and allowlisted library edits and fixes that run only once
-  the user confirms them.
+- [AI Assistant](ai-assistant.md) - documentation answers, bounded diagnostics,
+  approved library changes, and public website reads with domain approval.
 - [AI Page Builder](ai-page-builder.md)
 - [Automations](automations.md)
-- [Automation Web Calls](automation-web-calls.md) - design sketch (proposed):
-  authorized outbound HTTP for custom automations, detected from the script and
-  approved at publish; first use case is sharing photos to a Google Photos album.
 - [Sync Adapters](automation-sync-adapters.md) - a host sync engine for
   import/export with small Starlark Source and Target adapters per provider, the
   host/adapter hook contract, and peer sync: importing from paired devices through

@@ -14,6 +14,7 @@ interface LocalRunOptions {
     port: number;
     fresh: boolean;
     mode: Mode;
+    syncOriginOverrides?: Record<string, string>;
     signal?: AbortSignal;
 }
 
@@ -27,7 +28,8 @@ export async function runLocalSuite(
         withPeer: suite.withPeer,
         preseeded: !options.fresh,
         copyPreseeded: !options.fresh,
-        withFakeFlickr: suite.specs.some(spec => spec.includes("generated_tests/sync_services/")),
+        withFakeSyncServices: suite.specs.some(spec => /generated_tests\/sync_(?:services|automations)\//.test(spec)),
+        syncOriginOverrides: options.syncOriginOverrides,
     });
     try {
         if (options.signal?.aborted) return 130;
@@ -48,6 +50,8 @@ export async function runLocalSuite(
                 SUITE: `local__${suite.id}`,
                 PEER_URL: environment.peer?.baseUrl ?? "",
                 FAKE_FLICKR_URL: environment.fakeFlickrUrl ?? "",
+                FAKE_ONEDRIVE_URL: environment.fakeOneDriveUrl ?? "",
+                FAKE_IMMICH_URL: environment.fakeImmichUrl ?? "",
                 YAFFO_DATA_DIR: environment.tempDir,
                 PATH: `${join(resolve(process.cwd(), ".."), "venv", "bin")}:${process.env.PATH ?? ""}`,
                 PLAYWRIGHT_HTML_OUTPUT_DIR: `${reportRoot}/html`,
@@ -67,6 +71,7 @@ async function main(): Promise<void> {
         mode: {type: "string"},
         port: {type: "string", default: "5002"},
         fresh: {type: "boolean", default: false},
+        "sync-origin-overrides": {type: "string"},
     }});
     if (values.help) {
         console.log(`Usage: npm run test:local -- [--suite <name>] [--mode headed|headless|ui] [--port <port>] [--fresh]
@@ -83,6 +88,20 @@ Supply both --suite and --mode to skip the menus.`);
     }
     if (values.mode && !MODES.includes(values.mode as Mode)) {
         throw new Error("--mode must be headed, headless, or ui");
+    }
+    let syncOriginOverrides: Record<string, string> | undefined;
+    if (values["sync-origin-overrides"]) {
+        try {
+            const parsed: unknown = JSON.parse(values["sync-origin-overrides"]);
+            if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)
+                || Object.entries(parsed).some(([origin, url]) => !/^https?:\/\//.test(origin)
+                    || typeof url !== "string" || !/^https?:\/\//.test(url))) {
+                throw new Error();
+            }
+            syncOriginOverrides = parsed as Record<string, string>;
+        } catch {
+            throw new Error("--sync-origin-overrides must be a JSON object mapping http(s) origins to http(s) URLs");
+        }
     }
     const suites = discoverSandboxedSuites();
     let suite = values.suite
@@ -139,7 +158,7 @@ Supply both --suite and --mode to skip the menus.`);
             }
         }
         if (suite.withPeer) console.log("\nSharing scenarios are ordered: run the complete suite before retrying individual tests.");
-        process.exitCode = await runLocalSuite(suite, {port, fresh: values.fresh!, mode, signal: controller.signal});
+        process.exitCode = await runLocalSuite(suite, {port, fresh: values.fresh!, mode, signal: controller.signal, syncOriginOverrides});
     } catch (error) {
         if (!controller.signal.aborted) throw error;
         process.exitCode = 130;

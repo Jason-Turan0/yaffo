@@ -43,17 +43,23 @@ export default defineWalkthrough({
         await page.getByRole("button", {name: "Open File", exact: true}).click();
         await page.getByRole("button", {name: "Open Folder", exact: true}).click();
 
-        // Exercise favorite state without changing the seeded database.
-        await page.route(`**/api/media/${photoId}/favorite`, async (route) => {
+        // Exercise favorite state without changing the seeded database. Favorites
+        // are a PATCH of the media item; anything else passes through.
+        const mediaApi = `**/api/media/${photoId}`;
+        await page.route(mediaApi, async (route) => {
+            if (route.request().method() !== "PATCH") return route.fallback();
             await route.fulfill({
                 contentType: "application/json",
-                body: JSON.stringify({favorite: true}),
+                body: JSON.stringify({id: photoId, favorite: true}),
             });
         });
         const favorite = page.locator(".favorite-toggle");
+        const favorited = page.waitForRequest((request) =>
+            request.method() === "PATCH" && new URL(request.url()).pathname === `/api/media/${photoId}`);
         await favorite.click();
+        await favorited;
         await favorite.waitFor({state: "visible"});
-        await page.unroute(`**/api/media/${photoId}/favorite`);
+        await page.unroute(mediaApi);
 
         // Open and exercise the tag editor, then cancel without saving.
         await page.getByRole("button", {name: "Edit Tags"}).click();

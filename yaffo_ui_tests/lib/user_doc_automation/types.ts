@@ -70,6 +70,8 @@ export interface Shot {
     ignoreRegions?: string[];
     /** Drive the page into the state this shot needs, after it has settled. */
     setup?: (page: Page) => Promise<void>;
+    /** Undo state created by setup after the image has been captured. */
+    teardown?: (page: Page) => Promise<void>;
 }
 
 export interface FlowContext extends SandboxLookups {

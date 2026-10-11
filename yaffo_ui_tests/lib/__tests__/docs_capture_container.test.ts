@@ -1,37 +1,16 @@
-import {addHostArgs, buildCaptureArgs, containerBaseUrl, snapshotDockerEnv,
-        DOCS_CAPTURE_IMAGE, HOST_ALIAS} from "../user_doc_automation/docker";
+import {buildAppArgs, buildCaptureArgs, snapshotDockerEnv, isNamedVolume,
+        CONTAINER_BASE_URL, DOCS_APP_CONTAINER, DOCS_CAPTURE_IMAGE, DOCS_DOCKER_PLATFORM,
+        DOCS_NETWORK} from "../user_doc_automation/docker";
 import {CAPTURE_ENV_ALLOWLIST} from "../user_doc_automation/env";
 
 const args = (over: Partial<Parameters<typeof buildCaptureArgs>[0]> = {}): string[] =>
-    buildCaptureArgs({repoDir: "/repo", stagingDir: "/repo/yaffo_ui_tests/.doc-staging/captures",
-                      baseUrl: "http://127.0.0.1:5002", ...over});
+    buildCaptureArgs({repoDir: "/repo", stagingDir: "/repo/yaffo_ui_tests/.doc-staging/captures", ...over});
 
-describe("containerBaseUrl", () => {
-    it.each([
-        ["http://127.0.0.1:5002", `http://${HOST_ALIAS}:5002`],
-        ["http://localhost:5002", `http://${HOST_ALIAS}:5002`],
-        ["http://0.0.0.0:5002", `http://${HOST_ALIAS}:5002`],
-    ])("rewrites %s so the container can reach the host", (given, expected) => {
-        expect(containerBaseUrl(given)).toBe(expected);
-    });
+const appArgs = (over: Partial<Parameters<typeof buildAppArgs>[0]> = {}): string[] =>
+    buildAppArgs({repoDir: "/repo", mode: "serve", mounts: {data: "docs-data", assets: "docs-assets"}, ...over});
 
-    it("leaves a real host alone", () => {
-        expect(containerBaseUrl("http://staging.example.com:8080")).toBe("http://staging.example.com:8080");
-    });
-});
-
-describe("addHostArgs", () => {
-    // Regression: mapping the alias to host-gateway on macOS overrides Docker's own
-    // resolution (the Mac) with the bridge gateway (the Linux VM), and every
-    // connection to the app is refused.
-    it("is empty on macOS, where Docker resolves the alias itself", () => {
-        expect(addHostArgs("darwin")).toEqual([]);
-    });
-
-    it("maps the alias on Linux, which has no built-in one", () => {
-        expect(addHostArgs("linux")).toEqual(["--add-host", `${HOST_ALIAS}:host-gateway`]);
-    });
-});
+const envNames = (argv: string[]): string[] =>
+    argv.filter((a, i, all) => all[i - 1] === "-e").map((a) => a.split("=")[0]);
 
 describe("buildCaptureArgs", () => {
     // Staging must stay a sibling of the content tree, never a child: the agent's
@@ -82,6 +61,87 @@ describe("buildCaptureArgs", () => {
 
     it("names the pinned image", () => {
         expect(args()).toContain(DOCS_CAPTURE_IMAGE);
+    });
+
+    // The app runs in its own container; the capture never reaches back to the host.
+    it("drives the app container over the docs network", () => {
+        expect(args()).toEqual(expect.arrayContaining(["--network", DOCS_NETWORK]));
+        expect(args()).toContain(`DOCS_BASE_URL=${CONTAINER_BASE_URL}`);
+        expect(args().join(" ")).not.toContain("host.docker.internal");
+    });
+
+    it("gives walkthroughs the fixture path the app container sees", () => {
+        expect(args()).toContain("YAFFO_DOCS_DATA_DIR=/tmp/yaffo-docs");
+    });
+
+    it("runs on the pinned platform", () => {
+        expect(args()).toEqual(expect.arrayContaining(["--platform", DOCS_DOCKER_PLATFORM]));
+    });
+});
+
+describe("buildAppArgs", () => {
+    it("serves the docs fixture by name on the docs network", () => {
+        const argv = appArgs();
+        expect(argv).toEqual(expect.arrayContaining(["--name", DOCS_APP_CONTAINER, "--network", DOCS_NETWORK]));
+        expect(argv.slice(-6)).toEqual(
+            ["tsx", "lib/services/isolated_runner.ts", "--port", "5002", "--preseeded", "--docs"]);
+    });
+
+    it("publishes the sandbox on host loopback only", () => {
+        expect(appArgs()).toContain("127.0.0.1:5002:5002");
+    });
+
+    it("allows the container name through the app's host guard", () => {
+        expect(appArgs()).toContain(`YAFFO_WEB_ALLOWED_HOSTS=${DOCS_APP_CONTAINER}`);
+        expect(appArgs()).toContain("YAFFO_DOC_OBSERVER=1");
+    });
+
+    it("mounts the repo read-only and writes only to the data and asset mounts", () => {
+        const argv = appArgs();
+        expect(argv).toContain("/repo:/app:ro");
+        const writable = argv.filter((a, i, all) => all[i - 1] === "-v" && a.includes(":") && !a.endsWith(":ro"));
+        expect(writable).toEqual(["docs-data:/tmp/yaffo-docs", "docs-assets:/tmp/yaffo-assets"]);
+    });
+
+    // HOME=/tmp would make the app show the fixture as ~/yaffo-docs.
+    it("gives the app a home outside the fixture", () => {
+        expect(appArgs()).toContain("HOME=/home/yaffo");
+        expect(appArgs()).not.toContain("HOME=/tmp");
+    });
+
+    it("uses the image's venv, never the host's", () => {
+        expect(appArgs()).toContain("YAFFO_VENV=/opt/venv");
+    });
+
+    // The image installs only Yaffo's dependencies; the package is the mounted source.
+    it("puts the mounted source on the Python path", () => {
+        expect(appArgs()).toContain("PYTHONPATH=/app");
+    });
+
+    // PYTHON_KEYRING_BACKEND names a backend, not a secret.
+    it("passes no secret to the app", () => {
+        expect(envNames(appArgs()).some((k) => /_KEY$|TOKEN|SECRET|PASSWORD|DOCKER_HOST/i.test(k))).toBe(false);
+    });
+
+    it("builds the fixture without a name, port, or observer", () => {
+        const argv = appArgs({mode: "fixture"});
+        expect(argv).not.toContain("--name");
+        expect(argv).not.toContain("-p");
+        expect(argv).not.toContain("YAFFO_DOC_OBSERVER=1");
+        expect(argv.slice(-3)).toEqual(["lib/services/isolated_runner.ts", "--build-seed", "--docs"]);
+    });
+
+    it("keeps a detached sandbox after exit so its logs survive", () => {
+        expect(appArgs({detach: true})).toContain("--detach");
+        expect(appArgs({detach: true})).not.toContain("--rm");
+        expect(appArgs()).toContain("--rm");
+    });
+});
+
+describe("isNamedVolume", () => {
+    it("distinguishes Docker volume names from host bind paths", () => {
+        expect(isNamedVolume("yaffo-docs-data")).toBe(true);
+        expect(isNamedVolume("/tmp/yaffo-docs")).toBe(false);
     });
 });
 

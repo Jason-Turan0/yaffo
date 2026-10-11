@@ -77,14 +77,15 @@ If photos appear in the wrong year, follow
 
 ## AI Features Do Not Work
 
-![The AI Generation settings showing the selected model and API-key status](assets/troubleshooting/ai-generation-status.webp)
+![The AI Generation settings with a provider chosen, showing its models and API-key status](assets/troubleshooting/ai-generation-status.webp)
 
 The page builder, theme designer, and custom automations need AI generation to be
 configured.
 
 - **Set a model and API key.** In **Settings** → **AI Generation**, choose a
-  model. The provider's API key is stored in your operating system's credential
-  store. Without a valid key, generation cannot run.
+  provider, save its API key, then choose a model. **Active model** shows what
+  Yaffo will use. The key is stored in your operating system's credential store.
+  Without a valid key, generation cannot run.
 - **Check your network.** Generation calls the model provider over the internet;
   an offline machine or blocked connection will fail.
 - **Read the error.** Provider errors (an invalid key, a rate limit, or an

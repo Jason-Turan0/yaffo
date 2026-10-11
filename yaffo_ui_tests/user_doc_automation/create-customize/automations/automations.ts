@@ -140,7 +140,12 @@ export default defineWalkthrough({
                 throw new Error("The Automations page should list seven system automations");
             }
             await customAutomationsNav(page).locator("a").filter({hasText: SEEDED_NAME}).waitFor();
-            await page.locator(".automation-actions").getByRole("button", {name: "Enable"}).waitFor();
+            const enabledSwitch = page.locator(".automation-actions")
+                .getByRole("switch", {name: SEEDED_NAME});
+            await enabledSwitch.waitFor();
+            if (await enabledSwitch.getAttribute("aria-checked") !== "false") {
+                throw new Error("The seeded automation should start disabled");
+            }
             await page.getByRole("link", {name: "Edit", exact: true}).waitFor();
             await page.locator("#edit-automation-button").waitFor();
             await page.locator("#delete-automation-button").waitFor();
@@ -169,11 +174,11 @@ export default defineWalkthrough({
             if (await page.locator("#edit-automation-button, #delete-automation-button").count() !== 0) {
                 throw new Error("A system automation exposed custom-automation actions");
             }
-            await page.locator("#configure-automation-button").click();
-            const configureModal = page.locator("#configureAutomationModal.active");
-            await configureModal.locator("#config-threshold").waitFor();
-            await configureModal.locator('.modal-actions [name="cancel"]').click();
-            await configureModal.waitFor({state: "hidden"});
+            const configuration = page.locator("#automation-configure-panel");
+            await configuration.locator("> summary").click();
+            await configuration.locator("#config-threshold").waitFor();
+            await configuration.locator("> summary").click();
+            await configuration.locator("#config-threshold").waitFor({state: "hidden"});
 
             // Create a disposable custom automation and fill in its details through
             // the same controls described by the guide.

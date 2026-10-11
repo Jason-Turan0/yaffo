@@ -16,6 +16,7 @@ const HOST_REPO = resolve(join(process.cwd(), ".."));
 
 const scrubProcessEnv = jest.fn<(extra?: Record<string, string>) => void>();
 const dockerAvailable = jest.fn<(dockerEnv?: Record<string, string>) => boolean>();
+const appContainerRunning = jest.fn<(dockerEnv?: Record<string, string>) => boolean>();
 const runCaptureContainer = jest.fn<(options: unknown) => number>();
 const snapshotDockerEnv = jest.fn<() => Record<string, string>>();
 const loadWalkthroughs = jest.fn<(contentDir: string, only?: string[]) => Promise<unknown[]>>();
@@ -35,6 +36,9 @@ snapshotDockerEnv.mockReturnValue({DOCKER_HOST: "unix:///initial.sock"});
 
 await jest.unstable_mockModule("../env", () => ({scrubProcessEnv}));
 await jest.unstable_mockModule("../docker", () => ({
+    appContainerRunning,
+    CONTAINER_BASE_URL: "http://yaffo-docs-app:5002",
+    DOCS_APP_CONTAINER: "yaffo-docs-app",
     DOCS_CAPTURE_IMAGE: "yaffo-docs-capture:latest",
     dockerAvailable,
     runCaptureContainer,
@@ -93,12 +97,13 @@ beforeEach(() => {
     mkdirSync(CAPTURE_DIR, {recursive: true});
     mkdirSync(GUIDE_DIR, {recursive: true});
     for (const mock of [
-        dockerAvailable, runCaptureContainer, loadWalkthroughs, processResults,
+        dockerAvailable, appContainerRunning, runCaptureContainer, loadWalkthroughs, processResults,
         pagesNeedingStability, finalizeStability, runWalkthroughs,
     ]) mock.mockReset();
     currentHead.mockReset().mockReturnValue("feature-head-sha");
     dependencyHashes.mockReset().mockReturnValue({"yaffo/routes/home.py": "route-hash"});
     dockerAvailable.mockReturnValue(true);
+    appContainerRunning.mockReturnValue(true);
     runCaptureContainer.mockReturnValue(0);
     processResults.mockReturnValue([]);
     pagesNeedingStability.mockReturnValue([]);
@@ -301,13 +306,20 @@ describe("Docker capture", () => {
         expect(error).toHaveBeenCalledWith(expect.stringContaining("Docker is not reachable"));
     });
 
+    it("refuses to capture a host sandbox: the app must be the containerized one", async () => {
+        appContainerRunning.mockReturnValue(false);
+        await expect(main(["--docker"], dockerEnv)).resolves.toBe(1);
+        expect(appContainerRunning).toHaveBeenCalledWith(dockerEnv);
+        expect(runCaptureContainer).not.toHaveBeenCalled();
+        expect(error).toHaveBeenCalledWith(expect.stringContaining("npm run docs:sandbox:start"));
+    });
+
     it("returns the container's nonzero status without processing partial output", async () => {
         runCaptureContainer.mockReturnValue(17);
         await expect(main(["--docker", "library/browsing"], dockerEnv)).resolves.toBe(17);
         expect(runCaptureContainer).toHaveBeenCalledWith({
             repoDir: HOST_REPO,
             stagingDir: CAPTURE_DIR,
-            baseUrl: BASE_URL,
             pages: ["library/browsing"],
             dockerEnv,
         });
@@ -362,7 +374,6 @@ describe("Docker capture", () => {
         expect(runCaptureContainer).toHaveBeenNthCalledWith(2, {
             repoDir: HOST_REPO,
             stagingDir: join(CAPTURE_DIR, ".recheck"),
-            baseUrl: BASE_URL,
             pages: ["library/browsing"],
             shotsOnly: true,
             dockerEnv,

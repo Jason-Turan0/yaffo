@@ -86,6 +86,29 @@ async function enableSync(page: Page, slug: string): Promise<void> {
   await expect(page.locator('.automation-actions [role="switch"]')).toHaveAttribute('aria-checked', 'true');
 }
 
+async function openAccount(page: Page): Promise<void> {
+  const account = page.locator('#sync-step-account');
+  if (await account.getAttribute('open') === null) {
+    await account.locator('summary.sync-step-head').click();
+  }
+}
+
+async function signInToOneDrive(page: Page, slug: string, expectedScope?: string): Promise<void> {
+  await page.locator('#sync-sign-in').click();
+  await expect(page.locator('#accept')).toBeVisible();
+  if (expectedScope) await expect(page.locator('body')).toContainText(expectedScope);
+  await page.locator('#accept').click();
+  await expect(page).toHaveURL(new RegExp(`/utilities/automations/${slug}$`));
+}
+
+async function fakeOneDriveState(page: Page): Promise<{counters: Record<string, number>}> {
+  const fakeUrl = process.env.FAKE_ONEDRIVE_URL;
+  expect(fakeUrl, 'test:spec starts scripts/fake_onedrive.py for sync specs').toBeTruthy();
+  const response = await page.request.get(`${fakeUrl}/_admin/state`);
+  expect(response.ok()).toBeTruthy();
+  return response.json();
+}
+
 async function deleteSync(page: Page, slug: string): Promise<void> {
   await page.goto(`/utilities/automations/${slug}`);
   await page.locator('#delete-automation-button').click();
@@ -141,6 +164,142 @@ test('new_automation_lists_services_by_direction', async ({ page }) => {
   await expect(imports).toBeHidden();
   await expect(sends).toBeHidden();
   await modal.locator('.modal-close').click();
+});
+
+test('immich_validates_server_and_loads_fake_server_collections', async ({ page }) => {
+  const slug = await createSync(page, 'import', 'Immich', `UI Immich Setup ${Date.now()}`);
+  try {
+    const account = page.locator('#sync-step-account');
+    await expect(account).toBeVisible();
+    await expect(account.locator('#sync-base-url')).toBeVisible();
+    await expect(account.locator('#sync-api-key')).toBeVisible();
+    await account.locator('#sync-base-url').fill('http://127.0.0.1:1');
+    await account.locator('[data-allow-http] input').check();
+    await account.locator('#sync-api-key').fill('ui-test-invalid-key');
+
+    await Promise.all([
+      page.waitForResponse(response => response.url().includes(`/utilities/automations/${slug}/sync/credentials`)
+        && response.request().method() === 'POST'),
+      account.locator('#sync-connect').click(),
+    ]);
+
+    await expect(page.locator('.alert-error[role="alert"]')).toContainText("couldn't reach the server");
+    await expect(page.locator('#sync-step-options')).toContainText('Sign in first');
+    await expect(page.locator('#sync-step-options form')).toHaveCount(0);
+    await expect(page.locator('.automation-actions [role="switch"]')).toBeDisabled();
+
+    const fakeImmichUrl = process.env.FAKE_IMMICH_URL;
+    expect(fakeImmichUrl, 'test:spec starts scripts/fake_immich.py for sync specs').toBeTruthy();
+    await account.locator('#sync-base-url').fill(fakeImmichUrl!);
+    await account.locator('[data-allow-http] input').check();
+    await account.locator('#sync-api-key').fill('immich-test-key');
+    await Promise.all([
+      page.waitForResponse(response => response.url().includes(`/utilities/automations/${slug}/sync/credentials`)
+        && response.request().method() === 'POST'),
+      account.locator('#sync-connect').click(),
+    ]);
+
+    await expect(page.locator('#sync-step-account')).toContainText('Signed in');
+    await expect(page.locator('#sync-step-options form')).toBeVisible();
+    const album = page.locator('[data-remote-option="album"]');
+    await album.locator('[data-remote-open]').first().click();
+    await expect(album.locator('[data-remote-list]')).toContainText('Family');
+  } finally {
+    await deleteSync(page, slug);
+  }
+});
+
+test('onedrive_shares_account_and_reconsents_when_target_needs_write_scope', async ({ page }) => {
+  const sourceSlug = await createSync(page, 'import', 'OneDrive', `UI OneDrive Import ${Date.now()}`);
+  let targetSlug: string | undefined;
+  try {
+    await signInToOneDrive(page, sourceSlug);
+    await openAccount(page);
+    await expect(page.locator('#sync-step-account')).toContainText('Signed in');
+
+    const sourceFolder = page.locator('[data-remote-option="folder"]');
+    await sourceFolder.locator('[data-remote-open]').first().click();
+    const cameraRoll = sourceFolder.locator('[data-remote-list] .sync-picker-item').filter({ hasText: 'Camera Roll' });
+    await expect(cameraRoll).toBeVisible();
+    const beforePreview = await fakeOneDriveState(page);
+    await Promise.all([
+      page.waitForResponse(response => response.url().includes(`/utilities/automations/${sourceSlug}/sync/options`)
+        && response.request().method() === 'POST'),
+      cameraRoll.getByRole('button', { name: /Choose/ }).click(),
+    ]);
+    await expect(page.locator('#sync-option-folder')).toHaveValue(/Camera Roll/);
+    await page.locator('#sync-test').click();
+    await expect(page.locator('#sync-test-card')).toBeVisible();
+    await expect(page.locator('#sync-test-meta')).not.toBeEmpty();
+    await expect(page.locator('#sync-test-result .sync-test-table tbody tr').first()).toBeVisible();
+    const afterPreview = await fakeOneDriveState(page);
+    expect(afterPreview.counters.delta_pages ?? 0).toBeGreaterThan(beforePreview.counters.delta_pages ?? 0);
+    expect(afterPreview.counters.downloads ?? 0).toBe(beforePreview.counters.downloads ?? 0);
+
+    targetSlug = await createSync(page, 'send', 'OneDrive', `UI OneDrive Export ${Date.now()}`);
+    await openAccount(page);
+    const targetAccount = page.locator('#sync-step-account');
+    await expect(targetAccount).toContainText('Also used by 1 other sync');
+    await expect(targetAccount).toContainText('needs more access');
+
+    await signInToOneDrive(page, targetSlug, 'Files.ReadWrite');
+    await openAccount(page);
+    await expect(targetAccount).toContainText('Signed in');
+
+    await page.goto(`/utilities/automations/${sourceSlug}`);
+    await openAccount(page);
+    await expect(page.locator('#sync-step-account')).toContainText('Signed in');
+    await expect(page.locator('#sync-step-account')).toContainText('Also used by 1 other sync');
+  } finally {
+    if (targetSlug) await deleteSync(page, targetSlug);
+    await deleteSync(page, sourceSlug);
+  }
+});
+
+test('onedrive_target_reviews_destination_and_selection_changes', async ({ page }) => {
+  const slug = await createSync(page, 'send', 'OneDrive', `UI OneDrive Review ${Date.now()}`);
+  try {
+    await signInToOneDrive(page, slug, 'Files.ReadWrite');
+    const destination = page.locator('[data-remote-option="folder"]');
+    await destination.locator('[data-remote-open]').first().click();
+    const cameraRoll = destination.locator('[data-remote-list] .sync-picker-item').filter({ hasText: 'Camera Roll' });
+    await expect(cameraRoll).toBeVisible();
+    await Promise.all([
+      page.waitForResponse(response => response.url().includes(`/utilities/automations/${slug}/sync/options`)
+        && response.request().method() === 'POST'),
+      cameraRoll.getByRole('button', { name: /Choose/ }).click(),
+    ]);
+    const albumCount = await chooseAlbum(page);
+    expect(albumCount).toBeGreaterThan(0);
+
+    await page.locator('#sync-enable-review').click();
+    const review = page.locator('#syncEnableModal.active');
+    await expect(review).toBeVisible();
+    await expect(review).toContainText('Seeded Album');
+    await expect(review).toContainText('jason@example.com');
+    await expect(review).toContainText('Camera Roll');
+    await expect(review).toContainText('deletes its unchanged copy from OneDrive');
+    await Promise.all([
+      page.waitForResponse(response => response.url().includes(`/utilities/automations/${slug}/sync/turn-on`)
+        && response.request().method() === 'POST'),
+      review.locator('button[type="submit"]').click(),
+    ]);
+    await expect(page.locator('.automation-actions [role="switch"]')).toHaveAttribute('aria-checked', 'true');
+
+    await page.locator('#sync-step-where > summary').click();
+    await page.locator('#sync-selection-query').check();
+    await page.locator('#sync-step-where [data-selection-submit]').click();
+    await expect(page).toHaveURL(new RegExp(`/utilities/automations/${slug}/sync/filter`));
+    await chooseSearchableOption(page, '#media-type-select', 'Photos Only');
+    await page.getByRole('button', { name: 'Apply Filters' }).click();
+    await page.getByRole('button', { name: 'Send these photos' }).click();
+    await expect(page).toHaveURL(new RegExp(`/utilities/automations/${slug}$`));
+    await expect(page.locator('.automation-actions [role="switch"]')).toHaveAttribute('aria-checked', 'false');
+    await page.locator('#sync-enable-review').click();
+    await expect(page.locator('#syncEnableModal.active')).toContainText('photos matching your filter');
+  } finally {
+    await deleteSync(page, slug);
+  }
 });
 
 test('send_album_to_folder_runs_and_requires_consent_after_a_change', async ({ page }, testInfo) => {

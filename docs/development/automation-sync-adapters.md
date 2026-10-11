@@ -5,14 +5,11 @@ cleanup. Phases 1 and 2 are built; Phase 3 cloud targets and selector scripts
 have local coverage and a live Google Photos upload is verified. Phase 4 peer
 sync works between two instances on one machine. Remaining validation and
 release work is listed under the relevant phases below. Phase 5 is in progress;
-Phase 6 remains proposed. Alternative to
-[Automation Web Calls](automation-web-calls.md).**
-That doc has a custom automation do *everything* for an export (select, diff,
-upload, batch, record state) in one Starlark script. This sketch keeps its
-primitives (connections, stored as application settings and shared by syncs;
-endpoint grants,
-`web_request`, `web_upload_media`, follow-up hosts, the static endpoint
-detector) and changes who owns what:
+Phase 6 remains proposed.**
+
+The host sync engine uses shared connections stored as application settings,
+endpoint grants, `web_request`, `web_upload_media`, follow-up hosts, and the
+static endpoint detector. Responsibility is split as follows:
 
 - **Yaffo's host owns the sync engine**: diffing, state, batching, retries, rate
   limits, resume, crash recovery, downloads, file writes, and indexing.
@@ -150,8 +147,7 @@ declare the same fields in their `connection` block.
 
 ### Connection
 
-A signed-in account at a provider (as in [Automation Web
-Calls](automation-web-calls.md#connection)). The provider supplies how to sign
+A signed-in account at a provider. The provider supplies how to sign
 in and which hosts may be called; the connection holds whose account it is. Adding OAuth 1.0a (Flickr, SmugMug)
 and AWS SigV4 (S3, R2, B2) means the connection signs the **whole request**, not
 just a header. That happens in the host's request pipeline, so adapters don't
@@ -2942,8 +2938,9 @@ engine. The design is in [Peer sync](#peer-sync-importing-from-paired-devices).
   the second run imports only new files, and a mutual import moves no duplicate
   bytes.
 
-**Status: built (2026-10-10); the two-machine checks, the guide, translations, and
-browser specs remain.** Between two instances on one machine, a run over the LAN
+**Status: built (2026-10-10); the two-machine checks, translations, and browser
+verification remain. Guide prose and documentation coverage charters were updated
+on 2026-10-11; screenshot capture still needs refreshing.** Between two instances on one machine, a run over the LAN
 path imported 2,160 photos (2 more linked by hash) and the next run found all
 2,162 unchanged. Implementation notes:
 
@@ -2969,7 +2966,8 @@ path imported 2,160 photos (2 more linked by hash) and the next run found all
   run while the download continues; the sync's Run history shows only the sync run.
 - **Still required for the Phase 4 exit:** the two-machine LAN run (with the
   2,000-photo exit run across machines and the mutual import), timeouts retuned
-  against real NATs, then the user guide, translations, and Playwright specs.
+  against real NATs, refreshed guide screenshots, completed translations, and
+  verified Playwright flows.
 
 ### Phase 5: custom adapters and self-hosted servers
 
@@ -2978,6 +2976,12 @@ adapter builder and Immich code are present in the repository, but the exit
 criteria below have not yet been recorded as complete. Track cleanup findings
 and close them alongside the remaining validation and release work; avoid
 marking a phase complete until its exit criteria are verified.
+
+User-guide prose now covers import/send setup, paired devices, removal policies,
+and custom service publishing in [Automations](../guide/create-customize/automations.md).
+The documentation coverage charters also cover these flows and the updated
+Settings and Ask Yaffo behavior. Screenshot recapture and browser verification
+are still required; translation completion is tracked separately.
 
 - The *Add a new service…* builder: `write_adapter_code`, `test_adapter`,
   the Overview / Test account / Web access / Code / Test panel, the publish

@@ -2,8 +2,7 @@ import {afterEach, beforeEach, describe, expect, it} from "@jest/globals";
 import {chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from "fs";
 import {tmpdir} from "os";
 import {join} from "path";
-import {dockerAvailable, hostUserArgs, runCaptureContainer} from "../docker";
-import {DOCS_DATA_DIR} from "../paths";
+import {CONTAINER_BASE_URL, CONTAINER_DOCS_DATA_DIR, dockerAvailable, hostUserArgs, runCaptureContainer} from "../docker";
 
 let testDir: string;
 let fakeDocker: string;
@@ -56,7 +55,6 @@ describe("runCaptureContainer", () => {
             const status = runCaptureContainer({
                 repoDir: "/repo",
                 stagingDir,
-                baseUrl: "http://127.0.0.1:5002",
                 pages: ["library/browsing"],
                 dockerEnv: {
                     PATH: testDir,
@@ -75,8 +73,8 @@ describe("runCaptureContainer", () => {
             if (typeof process.getuid === "function" && typeof process.getgid === "function") {
                 expect(argv).toContain(`${process.getuid()}:${process.getgid()}`);
             }
-            expect(argv).toContain("DOCS_BASE_URL=http://host.docker.internal:5002");
-            expect(argv).toContain(`YAFFO_DOCS_DATA_DIR=${DOCS_DATA_DIR}`);
+            expect(argv).toContain(`DOCS_BASE_URL=${CONTAINER_BASE_URL}`);
+            expect(argv).toContain(`YAFFO_DOCS_DATA_DIR=${CONTAINER_DOCS_DATA_DIR}`);
             expect(argv.slice(-1)).toEqual(["library/browsing"]);
         } finally {
             if (previousSecret === undefined) delete process.env.ANTHROPIC_API_KEY;
@@ -88,7 +86,6 @@ describe("runCaptureContainer", () => {
         expect(runCaptureContainer({
             repoDir: "/repo",
             stagingDir: join(testDir, "captures"),
-            baseUrl: "http://app.test",
             dockerEnv: {PATH: testDir, DOCKER_TEST_SIGNAL: "1"},
         })).toBe(1);
     });
@@ -98,7 +95,6 @@ describe("runCaptureContainer", () => {
         expect(runCaptureContainer({
             repoDir: "/repo",
             stagingDir: join(testDir, "stability"),
-            baseUrl: "http://app.test",
             pages: ["library/browsing"],
             shotsOnly: true,
             dockerEnv: {PATH: testDir, DOCKER_TEST_OUTPUT: output},
@@ -112,7 +108,6 @@ describe("runCaptureContainer", () => {
         expect(() => runCaptureContainer({
             repoDir: "/repo",
             stagingDir: join(testDir, "captures"),
-            baseUrl: "http://app.test",
             dockerEnv: {PATH: join(testDir, "missing")},
         })).toThrow(/ENOENT/);
     });

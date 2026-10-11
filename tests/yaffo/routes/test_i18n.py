@@ -139,13 +139,22 @@ def test_saved_locale_translates_settings_llm_forms(client, monkeypatch):
         "yaffo.site_agents.llm_config.get_api_key",
         lambda provider_id: None,
     )
+    monkeypatch.setattr(
+        "yaffo.site_agents.model_catalog.refresh",
+        lambda *args, **kwargs: [],
+    )
     client.post("/settings/locale", data={"locale": "de"})
 
     body = client.get("/settings").get_data(as_text=True)
 
     assert "KI-Generierung" in body
     assert "KI-gestützte Anpassungsfunktionen" in body
-    assert ">Modell</label>" in body
+    assert ">Anbieter</label>" in body
+    assert "Claude Sonnet 4.6 — ausgewogen" in body
+
+    # The model list and key box load once a provider is chosen.
+    body = client.get("/settings/llm/models?provider=anthropic").get_data(as_text=True)
+
     assert "Claude Sonnet 4.6 — ausgewogen" in body
     assert "Anthropic-API-Schlüssel:" in body
     assert "Nicht festgelegt" in body
