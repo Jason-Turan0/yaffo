@@ -1,6 +1,6 @@
 {
     "page": "start-here/concepts",
-    "lastVerifiedSha": "07b05535b0b5fa731d76f750ff66bfb0f364b711",
+    "lastVerifiedSha": "9afff11862f0e86031527813e27a3c0c95e2af70",
     "observed": {
         "page": "start-here/concepts",
         "urls": [
@@ -250,7 +250,7 @@
         "serverObserver": "recorded"
     },
     "dependencyHashes": {
-        "yaffo/db/models.py": "4f8e6369d2d30f1d069f321c1f6061e4504199de729e40dcae871a1f5d566434",
+        "yaffo/db/models.py": "8f3238411dbb8562c1880805c2a27ec849f77e783cac754649c3397ff0a759df",
         "yaffo/routes/albums.py": "1d6b4e069d909d45bea2bf915c1f907261b7a7fa53f3854e470cf9ecdc1cd07c",
         "yaffo/routes/assistant.py": "40e40a343a1f4831cf9def8f7198168058d27191a538e69d430a25a4cf6f4a5a",
         "yaffo/routes/base.py": "c70c934c848142618c41b366798fc4d4b86741298cc194fb2bffb324340e69df",
