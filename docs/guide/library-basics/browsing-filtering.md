@@ -41,6 +41,7 @@ Common filters include:
 - **Device:** filter by camera or device metadata.
 - **Favorites:** show only favorited media.
 - **Media Type:** show photos only or videos only.
+- **Shape:** filter by orientation — portrait, landscape, or square.
 
 Click **Apply Filters** to update the gallery.
 

@@ -1,6 +1,6 @@
 {
     "page": "create-customize/themes",
-    "lastVerifiedSha": "07b05535b0b5fa731d76f750ff66bfb0f364b711",
+    "lastVerifiedSha": "038a029250218bce42cb9a98979c3068ba240b2e",
     "observed": {
         "page": "create-customize/themes",
         "urls": [
@@ -111,6 +111,7 @@
         "routes": [
             "yaffo/routes/assistant.py",
             "yaffo/routes/base.py",
+            "yaffo/routes/pages.py",
             "yaffo/routes/people.py",
             "yaffo/routes/themes_page.py"
         ],
@@ -119,10 +120,11 @@
     "dependencyHashes": {
         "yaffo/routes/assistant.py": "40e40a343a1f4831cf9def8f7198168058d27191a538e69d430a25a4cf6f4a5a",
         "yaffo/routes/base.py": "c70c934c848142618c41b366798fc4d4b86741298cc194fb2bffb324340e69df",
+        "yaffo/routes/pages.py": "2f89a021d85b1a2fbfbc0485ddfc576ea80b2de507b45153ae2663f1ef77e12d",
         "yaffo/routes/people.py": "d23743ad56c165f0b97f139ce49a3837ee14e241a6da7416234a26ebbc489d35",
         "yaffo/routes/themes_page.py": "78d49ad1761784cd85f71e78d02a93eef80483cea86311ed1dbc7e5005b366da",
         "yaffo/static/action-links.css": "fb3fd8e47c18993d826f7d34f8ccb24dc1aeb18a9aacb45c3a4fc41a901a4300",
-        "yaffo/static/app.js": "166c8895269cf5469fd1797b9c34b2281acc77240f74edc75e5b06d581cd9fd8",
+        "yaffo/static/app.js": "7aa9b2b8c921352f3928e5735a3210f9b085911c03085269e3e33c260ac6511b",
         "yaffo/static/assistant/assistant.css": "51af784b2881e1c3f119d97f2e88227a17e5fe28a88e67a63e9de83d711a46ca",
         "yaffo/static/assistant/assistant.js": "117173da2d7541ee51a23dcee1d19acd102bba8a1b66585a0e9bba687f38a112",
         "yaffo/static/assistant/plan_card.js": "22339c5d29df625ce95a94124b30fe474512d9a17b3d8420ee20f87c37daaf32",
@@ -158,11 +160,11 @@
         "yaffo/static/filters/tags.js": "ff59366f4d7b18149fbd7d401e29cc1e8d25b1d3c80805188d35ed9fc80dc079",
         "yaffo/static/form.css": "16dbfa5177212d3d33d72f5d82fac909ff38dca0e75836134ee44925e28e6ba7",
         "yaffo/static/i18n.js": "55b8645a19d8f982b14aa541c820605c9c9d81b2222e1a1628f69b0eaa7e6bc5",
-        "yaffo/static/locales/en.json": "0b637610172e977308d449dcaa30283747c0a4c02611dffa442baa855a64189a",
+        "yaffo/static/locales/en.json": "09181f92004b05a7cfc7fac7b25ba09ce46853067d2f92fc9aed10a4a3dab38d",
         "yaffo/static/match-type.css": "46a6ac0ede55c7800265e54c0e8b760d5a997aec8b1b5ebd0bb2991b7542e82c",
         "yaffo/static/multi-select.css": "2b898c7aecedd140e3fefc0be2e2dc11e59e4c6ccde1d0c555376f1177772ddb",
         "yaffo/static/multi-select.js": "d4ddd83c069e0900dc22e3d0de3a4b757f96477f820e7f6d78e4c38dc47c238f",
-        "yaffo/static/nav.js": "d57a9ad21b7d2001629b423806c03f6e1b76b0b8fa77c49e44e0cab8643c219f",
+        "yaffo/static/nav.js": "a6bb503219a68e61620faaddf503d60258ae4c15df42c9d2d093ee5510a8eb04",
         "yaffo/static/notification.css": "117f20bef2fe58da95491a59e414edc59bf866bf51f761edd785568eb219d3af",
         "yaffo/static/notification.js": "9ef3dd46a45373580066ccb53d402b189c658f429bd6d2d879167d51b98fb05a",
         "yaffo/static/pages/nav.css": "5bf844bd1ecc91c5c33e88b3ece44c307f2d233c0f16576e3514123f331b49b1",
@@ -194,7 +196,7 @@
         "yaffo/static/vendor/htmx/2.0.4/htmx.min.js": "e209dda5c8235479f3166defc7750e1dbcd5a5c1808b7792fc2e6733768fb447",
         "yaffo/static/vendor/i18next/25.7.4/i18next.min.js": "a91c328a3b79354160f6e68543657805230f0b51aba6e8534f7b1fb772af9ef2",
         "yaffo/templates/assistant/_panel.html": "bf015dfd85d361bbc7a33b304c7220eafa2b4622a293ddee75543cf75dad2eb3",
-        "yaffo/templates/base.html": "5a5f17e2a502b283ef5373d9fc8e70aec936fab448d083b6011f67cb26889378",
+        "yaffo/templates/base.html": "d1a23bae375d6d2c1243d0fa22b17920cb5e61f95625dffaca5a1621694fba44",
         "yaffo/templates/components/chat_dialog.html": "da8bfac5ca28f361fb0f621f409d644adb29fda577022cad1dab9771e84c2c37",
         "yaffo/templates/components/intl_date_input.html": "78e9e27806afaff2d33e2d43948f994652e5900489289155b2a1b8383d4baf44",
         "yaffo/templates/components/modal.html": "c6728e1414fd92a4e00ddfd17199f73c5a8f6b8ee9fc7d1922ede5c24ebe384a",
@@ -208,12 +210,12 @@
         "create-customize/assets/themes/themes-list.webp": {
             "width": 1400,
             "height": 900,
-            "sha256": "36c234be07a77ae0e538bfe0ca9f3d546be371560f50aedc76d1e23d7aff92c0"
+            "sha256": "9001a2eaefa5500c24507c1d2e5789adbc543dd4f188717b142ea0d5b047f448"
         },
         "create-customize/assets/themes/theme-editor.webp": {
             "width": 1400,
             "height": 900,
-            "sha256": "d93faa5a79e4fb171021110c23965c4f0d4fe1b00efffbafe4f2882cb78e6b88"
+            "sha256": "e118619b2027ed03848e151e4393ed24c041f42bdba11a5b0a0834695d75a19d"
         }
     }
 }

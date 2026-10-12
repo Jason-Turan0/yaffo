@@ -18,6 +18,28 @@
   Edit triggers, Configure (only when config fields exist), Edit details, Delete.
 - Editor: Test…, Publish draft, Discard; code toggle is "Working code" / "Active code".
 - Triggers editor: "Add a schedule" / "Add an event", "Save schedule", "Cancel".
-- There is NO "Run now" control anywhere in the app (grep of templates, en.json
-  and automations.js): the manual run button label is "Run…" (class `.js-run-files`,
-  route automations_run_now). The guide used to call it "Run now" — fixed.
+- CORRECTION (verified in templates/utilities/sync_detail.html): a **Run now**
+  control DOES exist for syncs only — `#sync-run-now` (label `Run now`, rendered
+  while the sync is on). Automations (system + custom) use **Run…**
+  (class `.js-run-files`, route automations_run_now). The guide's line "Use
+  **Run…** for system and custom automations, or **Run now** for an enabled sync"
+  is CORRECT — do not "fix" it (an earlier note here wrongly claimed no such
+  control exists).
+
+## automation-test.webp — shell reframe, not a state change (2244x2006 -> 2244x2064)
+- The shots clipped to `.utilities-content` are framed from that element's top down
+  to the bottom of the viewport, so their height tracks the navbar height. The
+  reviewed diff is exactly 2244 x 58 = 130152 pixels — a bottom-only band of added
+  page background; every content pixel (conversation, code, "Actions (5)",
+  "Move 0 photo(s)", "Ran published code · 32 photos") is identical.
+- Cause: base.html now renders #navbar-pages-bar `hidden` unless the server-side
+  `show_pages_bar` setting says otherwise (routes/pages.py,
+  PUT /pages/bar-visibility) and nav.js now does `apply(bar.hidden)` instead of
+  force-showing the strip from localStorage, so the Pages strip is gone and the
+  navbar is one strip (~29 CSS px) shorter.
+- Read a bottom-band-only diff here as a shell reframe, not a wrong page/filter or
+  broken content, and check the prose for shell-level names before editing (this
+  page never mentions the Pages strip).
+- Do NOT pin /pages/bar-visibility from this walkthrough to "stabilise" the framing:
+  it is shared fixture state that other pages' clip framing (custom-pages) and that
+  walkthrough's `.nav-page-tab` locators also depend on.

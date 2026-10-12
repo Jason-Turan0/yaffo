@@ -4,6 +4,10 @@
  * Published shots use the seeded Test Ocean theme. The flow creates one
  * temporary theme, exercises its user-facing lifecycle, and always restores the
  * original default and fixture state.
+ *
+ * The custom-pages strip under the navbar is part of every shot (its presence
+ * shifts the whole content column), and where it lives is now a server-side
+ * setting rather than per-browser state, so the shots pin it before framing.
  */
 import type {Page} from "@playwright/test";
 import {defineWalkthrough} from "../../_support";
@@ -45,6 +49,23 @@ const setDefault = async (page: Page, slug: string): Promise<void> => {
     }
 };
 
+/**
+ * Whether the custom-pages strip under the navbar is shown is now one app-wide
+ * setting (base.html's `show_pages_bar`, PUT /pages/bar-visibility) instead of a
+ * per-browser preference, so a toggle left behind by any earlier run changes
+ * every shot on this page — the strip's presence moves the whole content column.
+ * Pin the state the published shots are framed in rather than inheriting it.
+ */
+const setPagesBarVisible = async (page: Page, visible: boolean): Promise<void> => {
+    const response = await page.request.put("/pages/bar-visibility", {
+        headers: {"X-CSRF-Token": await csrfToken(page)},
+        data: {visible},
+    });
+    if (!response.ok()) {
+        throw new Error(`Could not set pages bar visibility: HTTP ${response.status()}`);
+    }
+};
+
 const removeDocumentationThemes = async (page: Page): Promise<void> => {
     const links = customThemesNav(page).locator("a");
     const count = await links.count();
@@ -63,6 +84,10 @@ const removeDocumentationThemes = async (page: Page): Promise<void> => {
 
 const prepareSeededTheme = async (page: Page, slug: string): Promise<void> => {
     await removeDocumentationThemes(page);
+    // The published shots show the strip hidden, which is also the app's default
+    // (no `show_pages_bar` row means hidden), but pin it explicitly so the capture
+    // does not depend on what a previous run left in the settings table.
+    await setPagesBarVisible(page, false);
     await page.goto(`/themes/${slug}`, {waitUntil: "domcontentloaded"});
     await page.locator(".themes-container").waitFor();
     await page.mouse.move(0, 0);
