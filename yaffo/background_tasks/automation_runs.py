@@ -1,10 +1,8 @@
 import json
-import sqlite3
 import time
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Callable
-from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 from yaffo.utils.time import utcnow
 from yaffo.background_tasks.automation_sandbox.executor import run_automation
@@ -20,6 +18,7 @@ from yaffo.db.models import (
     JOB_STATUS_FAILED,
 )
 from yaffo.db.repositories.job_repository import is_job_cancelled, open_run_job
+from yaffo.db.errors import is_lock_error
 from yaffo.logging_config import get_logger
 from yaffo.utils import job_codes as codes
 
@@ -29,10 +28,6 @@ logger = get_logger(__name__, 'background_tasks')
 # each after the busy_timeout already spent waiting. Another job holding the write
 # lock is passing; failing the run over it is not.
 LOCK_RETRY_DELAYS_S = (15, 60)
-
-
-def _is_lock_error(exc: Exception) -> bool:
-    return isinstance(exc, (OperationalError, sqlite3.OperationalError)) and "database is locked" in str(exc)
 
 
 @dataclass(frozen=True)
@@ -107,7 +102,7 @@ def _run_with_lock_retries(session: Session, automation: Automation, job_id: str
         try:
             return work(ProgressReporter(session, job_id))
         except Exception as e:
-            if delay is None or not _is_lock_error(e):
+            if delay is None or not is_lock_error(e):
                 raise
             session.rollback()
             if is_job_cancelled(session, job_id):

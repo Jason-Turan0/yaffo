@@ -82,15 +82,23 @@ def _export_tags(
     export_labels: bool = False,
     export_custom_tags: bool = False,
     export_favorite: bool = False,
+    *, written_paths: set[Path] | None = None, suppressed_paths: set[Path] | None = None,
 ) -> int:
     """Write the enabled tag(s) into each photo's file metadata. Returns how many
     files were written. Photos whose file is missing are skipped.
 
     The work is file I/O (exiftool), not a DB write, so no lock is held while writing;
     the photos are *loaded* in chunks (one IN-clause per chunk) to stay under SQLite's
-    bound-param cap and bound the eager loads' memory."""
+    bound-param cap and bound the eager loads' memory. Retaining `written_paths` and
+    `suppressed_paths` across calls skips durable writes and retries any outstanding
+    watcher suppression."""
     if not media_item_ids or not (export_location or export_people or export_labels or export_custom_tags or export_favorite):
         return 0
+    written_paths = written_paths if written_paths is not None else set()
+    suppressed_paths = suppressed_paths if suppressed_paths is not None else set()
+    for photo_path in written_paths - suppressed_paths:
+        record_self_write(photo_path)
+        suppressed_paths.add(photo_path)
     media_items = []
     for start in range(0, len(media_item_ids), _LOAD_CHUNK):
         chunk = media_item_ids[start:start + _LOAD_CHUNK]
@@ -108,6 +116,8 @@ def _export_tags(
     def media_item_processor(media_item: MediaItem):
         nonlocal written
         photo_path = Path(media_item.full_file_path)
+        if photo_path in written_paths:
+            return
         if not photo_path.exists():
             logger.warning(f"export_photo_tag: file not found, skipping {photo_path}")
             return
@@ -127,9 +137,11 @@ def _export_tags(
         )
         if success:
             written += 1
+            written_paths.add(photo_path)
             # We just wrote a watched file; record it so the watcher doesn't re-index it
             # and loop back through photo_indexed (loop guard, Mechanism 2).
             record_self_write(photo_path)
+            suppressed_paths.add(photo_path)
         else:
             logger.warning(f"export_photo_tag: failed to write {photo_path}: {error}")
     progress_reporter.run_with_progress(media_items, media_item_processor)
@@ -151,15 +163,18 @@ def export_photo_tag_task(automation_id: int, media_item_ids: list[int], task=No
         export_labels = bool(config_value(automation, _LABELS_FIELD))
         export_custom_tags = bool(config_value(automation, _CUSTOM_TAGS_FIELD))
         export_favorite = bool(config_value(automation, _FAVORITE_FIELD))
+        written_paths: set[Path] = set()
+        suppressed_paths: set[Path] = set()
 
         def work(progress_reporter: ProgressReporter) -> RunOutcome:
-            written = _export_tags(
+            _export_tags(
                 session, progress_reporter, media_item_ids, export_location, export_people,
                 export_labels, export_custom_tags, export_favorite,
+                written_paths=written_paths, suppressed_paths=suppressed_paths,
             )
             return RunOutcome(
                 codes.OUTCOME_WRITTEN,
-                {"written": written, "total": len(media_item_ids)},
+                {"written": len(written_paths), "total": len(media_item_ids)},
                 {"location": export_location, "people": export_people, "labels": export_labels,
                  "custom_tags": export_custom_tags, "favorite": export_favorite},
             )

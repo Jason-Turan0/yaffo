@@ -8,6 +8,8 @@ Distinct from background_tasks.tasks.auto_assign_faces, which is the manual
 'assign every matching face to ONE chosen person' batch job driven from the faces
 UI -- this one matches each face against *all* people and is fired by an event.
 """
+from typing import Callable
+
 from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_config import AUTOMATION_CONFIG, config_value
@@ -43,6 +45,7 @@ def _assign_faces(
     media_item_ids: list[int],
     threshold: float,
     assign_multiple_matches: bool = False,
+    on_committed: Callable[[int], None] | None = None,
 ) -> int:
     """For each face in the given photos, assign it to the single person it matches
     at/above `threshold`; skip faces with zero matches. Multiple strong matches are
@@ -51,7 +54,8 @@ def _assign_faces(
     loaded once for the whole batch.
 
     Similarity matching holds no DB lock: matched (person_id, face_id) links are
-    buffered and bulk-written every `_FLUSH_SIZE` photos (and once at the end)."""
+    buffered and bulk-written every `_FLUSH_SIZE` photos (and once at the end).
+    `on_committed` receives each durable count even if a later chunk fails."""
     people = person_repository.get_people_with_embeddings(session)
     if not people:
         return 0
@@ -63,7 +67,10 @@ def _assign_faces(
     def flush():
         nonlocal assigned, photos_in_buffer
         if pending:
-            assigned += person_repository.bulk_link_faces_to_people(session, pending)
+            count = person_repository.bulk_link_faces_to_people(session, pending)
+            assigned += count
+            if on_committed is not None:
+                on_committed(count)
             pending.clear()
         photos_in_buffer = 0
 
@@ -104,14 +111,20 @@ def auto_assign_faces_automation_task(automation_id: int, media_item_ids: list[i
         ui_threshold = config_value(automation, _THRESHOLD_FIELD)
         threshold = ui_threshold_to_similarity(ui_threshold, *get_similarity_bounds(session))
         assign_multiple_matches = bool(config_value(automation, _ASSIGN_MULTIPLE_MATCHES_FIELD))
+        assigned = 0
+
+        def retain_assigned(count: int) -> None:
+            nonlocal assigned
+            assigned += count
 
         def work(progress_reporter: ProgressReporter) -> RunOutcome:
-            assigned = _assign_faces(
+            _assign_faces(
                 session,
                 progress_reporter,
                 media_item_ids,
                 threshold,
                 assign_multiple_matches=assign_multiple_matches,
+                on_committed=retain_assigned,
             )
             return RunOutcome(
                 codes.OUTCOME_ASSIGNED,

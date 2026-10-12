@@ -74,6 +74,7 @@ def _assign_location_names(
     radius_km: float,
     overwrite: bool,
     geocode: Geocoder,
+    on_committed: Callable[[list[int]], None] | None = None,
 ) -> list[int]:
     """Set location_name on the named-able photos in `media_item_ids`; return the ids
     actually updated (committed). A photo named here joins the reuse candidates for
@@ -81,7 +82,8 @@ def _assign_location_names(
 
     Reads plain (id, lat, lon, name) rows and writes names by id: nothing in the
     session is ever dirty between writes, so the progress reporter's queries can't
-    autoflush an UPDATE and hold the write lock across the slow work."""
+    autoflush an UPDATE and hold the write lock across the slow work.
+    `on_committed` receives each durable chunk even if a later chunk fails."""
     photos = media_repository.get_coords_for_media_items(session, media_item_ids)
     if not photos:
         return []
@@ -94,6 +96,8 @@ def _assign_location_names(
         media_repository.bulk_set_location_names(session, pending)
         for media_id in pending.keys():
             updated.append(media_id)
+        if on_committed is not None:
+            on_committed(list(pending))
         pending.clear()
 
     def photo_processor(photo):
@@ -152,25 +156,19 @@ def assign_location_name_automation_task(
         overwrite = bool(config_value(automation, _FIELDS["overwrite_existing"]))
         geocode = _throttled_geocoder() if bool(config_value(automation, _FIELDS["reverse_geocode_enabled"])) else None
 
-        # Every photo named, across attempts: record_run re-runs `work` after a locked
-        # database, and the re-run skips what an earlier attempt already committed.
         total_updated_media_ids: set[int] = set()
 
         def work(progress_callback: ProgressReporter) -> RunOutcome:
-            current_updated_media_ids = _assign_location_names(
+            _assign_location_names(
                 session,
                 progress_callback,
-                media_item_ids,
+                [media_id for media_id in media_item_ids if media_id not in total_updated_media_ids],
                 reuse_enabled=reuse_enabled,
                 radius_km=radius_km,
                 overwrite=overwrite,
                 geocode=geocode,
+                on_committed=total_updated_media_ids.update,
             )
-            total_updated_media_ids.update(current_updated_media_ids)
-
-            if total_updated_media_ids:
-                # Let export_photo_tag (photo_modified) write the new name into the file.
-                emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": current_updated_media_ids})
             return RunOutcome(
                 codes.OUTCOME_NAMED,
                 {"named": len(total_updated_media_ids), "total": len(media_item_ids)},
@@ -180,6 +178,8 @@ def assign_location_name_automation_task(
         # Scope the run so the photo_modified it emits carries this automation (loop guard).
         with event_chain_scope(origin_automation_ids, automation_id):
             record_run(session, automation, work, media_item_ids=media_item_ids, job_id=run_job_id(task))
+            if total_updated_media_ids:
+                emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": sorted(total_updated_media_ids)})
     finally:
         session.close()
         SessionFactory.remove()

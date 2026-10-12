@@ -15,7 +15,7 @@ chain and drift. Fired by the `photo_indexed` event; the run is recorded as a Jo
 """
 import bisect
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Callable, Optional
 
 from sqlalchemy.orm import Session
 
@@ -65,18 +65,24 @@ def _nearest_match(
     return best
 
 
-def _geotag_from_neighbors(session: Session, progress_reporter: ProgressReporter, media_item_ids: list[int], max_minutes: int) -> list[int]:
+def _geotag_from_neighbors(
+    session: Session, progress_reporter: ProgressReporter, media_item_ids: list[int], max_minutes: int,
+    *, gps_candidates: list[tuple[str, float, float, str | None]] | None = None,
+    on_committed: Callable[[list[int]], None] | None = None,
+) -> list[int]:
     """Give each GPS-less photo in `media_item_ids` the coordinates (and location name, if
     the source has one) of the closest-in-time GPS-tagged photo within `max_minutes`;
     return the ids actually updated (committed). Candidates are loaded once up front,
-    so newly-geotagged photos aren't reused."""
+    so newly-geotagged photos aren't reused. `gps_candidates` preserves the original
+    sources across retries; `on_committed` retains IDs after each durable chunk."""
     targets = media_repository.get_media_items_missing_gps(session, media_item_ids)
     if not targets:
         progress_reporter.progress_update(1,1,0,0)
         return []
 
     candidates = []
-    for date_str, lat, lon, location_name in media_repository.get_gps_timestamps(session):
+    rows = media_repository.get_gps_timestamps(session) if gps_candidates is None else gps_candidates
+    for date_str, lat, lon, location_name in rows:
         dt = parse_date_taken(date_str)
         if dt is not None:
             candidates.append((dt, lat, lon, location_name))
@@ -89,26 +95,29 @@ def _geotag_from_neighbors(session: Session, progress_reporter: ProgressReporter
     max_delta = timedelta(minutes=max_minutes)
 
     updated: list[int] = []
-    pending: list[int] = []
+    pending: list[tuple[MediaItem, Match]] = []
 
     def flush():
         if pending:
-            session.commit()  # persist the chunk's coordinate updates (dirty ORM photos)
+            committed = [media_item.id for media_item, _ in pending]
+            for media_item, (lat, lon, location_name) in pending:
+                media_item.latitude = lat
+                media_item.longitude = lon
+                if location_name and not (media_item.location_name or "").strip():
+                    media_item.location_name = location_name
+            session.commit()
+            updated.extend(committed)
+            if on_committed is not None:
+                on_committed(committed)
             pending.clear()
 
-    def media_item_processor (media_item: MediaItem):
+    def media_item_processor(media_item: MediaItem):
         target = parse_date_taken(media_item.date_taken)
         if target is None:
             return
         match = _nearest_match(target, times, values, max_delta)
         if match is not None:
-            lat, lon, location_name = match
-            media_item.latitude = lat
-            media_item.longitude = lon
-            if location_name and not (media_item.location_name or "").strip():
-                media_item.location_name = location_name
-            updated.append(media_item.id)
-            pending.append(media_item.id)
+            pending.append((media_item, match))
             if len(pending) >= _FLUSH_SIZE:
                 flush()
     progress_reporter.run_with_progress(targets, media_item_processor)
@@ -127,9 +136,17 @@ def geotag_from_neighbors_automation_task(automation_id: int, media_item_ids: li
         if automation is None:
             return
         max_minutes = int(config_value(automation, _MINUTES_FIELD))
+        updated: set[int] = set()
+        gps_candidates: list[tuple[str, float, float, str | None]] | None = None
 
         def work(progress_reporter: ProgressReporter) -> RunOutcome:
-            updated = _geotag_from_neighbors(session, progress_reporter, media_item_ids, max_minutes)
+            nonlocal gps_candidates
+            if gps_candidates is None:
+                gps_candidates = media_repository.get_gps_timestamps(session)
+            _geotag_from_neighbors(
+                session, progress_reporter, media_item_ids, max_minutes,
+                gps_candidates=gps_candidates, on_committed=updated.update,
+            )
             return RunOutcome(
                 codes.OUTCOME_GEOTAGGED,
                 {"geotagged": len(updated), "total": len(media_item_ids)},

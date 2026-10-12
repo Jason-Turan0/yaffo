@@ -210,10 +210,11 @@ names the sync automations that had copies queued for removal
     [Sync Adapters](automation-sync-adapters.md).
 
 **`media_labeled` is emitted from `classify_labels_automation_task`** after a batch
-is labelled — for the photos that received at least one label. Like
-`assign_location_name` emits its event from inside the run, but **after `record_run`
-commits** (classify's `replace_photo_labels` defers its commit to `record_run`), so a
-subscriber reading `media_labels` sees the new rows. Fires for both the
+is labelled — for the photos whose assignments changed and received at least one
+label. Both classification and location naming retain changed IDs after each chunk
+commits, including chunks committed before a database-lock retry. They emit one
+event after `record_run` finishes, including any durable changes from a run whose
+retries were exhausted, so subscribers see committed rows. Fires for both the
 `media_indexed`-driven run and the Settings "re-classify all" backfill; a run that
 labels nothing emits nothing.
 
