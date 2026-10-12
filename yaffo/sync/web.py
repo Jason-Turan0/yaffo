@@ -23,8 +23,7 @@ the request leaves, so the secret never appears in a check, a log, or a denial.
 Denials and failures come back to the script as data, `{"status": 0, "error": ...}`,
 never as exceptions. Redirects are followed by hand, only to allowed hosts, and
 credentials are only ever sent to `base_urls`. Responses expose a short allowlist of
-headers. See docs/development/automation-sync-adapters.md and automation-web-calls.md
-(Runtime enforcement).
+headers. See docs/development/automation-sync-adapters.md (Web access).
 """
 from __future__ import annotations
 

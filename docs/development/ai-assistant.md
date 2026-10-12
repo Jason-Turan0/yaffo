@@ -144,7 +144,7 @@ List, private addresses are rejected, redirects to a new domain wait for
 approval, and input bytes and returned text are bounded. The tool caps reads per
 turn, redacts returned text, and shows the same text in its activity line. It
 does not add search-engine queries; `web_search` still needs a configured search
-backend (see [Sync Adapters](automation-sync-adapters.md#permissions)).
+backend (see [Sync Automations](automation-sync-adapters.md#limits-deferred-work-and-open-questions)).
 
 Approvals and denials are `web_permission` transcript events, managed by
 `assistant_web_repository.py`. They start empty in each conversation and disappear

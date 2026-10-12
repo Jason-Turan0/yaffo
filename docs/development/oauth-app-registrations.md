@@ -1,6 +1,6 @@
 # OAuth App Registrations
 
-Phase 0 of [Automation Sync Adapters](automation-sync-adapters.md#phase-0-lead-time-items-start-now-in-parallel).
+The app registrations behind [Sync Automations](automation-sync-adapters.md#app-credentials).
 The OneDrive and Google Photos presets sign in with Yaffo's own registered
 apps, so users never create one. Both registrations are **desktop (public)
 clients**: the browser sign-in uses PKCE and a loopback return address

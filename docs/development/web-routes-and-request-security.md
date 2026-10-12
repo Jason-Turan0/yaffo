@@ -106,7 +106,7 @@ same site but different origins.
 Requests with neither header pass. They come from non-browser clients (a sync
 worker, `curl`, the test client), which no web page can make the browser imitate.
 The internal P2P API keeps its own stricter checks (loopback caller and the
-`X-Yaffo-Internal` header; see [Peer sync](automation-sync-adapters.md#peer-sync-importing-from-paired-devices)).
+`X-Yaffo-Internal` header; see [Peer sync](automation-sync-adapters.md#peer-sync)).
 
 A CSRF token was considered and dropped. It would mean changing every form, HTMX
 call, and `fetch`, and it adds nothing over the origin check for the threat that
