@@ -37,6 +37,7 @@ from yaffo.utils.file_sync import (
     SYNC_FAILED,
     SYNC_CANCELLED,
     SYNC_IN_SYNC,
+    SYNC_LIBRARY_BUSY,
     SYNC_NO_FOLDER_CONNECTED,
     SYNC_NO_MEDIA_DIRS,
     SYNC_NO_THUMBNAIL_DIR,
@@ -153,6 +154,8 @@ def _file_sync_summary(job: Job, data: dict) -> str:
     outcome = data.get("outcome")
     if outcome == SYNC_IN_SYNC:
         return gettext("Already in sync")
+    if outcome == SYNC_LIBRARY_BUSY:
+        return gettext("Skipped: indexing was already in progress")
     if outcome == SYNC_STARTED:
         indexed, removed = int(data.get("indexed") or 0), int(data.get("removed") or 0)
         parts = []

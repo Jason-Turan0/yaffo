@@ -13,7 +13,7 @@ event with the affected photo ids; the actual write reuses `utils.write_metadata
 """
 from pathlib import Path
 
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, selectinload
 
 from yaffo.background_tasks.automation_config import AUTOMATION_CONFIG, config_value
 from yaffo.background_tasks.automation_runs import RunOutcome, record_run
@@ -43,7 +43,7 @@ _FAVORITE_FIELD = _FIELDS["export_favorite_enabled"]
 FAVORITE_KEYWORD = "Favorite"
 
 # Photo ids per load query — stay under SQLite's ~999 bound-param cap and bound the
-# joinedload's memory for a large batch.
+# eager loads' memory for a large batch.
 _LOAD_CHUNK = 500
 
 
@@ -88,7 +88,7 @@ def _export_tags(
 
     The work is file I/O (exiftool), not a DB write, so no lock is held while writing;
     the photos are *loaded* in chunks (one IN-clause per chunk) to stay under SQLite's
-    bound-param cap and bound the joinedload's memory."""
+    bound-param cap and bound the eager loads' memory."""
     if not media_item_ids or not (export_location or export_people or export_labels or export_custom_tags or export_favorite):
         return 0
     media_items = []
@@ -97,9 +97,9 @@ def _export_tags(
         media_items.extend(
             session.query(MediaItem)
             .options(
-                joinedload(MediaItem.faces).joinedload(Face.people),
-                joinedload(MediaItem.labels).joinedload(MediaLabel.label),
-                joinedload(MediaItem.tags),
+                selectinload(MediaItem.faces).selectinload(Face.people),
+                selectinload(MediaItem.labels).selectinload(MediaLabel.label),
+                selectinload(MediaItem.tags),
             )
             .filter(MediaItem.id.in_(chunk))
             .all()

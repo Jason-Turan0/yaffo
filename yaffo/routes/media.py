@@ -3,7 +3,7 @@ from pathlib import Path
 
 from flask import Flask, Response, abort, current_app, jsonify, render_template, request, send_file, send_from_directory
 from flask_babel import gettext
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import selectinload
 
 from yaffo import themes
 from yaffo.background_tasks.events import emit_event
@@ -111,8 +111,8 @@ def init_media_routes(app: Flask):
         media_item = (MediaItem.query
                  .filter(MediaItem.id == media_item_id)
                  .options(
-                     joinedload(MediaItem.faces).joinedload(Face.people),
-                     joinedload(MediaItem.tags)
+                     selectinload(MediaItem.faces).selectinload(Face.people),
+                     selectinload(MediaItem.tags)
                  )
                  .first())
 

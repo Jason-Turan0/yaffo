@@ -2,7 +2,7 @@ import calendar
 import os
 from pathlib import Path
 
-from sqlalchemy import insert, or_
+from sqlalchemy import insert, or_, update
 from sqlalchemy.orm import Session
 from yaffo.db.models import Face, PersonFace, MediaItem, MediaLabel, Tag, MEDIA_STATUS_INDEXED
 from yaffo.sync.deletes import announce_deleted, queue_target_removals
@@ -186,17 +186,33 @@ def move_media_item_path(session: Session, old_path: str, new_path: str) -> bool
     return bool(updated)
 
 
-def get_media_items_with_coords(session: Session, media_item_ids: list[int]) -> list[MediaItem]:
-    """The given photos that have both latitude and longitude set."""
-    if not media_item_ids:
-        return []
-    return (
-        session.query(MediaItem)
-        .filter(MediaItem.id.in_(media_item_ids))
-        .filter(MediaItem.latitude.isnot(None))
-        .filter(MediaItem.longitude.isnot(None))
-        .all()
+def get_coords_for_media_items(session: Session, media_item_ids: list[int]) -> list:
+    """(id, latitude, longitude, location_name) rows for the given photos that have both
+    coordinates. Plain rows, not ORM objects: the caller computes new names without
+    the session tracking anything it could autoflush (and so hold the write lock)."""
+    rows = []
+    for start in range(0, len(media_item_ids), _DELETE_CHUNK):
+        chunk = media_item_ids[start:start + _DELETE_CHUNK]
+        rows.extend(
+            session.query(MediaItem.id, MediaItem.latitude, MediaItem.longitude, MediaItem.location_name)
+            .filter(MediaItem.id.in_(chunk))
+            .filter(MediaItem.latitude.isnot(None))
+            .filter(MediaItem.longitude.isnot(None))
+            .all()
+        )
+    return rows
+
+
+def bulk_set_location_names(session: Session, names: dict[int, str]) -> None:
+    """Set location_name by photo id (one executemany UPDATE) and commit, so the write
+    lock is held only for this statement."""
+    if not names:
+        return
+    session.execute(
+        update(MediaItem),
+        [{"id": media_item_id, "location_name": name} for media_item_id, name in names.items()],
     )
+    session.commit()
 
 
 def get_named_coordinates(session: Session) -> list[tuple[float, float, str]]:

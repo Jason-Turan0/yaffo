@@ -294,6 +294,37 @@ def test_a_file_sync_cancelled_during_its_scan_changes_nothing(session, library,
     assert session.query(MediaItem).count() == 1
 
 
+
+def test_a_file_sync_skips_while_library_jobs_are_active(session, library, monkeypatch):
+    session.add(Job(id="index-running", name="index_photos", status="RUNNING", task_count=10))
+    session.commit()
+    monkeypatch.setattr(file_sync, "scan_media_dirs", lambda *a, **k: pytest.fail("a busy sync must not scan"))
+    monkeypatch.setattr(file_sync, "perform_sync", lambda *a, **k: pytest.fail("a busy sync must not sync"))
+
+    assert file_sync.run_file_sync(session) is None
+
+    run = session.query(Job).filter_by(name=file_sync.FILE_SYNC_JOB).one()
+    assert run.status == JOB_STATUS_COMPLETED and run.error is None
+    assert json.loads(run.job_data)["outcome"] == file_sync.SYNC_LIBRARY_BUSY
+
+
+def test_a_file_sync_skips_when_library_jobs_start_during_its_scan(session, library, monkeypatch):
+    scan = file_sync.scan_media_dirs
+
+    def scan_then_sync_by_hand(s, *args, **kwargs):
+        result = scan(s, *args, **kwargs)
+        with Session(s.get_bind()) as other:
+            other.add(Job(id="index-by-hand", name="index_photos", status="PENDING", task_count=1))
+            other.commit()
+        return result
+    monkeypatch.setattr(file_sync, "scan_media_dirs", scan_then_sync_by_hand)
+    monkeypatch.setattr(file_sync, "perform_sync", lambda *a, **k: pytest.fail("a busy sync must not sync"))
+
+    assert file_sync.run_file_sync(session) is None
+
+    run = session.query(Job).filter_by(name=file_sync.FILE_SYNC_JOB).one()
+    assert json.loads(run.job_data)["outcome"] == file_sync.SYNC_LIBRARY_BUSY
+
 # ---- regenerate_thumbnails ----------------------------------------------------------------
 
 def test_regenerate_thumbnails_starts_a_repair_for_the_missing_items(session, library, tmp_path, monkeypatch):

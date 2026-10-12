@@ -7,16 +7,16 @@ from flask import Flask, Response, current_app, jsonify, render_template, reques
 from flask_babel import gettext
 
 from yaffo.db import db
-from yaffo.db.models import Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, MEDIA_STATUS_FAILED, MediaItem
+from yaffo.db.models import Job, MEDIA_STATUS_FAILED, MediaItem
 from yaffo.routes.utilities.common import get_media_dirs, get_thumbnail_dir, automations_sidebar_context
 from yaffo.routes.utilities.index_failures import failed_media
-from yaffo.routes.utilities.run_history import run_view
+from yaffo.routes.utilities.run_history import RUN_FINISHED_STATUSES, run_view
 from yaffo.utils.file_sync import FILE_SYNC_JOB, MediaScan, iter_media_scan, perform_sync
-from yaffo.utils.index_jobs import enqueue_index_jobs, reindex_media_items
-from yaffo.utils.thumbnail_marker import ensure_thumbnail_dir
-from yaffo.utils.thumbnail_repair import (
-    THUMBNAIL_REPAIR_JOB, MissingThumbnails, find_missing_thumbnails, start_thumbnail_repair,
+from yaffo.utils.index_jobs import (
+    LIBRARY_JOB_NAMES, active_library_jobs, enqueue_index_jobs, reindex_media_items,
 )
+from yaffo.utils.thumbnail_marker import ensure_thumbnail_dir
+from yaffo.utils.thumbnail_repair import MissingThumbnails, find_missing_thumbnails, start_thumbnail_repair
 
 
 # NDJSON records the scan stream emits (one JSON object per line). Named so the page
@@ -78,36 +78,39 @@ class ThumbnailRepairStarted:
     thumbnail_count: int
 
 
-# The page's job kinds: import (new files) runs before index; thumbnail repair
-# stands alone.
-INDEX_JOB_NAMES = ("import_photos", "index_photos", THUMBNAIL_REPAIR_JOB)
 # The run history also lists file-sync runs that need attention (skipped, failed, or
 # left items alone); its "Already in sync" runs stay on the automation's own page.
 # Runs listed in the run history.
 RUN_HISTORY_LIMIT = 10
-_IN_PROGRESS = (JOB_STATUS_PENDING, JOB_STATUS_RUNNING)
 
 
-def _in_progress_and_history() -> tuple[list[Job], list[Job]]:
-    """Each kind's latest run while it is still in progress (shown as a job card),
-    and every other run of either kind, newest first (the run history). A finished
-    latest run is history too; so is an older run that never finished."""
-    in_progress = []
-    for name in INDEX_JOB_NAMES:
-        job = db.session.query(Job).filter(Job.name == name).order_by(Job.created_at.desc()).first()
-        if job is not None and job.status in _IN_PROGRESS:
-            in_progress.append(job)
-    history = (
+def _finished_runs() -> list[Job]:
+    """The run history: finished library jobs, newest first. Jobs still pending or
+    running are job cards instead (active_library_jobs)."""
+    return (
         db.session.query(Job)
         .filter(
-            or_(Job.name.in_(INDEX_JOB_NAMES), and_(Job.name == FILE_SYNC_JOB, Job.error.isnot(None))),
-            Job.id.notin_([job.id for job in in_progress]),
+            or_(Job.name.in_(LIBRARY_JOB_NAMES), and_(Job.name == FILE_SYNC_JOB, Job.error.isnot(None))),
+            Job.status.in_(RUN_FINISHED_STATUSES),
         )
         .order_by(Job.created_at.desc())
         .limit(RUN_HISTORY_LIMIT)
         .all()
     )
-    return in_progress, history
+
+
+def _library_busy_response() -> tuple[Response, int] | None:
+    """A 409 when library jobs are already pending or running, None when the page's
+    fixes may start. Starting another would queue it behind them and redo their work,
+    so the page refuses and shows the jobs in progress instead."""
+    if not active_library_jobs(db.session):
+        return None
+    return jsonify({
+        "error": gettext(
+            "Indexing is already in progress. Wait for it to finish, or cancel it, then try again."
+        ),
+        "code": "library_jobs_active",
+    }), 409
 
 
 def init_index_photos_routes(app: Flask):
@@ -158,25 +161,21 @@ def init_index_photos_routes(app: Flask):
         can_sync = len(media_dirs) > 0 and all(d.exists() for d in media_dirs) and thumbnail_dir is not None
         can_scan = any(d.exists() for d in media_dirs)
 
-        in_progress_jobs, history_jobs = _in_progress_and_history()
+        in_progress_jobs = active_library_jobs(db.session)
         failed_rows, failed_total = failed_media(db.session)
-        has_active_jobs = db.session.query(Job.id).filter(
-            Job.status.in_(_IN_PROGRESS),
-            Job.name.in_(INDEX_JOB_NAMES),
-        ).first() is not None
 
         return render_template(
             "utilities/index_photos.html",
             **automations_sidebar_context(),
             media_dirs=[str(d) for d in media_dirs],
             in_progress_jobs=[job.to_dict_with_view_props() for job in in_progress_jobs],
-            run_history=[run_view(job) for job in history_jobs],
+            run_history=[run_view(job) for job in _finished_runs()],
             failed_media=failed_rows,
             failed_count=failed_total,
             warnings=warnings,
             can_sync=can_sync,
             can_scan=can_scan,
-            has_active_jobs=has_active_jobs,
+            has_active_jobs=bool(in_progress_jobs),
         )
 
     @app.route("/library/health/scan", methods=["GET"])
@@ -248,6 +247,8 @@ def init_index_photos_routes(app: Flask):
                 "code": "thumbnail_directory_not_configured",
             }), 400
 
+        if (busy := _library_busy_response()) is not None:
+            return busy
         ensure_thumbnail_dir(thumbnail_dir)
 
         jobs = perform_sync(db.session, files_to_index, files_to_delete, thumbnail_dir)
@@ -259,6 +260,8 @@ def init_index_photos_routes(app: Flask):
         that file sync otherwise waits for. Failed files have no faces, so nothing is
         lost and no confirmation is needed. Files that have since vanished are
         skipped; Sync reconciles those."""
+        if (busy := _library_busy_response()) is not None:
+            return busy
         thumbnail_dir = get_thumbnail_dir()
         if thumbnail_dir is None:
             return jsonify({
@@ -286,6 +289,8 @@ def init_index_photos_routes(app: Flask):
         deleted up front, so every person assignment is dropped. The button behind this
         confirms that first.
         """
+        if (busy := _library_busy_response()) is not None:
+            return busy
         thumbnail_dir = get_thumbnail_dir()
         if thumbnail_dir is None:
             return jsonify({
@@ -318,6 +323,8 @@ def init_index_photos_routes(app: Flask):
         """Rebuild the face crops and posters whose files are gone, at the paths the
         index records. Faces keep their people and ignored status (unlike Reindex),
         so no confirmation is needed."""
+        if (busy := _library_busy_response()) is not None:
+            return busy
         missing = find_missing_thumbnails(db.session, get_thumbnail_dir())
         if not missing.available:
             return jsonify({

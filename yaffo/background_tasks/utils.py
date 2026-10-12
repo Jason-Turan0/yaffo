@@ -9,6 +9,7 @@ from yaffo.db.models import (
     AssistantConversation,
 )
 from yaffo.common import DB_PATH
+from yaffo.db import log_slow_queries
 from yaffo.db.repositories.job_repository import mark_job_stopped
 from yaffo.logging_config import get_logger
 from yaffo.themes import _setting_name, _theme_from_json
@@ -22,6 +23,7 @@ engine = create_engine(
 
 SessionFactory = scoped_session(sessionmaker(bind=engine))
 logger = get_logger(__name__, 'background_tasks')
+log_slow_queries(engine, logger)
 
 
 def get_job_status(job_id: str) -> str:

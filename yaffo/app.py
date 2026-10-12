@@ -9,7 +9,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from yaffo import themes
 from yaffo.config import get_int as get_config_int
 from yaffo.common import DB_PATH
-from yaffo.db import db
+from yaffo.db import db, log_slow_queries
 from yaffo.demo import configure_demo, init_demo_boundary
 from yaffo.distance_units import supported_distance_unit_options
 from yaffo.doc_observer import init_doc_observer
@@ -80,6 +80,8 @@ def create_app(db_path: Path = DB_PATH, config: Optional[dict] = None,
         )
 
     db.init_app(app)
+    with app.app_context():
+        log_slow_queries(db.engine, logger)
     init_i18n(app)
 
     # Make url_map available in all templates

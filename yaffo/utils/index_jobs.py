@@ -4,13 +4,29 @@ from itertools import batched
 
 from sqlalchemy.orm import Session
 
-from yaffo.db.models import MediaItem, Job, JOB_STATUS_PENDING, MEDIA_STATUS_INDEXED
+from yaffo.db.models import MediaItem, Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, MEDIA_STATUS_INDEXED
 from yaffo.utils.index_jobs_dto import IndexJobs
 from yaffo.logging_config import get_logger
 
 logger = get_logger(__name__, 'background_tasks')
 
 IMPORT_BATCH_SIZE = 250
+
+THUMBNAIL_REPAIR_JOB = "regenerate_thumbnails"
+# The jobs that rewrite the library's items and thumbnails. Only one batch of them
+# runs at a time: a second sync queued behind a running one would index the same
+# files again (see active_library_jobs).
+LIBRARY_JOB_NAMES = ("import_photos", "index_photos", THUMBNAIL_REPAIR_JOB)
+
+
+def active_library_jobs(session: Session) -> list[Job]:
+    """The library jobs still pending or running, oldest first."""
+    return (
+        session.query(Job)
+        .filter(Job.name.in_(LIBRARY_JOB_NAMES), Job.status.in_((JOB_STATUS_PENDING, JOB_STATUS_RUNNING)))
+        .order_by(Job.created_at.asc())
+        .all()
+    )
 
 
 def reindex_media_items(session: Session, media_items: list[MediaItem]) -> IndexJobs:

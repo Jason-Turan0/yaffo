@@ -921,7 +921,7 @@ accepts optional per-item positions for restoring removed membership.
 | Built-in auto_assign_faces | `yaffo/background_tasks/tasks/auto_assign_faces_automation.py` |
 | Built-in duplicate_scan | `yaffo/background_tasks/tasks/duplicate_scan.py` |
 | Built-in export_photo_tag | `yaffo/background_tasks/tasks/export_photo_tag.py` (+ emit hooks in `routes/{faces,people,locations}.py`) |
-| Built-in assign_location_name | `yaffo/background_tasks/tasks/assign_location_name_automation.py` (+ `utils/reverse_geocode.py`, `utils/geo.py`, `media_repository.{get_media_items_with_coords,get_named_coordinates}`) |
+| Built-in assign_location_name | `yaffo/background_tasks/tasks/assign_location_name_automation.py` (+ `utils/reverse_geocode.py`, `utils/geo.py`, `media_repository.{get_coords_for_media_items,get_named_coordinates,bulk_set_location_names}`) |
 | Built-in geotag_from_neighbors | `yaffo/background_tasks/tasks/geotag_from_neighbors_automation.py` (+ `media_repository.{get_media_items_missing_gps,get_gps_timestamps}`) |
 | Tag inspector (debug) | `scripts/print_photo_tags.py` (`inv tags <path>`) |
 | System-automation config schema | `yaffo/background_tasks/automation_config.py` |

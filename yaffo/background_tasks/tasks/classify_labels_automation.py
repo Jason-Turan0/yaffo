@@ -159,17 +159,18 @@ def classify_labels_automation_task(
         threshold = get_clip_threshold(ui_threshold)
         max_labels = int(config_value(automation, _FIELDS["max_labels"]))
 
-        labeled: list[int] = []
+        # Every photo labeled, across attempts: record_run re-runs `work` after a locked
+        # database, and the re-run reports no change for labels an earlier attempt committed.
+        labeled: dict[int, None] = {}
 
         def work(progress_reporter: ProgressReporter) -> RunOutcome:
-            nonlocal labeled
-            labeled = classify_media_items(
+            labeled.update(dict.fromkeys(classify_media_items(
                 session,
                 media_item_ids,
                 threshold,
                 max_labels,
                 progress_reporter,
-            )
+            )))
             return RunOutcome(
                 codes.OUTCOME_LABELED,
                 {"labeled": len(labeled), "total": len(media_item_ids)},
@@ -182,7 +183,7 @@ def classify_labels_automation_task(
             # Emit after record_run so the labels are committed before subscribers run
             # (record_run commits work's writes); fire only when something was labeled.
             if labeled:
-                emit_event(EVENT_MEDIA_LABELED, {"media_item_ids": labeled})
+                emit_event(EVENT_MEDIA_LABELED, {"media_item_ids": list(labeled)})
     finally:
         session.close()
         SessionFactory.remove()

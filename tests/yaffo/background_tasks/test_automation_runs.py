@@ -6,11 +6,14 @@ with the error on a bad script. Run against a throwaway SQLite DB; data_query is
 faked so the script needn't hit real photo data.
 """
 import json
+import sqlite3
 
 import pytest
 from sqlalchemy import create_engine
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
+from yaffo.background_tasks import automation_runs
 from yaffo.background_tasks.automation_runs import RunOutcome, record_run, run_and_record
 from yaffo.db import db
 from yaffo.db.models import (
@@ -151,6 +154,61 @@ def test_record_run_captures_work_failure(session):
     assert json.loads(job.job_data) == {"problem": "task_error"}
     assert job.automation_id == automation.id
     assert job.completed_at is not None
+
+
+def _locked():
+    return OperationalError("UPDATE jobs SET completed_count=?", {}, sqlite3.OperationalError("database is locked"))
+
+
+def test_record_run_runs_work_again_after_a_locked_database(session, monkeypatch):
+    """Another job holding the write lock past busy_timeout is passing: the run rolls
+    back, waits, and runs again on the same Job instead of failing."""
+    sleeps = []
+    monkeypatch.setattr(automation_runs.time, "sleep", sleeps.append)
+    automation = _system_automation(session, "auto_assign_faces")
+    attempts = []
+
+    def work(progress_reporter):
+        attempts.append(progress_reporter.job_id)
+        if len(attempts) < 3:
+            raise _locked()
+        return RunOutcome("assigned", {"faces": 2})
+
+    job = record_run(session, automation, work)
+
+    assert job.status == JOB_STATUS_COMPLETED and job.error is None
+    assert len(set(attempts)) == 1 and attempts[0] == job.id
+    assert sleeps == list(automation_runs.LOCK_RETRY_DELAYS_S)
+    assert session.query(Job).filter_by(automation_id=automation.id).count() == 1
+
+
+def test_record_run_fails_once_lock_retries_are_spent(session, monkeypatch):
+    monkeypatch.setattr(automation_runs.time, "sleep", lambda _s: None)
+    automation = _system_automation(session, "auto_assign_faces")
+    attempts = []
+
+    def work(_reporter):
+        attempts.append(1)
+        raise _locked()
+
+    job = record_run(session, automation, work)
+
+    assert len(attempts) == len(automation_runs.LOCK_RETRY_DELAYS_S) + 1
+    assert job.status == JOB_STATUS_FAILED and "database is locked" in job.error
+
+
+def test_record_run_does_not_retry_other_errors(session, monkeypatch):
+    monkeypatch.setattr(automation_runs.time, "sleep", lambda _s: pytest.fail("must not wait"))
+    automation = _system_automation(session, "auto_assign_faces")
+    attempts = []
+
+    def work(_reporter):
+        attempts.append(1)
+        raise OperationalError("SELECT 1", {}, sqlite3.OperationalError("no such table: faces"))
+
+    job = record_run(session, automation, work)
+
+    assert attempts == [1] and job.status == JOB_STATUS_FAILED
 
 
 def test_record_run_completes_empty_media_scope_without_calling_work(session):
