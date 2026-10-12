@@ -16,13 +16,12 @@ from sqlalchemy.orm import Session
 
 from yaffo.db.models import Face, Job, MediaItem, JOB_STATUS_PENDING, MEDIA_TYPE_VIDEO
 from yaffo.logging_config import get_logger
+from yaffo.utils.index_jobs import THUMBNAIL_REPAIR_JOB
 from yaffo.utils.index_photos import write_face_crop
 from yaffo.utils.index_video import face_crop_frame_index, write_poster, write_sampled_frame
 from yaffo.utils.thumbnail_marker import THUMBNAIL_DIR_MARKER
 
 logger = get_logger(__name__, 'background_tasks')
-
-THUMBNAIL_REPAIR_JOB = "regenerate_thumbnails"
 
 
 @dataclass(frozen=True)

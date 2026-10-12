@@ -210,10 +210,11 @@ names the sync automations that had copies queued for removal
     [Sync Adapters](automation-sync-adapters.md).
 
 **`media_labeled` is emitted from `classify_labels_automation_task`** after a batch
-is labelled — for the photos that received at least one label. Like
-`assign_location_name` emits its event from inside the run, but **after `record_run`
-commits** (classify's `replace_photo_labels` defers its commit to `record_run`), so a
-subscriber reading `media_labels` sees the new rows. Fires for both the
+is labelled — for the photos whose assignments changed and received at least one
+label. Both classification and location naming retain changed IDs after each chunk
+commits, including chunks committed before a database-lock retry. They emit one
+event after `record_run` finishes, including any durable changes from a run whose
+retries were exhausted, so subscribers see committed rows. Fires for both the
 `media_indexed`-driven run and the Settings "re-classify all" backfill; a run that
 labels nothing emits nothing.
 
@@ -921,7 +922,7 @@ accepts optional per-item positions for restoring removed membership.
 | Built-in auto_assign_faces | `yaffo/background_tasks/tasks/auto_assign_faces_automation.py` |
 | Built-in duplicate_scan | `yaffo/background_tasks/tasks/duplicate_scan.py` |
 | Built-in export_photo_tag | `yaffo/background_tasks/tasks/export_photo_tag.py` (+ emit hooks in `routes/{faces,people,locations}.py`) |
-| Built-in assign_location_name | `yaffo/background_tasks/tasks/assign_location_name_automation.py` (+ `utils/reverse_geocode.py`, `utils/geo.py`, `media_repository.{get_media_items_with_coords,get_named_coordinates}`) |
+| Built-in assign_location_name | `yaffo/background_tasks/tasks/assign_location_name_automation.py` (+ `utils/reverse_geocode.py`, `utils/geo.py`, `media_repository.{get_coords_for_media_items,get_named_coordinates,bulk_set_location_names}`) |
 | Built-in geotag_from_neighbors | `yaffo/background_tasks/tasks/geotag_from_neighbors_automation.py` (+ `media_repository.{get_media_items_missing_gps,get_gps_timestamps}`) |
 | Tag inspector (debug) | `scripts/print_photo_tags.py` (`inv tags <path>`) |
 | System-automation config schema | `yaffo/background_tasks/automation_config.py` |

@@ -25,3 +25,23 @@
 - Reminder: this page has no shot of `/people/:id/faces`, so CSS that only affects
   the person-faces sidebar (e.g. `similarity_filter`) cannot show up in the diff —
   check those surfaces by reading the CSS, not by trusting the pixel result.
+
+## 2026 run — faces-review.webp grew 29 CSS px taller, content identical
+- Reported as a reframe: 2784x3006 became 2784x3064, "161472 pixels differ
+  after top-left alignment". 2784 x 58 = 161,472 exactly, i.e. every changed
+  pixel is in the 58 added device rows at the bottom; the whole overlap is
+  pixel-identical (same cluster, "54 of 54 unassigned faces", 50% threshold,
+  same sidebar controls and pager).
+- Cause: the Pages strip toggle moved from per-browser localStorage to the
+  server-side `show_pages_bar` setting (`routes/pages.py` PUT
+  /pages/bar-visibility + `get_show_pages_bar`; `base.html` renders the strip
+  with `hidden` and the toggle `collapsed`; `nav.js` now does `apply(bar.hidden)`
+  and enables the button during an async save). A hidden strip makes the sticky
+  navbar ~29px shorter, so the `.main-container-layout` crop — whose height is
+  `max(content, calc(100dvh - 100px))` in `base.css` — starts higher and ends
+  29px lower, showing plain page background.
+- Do not chase this as a content change: before believing any diff on this shot,
+  subtract the added-row area (width x height delta) from the differing-pixel
+  count. If they are equal, only the crop height moved.
+- Page prose unaffected: the strip is not mentioned anywhere on this page, and
+  the Faces surface itself is unchanged.

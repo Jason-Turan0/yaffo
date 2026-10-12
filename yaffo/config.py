@@ -57,6 +57,12 @@ allowed_hosts = []
 #            writes, at a write-throughput cost.
 # One of: NORMAL, FULL
 synchronous = "NORMAL"
+# How long (ms) a write waits for another write to finish before failing with
+# "database is locked". Background jobs share one write lock.
+busy_timeout_ms = 30000
+# Log every SQL statement slower than this many milliseconds, with its duration and
+# parameters, to yaffo.log (web) or background_tasks.log (worker). 0 turns it off.
+slow_query_ms = 0
 
 [tasks]
 # Background worker processes: more = more parallel indexing, more CPU/RAM. Defaults

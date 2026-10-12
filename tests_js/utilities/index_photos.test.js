@@ -302,4 +302,18 @@ describe('initIndexPhotos — each card fixes only its own problem', () => {
     expect(byId(id).disabled).toBe(false);
     expect(byId(id).textContent).toBe(window.testI18n.t(`utilities:indexPhotos.${keys}.button`));
   });
+  it('warns and reloads to show the jobs when indexing is already in progress', async () => {
+    const message = 'Indexing is already in progress.';
+    stubFetch({
+      ok: false,
+      status: 409,
+      json: () => Promise.resolve({ error: message, code: 'library_jobs_active' }),
+    });
+    const api = await init();
+
+    await api.startRetryFailed();
+
+    expect(window.notification.flash).toHaveBeenCalledWith(message, 'warning', 6000);
+    expect(window.notification.failure).not.toHaveBeenCalled();
+  });
 });

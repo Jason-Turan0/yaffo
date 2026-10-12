@@ -92,6 +92,7 @@ beforeEach(() => {
     warning: vi.fn(),
     info: vi.fn(),
     show: vi.fn(),
+    flash: vi.fn(),
   };
 
   window.testHelpers = {

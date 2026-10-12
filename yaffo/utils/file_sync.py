@@ -16,7 +16,7 @@ from yaffo.utils.index_errors import file_signature
 from yaffo.utils.job_codes import PROBLEM_MEDIA_FOLDER_EMPTY
 from yaffo.db.repositories.media_dir_repository import get_media_dirs
 from yaffo.logging_config import get_logger
-from yaffo.utils.index_jobs import enqueue_index_jobs
+from yaffo.utils.index_jobs import active_library_jobs, enqueue_index_jobs
 from yaffo.utils.index_jobs_dto import IndexJobs
 from yaffo.utils.index_photos import (
     delete_orphaned_media_items,
@@ -45,11 +45,13 @@ SYNC_NO_MEDIA_DIRS = "no_media_dirs"
 SYNC_NO_THUMBNAIL_DIR = "no_thumbnail_dir"
 SYNC_NO_FOLDER_CONNECTED = "no_folder_connected"
 SYNC_IN_SYNC = "in_sync"
+# Library jobs were already pending or running; the next run picks up what's left.
+SYNC_LIBRARY_BUSY = "library_busy"
 SYNC_STARTED = "started"
 SYNC_FAILED = "failed"
 SYNC_CANCELLED = "cancelled"
 FILE_SYNC_OUTCOMES = (SYNC_NO_MEDIA_DIRS, SYNC_NO_THUMBNAIL_DIR, SYNC_NO_FOLDER_CONNECTED,
-                      SYNC_IN_SYNC, SYNC_STARTED, SYNC_FAILED)
+                      SYNC_IN_SYNC, SYNC_LIBRARY_BUSY, SYNC_STARTED, SYNC_FAILED)
 # Outcomes where the sync didn't run at all.
 SYNC_SKIPPED = (SYNC_NO_MEDIA_DIRS, SYNC_NO_THUMBNAIL_DIR, SYNC_NO_FOLDER_CONNECTED)
 
@@ -345,6 +347,11 @@ def _file_sync(session: Session, run: Job, scope_paths: list[str] | None = None)
                    error=f"None of the media folders is connected: {', '.join(str(d) for d in media_dirs)}.")
         return None
 
+    if active_library_jobs(session):
+        logger.info("file_sync: library jobs already in progress; skipping")
+        _close_run(session, run, SYNC_LIBRARY_BUSY)
+        return None
+
     ensure_thumbnail_dir(thumbnail_dir)
     scan = scan_media_dirs(session, media_dirs, thumbnail_dir, scoped=scope_paths is not None)
     # Nobody reviews an unattended sync: a media folder that came back empty is far
@@ -374,6 +381,12 @@ def _file_sync(session: Session, run: Job, scope_paths: list[str] | None = None)
     if not scan.files_to_index and not orphaned_ids:
         logger.info("file_sync: index already in sync; nothing to do")
         _close_run(session, run, SYNC_IN_SYNC, data, error)
+        return None
+
+    # The scan can take minutes; a sync started by hand meanwhile already covers this.
+    if active_library_jobs(session):
+        logger.info("file_sync: library jobs started during the scan; skipping")
+        _close_run(session, run, SYNC_LIBRARY_BUSY, data)
         return None
 
     logger.info(

@@ -11,6 +11,7 @@
     "notAvailable": "N / A",
     "pageOf": "Página {{page}} de {{total}}",
     "save": "Ahorrar",
+    "saveFailed": "No se pudo guardar la configuración.",
     "search": "Buscar…",
     "similarityValue": "Similitud: {{value}}",
     "unknown": "Desconocido"

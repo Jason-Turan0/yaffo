@@ -619,7 +619,8 @@ export const autoHealTestOrchestratorFactory = async (
     allowedDirectories: string[],
     fileMcpClient: ToolProvider,
     mcpPlaywrightClient: ToolProvider | undefined,
-    maxIterations: number = DEFAULT_MAX_HEAL_ITERATIONS
+    maxIterations: number = DEFAULT_MAX_HEAL_ITERATIONS,
+    playwrightTestRunner: PlaywrightTestRunner = runPlaywrightTests,
 ): Promise<AutoHealTestOrchestrator> => {
     const playwrightClient = mcpPlaywrightClient == null ? await createPlaywrightClient({
         headless: true,
@@ -656,7 +657,7 @@ export const autoHealTestOrchestratorFactory = async (
         allowedDirectories,
         toolProviders,
         undefined,
-        undefined,
+        playwrightTestRunner,
         maxIterations
     );
 };

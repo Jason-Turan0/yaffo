@@ -11,6 +11,7 @@
     "notAvailable": "k. A.",
     "pageOf": "Seite {{page}} von {{total}}",
     "save": "Speichern",
+    "saveFailed": "Die Einstellungen konnten nicht gespeichert werden.",
     "search": "Suchen…",
     "similarityValue": "Ähnlichkeit: {{value}}",
     "unknown": "Unbekannt"

@@ -36,7 +36,7 @@ async function deleteService(page: Page, slug: string): Promise<void> {
 }
 
 function runFlickrFixture(slug: string, ...args: string[]): string {
-  return execFileSync('python', [resolve(process.cwd(), 'scripts/seed_flickr_service.py'), slug, ...args], {
+  return execFileSync('python', ['-m', 'yaffo_ui_tests.scripts.seed_flickr_service', slug, ...args], {
     cwd: resolve(process.cwd(), '..'), env: process.env, encoding: 'utf8', stdio: 'pipe',
   });
 }
@@ -337,8 +337,12 @@ test('flickr_test_account_oauth_and_adapter_test_use_the_local_fake', async ({ p
     await expect(livePermission).toContainText('read-only calls');
     await livePermission.getByRole('button', { name: 'Allow', exact: true }).click();
     await expect(livePermission).toHaveClass(/is-answered/);
+    const builderFinished = page.waitForEvent('framenavigated', {
+      predicate: frame => frame === page.mainFrame(),
+    });
     runFlickrFixture(slug, '--ready');
-    await page.reload();
+    await builderFinished;
+    await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('.service-permission')).toContainText('Live read-only tests allowed');
 
     await page.getByRole('link', { name: 'Access' }).click();
@@ -371,7 +375,7 @@ test('flickr_test_account_oauth_and_adapter_test_use_the_local_fake', async ({ p
     await expect(page.locator('.service-account-row').filter({ hasText: 'Live reads allowed' })).toBeVisible();
 
     const syncSlug = await createFlickrSync(page, name, `UI Flickr Sync ${Date.now()}`);
-    execFileSync('python', [resolve(process.cwd(), 'scripts/seed_flickr_sync.py'), syncSlug], {
+    execFileSync('python', ['-m', 'yaffo_ui_tests.scripts.seed_flickr_sync', syncSlug], {
       cwd: resolve(process.cwd(), '..'), env: process.env, stdio: 'pipe',
     });
     await page.goto(`/utilities/automations/${syncSlug}`);

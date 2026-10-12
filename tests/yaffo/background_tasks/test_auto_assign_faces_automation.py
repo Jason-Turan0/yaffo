@@ -124,7 +124,7 @@ def test_task_scales_ui_threshold_to_cosine_against_the_band(monkeypatch, progre
     monkeypatch.setattr(mod, "get_similarity_bounds", lambda session: (0.40, 0.80))
     monkeypatch.setattr(mod, "record_run", lambda session, automation, work, media_item_ids, job_id: work(progress_reporter))
 
-    def _capture(session, reporter, media_item_ids, threshold, assign_multiple_matches=False):
+    def _capture(session, reporter, media_item_ids, threshold, assign_multiple_matches=False, on_committed=None):
         captured["threshold"] = threshold
         captured["reporter"] = reporter
         captured["assign_multiple_matches"] = assign_multiple_matches

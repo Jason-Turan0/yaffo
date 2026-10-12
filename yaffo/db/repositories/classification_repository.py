@@ -1,6 +1,9 @@
 """Persistence for the photo-label vocabulary (`classification_labels`) and the
 classifier's per-photo assignments (`photo_labels`). Used by the Settings admin
 routes (vocabulary CRUD) and the classify-labels automation task (assignments)."""
+from collections.abc import Sequence
+from typing import NamedTuple
+
 from sqlalchemy import insert
 from sqlalchemy.orm import Session
 
@@ -9,6 +12,11 @@ from yaffo.db.models import ClassificationLabel, MediaLabel
 # SQLite caps bound parameters per statement (~999); chunk the IN-list delete so a
 # large re-classify batch never blows that limit.
 _DELETE_CHUNK = 500
+
+
+class MediaLabelAssignment(NamedTuple):
+    media_item_id: int
+    assignments: list[tuple[int, float]]
 
 
 def list_labels(session: Session) -> list[ClassificationLabel]:
@@ -60,11 +68,12 @@ def set_enabled(session: Session, label_id: int, enabled: bool) -> None:
 
 
 def bulk_replace_media_labels(
-    session: Session, results: list[tuple[int, list[tuple[int, float]]]]
+    session: Session, results: Sequence[MediaLabelAssignment]
 ) -> list[int]:
     """Set each photo's labels to exactly its assignments, for a batch of photos in
     one short transaction: wipe those photos' prior rows, then bulk-insert the new
-    ones (one executemany). `results` is [(media_item_id, [(label_id, confidence), ...])].
+    ones (one executemany). Each result names a media item and its (label_id, confidence)
+    assignments.
     A photo with an empty assignment list is still included, so its stale labels are
     cleared. Unchanged assignments keep their existing rows. Returns IDs whose
     assignments changed; commits once when there are changes. Callers compute
@@ -72,7 +81,7 @@ def bulk_replace_media_labels(
     the slow work."""
     if not results:
         return []
-    media_item_ids = [media_item_id for media_item_id, _ in results]
+    media_item_ids = [result.media_item_id for result in results]
     existing: dict[int, set[tuple[int, float]]] = {}
     for start in range(0, len(media_item_ids), _DELETE_CHUNK):
         chunk = media_item_ids[start:start + _DELETE_CHUNK]
@@ -81,20 +90,19 @@ def bulk_replace_media_labels(
         ).filter(MediaLabel.media_item_id.in_(chunk)).all():
             existing.setdefault(media_item_id, set()).add((label_id, confidence))
     changed = [
-        (media_item_id, assignments)
-        for media_item_id, assignments in results
-        if existing.get(media_item_id, set()) != set(assignments)
+        result for result in results
+        if existing.get(result.media_item_id, set()) != set(result.assignments)
     ]
     if not changed:
         return []
-    media_item_ids = [media_item_id for media_item_id, _ in changed]
+    media_item_ids = [result.media_item_id for result in changed]
     for start in range(0, len(media_item_ids), _DELETE_CHUNK):
         chunk = media_item_ids[start:start + _DELETE_CHUNK]
         session.query(MediaLabel).filter(MediaLabel.media_item_id.in_(chunk)).delete(synchronize_session=False)
     rows = [
-        {"media_item_id": media_item_id, "label_id": label_id, "confidence": confidence}
-        for media_item_id, assignments in changed
-        for label_id, confidence in assignments
+        {"media_item_id": result.media_item_id, "label_id": label_id, "confidence": confidence}
+        for result in changed
+        for label_id, confidence in result.assignments
     ]
     if rows:
         session.execute(insert(MediaLabel), rows)

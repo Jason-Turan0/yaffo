@@ -283,7 +283,7 @@ type PhotoOrganizerComponents = {
     selectionBar?: SelectionBarComponent;
     overlay?: OverlayApi;
     initChatDialog?: (id: string, options: ChatDialogOptions) => ChatDialogApi | null;
-    initNavPagesBar?: () => NavPagesBarApi | undefined;
+    initNavPagesBar?: (i18n: I18nService, config: AppConfig) => NavPagesBarApi | undefined;
     navPagesBar?: NavPagesBarApi;
     intlDateInput?: IntlDateInputApi;
     multiSelect?: MultiSelectApi;

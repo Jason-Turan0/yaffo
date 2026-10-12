@@ -39,8 +39,8 @@ def _labels_for(session, media_item_id):
 def test_bulk_insert_assigns_each_photo(session, seeded):
     (p0, p1), (dog, beach) = seeded
     repo.bulk_replace_media_labels(session, [
-        (p0, [(dog, 0.9), (beach, 0.4)]),
-        (p1, [(beach, 0.8)]),
+        repo.MediaLabelAssignment(p0, [(dog, 0.9), (beach, 0.4)]),
+        repo.MediaLabelAssignment(p1, [(beach, 0.8)]),
     ])
     assert _labels_for(session, p0) == {(dog, 0.9), (beach, 0.4)}
     assert _labels_for(session, p1) == {(beach, 0.8)}
@@ -48,29 +48,29 @@ def test_bulk_insert_assigns_each_photo(session, seeded):
 
 def test_bulk_replace_wipes_prior_labels(session, seeded):
     (p0, _), (dog, beach) = seeded
-    repo.bulk_replace_media_labels(session, [(p0, [(dog, 0.9)])])
+    repo.bulk_replace_media_labels(session, [repo.MediaLabelAssignment(p0, [(dog, 0.9)])])
     # Re-running with a different set replaces, not appends.
-    repo.bulk_replace_media_labels(session, [(p0, [(beach, 0.5)])])
+    repo.bulk_replace_media_labels(session, [repo.MediaLabelAssignment(p0, [(beach, 0.5)])])
     assert _labels_for(session, p0) == {(beach, 0.5)}
 
 
 def test_bulk_replace_skips_unchanged_labels(session, seeded):
     (p0, _), (dog, _) = seeded
-    assert repo.bulk_replace_media_labels(session, [(p0, [(dog, 0.9)])]) == [p0]
+    assert repo.bulk_replace_media_labels(session, [repo.MediaLabelAssignment(p0, [(dog, 0.9)])]) == [p0]
 
-    assert repo.bulk_replace_media_labels(session, [(p0, [(dog, 0.9)])]) == []
+    assert repo.bulk_replace_media_labels(session, [repo.MediaLabelAssignment(p0, [(dog, 0.9)])]) == []
     assert _labels_for(session, p0) == {(dog, 0.9)}
 
 
 def test_empty_assignments_clears_photo(session, seeded):
     (p0, _), (dog, _) = seeded
-    repo.bulk_replace_media_labels(session, [(p0, [(dog, 0.9)])])
-    repo.bulk_replace_media_labels(session, [(p0, [])])  # still listed -> stale labels cleared
+    repo.bulk_replace_media_labels(session, [repo.MediaLabelAssignment(p0, [(dog, 0.9)])])
+    repo.bulk_replace_media_labels(session, [repo.MediaLabelAssignment(p0, [])])  # still listed -> stale labels cleared
     assert _labels_for(session, p0) == set()
 
 
 def test_empty_results_is_noop(session, seeded):
     (p0, _), (dog, _) = seeded
-    repo.bulk_replace_media_labels(session, [(p0, [(dog, 0.9)])])
+    repo.bulk_replace_media_labels(session, [repo.MediaLabelAssignment(p0, [(dog, 0.9)])])
     repo.bulk_replace_media_labels(session, [])  # untouched photos keep their labels
     assert _labels_for(session, p0) == {(dog, 0.9)}

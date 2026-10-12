@@ -45,9 +45,9 @@ _MIN_GEOCODE_INTERVAL_S = 1.0
 # A coordinate -> name lookup; None when online geocoding is disabled.
 Geocoder = Optional[Callable[[float, float], Optional[str]]]
 
-# Photos named before each commit. Geocoding (slow, throttled) runs without a write
-# lock held; the name updates are committed in chunks so progress is durable and the
-# lock is taken only in short bursts rather than one commit at the very end.
+# Photos named before each write. Names are computed from plain rows and buffered, so
+# matching and geocoding (slow, throttled) run with no write lock held; each chunk is
+# written by id in one statement, so the lock is taken only in short bursts.
 _FLUSH_SIZE = 200
 
 
@@ -74,38 +74,45 @@ def _assign_location_names(
     radius_km: float,
     overwrite: bool,
     geocode: Geocoder,
+    on_committed: Callable[[list[int]], None] | None = None,
 ) -> list[int]:
     """Set location_name on the named-able photos in `media_item_ids`; return the ids
     actually updated (committed). A photo named here joins the reuse candidates for
-    the remaining photos in the batch."""
-    media_items = media_repository.get_media_items_with_coords(session, media_item_ids)
-    if not media_items:
+    the remaining photos in the batch.
+
+    Reads plain (id, lat, lon, name) rows and writes names by id: nothing in the
+    session is ever dirty between writes, so the progress reporter's queries can't
+    autoflush an UPDATE and hold the write lock across the slow work.
+    `on_committed` receives each durable chunk even if a later chunk fails."""
+    photos = media_repository.get_coords_for_media_items(session, media_item_ids)
+    if not photos:
         return []
     candidates = media_repository.get_named_coordinates(session) if reuse_enabled else []
 
     updated: list[int] = []
-    pending: list[int] = []
+    pending: dict[int, str] = {}
 
     def flush():
-        if pending:
-            session.commit()  # persist the chunk's name updates (dirty ORM photos)
-            pending.clear()
+        media_repository.bulk_set_location_names(session, pending)
+        for media_id in pending.keys():
+            updated.append(media_id)
+        if on_committed is not None:
+            on_committed(list(pending))
+        pending.clear()
 
-    def media_item_processor(media_item):
-        if not overwrite and (media_item.location_name or "").strip():
+    def photo_processor(photo):
+        if not overwrite and (photo.location_name or "").strip():
             return
-        name = _nearest_name(media_item.latitude, media_item.longitude, candidates, radius_km) if reuse_enabled else None
+        name = _nearest_name(photo.latitude, photo.longitude, candidates, radius_km) if reuse_enabled else None
         if name is None and geocode is not None:
-            name = geocode(media_item.latitude, media_item.longitude)
-        if name and name != media_item.location_name:
-            media_item.location_name = name
-            candidates.append((media_item.latitude, media_item.longitude, name))
-            updated.append(media_item.id)
-            pending.append(media_item.id)
+            name = geocode(photo.latitude, photo.longitude)
+        if name and name != photo.location_name:
+            candidates.append((photo.latitude, photo.longitude, name))
+            pending[photo.id] = name
             if len(pending) >= _FLUSH_SIZE:
                 flush()
 
-    progress_reporter.run_with_progress(media_items, media_item_processor)
+    progress_reporter.run_with_progress(photos, photo_processor)
     flush()  # remaining tail
     return updated
 
@@ -149,28 +156,30 @@ def assign_location_name_automation_task(
         overwrite = bool(config_value(automation, _FIELDS["overwrite_existing"]))
         geocode = _throttled_geocoder() if bool(config_value(automation, _FIELDS["reverse_geocode_enabled"])) else None
 
+        total_updated_media_ids: set[int] = set()
+
         def work(progress_callback: ProgressReporter) -> RunOutcome:
-            updated = _assign_location_names(
+            _assign_location_names(
                 session,
                 progress_callback,
-                media_item_ids,
+                [media_id for media_id in media_item_ids if media_id not in total_updated_media_ids],
                 reuse_enabled=reuse_enabled,
                 radius_km=radius_km,
                 overwrite=overwrite,
                 geocode=geocode,
+                on_committed=total_updated_media_ids.update,
             )
-            if updated:
-                # Let export_photo_tag (photo_modified) write the new name into the file.
-                emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": updated})
             return RunOutcome(
                 codes.OUTCOME_NAMED,
-                {"named": len(updated), "total": len(media_item_ids)},
+                {"named": len(total_updated_media_ids), "total": len(media_item_ids)},
                 {"reuse": reuse_enabled, "radius_km": radius_km, "reverse_geocode": geocode is not None},
             )
 
         # Scope the run so the photo_modified it emits carries this automation (loop guard).
         with event_chain_scope(origin_automation_ids, automation_id):
             record_run(session, automation, work, media_item_ids=media_item_ids, job_id=run_job_id(task))
+            if total_updated_media_ids:
+                emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": sorted(total_updated_media_ids)})
     finally:
         session.close()
         SessionFactory.remove()

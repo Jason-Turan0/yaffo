@@ -11,6 +11,7 @@
     "notAvailable": "不适用",
     "pageOf": "页 {{page}} 的 {{total}}",
     "save": "节省",
+    "saveFailed": "无法保存设置。",
     "search": "搜索…",
     "similarityValue": "相似： {{value}}",
     "unknown": "未知"

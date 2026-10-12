@@ -1,4 +1,5 @@
 import json
+import time
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Callable
@@ -17,10 +18,16 @@ from yaffo.db.models import (
     JOB_STATUS_FAILED,
 )
 from yaffo.db.repositories.job_repository import is_job_cancelled, open_run_job
+from yaffo.db.errors import is_lock_error
 from yaffo.logging_config import get_logger
 from yaffo.utils import job_codes as codes
 
 logger = get_logger(__name__, 'background_tasks')
+
+# Waits before re-running a system automation whose run hit "database is locked" --
+# each after the busy_timeout already spent waiting. Another job holding the write
+# lock is passing; failing the run over it is not.
+LOCK_RETRY_DELAYS_S = (15, 60)
 
 
 @dataclass(frozen=True)
@@ -83,6 +90,29 @@ def record_dispatch_failure(session: Session, automation: Automation, trigger_id
     return job
 
 
+def _run_with_lock_retries(session: Session, automation: Automation, job_id: str,
+                           work: Callable[[ProgressReporter], RunOutcome],
+                           media_item_ids: list[int] | None) -> RunOutcome:
+    """Run `work` for the run Job, and again after each LOCK_RETRY_DELAYS_S wait when
+    it hits a locked database (unless the run was cancelled meanwhile). Raises the
+    last error once the retries are spent, or at once for any other error."""
+    if media_item_ids is not None and not media_item_ids:
+        return RunOutcome(codes.OUTCOME_NO_MEDIA)
+    for delay in (*LOCK_RETRY_DELAYS_S, None):
+        try:
+            return work(ProgressReporter(session, job_id))
+        except Exception as e:
+            if delay is None or not is_lock_error(e):
+                raise
+            session.rollback()
+            if is_job_cancelled(session, job_id):
+                raise
+            logger.warning(f"automation '{automation.slug}' run {job_id} hit a locked database; "
+                           f"running it again in {delay}s")
+            time.sleep(delay)
+    raise AssertionError("unreachable")
+
+
 def record_run(session: Session, automation: Automation, work: Callable[[ProgressReporter], RunOutcome],
                media_item_ids: list[int] | None = None, job_id: str | None = None) -> Job | None:
     """Record one run of a *system* automation as a Job (the run history).
@@ -92,7 +122,10 @@ def record_run(session: Session, automation: Automation, work: Callable[[Progres
     to COMPLETED with that outcome in job_data, or to FAILED with the exception
     message in `error` and a task_error problem. A run cancelled while `work` ran stays CANCELLED (the reporter's
     run_with_progress stops at its next check). `work`'s exception is captured (logged, not re-raised) so a failing run
-    becomes a FAILED Job rather than a crashed worker. Like run_and_record these Jobs
+    becomes a FAILED Job rather than a crashed worker. A run that hits "database is locked" is rolled back and
+    `work` runs again on the same Job after each of LOCK_RETRY_DELAYS_S, so `work` must be safe to repeat: whatever
+    an earlier attempt committed is skipped or rewritten unchanged, and anything it reports (ids to emit events
+    for) must be collected across attempts. Like run_and_record these Jobs
     never go through complete_job_task, so they emit no events (and can't feed a
     trigger loop). `job_id` is the task's queue id, so a retried task records on
     the same Job; returns None (without running `work`) when that Job already ended."""
@@ -101,8 +134,7 @@ def record_run(session: Session, automation: Automation, work: Callable[[Progres
         logger.info(f"automation '{automation.slug}' run {job_id} already ended; not running it again")
         return None
     try:
-        outcome = (RunOutcome(codes.OUTCOME_NO_MEDIA) if media_item_ids is not None and not media_item_ids
-                   else work(ProgressReporter(session, job.id)))
+        outcome = _run_with_lock_retries(session, automation, job.id, work, media_item_ids)
     except Exception as e:
         session.rollback()
         job = session.get(Job, job.id)

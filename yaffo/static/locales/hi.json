@@ -11,6 +11,7 @@
     "notAvailable": "एन/ए",
     "pageOf": "पेज {{page}} का {{total}}",
     "save": "बचाना",
+    "saveFailed": "सेटिंग सेव नहीं की जा सकीं।",
     "search": "खोजना…",
     "similarityValue": "समानता: {{value}}",
     "unknown": "अज्ञात"

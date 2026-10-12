@@ -245,9 +245,11 @@ def _add_job(app, job_id, name, status, minutes_ago, **fields):
         db.session.commit()
 
 
-def test_page_shows_only_in_progress_latest_runs_as_cards(app, client):
+def test_page_shows_every_active_run_as_a_card_oldest_first(app, client):
     _add_job(app, "index-old", "index_photos", "COMPLETED", 60, error_count=3)
-    _add_job(app, "index-new", "index_photos", "RUNNING", 5, completed_count=4)
+    _add_job(app, "index-running", "index_photos", "RUNNING", 5, completed_count=4)
+    # Queued behind the running one: a newer run must not hide the one doing the work.
+    _add_job(app, "index-queued", "index_photos", "PENDING", 2, completed_count=0)
     _add_job(app, "import-stuck", "import_photos", "RUNNING", 70,
              message="Imported {totalCount}/{taskCount} photos")
     _add_job(app, "import-new", "import_photos", "COMPLETED", 6,
@@ -257,19 +259,39 @@ def test_page_shows_only_in_progress_latest_runs_as_cards(app, client):
     body = client.get("/library/health").get_data(as_text=True)
     cards, history = body.split('class="section index-run-history"')
 
-    # A card only for a kind whose latest run is still in progress.
-    assert 'id="job-index-new"' in cards
-    assert 'id="job-import-new"' not in cards and 'id="job-import-stuck"' not in cards
-    assert 'id="job-index-old"' not in cards
-    # Everything else is history: a finished latest run, an older one, and an
-    # older run that never finished. Labelled by kind; other jobs aren't listed.
+    assert cards.index('id="job-import-stuck"') < cards.index('id="job-index-running"') \
+        < cards.index('id="job-index-queued"')
+    assert 'id="job-index-old"' not in cards and 'id="job-import-new"' not in cards
+    # Only finished runs are history, labelled by kind; other jobs aren't listed.
     assert "3 errors" in history
     assert "Index photos" in history and "Import photos" in history
-    assert history.count('class="run-history-row') == 3
+    assert history.count('class="run-history-row') == 2
     assert "dupes" not in body
     # A card that finishes while the page is open gets no Dismiss (it deletes the job).
-    assert "/jobs/index-new/fragment?has_results=0&amp;dismiss=0" in cards
+    assert "/jobs/index-running/fragment?has_results=0&amp;dismiss=0" in cards
     assert "hasActiveJobs: true" in body
+
+
+@pytest.mark.parametrize("url, body", [
+    ("/library/health/sync", {"files_to_index": ["/photos/a.jpg"], "files_to_delete": []}),
+    ("/library/health/retry-failed", None),
+    ("/library/health/reindex", None),
+    ("/library/health/regenerate-thumbnails", None),
+])
+def test_fixes_are_refused_while_library_jobs_are_active(app, client, monkeypatch, tmp_path, url, body):
+    media = tmp_path / "media"
+    media.mkdir()
+    monkeypatch.setattr("yaffo.routes.utilities.index_photos.get_media_dirs", lambda: [media])
+    monkeypatch.setattr("yaffo.routes.utilities.index_photos.get_thumbnail_dir", lambda: tmp_path / "thumbs")
+    for name in ("perform_sync", "enqueue_index_jobs", "reindex_media_items", "start_thumbnail_repair"):
+        monkeypatch.setattr(f"yaffo.routes.utilities.index_photos.{name}",
+                            lambda *a, **k: pytest.fail("a fix started while jobs were active"))
+    _add_job(app, "index-pending", "index_photos", "PENDING", 1, completed_count=0)
+
+    response = client.post(url, json=body) if body is not None else client.post(url)
+
+    assert response.status_code == 409
+    assert response.get_json()["code"] == "library_jobs_active"
 
 
 def test_page_shows_no_cards_when_nothing_is_in_progress(app, client):

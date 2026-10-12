@@ -281,6 +281,11 @@ const initIndexPhotos = (opts, i18n, config) => {
                 const count = countField ? data[countField] : undefined;
                 window.notification.success(i18n.t(`${keys}.started`, { count }));
                 window.location.reload();
+            } else if (response.status === 409 && data.code === 'library_jobs_active') {
+                // Jobs started since this page loaded: reload to show their cards.
+                const message = typeof data.error === 'string' ? data.error : '';
+                window.notification.flash(message, 'warning', 6000);
+                window.location.reload();
             } else {
                 const error = typeof data.error === 'string' ? data.error : '';
                 window.notification.failure(error || i18n.t(`${keys}.startFailed`));

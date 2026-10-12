@@ -13,6 +13,19 @@
   so do not quarantine it; the shot is correct.
 - Capture state: the default theme at capture time is `classic`, so the badge sits on
   Classic in the System list. The shot setup does not pin the default itself.
+- theme-editor.webp recaptured: the only delta is the custom-pages strip under the
+  navbar disappearing (everything below the navbar shifts up ~48px, which is what
+  the 6.7% magenta covers). Cause is the shipped nav change, not fixture drift: the
+  pages bar is now server-persisted — base.html renders it `hidden` and gives the
+  toggle `.collapsed` when `show_pages_bar` is false, nav.js PUTs
+  /pages/bar-visibility (yaffo/routes/pages.py, yaffo/utils/settings.py) — and an
+  absent setting row means hidden, where the old localStorage read treated "no
+  value" as visible. Editor content (header actions, conversation, Send/Cancel,
+  sidebar lists) is unchanged, so the shot was adopted.
+- Because that setting is global (one DB row for the whole app), both shots on this
+  page now pin the strip hidden in `prepareSeededTheme` via `setPagesBarVisible`
+  rather than inheriting whatever the previous run left behind. `themes-list.webp`
+  will lose the strip on its next recapture for the same reason.
 - Prose check (still accurate after the recapture): the System list matches THEMES
   (Classic, Darkroom, Neo-Brutalist, Scrapbook, Photos App, Memphis; six entries), the
   Custom section shows the seeded Test Ocean theme, the `New theme` button is present,

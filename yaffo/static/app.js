@@ -34,7 +34,7 @@ app.COMPONENTS.initAll = () => {
     const components = app.COMPONENTS;
     const i18n = /** @type {I18nService} */ (app.i18n);
 
-    components.navPagesBar = components.initNavPagesBar?.();
+    components.navPagesBar = components.initNavPagesBar?.(i18n, window.APP_CONFIG);
     components.fileBrowser?.init?.();
     components.multiSelect?.initAll?.();
     components.searchableSelect?.initAll?.(i18n);

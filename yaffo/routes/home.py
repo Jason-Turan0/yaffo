@@ -5,7 +5,7 @@ from flask import Flask, flash, render_template, request, url_for
 from flask_babel import format_date as babel_format_date
 from flask_babel import gettext
 from sqlalchemy import func
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import selectinload
 
 from yaffo.db import db
 from yaffo.db.models import (
@@ -231,17 +231,23 @@ def _timeline_index(
 def init_home_routes(app: Flask):
     @app.route("/", methods=["GET"])
     def index():
+        # First: saving a changed view commits, and a commit expires everything the
+        # session has loaded. After the page's items, each would be re-fetched one by
+        # one as the template touched it.
+        view = _resolve_library_view(db.session)
         # Parse filter parameters + build the sidebar's option lists (shared with
         # the locations page, which filters client-side from the same panel).
         filters = build_filters_context(db.session, request.args)
         page = request.args.get("page", default=1, type=int)
         page_size = request.args.get("page-size", type=int)
         filter_page_size = page_size if page_size else 25
-        # Build query with eager loading
+        # Eager-load with IN queries, not JOINs: joining faces -> people goes through
+        # people_face as a nested join SQLite can't index, so it copies the whole table
+        # on every query; joined collections also multiply rows (faces x labels).
         query = (
             db.session.query(MediaItem)
-            .options(joinedload(MediaItem.faces).joinedload(Face.people))
-            .options(joinedload(MediaItem.labels).joinedload(MediaLabel.label))
+            .options(selectinload(MediaItem.faces).selectinload(Face.people))
+            .options(selectinload(MediaItem.labels).selectinload(MediaLabel.label))
             .order_by(MediaItem.date_taken.desc())
         )
 
@@ -280,7 +286,6 @@ def init_home_routes(app: Flask):
         filters["page_sizes"] = [10, 25, 50, 100, 250]
         filters["page_size"] = filter_page_size
 
-        view = _resolve_library_view(db.session)
         filter_params = to_query_params(filters)
         base_params = {k: v for k, v in filter_params.items() if v not in (None, "", [])}
         timeline_groups: list[dict] = []

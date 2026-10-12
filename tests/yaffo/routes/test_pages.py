@@ -6,16 +6,44 @@ data resolution (resolve_data / resolve_query) and the model are not asserted on
 for content -- the chat route's generation path is driven by a fake agent.
 """
 import pytest
+from flask import Flask
+from flask.testing import FlaskClient
 
 from yaffo.db import db
 from yaffo.db.models import (
     PAGE_VERSION_STATUS_IN_PROGRESS,
     PAGE_VERSION_STATUS_READY,
+    ApplicationSettings,
     Widget,
 )
 from yaffo.db.repositories import custom_page_repository as page_repo
+from yaffo.utils.settings import SHOW_PAGES_BAR_SETTING
 
 pytestmark = pytest.mark.unit
+
+
+def test_pages_bar_defaults_to_collapsed(client: FlaskClient) -> None:
+    body = client.get("/").get_data(as_text=True)
+    assert 'id="navbar-pages-bar" hidden' in body
+    assert 'aria-expanded="false" aria-controls="navbar-pages-bar"' in body
+
+
+def test_pages_bar_visibility_is_persisted_and_shared_between_clients(client: FlaskClient, app: Flask) -> None:
+    for visible in (True, False, True):
+        response = client.put("/pages/bar-visibility", json={"visible": visible})
+        assert response.status_code == 204
+        setting = db.session.query(ApplicationSettings).filter_by(name=SHOW_PAGES_BAR_SETTING).one()
+        assert setting.value == ("true" if visible else "false")
+        body = app.test_client().get("/").get_data(as_text=True)
+        assert ('id="navbar-pages-bar" hidden' in body) is not visible
+        assert f'aria-expanded="{str(visible).lower()}" aria-controls="navbar-pages-bar"' in body
+    assert db.session.query(ApplicationSettings).filter_by(name=SHOW_PAGES_BAR_SETTING).count() == 1
+
+
+@pytest.mark.parametrize("payload", [{}, {"visible": "false"}, {"visible": 0}, {"visible": None}, []])
+def test_pages_bar_rejects_non_boolean_visibility(client: FlaskClient, payload: object) -> None:
+    assert client.put("/pages/bar-visibility", json=payload).status_code == 400
+    assert db.session.query(ApplicationSettings).filter_by(name=SHOW_PAGES_BAR_SETTING).first() is None
 
 
 # --- helpers ---------------------------------------------------------------

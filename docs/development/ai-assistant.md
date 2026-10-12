@@ -83,7 +83,7 @@ the prompt prefers guide pages for user questions.
 After changing included documentation, rebuild the bundle from the repo root:
 
 ```bash
-python -m scripts.build_assistant_knowledge
+inv build-assistant-knowledge
 ```
 
 App-page links use the separately generated

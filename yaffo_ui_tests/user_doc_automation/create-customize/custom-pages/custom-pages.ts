@@ -25,7 +25,24 @@ const waitForImage = async (image: Locator): Promise<void> => {
     });
 };
 
+/**
+ * The Pages strip (tabs, the edit pencil, + New page) is hidden whenever the
+ * persisted `show_pages_bar` flag is off, and nothing on the page brings it
+ * back. Everything this walkthrough does with page tabs lives in that strip, so
+ * expand it first — clicking a control that is not in the layout would either
+ * miss silently or time out on actionability.
+ */
+const ensurePagesStrip = async (page: Page): Promise<void> => {
+    const bar = page.locator("#navbar-pages-bar");
+    await bar.waitFor({state: "attached"});
+    if (await bar.isHidden()) {
+        await page.locator("#nav-pages-toggle").click();
+        await bar.waitFor({state: "visible"});
+    }
+};
+
 const openSeededPage = async (page: Page, design = false): Promise<void> => {
+    await ensurePagesStrip(page);
     const link = page.locator(".nav-page-tab").filter({hasText: SEEDED_PAGE});
     const href = await link.getAttribute("href");
     if (!href?.match(/^\/pages\/\d+$/)) {
@@ -33,6 +50,28 @@ const openSeededPage = async (page: Page, design = false): Promise<void> => {
     }
     await page.goto(design ? `${href}/design` : href, {waitUntil: "domcontentloaded"});
     await page.locator(design ? ".page-design" : ".page-presentation").waitFor();
+};
+
+/**
+ * Click + New page and return the new page's id, ending on its design view.
+ * Creation posts to /pages; the server lands on /pages/<id> and only forwards to
+ * /design while the page has no widgets. Rather than depend on that hop, accept
+ * either landing and pin the design URL explicitly — that is the state the rest
+ * of the flow edits.
+ */
+const createTemporaryPage = async (page: Page): Promise<number> => {
+    await ensurePagesStrip(page);
+    const button = page.locator(".nav-new-page");
+    await button.waitFor();
+    await button.click();
+    await page.waitForURL(/\/pages\/\d+(\/design)?$/, {waitUntil: "domcontentloaded"});
+    const pageId = Number(page.url().match(/\/pages\/(\d+)/)?.[1]);
+    if (!pageId) throw new Error("The new custom page has no id");
+    if (!/\/design$/.test(new URL(page.url()).pathname)) {
+        await page.goto(`/pages/${pageId}/design`, {waitUntil: "domcontentloaded"});
+    }
+    await page.locator(".page-design").waitFor();
+    return pageId;
 };
 
 const waitForSeededWidgets = async (page: Page): Promise<void> => {
@@ -91,12 +130,7 @@ export default defineWalkthrough({
         let temporaryPageId: number | undefined;
         try {
             await visit(NAV_START);
-            await Promise.all([
-                page.waitForURL(/\/pages\/\d+\/design$/, {waitUntil: "domcontentloaded"}),
-                page.locator(".nav-new-page").click(),
-            ]);
-            temporaryPageId = Number(page.url().match(/\/pages\/(\d+)\/design$/)?.[1]);
-            if (!temporaryPageId) throw new Error("The new custom page has no id");
+            temporaryPageId = await createTemporaryPage(page);
 
             await page.locator("#page-title").fill(TEMP_TITLE);
             await page.locator("#page-subtitle").fill("A temporary page used to verify the editor");
@@ -118,6 +152,7 @@ export default defineWalkthrough({
                 page.locator("#save-page-button").click(),
             ]);
             await page.locator(".page-presentation").waitFor();
+            await ensurePagesStrip(page);
             await page.locator(".nav-page-edit").click();
             await page.waitForURL(new RegExp(`/pages/${temporaryPageId}/design$`), {
                 waitUntil: "domcontentloaded",
@@ -195,6 +230,7 @@ export default defineWalkthrough({
             await page.unrouteAll({behavior: "wait"});
 
             // Delete through the visible confirmation flow and verify its tab is gone.
+            await ensurePagesStrip(page);
             await Promise.all([
                 page.waitForURL(new RegExp(`/pages/${temporaryPageId}/design$`), {
                     waitUntil: "domcontentloaded",

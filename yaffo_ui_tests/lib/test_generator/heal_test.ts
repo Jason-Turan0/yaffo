@@ -11,16 +11,16 @@
  *   -p, --port <port>  Port for Flask server (default: 5001)
  */
 import "dotenv/config";
-import {join, basename, dirname, relative, resolve} from "path";
+import {join, basename, dirname, relative, resolve, delimiter} from "path";
 import {existsSync, mkdirSync, readdirSync, statSync, writeFileSync} from "fs";
 import {autoHealTestOrchestratorFactory, DEFAULT_MAX_HEAL_ITERATIONS, HealResult} from "@lib/test_generator/auto_heal_orchestrator";
-import {formatTestResultsAsJUnit, runPlaywrightTests} from "@lib/services/run_playwright_tests";
+import {formatTestResultsAsJUnit, runPlaywrightTests, PlaywrightTestRunner} from "@lib/services/run_playwright_tests";
 import {generateTimestampString} from "@lib/test_generator/utils";
-import {startIsolatedEnvironment, IsolatedEnvironment} from "@lib/services/isolated_runner";
+import {startIsolatedEnvironment, IsolatedEnvironment, needsFakeSyncServices} from "@lib/services/isolated_runner";
 import {defaultModel, isKnownModel, KNOWN_MODEL_ALIASES} from "@lib/model_clients/model_client_factory";
 import {preflightModel, PreflightError} from "@lib/model_clients/preflight";
 import {createFilesystemClient} from "@lib/tool_providers/mcp_filesystem_client";
-import {GENERATED_TESTS_ROOT, YAFFO_APP_ROOT} from "@lib/types";
+import {GENERATED_TESTS_ROOT, YAFFO_APP_ROOT, YAFFO_PROJECT_ROOT} from "@lib/types";
 import {recordTestResult} from "@lib/test_generator/test_result_history";
 import {parseSpecFile} from "@lib/test_generator/prompt/spec_parser";
 import {ModelAlias} from "@lib/model_clients/model_client.interface";
@@ -68,6 +68,24 @@ interface HealOptions {
     preseeded?: boolean;
     /** Model-turn budget per test file (default: HEAL_MAX_ITERATIONS env var, else 50). */
     maxIterations?: number;
+}
+
+export function environmentTestRunner(
+    environment: IsolatedEnvironment,
+    runTests: PlaywrightTestRunner = runPlaywrightTests,
+): PlaywrightTestRunner {
+    return (baseUrl, testFiles, options = {}) => runTests(baseUrl, testFiles, {
+        ...options,
+        environment: {
+            ...options.environment,
+            PEER_URL: environment.peer?.baseUrl ?? "",
+            FAKE_FLICKR_URL: environment.fakeFlickrUrl ?? "",
+            FAKE_ONEDRIVE_URL: environment.fakeOneDriveUrl ?? "",
+            FAKE_IMMICH_URL: environment.fakeImmichUrl ?? "",
+            YAFFO_DATA_DIR: environment.tempDir,
+            PATH: `${join(YAFFO_PROJECT_ROOT, "venv", "bin")}${delimiter}${process.env.PATH ?? ""}`,
+        },
+    });
 }
 
 export async function healTest(
@@ -120,15 +138,13 @@ export async function healTest(
 
     try {
         console.log(`\n🔧 Starting isolated environment for healing...`);
-        // The sharing suite needs the two-instance sandbox (a peer to pair with
-        // and pull from). PEER_URL goes into process.env so every downstream
-        // Playwright run — including the orchestrator's re-runs — inherits it
-        // and the config's `sharing` project exists.
+        // Initial runs and healer re-runs share the same isolated database,
+        // peer and provider fakes through the bound test runner.
         const withPeer = basename(specPath, ".yaml") === "sharing";
-        isolatedEnvironment = await startIsolatedEnvironment(port, {withPeer, preseeded});
-        if (isolatedEnvironment.peer) {
-            process.env.PEER_URL = isolatedEnvironment.peer.baseUrl;
-        }
+        isolatedEnvironment = await startIsolatedEnvironment(port, {
+            withPeer, preseeded, withFakeSyncServices: needsFakeSyncServices(testFiles),
+        });
+        const runTests = environmentTestRunner(isolatedEnvironment);
 
         const spec = parseSpecFile(specPath);
         const featureName = spec.feature;
@@ -144,7 +160,7 @@ export async function healTest(
             const outputDir = dirname(absoluteTestPath);
 
             console.log(`\n🧪 Running initial test to capture failures: ${testName}`);
-            const initialResult = await runPlaywrightTests(baseUrl, [absoluteTestPath]);
+            const initialResult = await runTests(baseUrl, [absoluteTestPath]);
             recordTestResult(outputDir, featureName, initialResult);
 
             if (initialResult.success) {
@@ -174,7 +190,8 @@ export async function healTest(
                 allowedDirectories,
                 await createFilesystemClient(allowedDirectories),
                 undefined,
-                maxIterations
+                maxIterations,
+                runTests,
             );
             const healResult = await healer.healTest(initialResult, specPath);
             results.push({

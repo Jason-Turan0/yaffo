@@ -6,6 +6,7 @@ import json
 import re
 
 import pytest
+from sqlalchemy import event
 
 from yaffo.db import db
 from yaffo.db.models import ApplicationSettings, MediaItem
@@ -105,6 +106,28 @@ def test_timeline_view_is_persisted_as_preference(client, dated_library):
     client.get("/?view=grid")
 
     assert "timeline-day-header" not in client.get("/").data.decode()
+
+
+def test_switching_view_does_not_refetch_the_page(app, client, dated_library):
+    """Saving a changed view commits, which expires what the session has loaded. Done
+    after the page's items it re-fetched each one as the template touched it (25
+    extra round trips, each re-running the eager loads), so a switch is no costlier
+    than staying put, give or take the preference's own write."""
+    statements = []
+    with app.app_context():
+        engine = db.engine
+    count = lambda *args: statements.append(1)  # noqa: E731
+    event.listen(engine, "before_cursor_execute", count)
+    try:
+        client.get("/?view=timeline")  # switch: grid -> timeline (writes the preference)
+        switched = len(statements)
+        statements.clear()
+        client.get("/?view=timeline")  # stay
+        stayed = len(statements)
+    finally:
+        event.remove(engine, "before_cursor_execute", count)
+
+    assert switched - stayed <= 3
 
 
 def test_invalid_view_falls_back_to_saved_preference(client, dated_library):

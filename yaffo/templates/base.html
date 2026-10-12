@@ -158,16 +158,15 @@
             {% endif %}
 
         </ul>
-        <button type="button" id="nav-pages-toggle" class="nav-link nav-pages-toggle"
-                aria-expanded="true" aria-controls="navbar-pages-bar">
+        <button type="button" id="nav-pages-toggle" class="nav-link nav-pages-toggle{% if not show_pages_bar %} collapsed{% endif %}"
+                aria-expanded="{{ 'true' if show_pages_bar else 'false' }}" aria-controls="navbar-pages-bar">
             {{ _("Pages") }} <span class="nav-pages-toggle-arrow" aria-hidden="true">▾</span>
         </button>
         </div>
     </div>
     <div class="navbar-context-panels" id="navbar-context-panels" hidden></div>
-    {# Custom pages live on their own bookmarks-style strip; the toggle above
-       collapses it (persisted per browser in localStorage by nav.js). #}
-    <div class="navbar-pages-bar" id="navbar-pages-bar">
+    {# Custom pages live on their own bookmarks-style strip. #}
+    <div class="navbar-pages-bar" id="navbar-pages-bar"{% if not show_pages_bar %} hidden{% endif %}>
         <div class="navbar-container">
             {% if nav_pages %}
             <ul class="navbar-pages">

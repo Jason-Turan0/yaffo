@@ -8,6 +8,7 @@ Mirrors auto_assign_faces_automation: a thin handler that enqueues a task, the t
 reads config, does the work inside record_run (Job history), and closes its session.
 """
 from pathlib import Path
+from typing import Callable
 
 import numpy as np
 from sqlalchemy.orm import Session
@@ -29,6 +30,7 @@ from yaffo.db.models import (
     MEDIA_TYPE_VIDEO,
 )
 from yaffo.db.repositories import classification_repository, media_repository
+from yaffo.db.repositories.classification_repository import MediaLabelAssignment
 from yaffo.logging_config import get_logger
 from yaffo.utils.image import image_from_path, image_to_numpy
 from yaffo.utils.image_classifier import embed_image, embed_texts, get_clip_threshold
@@ -51,6 +53,7 @@ def classify_media_items(
         threshold: float,
         max_labels: int,
         progress_reporter: ProgressReporter | None = None,
+        on_committed: Callable[[list[int]], None] | None = None,
 ) -> list[int]:
     """Label each photo with the vocabulary entries scoring >= threshold (cosine),
     keeping the top `max_labels`. Replaces each photo's prior labels. Returns the ids
@@ -58,7 +61,9 @@ def classify_media_items(
 
     CLIP inference holds no DB lock: each photo's assignments are computed into an
     in-memory buffer, then flushed to the DB in bulk every `_FLUSH_SIZE` photos (and
-    once at the end). Label embeddings are computed once for the whole batch."""
+    once at the end). Label embeddings are computed once for the whole batch.
+    `on_committed` receives labeled IDs from each durable chunk, including when a
+    later chunk fails."""
     labels = classification_repository.get_enabled_labels(session)
     if not labels:
         return []
@@ -80,13 +85,16 @@ def classify_media_items(
         return agg
 
     labeled: list[int] = []
-    pending: list[tuple[int, list[tuple[int, float]]]] = []
+    pending: list[MediaLabelAssignment] = []
 
     def flush():
         if pending:
             changed = set(classification_repository.bulk_replace_media_labels(session, pending))
-            labeled.extend(media_item_id for media_item_id, assignments in pending
-                           if assignments and media_item_id in changed)
+            committed = [item.media_item_id for item in pending
+                         if item.assignments and item.media_item_id in changed]
+            labeled.extend(committed)
+            if on_committed is not None:
+                on_committed(committed)
             pending.clear()
 
     def media_item_processor(media_item_id: int):
@@ -111,7 +119,7 @@ def classify_media_items(
             return  # video with no extractable frames (e.g. ffmpeg unavailable)
         order = np.argsort(-sims)[:max_labels]
         assignments = [(labels[i].id, float(sims[i])) for i in order if sims[i] >= threshold]
-        pending.append((media_item_id, assignments))
+        pending.append(MediaLabelAssignment(media_item_id, assignments))
         if len(pending) >= _FLUSH_SIZE:
             flush()
 
@@ -159,16 +167,16 @@ def classify_labels_automation_task(
         threshold = get_clip_threshold(ui_threshold)
         max_labels = int(config_value(automation, _FIELDS["max_labels"]))
 
-        labeled: list[int] = []
+        labeled: set[int] = set()
 
         def work(progress_reporter: ProgressReporter) -> RunOutcome:
-            nonlocal labeled
-            labeled = classify_media_items(
+            classify_media_items(
                 session,
                 media_item_ids,
                 threshold,
                 max_labels,
                 progress_reporter,
+                on_committed=labeled.update,
             )
             return RunOutcome(
                 codes.OUTCOME_LABELED,
@@ -179,10 +187,8 @@ def classify_labels_automation_task(
         # Scope the run so the photo_labeled it emits carries this automation (loop guard).
         with event_chain_scope(origin_automation_ids, automation_id):
             record_run(session, automation, work, media_item_ids=media_item_ids, job_id=run_job_id(task))
-            # Emit after record_run so the labels are committed before subscribers run
-            # (record_run commits work's writes); fire only when something was labeled.
             if labeled:
-                emit_event(EVENT_MEDIA_LABELED, {"media_item_ids": labeled})
+                emit_event(EVENT_MEDIA_LABELED, {"media_item_ids": sorted(labeled)})
     finally:
         session.close()
         SessionFactory.remove()

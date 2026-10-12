@@ -2,6 +2,7 @@ import time
 from typing import Sequence, Callable, TypeVar
 from sqlalchemy.orm import Session
 from yaffo.db.models import Job
+from yaffo.db.errors import is_lock_error
 from yaffo.db.repositories.job_repository import estimate_completion, is_job_cancelled
 from yaffo.utils.time import utcnow
 
@@ -53,7 +54,9 @@ class ProgressReporter:
             try:
                 item_processor(item)
                 completed += 1
-            except Exception:
+            except Exception as exc:
+                if is_lock_error(exc):
+                    raise
                 errors += 1
             processed += 1
             current_time = time.monotonic()

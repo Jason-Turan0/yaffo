@@ -31,6 +31,18 @@ async function csrfToken(page: Page): Promise<string> {
   return token!;
 }
 
+// The Pages strip is a collapse/expand toggle. A fresh database has no stored
+// `show_pages_bar` preference, so the strip is rendered collapsed (hidden) by
+// default. Expanding it before reaching for its controls makes the nav-driven
+// scenarios deterministic regardless of that stored preference.
+async function ensurePagesBarVisible(page: Page): Promise<void> {
+  const bar = page.locator('#navbar-pages-bar');
+  if (!(await bar.isVisible())) {
+    await page.locator('#nav-pages-toggle').click();
+  }
+  await expect(bar).toBeVisible();
+}
+
 // Create a page directly through the create endpoint (the nav's "New page" form
 // posts the same thing) and land on its design view.
 async function createPage(page: Page, title?: string): Promise<number> {
@@ -65,10 +77,11 @@ test.describe('Custom Pages', () => {
   });
 
   test('pages_create_new_page', async ({ page }) => {
-    // Create through the real nav control: the pages bar is expanded by default
-    // in a fresh browser context (the "Pages" button is a collapse TOGGLE — do
-    // not click it first or the bar hides).
+    // Create through the real nav control. The Pages strip is collapsed on a
+    // fresh database, so expand it first (the "Pages" button is a TOGGLE —
+    // clicking it when collapsed reveals the strip and its New page control).
     await page.goto('/');
+    await ensurePagesBarVisible(page);
     await Promise.all([
       page.waitForURL(/\/pages\/\d+\/design$/),
       page.locator('.nav-new-page').click(),
@@ -221,6 +234,7 @@ test.describe('Custom Pages', () => {
   test('pages_presentation_view_renders_widgets', async ({ page }) => {
     // The Bennett sandbox has one published showcase page.
     await page.goto('/');
+    await ensurePagesBarVisible(page);
     const pageLinks = page.locator('.nav-page-tab');
     await expect(pageLinks).toHaveCount(1);
     await expect(pageLinks.first()).toHaveText('Florida Trip');

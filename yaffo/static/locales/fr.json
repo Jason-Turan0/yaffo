@@ -11,6 +11,7 @@
     "notAvailable": "N / A",
     "pageOf": "Page {{page}} de {{total}}",
     "save": "Sauvegarder",
+    "saveFailed": "Impossible d’enregistrer les paramètres.",
     "search": "Rechercher…",
     "similarityValue": "Similarité: {{value}}",
     "unknown": "Inconnu"
