@@ -303,6 +303,10 @@ jobs:
           set -a
           . "$ENV_FILE"
           set +a
+          # Fixture scripts the specs run (seed_flickr_service.py) need the project's
+          # Python: the dependencies and Yaffo itself are installed only in the venv.
+          # The local runners put it first on PATH the same way.
+          export PATH="$(cd .. && pwd)/venv/bin:$PATH"
 
           # Via the runner, not `npx playwright test` directly: the runner is
           # what applies the OS sandbox and the env scrub. It derives the
