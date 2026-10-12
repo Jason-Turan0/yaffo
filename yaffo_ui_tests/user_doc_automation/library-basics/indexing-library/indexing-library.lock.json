@@ -1,6 +1,6 @@
 {
     "page": "library-basics/indexing-library",
-    "lastVerifiedSha": "07b05535b0b5fa731d76f750ff66bfb0f364b711",
+    "lastVerifiedSha": "038a029250218bce42cb9a98979c3068ba240b2e",
     "observed": {
         "page": "library-basics/indexing-library",
         "urls": [
@@ -149,10 +149,10 @@
         "yaffo/routes/jobs.py": "21c417ae7991c469f0110b7d169a5b727568096527f2ba31a2ab73de6374de9f",
         "yaffo/routes/settings.py": "e268a6b2f63e65ee4fe9a3de6e30ea0ee9b4e575c53a08a13cb7a0cb0b822f13",
         "yaffo/routes/utilities/automations.py": "f787c053db5f209bbcf692ad7ad5c3c165c0105bd85aa7cd456567f296ad3602",
-        "yaffo/routes/utilities/index_photos.py": "ffd5521d521733504e6415f4a6fe6dd7d035c579f9f8c50cd31326de3a7730f5",
+        "yaffo/routes/utilities/index_photos.py": "e061783d1e7e8a7b079f2fe8babdc649aca07f249c267e8b1793904cc6a746e2",
         "yaffo/scripts/db/migrations/000_MIGRATION_20260620_INIT.py": "16d33b9d6167ec011e7f97a29bc1f35896674478c831beacb1846cecc0ca1763",
         "yaffo/static/action-links.css": "fb3fd8e47c18993d826f7d34f8ccb24dc1aeb18a9aacb45c3a4fc41a901a4300",
-        "yaffo/static/app.js": "166c8895269cf5469fd1797b9c34b2281acc77240f74edc75e5b06d581cd9fd8",
+        "yaffo/static/app.js": "7aa9b2b8c921352f3928e5735a3210f9b085911c03085269e3e33c260ac6511b",
         "yaffo/static/assistant/assistant.css": "51af784b2881e1c3f119d97f2e88227a17e5fe28a88e67a63e9de83d711a46ca",
         "yaffo/static/assistant/assistant.js": "117173da2d7541ee51a23dcee1d19acd102bba8a1b66585a0e9bba687f38a112",
         "yaffo/static/assistant/plan_card.js": "22339c5d29df625ce95a94124b30fe474512d9a17b3d8420ee20f87c37daaf32",
@@ -193,11 +193,11 @@
         "yaffo/static/filters/tags.js": "ff59366f4d7b18149fbd7d401e29cc1e8d25b1d3c80805188d35ed9fc80dc079",
         "yaffo/static/form.css": "16dbfa5177212d3d33d72f5d82fac909ff38dca0e75836134ee44925e28e6ba7",
         "yaffo/static/i18n.js": "55b8645a19d8f982b14aa541c820605c9c9d81b2222e1a1628f69b0eaa7e6bc5",
-        "yaffo/static/locales/en.json": "0b637610172e977308d449dcaa30283747c0a4c02611dffa442baa855a64189a",
+        "yaffo/static/locales/en.json": "09181f92004b05a7cfc7fac7b25ba09ce46853067d2f92fc9aed10a4a3dab38d",
         "yaffo/static/match-type.css": "46a6ac0ede55c7800265e54c0e8b760d5a997aec8b1b5ebd0bb2991b7542e82c",
         "yaffo/static/multi-select.css": "2b898c7aecedd140e3fefc0be2e2dc11e59e4c6ccde1d0c555376f1177772ddb",
         "yaffo/static/multi-select.js": "d4ddd83c069e0900dc22e3d0de3a4b757f96477f820e7f6d78e4c38dc47c238f",
-        "yaffo/static/nav.js": "d57a9ad21b7d2001629b423806c03f6e1b76b0b8fa77c49e44e0cab8643c219f",
+        "yaffo/static/nav.js": "a6bb503219a68e61620faaddf503d60258ae4c15df42c9d2d093ee5510a8eb04",
         "yaffo/static/notification.css": "117f20bef2fe58da95491a59e414edc59bf866bf51f761edd785568eb219d3af",
         "yaffo/static/notification.js": "9ef3dd46a45373580066ccb53d402b189c658f429bd6d2d879167d51b98fb05a",
         "yaffo/static/pages/nav.css": "5bf844bd1ecc91c5c33e88b3ece44c307f2d233c0f16576e3514123f331b49b1",
@@ -230,12 +230,12 @@
         "yaffo/static/utilities/_base.js": "d1ddbb0f4fd52e01532391ea913a2151b2bb23467af8a3228bc8f97b394bdc17",
         "yaffo/static/utilities/automations.css": "6be7bb1f5f7fdb9c4b7b81e795dde05fad5d634286200ac3af85f35adcdf8a06",
         "yaffo/static/utilities/automations.js": "ba3007e58a31c13805375cc3bd2db5a3896bbf00928752ce8a200ef9f7ad4af6",
-        "yaffo/static/utilities/index_photos.js": "91e0acfd190b8fc114f85fe6e2fd4f24ca5d934c3f55e619d2d5179d6635289f",
+        "yaffo/static/utilities/index_photos.js": "ebcfa41c76729c685544406c63d119711916b810360ee84420d92f0b04469388",
         "yaffo/static/utils.js": "0d4990647fb99c0c611f38f9f140fdba555043ce3857dbe082c53fd193861c4a",
         "yaffo/static/vendor/htmx/2.0.4/htmx.min.js": "e209dda5c8235479f3166defc7750e1dbcd5a5c1808b7792fc2e6733768fb447",
         "yaffo/static/vendor/i18next/25.7.4/i18next.min.js": "a91c328a3b79354160f6e68543657805230f0b51aba6e8534f7b1fb772af9ef2",
         "yaffo/templates/assistant/_panel.html": "bf015dfd85d361bbc7a33b304c7220eafa2b4622a293ddee75543cf75dad2eb3",
-        "yaffo/templates/base.html": "5a5f17e2a502b283ef5373d9fc8e70aec936fab448d083b6011f67cb26889378",
+        "yaffo/templates/base.html": "d1a23bae375d6d2c1243d0fa22b17920cb5e61f95625dffaca5a1621694fba44",
         "yaffo/templates/components/chat_dialog.html": "da8bfac5ca28f361fb0f621f409d644adb29fda577022cad1dab9771e84c2c37",
         "yaffo/templates/components/collapsible_panel.html": "fdf82c45bc53177df9760c640e2a2c7a5bb133f9257bb8f35ce2f357933de4f0",
         "yaffo/templates/components/distance_input.html": "e1b500806335c7b7d7c9c2ea80d4e7fc7af4d9ee528ccc10d308028283ccd9b9",
@@ -263,9 +263,9 @@
         "yaffo/templates/utilities/automations_runs.html": "cfa2b41f6f70518cf3b6bc07a8dfd63853ff351738c74169a46dd2931c3e8784",
         "yaffo/templates/utilities/automations_trigger_panel.html": "8fab466328289bc02cc7ea7480a124c0b097250ec9dab300f1544417c5a8fe75",
         "yaffo/templates/utilities/automations_triggers.html": "ac3532c656f31fa8b471fbfd64b6911432bfe4d1718c82d2b464432c8b211b3a",
-        "yaffo/templates/utilities/index_photos.html": "aed40f7225f464289a9b1b6aebb6ef5bc563fb75eebff74c3353e3a7889522f3",
-        "yaffo/utils/file_sync.py": "7a95d9d9c62d2e1fd3c93c22332c57be7589df2cf38d8e6c9999ddfdaef5fa28",
-        "yaffo/utils/index_jobs.py": "502ac96e40aa8658b6007ff9e28768471183111c7f74d2bd5dbf307e6e1c9e9d"
+        "yaffo/templates/utilities/index_photos.html": "855568d6ba2e60fb4c354a94670284dbe5c201654f2c23be9b2547218a2161d3",
+        "yaffo/utils/file_sync.py": "c86d410a27a83a71913e1e40c37c4e2a6b25fa7d8434606f9ed54feffcebc626",
+        "yaffo/utils/index_jobs.py": "0d87c32e570c87751425c505a2dcfd6f1344ac2bc134d3b398774129d4295828"
     },
     "shots": {
         "library-basics/assets/indexing-library/library-health.webp": {

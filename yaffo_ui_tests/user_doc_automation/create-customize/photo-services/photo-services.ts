@@ -8,7 +8,10 @@ import {defineWalkthrough} from "../../_support";
  * without the builder model: the New automation choice and an empty builder.
  */
 const SHOT_SERVICE_NAME = "Flickr exports";
+const PAGES_BAR_ENDPOINT = "/pages/bar-visibility";
+
 let temporaryServicePath: string | undefined;
+let pagesBarWasExpanded = false;
 
 const removeTemporaryService = async (page: Page): Promise<void> => {
     if (!temporaryServicePath) return;
@@ -23,6 +26,43 @@ const removeTemporaryService = async (page: Page): Promise<void> => {
     if (!response.ok() && response.status() !== 404) {
         throw new Error(`Could not remove the documentation service: HTTP ${response.status()}`);
     }
+};
+
+/**
+ * The Pages strip is an app-wide preference behind the navbar, saved through
+ * `PUT /pages/bar-visibility` and collapsed unless it has been switched on. It
+ * sets the navbar's height, so it also moves the page content that shows in the
+ * margin these captures keep around the element they clip. Both shots here show
+ * the collapsed strip the app ships with, so pin that state, and hand the
+ * sandbox back what we found once the shot is taken — otherwise a walkthrough
+ * that expands the strip (custom pages need it) silently re-frames them.
+ * Uses the strip's own toggle, which applies the change to the DOM at once and
+ * carries the CSRF token the route requires.
+ */
+const pinPagesBar = async (page: Page, expanded: boolean): Promise<void> => {
+    const toggle = page.locator("#nav-pages-toggle");
+    if (((await toggle.getAttribute("aria-expanded")) === "true") === expanded) return;
+    const saved = page.waitForResponse((response) => (
+        response.url().includes(PAGES_BAR_ENDPOINT) && response.request().method() === "PUT"
+    ));
+    await toggle.click();
+    const response = await saved;
+    if (!response.ok()) {
+        throw new Error(`Could not save the Pages strip state: HTTP ${response.status()}`);
+    }
+    await expect(toggle).toHaveAttribute("aria-expanded", String(expanded));
+};
+
+const collapsePagesBar = async (page: Page): Promise<void> => {
+    pagesBarWasExpanded =
+        (await page.locator("#nav-pages-toggle").getAttribute("aria-expanded")) === "true";
+    await pinPagesBar(page, false);
+};
+
+const restorePagesBar = async (page: Page): Promise<void> => {
+    if (!pagesBarWasExpanded) return;
+    pagesBarWasExpanded = false;
+    await pinPagesBar(page, true);
 };
 
 const chooseNewService = async (page: Page): Promise<void> => {
@@ -40,9 +80,11 @@ export default defineWalkthrough({
             goto: "/utilities/automations",
             clip: "#newAutomationModal .modal-content",
             setup: async (page) => {
+                await collapsePagesBar(page);
                 await chooseNewService(page);
                 await page.mouse.move(1390, 0);
             },
+            teardown: restorePagesBar,
         },
         "service-builder.webp": {
             viewport: {width: 1400, height: 1000},
@@ -50,6 +92,7 @@ export default defineWalkthrough({
             clip: ".utilities-content",
             setup: async (page) => {
                 try {
+                    await collapsePagesBar(page);
                     await chooseNewService(page);
                     await Promise.all([
                         page.waitForURL(/\/utilities\/automations\/services\/[^/?]+$/),
@@ -63,7 +106,10 @@ export default defineWalkthrough({
                     throw error;
                 }
             },
-            teardown: removeTemporaryService,
+            teardown: async (page) => {
+                await removeTemporaryService(page);
+                await restorePagesBar(page);
+            },
         },
     },
     flows: async ({page, visit}) => {
