@@ -11,7 +11,7 @@ from typing import Any, Callable
 from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_runs import RunOutcome
-from yaffo.db.models import Automation, AutomationTrigger, TRIGGER_TYPE_SCHEDULE
+from yaffo.db.models import Automation, AutomationTrigger, SyncItem, TRIGGER_TYPE_SCHEDULE
 from yaffo.db.repositories import sync_repository
 from yaffo.logging_config import get_logger
 from yaffo.sync.handlers import ERROR_CODES, ERROR_CHANGED
@@ -23,6 +23,10 @@ logger = get_logger(__name__, 'background_tasks')
 
 # A run stops at a page/batch boundary after this long; the next run resumes.
 DEFAULT_TIME_BUDGET_SECONDS = 15 * 60
+
+# A failed item's message from its handler, kept in sync_items.details.
+ERROR_MESSAGE_KEY = "error_message"
+ERROR_MESSAGE_MAX_CHARS = 500
 
 
 class HookOutputError(Exception):
@@ -112,6 +116,21 @@ def check_results(envelope: Any, keys: set[str], allowed_fields: set[str]) -> li
         check_error(result.get("error"))
     check_error(envelope.get("error"))
     return results
+
+
+def record_item_error(automation: Automation, row: SyncItem, code: str | None, message: Any,
+                      filename: str | None = None) -> None:
+    """Keep why an item failed: the code on the row (translated at render time), the
+    handler's own words in `details.error_message` (English, for diagnosis, capped),
+    and a warning in the log. A later success replaces `details`, clearing it."""
+    text = str(message).strip()[:ERROR_MESSAGE_MAX_CHARS] if message else ""
+    details = {k: v for k, v in (row.details or {}).items() if k != ERROR_MESSAGE_KEY}
+    if text:
+        details[ERROR_MESSAGE_KEY] = text
+    row.details = details or None
+    name = filename or details.get("filename") or row.item_key
+    item = f"item {row.id} ({name})" if row.id is not None else f"item {name}"
+    logger.warning(f"sync '{automation.slug}': {item} {row.status} [{code}]" + (f": {text}" if text else ""))
 
 
 def set_runtime(session: Session, automation: Automation, runtime: SyncRuntime) -> None:

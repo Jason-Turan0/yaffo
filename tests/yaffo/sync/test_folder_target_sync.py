@@ -8,7 +8,7 @@ import pytest
 from PIL import Image
 
 from yaffo.db.models import AlbumItem, SyncItem, SYNC_ITEM_CANT_REMOVE, SYNC_ITEM_REMOVED, SYNC_ITEM_REMOVED_REMOTELY, \
-    SYNC_ITEM_REMOVING, SYNC_ITEM_SENT, SYNC_ITEM_PENDING
+    SYNC_ITEM_FAILED, SYNC_ITEM_REMOVING, SYNC_ITEM_SENT, SYNC_ITEM_PENDING
 from yaffo.db.repositories import sync_repository
 from yaffo.sync import folder_target, setup
 from yaffo.sync.engine import run_sync
@@ -259,6 +259,41 @@ def test_a_run_killed_mid_batch_resumes_without_duplicates(session, add_photo, a
     assert result.problem is None
     assert files_in(destination) == ["For Mom/a.jpg", "For Mom/b.jpg"]  # no "a (2).jpg"
     assert {r.status for r in sync_repository.rows(session, target.id)} == {SYNC_ITEM_SENT}
+
+
+class RejectingTarget(folder_target.FolderTarget):
+    """Refuses every item the way a service does, with its own reason."""
+
+    def push(self, batch, ctx):
+        return {"results": [{"key": item["key"], "error": {"code": "rejected", "message": "fileCreatedAt must be a date"}}
+                            for item in batch]}
+
+
+def test_a_failed_items_message_is_kept_and_logged_until_it_is_sent(session, add_photo, album, make_target,
+                                                                     destination, run_context, monkeypatch):
+    from yaffo.sync import adapters, run_common
+    warnings = []
+    monkeypatch.setattr(run_common.logger, "warning", warnings.append)
+    target = make_target(album("For Mom", [add_photo("a.jpg")]))
+    builtin = adapters.BUILTINS["folder_target"]
+    monkeypatch.setitem(adapters.BUILTINS, "folder_target",
+                        adapters.BuiltinAdapter(builtin.role, builtin.options, RejectingTarget))
+
+    result = run_sync(session, target.id, run_context)
+
+    assert result.params["failed"] == 1
+    row = sync_repository.rows(session, target.id)[0]
+    assert (row.status, row.error_code) == (SYNC_ITEM_FAILED, "rejected")
+    assert row.details["error_message"] == "fileCreatedAt must be a date"
+    assert any("a.jpg" in w and "[rejected]" in w and "fileCreatedAt must be a date" in w for w in warnings)
+
+    row.error_code = "not_sent"  # what Retry failed does
+    session.commit()
+    monkeypatch.setitem(adapters.BUILTINS, "folder_target", builtin)
+    run_sync(session, target.id, run_context)
+
+    row = sync_repository.rows(session, target.id)[0]
+    assert row.status == SYNC_ITEM_SENT and "error_message" not in (row.details or {})
 
 
 def test_a_copy_deleted_in_the_folder_is_not_sent_again(session, add_photo, album, make_target, destination,

@@ -57,8 +57,8 @@ from yaffo.sync.handlers import (
     STOP_OUT_OF_TIME, HookContext, SourceHandler, SourceItemSkipped, SourceStop,
 )
 from yaffo.sync.run_common import (
-    HookOutputError, RunContext, RunResult, check_error, merge_state, pause, schedule_continuation, set_runtime,
-    stop,
+    HookOutputError, RunContext, RunResult, check_error, merge_state, pause, record_item_error,
+    schedule_continuation, set_runtime, stop,
 )
 from yaffo.sync.starlark_adapter import HookFailed
 from yaffo.sync.web import WebClient, url_hash
@@ -401,12 +401,11 @@ class SourceRun:
                 except DiskFull:
                     raise
                 except SourceItemSkipped as e:
-                    self.mark_skipped(record, known.get(record["source_id"]), e.error_code)
+                    self.mark_skipped(record, known.get(record["source_id"]), e.error_code, e)
                 except (OSError, ValueError) as e:
                     # One unreadable or vanished file is one failed item. Nothing for it
                     # was added to the session before the file operation failed.
-                    logger.warning(f"sync '{self.automation.slug}': could not import {record['source_id']}: {e}")
-                    self.mark_failed(record, known.get(record["source_id"]))
+                    self.mark_failed(record, known.get(record["source_id"]), e)
                     self.counters.failed += 1
                 # A page can contain hundreds of downloads. Once the first media
                 # row is flushed, SQLite holds its writer lock until commit; without
@@ -418,7 +417,7 @@ class SourceRun:
             if self.client is not None:
                 self.client.mid_page = False
 
-    def mark_failed(self, record: dict, known: SyncItem | None) -> None:
+    def mark_failed(self, record: dict, known: SyncItem | None, message: Any = None) -> None:
         row = known
         if row is None:
             row = SyncItem(automation_id=self.automation.id, item_key=record["source_id"],
@@ -430,8 +429,10 @@ class SourceRun:
         if not self.adapter.is_builtin:
             # A delta feed won't list it again: keep the record to retry it.
             row.details = {**(row.details or {}), "record": record}
+        record_item_error(self.automation, row, ITEM_IMPORT_FAILED, message, record.get("filename"))
 
-    def mark_skipped(self, record: dict, known: SyncItem | None, error_code: str | None) -> None:
+    def mark_skipped(self, record: dict, known: SyncItem | None, error_code: str | None,
+                     message: Any = None) -> None:
         row = known
         if row is None:
             row = SyncItem(automation_id=self.automation.id, item_key=record["source_id"],
@@ -440,6 +441,7 @@ class SourceRun:
         row.status, row.error_code = SYNC_ITEM_SKIPPED, error_code
         row.attempts = (row.attempts or 0) + 1
         row.details = {**(row.details or {}), "filename": record.get("filename")}
+        record_item_error(self.automation, row, error_code, message, record.get("filename"))
 
     def retry_failed(self, ctx: HookContext) -> None:
         """Retry items whose download failed in earlier runs, from their kept records."""

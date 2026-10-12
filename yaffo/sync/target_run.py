@@ -43,8 +43,8 @@ from yaffo.sync.handlers import (
     MISSING, PRESENT, TARGETS_MANY, HookContext, TargetCapabilities, TargetHandler,
 )
 from yaffo.sync.run_common import (
-    HookOutputError, RunContext, RunResult, check_results, merge_state, pause, set_runtime, stop,
-    schedule_continuation,
+    ERROR_MESSAGE_KEY, HookOutputError, RunContext, RunResult, check_results, merge_state, pause,
+    record_item_error, set_runtime, stop, schedule_continuation,
 )
 from yaffo.sync.schemas import (
     CURSOR_RECONCILE, PASS_INCREMENTAL, PAUSE_SELECTION_MISSING, RUNTIME_NEEDS_SIGN_IN, SyncColumn, SyncCursor,
@@ -133,10 +133,11 @@ class TargetRun:
     def apply_hook_error(self, envelope: dict, unresolved: list[SyncItem]) -> None:
         """An unreported item may have reached the remote before a response was
         lost. Keep its intent for the next run's reconcile before retrying."""
+        error = envelope.get("error")
         for row in unresolved:
             row.status = SYNC_ITEM_PENDING if self.caps.reconcile else SYNC_ITEM_FAILED
             row.error_code = ITEM_NOT_SENT
-        error = envelope.get("error")
+            record_item_error(self.automation, row, ITEM_NOT_SENT, (error or {}).get("message"))
         self.commit_runtime(envelope.get("state_patch"))
         if error:
             raise StopRun(error["code"], error.get("message"))
@@ -209,10 +210,12 @@ class TargetRun:
                     self.finish_removed(row, kept=bool(result.get("kept")))
                 elif error["code"] == ERROR_CHANGED:
                     row.status, row.error_code = SYNC_ITEM_CANT_REMOVE, ERROR_CHANGED
+                    record_item_error(self.automation, row, ERROR_CHANGED, error.get("message"))
                     self.counters.cant_remove += 1
                 else:
                     row.error_code = error["code"]
                     row.attempts += 1
+                    record_item_error(self.automation, row, error["code"], error.get("message"))
             self.apply_hook_error_for_removal(envelope, list(by_key.values()))
 
     def apply_hook_error_for_removal(self, envelope: dict, unresolved: list[SyncItem]) -> None:
@@ -245,6 +248,7 @@ class TargetRun:
         source = Path(media.full_file_path)
         if not source.is_file():
             row.status, row.error_code = SYNC_ITEM_FAILED, ITEM_SOURCE_MISSING
+            record_item_error(self.automation, row, ITEM_SOURCE_MISSING, f"{source} is missing", source.name)
             self.counters.failed += 1
             return None
         path, filename = source, source.name
@@ -255,13 +259,14 @@ class TargetRun:
                 filename = f"{source.stem}.jpg"
                 sent_as = {"type": "image/jpeg", "size": path.stat().st_size}
                 self.counters.converted += 1
-        except UnsupportedFormat:
+        except UnsupportedFormat as e:
             row.status, row.error_code = SYNC_ITEM_FAILED, ITEM_UNSUPPORTED_FORMAT
+            record_item_error(self.automation, row, ITEM_UNSUPPORTED_FORMAT, e, source.name)
             self.counters.unsupported += 1
             return None
         except Exception as e:  # noqa: BLE001 - a photo Pillow can't decode is one failed item
-            logger.warning(f"sync '{self.automation.slug}': could not convert {source}: {e}")
             row.status, row.error_code = SYNC_ITEM_FAILED, ITEM_CONVERSION_FAILED
+            record_item_error(self.automation, row, ITEM_CONVERSION_FAILED, f"could not convert: {e}", source.name)
             self.counters.failed += 1
             return None
         if not self.adapter.is_builtin:
@@ -322,7 +327,8 @@ class TargetRun:
             row.attempts += 1
             row.run_id = self.run.job_id
         for row, item in batch:
-            row.details = {**(row.details or {}), "filename": item["filename"]}
+            details = {k: v for k, v in (row.details or {}).items() if k != ERROR_MESSAGE_KEY}
+            row.details = {**details, "filename": item["filename"]}
         self.commit_runtime()
         by_key = {item["key"]: (row, item) for row, item in batch}
         hook_batch = [{k: v for k, v in item.items() if k != "sent_as"} for _, item in batch]
@@ -342,6 +348,7 @@ class TargetRun:
             error = result.get("error")
             if error is not None:
                 row.status, row.error_code = SYNC_ITEM_FAILED, error["code"]
+                record_item_error(self.automation, row, error["code"], error.get("message"), item["filename"])
                 self.counters.failed += 1
                 continue
             if not isinstance(result.get("remote_id"), str):

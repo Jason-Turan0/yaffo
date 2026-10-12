@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from yaffo.db.models import Job, MediaItem, JOB_STATUS_CANCELLED, JOB_STATUS_RUNNING, MEDIA_STATUS_IMPORTED, \
-    MEDIA_STATUS_INDEXED, SYNC_ITEM_IMPORTED, SYNC_ITEM_LINKED_EXISTING, EVENT_MEDIA_MODIFIED
+    MEDIA_STATUS_INDEXED, SYNC_ITEM_FAILED, SYNC_ITEM_IMPORTED, SYNC_ITEM_LINKED_EXISTING, EVENT_MEDIA_MODIFIED
 from yaffo.db.repositories import sync_repository
 from yaffo.sync import folder_source, setup
 from yaffo.sync.engine import run_sync
@@ -302,3 +302,28 @@ def test_a_crashed_imports_temporary_file_is_swept(session, library, card, make_
 
     assert not leftover.exists()
     assert not list(library.rglob("*.part"))
+
+
+class UnreadableCard(folder_source.FolderSource):
+    """A card whose files can't be read."""
+
+    def fetch(self, record, destination, ctx):
+        raise OSError(f"Input/output error: {record['filename']}")
+
+
+def test_a_failed_imports_message_is_kept_and_logged(session, make_source, run_context, monkeypatch):
+    from yaffo.sync import adapters, run_common
+    warnings = []
+    monkeypatch.setattr(run_common.logger, "warning", warnings.append)
+    builtin = adapters.BUILTINS["folder_source"]
+    monkeypatch.setitem(adapters.BUILTINS, "folder_source",
+                        adapters.BuiltinAdapter(builtin.role, builtin.options, UnreadableCard))
+    source = make_source()
+
+    run_sync(session, source.id, run_context)
+
+    rows = sync_repository.rows(session, source.id)
+    assert {(r.status, r.error_code) for r in rows} == {(SYNC_ITEM_FAILED, "import_failed")}
+    assert {r.details["error_message"] for r in rows} == {
+        "Input/output error: IMG_0001.JPG", "Input/output error: IMG_0002.JPG"}
+    assert sum("[import_failed]" in w and "Input/output error" in w for w in warnings) == 2
