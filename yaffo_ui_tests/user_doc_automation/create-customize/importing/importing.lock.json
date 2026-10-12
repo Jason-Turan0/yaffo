@@ -1,6 +1,6 @@
 {
     "page": "create-customize/importing",
-    "lastVerifiedSha": "07b05535b0b5fa731d76f750ff66bfb0f364b711",
+    "lastVerifiedSha": "5b8ea9abfab78c6bbf374b7203f92a8015d42a53",
     "observed": {
         "page": "create-customize/importing",
         "urls": [
@@ -221,7 +221,7 @@
         "yaffo/sync/peer_source.py": "fd85fd9a1604bc9779b6e172fb9962b78940aee9896e5431aeea26119b5955f0",
         "yaffo/sync/preset_seed.py": "76704151a4bae9093d27ba97eb0436348f7d437d196efaeb6a113cf038ea9728",
         "yaffo/sync/setup.py": "b9eb3bf671bc8d7c72ca46e9bf78cf7bea6482d46106cd87dfb499ae1594ea81",
-        "yaffo/sync/source_run.py": "1c1259e95552dd879591ec76d45cd2ea54a3f880ba1d88dc6d3be308bdb09162",
+        "yaffo/sync/source_run.py": "4ea16ed45105442882a4180b0d9d56560cad607bbef53d241d73cf9c6b4635f4",
         "yaffo/templates/assistant/_panel.html": "bf015dfd85d361bbc7a33b304c7220eafa2b4622a293ddee75543cf75dad2eb3",
         "yaffo/templates/base.html": "5a5f17e2a502b283ef5373d9fc8e70aec936fab448d083b6011f67cb26889378",
         "yaffo/templates/components/chat_dialog.html": "da8bfac5ca28f361fb0f621f409d644adb29fda577022cad1dab9771e84c2c37",
