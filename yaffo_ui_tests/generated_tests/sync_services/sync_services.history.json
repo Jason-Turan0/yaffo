@@ -1,28 +1,6 @@
 {
   "testRunHistory": [
     {
-      "timestamp": "2026-10-11T16:57:09Z",
-      "success": true,
-      "summary": {
-        "total": 4,
-        "passed": 4,
-        "failed": 0,
-        "skipped": 0
-      },
-      "failedTests": []
-    },
-    {
-      "timestamp": "2026-10-11T17:10:29Z",
-      "success": true,
-      "summary": {
-        "total": 5,
-        "passed": 5,
-        "failed": 0,
-        "skipped": 0
-      },
-      "failedTests": []
-    },
-    {
       "timestamp": "2026-10-11T17:14:18Z",
       "success": true,
       "summary": {
@@ -65,6 +43,22 @@
         "skipped": 0
       },
       "failedTests": []
+    },
+    {
+      "timestamp": "2026-10-12T03:56:37.834Z",
+      "success": false,
+      "summary": {
+        "total": 6,
+        "passed": 2,
+        "failed": 1,
+        "skipped": 3
+      },
+      "failedTests": [
+        {
+          "testName": "sync_services/sync_services.spec.ts › generated_adapter_overview_is_saved_but_unpublished_service_is_not_a_send_target",
+          "error": "Error: Command failed: python /home/runner/work/yaffo/yaffo/yaffo_ui_tests/scripts/seed_flickr_service.py custom.ui-service-generated-179177738\nTraceback (most recent call last):\n  File \u001b[35m\"/home/runner/work/yaffo/yaffo/yaffo_ui_tests/scripts/seed_flickr_service.py\"\u001b[0m, line \u001b[35m11\u001b[0m, in \u001b[35m<module>\u001b[0m\n    from yaffo.app import create_app\n\u001b[1;35mModuleNotFoundError\u001b[0m: \u001b[35mNo module named 'yaffo'\u001b[0m\n"
+        }
+      ]
     }
   ]
 }
