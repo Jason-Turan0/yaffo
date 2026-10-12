@@ -1,28 +1,6 @@
 {
   "testRunHistory": [
     {
-      "timestamp": "2026-10-11T16:46:22Z",
-      "success": true,
-      "summary": {
-        "total": 5,
-        "passed": 5,
-        "failed": 0,
-        "skipped": 0
-      },
-      "failedTests": []
-    },
-    {
-      "timestamp": "2026-10-11T17:42:00Z",
-      "success": true,
-      "summary": {
-        "total": 6,
-        "passed": 6,
-        "failed": 0,
-        "skipped": 0
-      },
-      "failedTests": []
-    },
-    {
       "timestamp": "2026-10-11T17:52:21Z",
       "success": true,
       "summary": {
@@ -54,6 +32,38 @@
         "skipped": 0
       },
       "failedTests": []
+    },
+    {
+      "timestamp": "2026-10-12T02:39:31.775Z",
+      "success": false,
+      "summary": {
+        "total": 8,
+        "passed": 1,
+        "failed": 1,
+        "skipped": 6
+      },
+      "failedTests": [
+        {
+          "testName": "sync_automations/sync_automations.spec.ts › immich_validates_server_and_loads_fake_server_collections",
+          "error": "Error: test:spec starts scripts/fake_immich.py for sync specs\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mundefined\u001b[39m"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-10-12T02:41:08.608Z",
+      "success": false,
+      "summary": {
+        "total": 8,
+        "passed": 1,
+        "failed": 1,
+        "skipped": 6
+      },
+      "failedTests": [
+        {
+          "testName": "sync_automations/sync_automations.spec.ts › immich_validates_server_and_loads_fake_server_collections",
+          "error": "Error: test:spec starts scripts/fake_immich.py for sync specs\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mundefined\u001b[39m"
+        }
+      ]
     }
   ]
 }
