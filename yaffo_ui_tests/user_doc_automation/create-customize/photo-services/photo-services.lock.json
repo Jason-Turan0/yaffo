@@ -1,6 +1,6 @@
 {
     "page": "create-customize/photo-services",
-    "lastVerifiedSha": "07b05535b0b5fa731d76f750ff66bfb0f364b711",
+    "lastVerifiedSha": "5b8ea9abfab78c6bbf374b7203f92a8015d42a53",
     "observed": {
         "page": "create-customize/photo-services",
         "urls": [
@@ -129,7 +129,7 @@
         "yaffo/routes/assistant.py": "40e40a343a1f4831cf9def8f7198168058d27191a538e69d430a25a4cf6f4a5a",
         "yaffo/routes/base.py": "c70c934c848142618c41b366798fc4d4b86741298cc194fb2bffb324340e69df",
         "yaffo/routes/utilities/automations.py": "f787c053db5f209bbcf692ad7ad5c3c165c0105bd85aa7cd456567f296ad3602",
-        "yaffo/routes/utilities/sync_services.py": "506e74646db7602bd38217acf8cc72c706172cdb04443ecc22084361e00c05ab",
+        "yaffo/routes/utilities/sync_services.py": "d4a71a8e3c1aa657bc07fdab94dc6b7f874b8987d0feef1f267db71920a43df6",
         "yaffo/static/action-links.css": "fb3fd8e47c18993d826f7d34f8ccb24dc1aeb18a9aacb45c3a4fc41a901a4300",
         "yaffo/static/app.js": "166c8895269cf5469fd1797b9c34b2281acc77240f74edc75e5b06d581cd9fd8",
         "yaffo/static/assistant/assistant.css": "51af784b2881e1c3f119d97f2e88227a17e5fe28a88e67a63e9de83d711a46ca",
