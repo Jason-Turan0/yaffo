@@ -269,7 +269,9 @@ jobs:
               echo "- **Classification:** \`$classification\`"
               echo "- **Confidence:** $confidence"
               echo "- **Recommended action:** \`$action\`"
-              if [ "$resolved" = "true" ]; then
+              if [ "$resolved" = "true" ] && [ "$classification" = "environment_instability" ]; then
+                echo "- **Status:** passed on re-run with no changes (not a walkthrough defect)"
+              elif [ "$resolved" = "true" ]; then
                 echo "- **Status:** repaired and verified"
               fi
               echo "- **Summary:** $summary"
@@ -612,7 +614,11 @@ jobs:
                 echo ""
                 echo "- **Confidence:** ${confidence}"
                 echo "- **Recommended action:** \`${action}\`"
-                [ "$resolved" = "true" ] && echo "- **Status:** repaired and verified"
+                if [ "$resolved" = "true" ] && [ "$classification" = "environment_instability" ]; then
+                  echo "- **Status:** passed on re-run with no changes (not a walkthrough defect)"
+                elif [ "$resolved" = "true" ]; then
+                  echo "- **Status:** repaired and verified"
+                fi
                 echo "- **Summary:** ${summary}"
                 echo ""
                 echo "**Reasoning:**"
