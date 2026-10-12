@@ -614,6 +614,11 @@ class SyncAdapter(db.Model):
     created_at = db.Column(db.DateTime, default=utcnow)
     updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
 
+    # The builder chat. SQLite doesn't enforce conversations' ON DELETE CASCADE here,
+    # and a deleted adapter's id is reused, so without this a new service would open
+    # with the deleted one's chat and permission answers.
+    messages = db.relationship("Conversation", cascade="all, delete-orphan", order_by="Conversation.id")
+
 
 class SyncItem(db.Model):
     """One item a sync has seen (source) or sent (target); the per-item ledger.

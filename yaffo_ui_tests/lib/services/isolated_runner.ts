@@ -191,7 +191,7 @@ const startFakeService = async (
     const port = await allocateLocalPort();
     const url = `http://127.0.0.1:${port}`;
     const child = spawn("python", ["-m", module, "--port", String(port), ...args], {
-        env: environmentWithoutProviderKeys(), cwd: YAFFO_DIR, stdio: ["ignore", "pipe", "pipe"],
+        env: venvEnvironment(), cwd: YAFFO_DIR, stdio: ["ignore", "pipe", "pipe"],
     });
     let output = "";
     child.stdout?.on("data", data => { output += data.toString(); });
@@ -295,12 +295,23 @@ export const environmentWithoutProviderKeys = (env: NodeJS.ProcessEnv = process.
     return kept;
 };
 
+/**
+ * process.env without provider keys, with the project's venv first on PATH: CI
+ * installs the dependencies only there, so a bare `python` would otherwise be the
+ * runner's own interpreter, without Flask or Pillow.
+ */
+const venvEnvironment = (): Record<string, string> => ({
+    ...environmentWithoutProviderKeys(),
+    VIRTUAL_ENV: VENV_DIR,
+    PATH: `${join(VENV_DIR, "bin")}:${process.env.PATH}`,
+});
+
 const instanceEnv = (
     tempDir: string,
     seedProfile: "bennett" | "obama",
     assetDir?: string,
 ): Record<string, string> => ({
-    ...environmentWithoutProviderKeys(),
+    ...venvEnvironment(),
     YAFFO_DATA_DIR: tempDir,
     YAFFO_SYNC_SECRETS_FILE: join(tempDir, "sync-secrets.json"),
     // No OS keychain: the developer's real one holds their AI keys (an app that finds
@@ -317,8 +328,6 @@ const instanceEnv = (
     YAFFO_DEMO_MODE: "0",
     YAFFO_DEMO_ROLE: "",
     ...(assetDir ? {YAFFO_ASSET_DIR: assetDir} : {}),
-    VIRTUAL_ENV: VENV_DIR,
-    PATH: `${join(VENV_DIR, "bin")}:${process.env.PATH}`,
 });
 
 /**

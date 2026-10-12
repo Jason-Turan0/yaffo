@@ -217,6 +217,22 @@ def test_a_service_in_use_cant_be_deleted(client, app, tmp_path):
     assert services.get_service(db.session, other.slug) is None
 
 
+def test_a_deleted_services_chat_goes_with_it(client, app):
+    from yaffo.db.models import CONVERSATION_TYPE_USER, Conversation
+
+    old = new_service(client, "Old Flickr")
+    old_id = old.id
+    services.add_message(db.session, old_id, CONVERSATION_TYPE_USER, "Make me a Flickr target")
+    db.session.commit()
+    client.post(f"/utilities/automations/services/{old.slug}/delete")
+
+    assert db.session.query(Conversation).filter(Conversation.sync_adapter_id == old_id).count() == 0
+    # SQLite reuses the freed id, so leftover rows would open in the next service's chat.
+    fresh = new_service(client, "Fresh draft")
+    assert fresh.id == old_id
+    assert services.messages(db.session, fresh.id) == []
+
+
 def test_answering_a_docs_request_continues_the_builder(client, app, queued):
     row = new_service(client)
     services.ask_for_docs(db.session, row.id, {"immich.app": ["https://immich.app/docs"],
