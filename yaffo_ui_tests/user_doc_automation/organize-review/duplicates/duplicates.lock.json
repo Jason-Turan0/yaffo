@@ -1,6 +1,6 @@
 {
     "page": "organize-review/duplicates",
-    "lastVerifiedSha": "5b8ea9abfab78c6bbf374b7203f92a8015d42a53",
+    "lastVerifiedSha": "5a2747164362d88ea35942eaf56d332095e95756",
     "observed": {
         "page": "organize-review/duplicates",
         "urls": [
@@ -221,7 +221,7 @@
         "yaffo/templates/utilities/remove_duplicates_results.html": "e76e7360d82427fe7f481a2118a232e3e2859c6ca28312b4afd57409a6f76c63",
         "yaffo/templates/utilities/remove_duplicates_results_form.html": "b8100bc0c91896fe2821234837357d8f12b2d34f347f3861a64c55e38fc0cf36",
         "yaffo/templates/utilities/remove_duplicates_results_form_header.html": "6a65baefb111fc29ab8812b47a9279e21f65e0581ad99f0c1cb61eba0426edef",
-        "yaffo_ui_tests/lib/services/isolated_runner.ts": "345e504e68248dba74514b1ecdc48e291c4715712494ae124bd3215084e6bd0d"
+        "yaffo_ui_tests/lib/services/isolated_runner.ts": "97361a6f61bab945a6d36afed23520cf9d7d14ace2adb9cb6efed287c4dfdd68"
     },
     "shots": {
         "organize-review/assets/duplicates/utilities-remove-duplicates.webp": {
