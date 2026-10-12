@@ -14,7 +14,11 @@ window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
  * at a time, and the *live* panel DOM moves between its desktop slot and the
  * navbar host so form values and component state survive a resize.
  */
-window.PHOTO_ORGANIZER.COMPONENTS.initNavPagesBar = () => {
+/**
+ * @param {I18nService} i18n
+ * @param {AppConfig} config
+ */
+window.PHOTO_ORGANIZER.COMPONENTS.initNavPagesBar = (i18n, config) => {
     // The single source of truth for "the shell is narrow". Structural layout
     // keys off the same width in responsive.css; nothing else should hardcode it.
     const NARROW_QUERY = '(max-width: 1200px)';
@@ -26,7 +30,7 @@ window.PHOTO_ORGANIZER.COMPONENTS.initNavPagesBar = () => {
     const primary = /** @type {HTMLElement | null} */ (
         document.getElementById('navbar-primary')
     );
-    const toggle = /** @type {HTMLElement | null} */ (
+    const toggle = /** @type {HTMLButtonElement | null} */ (
         document.getElementById('nav-pages-toggle')
     );
     const bar = /** @type {HTMLElement | null} */ (
@@ -37,7 +41,6 @@ window.PHOTO_ORGANIZER.COMPONENTS.initNavPagesBar = () => {
     );
     if (!navbar || !toggle || !bar || !menuToggle || !primary || !contextHost) return;
 
-    const STORAGE_KEY = 'yaffo.pagesBarHidden';
     const narrow = window.matchMedia(NARROW_QUERY);
 
     // A panel's element is resolved by id on every use rather than captured:
@@ -163,12 +166,27 @@ window.PHOTO_ORGANIZER.COMPONENTS.initNavPagesBar = () => {
         syncContextHost();
     };
 
-    apply(localStorage.getItem(STORAGE_KEY) === '1');
+    apply(bar.hidden);
 
-    toggle.addEventListener('click', () => {
-        const hidden = !bar.hidden;
-        localStorage.setItem(STORAGE_KEY, hidden ? '1' : '0');
-        apply(hidden);
+    toggle.addEventListener('click', async () => {
+        if (toggle.disabled) return;
+        const previousHidden = bar.hidden;
+        toggle.disabled = true;
+        apply(!previousHidden);
+        try {
+            const response = await fetch(config.urls.pages_bar_visibility, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ visible: previousHidden }),
+            });
+            if (!response.ok) throw new Error(`Pages visibility save failed (${response.status})`);
+        } catch (error) {
+            apply(previousHidden);
+            console.error('Could not save pages visibility:', error);
+            window.notification.failure(i18n.t('common.saveFailed'));
+        } finally {
+            toggle.disabled = false;
+        }
     });
 
     menuToggle.addEventListener('click', () => {

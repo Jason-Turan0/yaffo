@@ -5,6 +5,22 @@ from sqlalchemy.orm import Session
 from yaffo.db.models import ApplicationSettings
 
 SHARED_DOWNLOAD_DIR_SETTING = "shared_download_dir"
+SHOW_PAGES_BAR_SETTING = "show_pages_bar"
+
+
+def get_show_pages_bar(session: Session) -> bool:
+    setting = session.query(ApplicationSettings).filter_by(name=SHOW_PAGES_BAR_SETTING).first()
+    return setting is not None and setting.value == "true"
+
+
+def set_show_pages_bar(session: Session, visible: bool) -> None:
+    setting = session.query(ApplicationSettings).filter_by(name=SHOW_PAGES_BAR_SETTING).first()
+    value = "true" if visible else "false"
+    if setting is None:
+        session.add(ApplicationSettings(name=SHOW_PAGES_BAR_SETTING, type="string", value=value))
+    else:
+        setting.value = value
+    session.commit()
 
 
 def get_thumbnail_dir(session: Session) -> Path | None:

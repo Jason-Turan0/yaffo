@@ -31,6 +31,7 @@ from yaffo.site_agents.serializers import version_status_payload
 from yaffo.site_agents.widget_api import widget_api_source
 from yaffo.site_agents.widget_theme import WIDGET_THEME_CSS
 from yaffo.utils.context import context
+from yaffo.utils.settings import get_show_pages_bar, set_show_pages_bar
 
 logger = get_logger(__name__)
 
@@ -89,7 +90,18 @@ def _resolve_widget_data(data_query: dict) -> dict:
 def init_pages_routes(app: Flask):
     @app.context_processor
     def inject_nav_pages():
-        return {"nav_pages": page_repo.list_pages(db.session)}
+        return {
+            "nav_pages": page_repo.list_pages(db.session),
+            "show_pages_bar": get_show_pages_bar(db.session),
+        }
+
+    @app.route("/pages/bar-visibility", methods=["PUT"])
+    def pages_bar_visibility() -> tuple[str, int]:
+        payload = request.get_json()
+        if not isinstance(payload, dict) or not isinstance(payload.get("visible"), bool):
+            abort(400)
+        set_show_pages_bar(db.session, payload["visible"])
+        return "", 204
 
     @app.context_processor
     def inject_widget_api():

@@ -11,6 +11,7 @@
     "notAvailable": "لا يوجد",
     "pageOf": "صفحة {{page}} ل {{total}}",
     "save": "يحفظ",
+    "saveFailed": "تعذّر حفظ الإعدادات.",
     "search": "يبحث…",
     "similarityValue": "تشابه: {{value}}",
     "unknown": "غير معروف"
