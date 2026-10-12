@@ -13,6 +13,20 @@ export default defineWalkthrough({
             // Keep them visible in the guide while excluding them from pixel comparison.
             ignoreRegions: [".media-dir-path", "#current-thumbnail-dir", "#thumbnail-size"],
             setup: async (page) => {
+                // The "Pages" strip under the navbar is now a server-persisted
+                // preference (base.html renders `hidden` from `show_pages_bar` and
+                // nav.js saves the toggle through PUT /pages/bar-visibility), so it
+                // is shared state: the custom-pages walkthrough expands the strip and
+                // that choice now sticks for every later visit. The clip below ends at
+                // the viewport bottom, so an expanded strip would shorten this capture
+                // by the strip's height depending on which walkthrough ran first. Pin it
+                // collapsed — the state a fresh install renders — instead of inheriting
+                // whatever the shared docs database last saved.
+                await page.evaluate(() => {
+                    const bar = document.getElementById("navbar-pages-bar");
+                    if (bar) bar.hidden = true;
+                });
+
                 // Wait for thumbnail stats stream to settle so count and size are rendered
                 await page.waitForFunction(() => {
                     const el = document.getElementById("thumbnail-size");

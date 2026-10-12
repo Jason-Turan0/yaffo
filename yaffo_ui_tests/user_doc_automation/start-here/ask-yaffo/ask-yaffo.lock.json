@@ -1,6 +1,6 @@
 {
     "page": "start-here/ask-yaffo",
-    "lastVerifiedSha": "07b05535b0b5fa731d76f750ff66bfb0f364b711",
+    "lastVerifiedSha": "c31db1749e9583f03ad8dd485aa9d341ce20e20d",
     "observed": {
         "page": "start-here/ask-yaffo",
         "urls": [
@@ -168,17 +168,17 @@
         "yaffo/db/repositories/assistant_web_repository.py": "7215fc63229eb26a8d5035b661aa7e3de9cc6d468b4b19abc5c15d260612c0c3",
         "yaffo/routes/assistant.py": "40e40a343a1f4831cf9def8f7198168058d27191a538e69d430a25a4cf6f4a5a",
         "yaffo/routes/base.py": "c70c934c848142618c41b366798fc4d4b86741298cc194fb2bffb324340e69df",
-        "yaffo/routes/home.py": "647aa04b87fc3cba309076804e6bf446c661ca3209d7a6a0e93741d0e03c1e74",
-        "yaffo/routes/media.py": "c7294c1a4988158977ab886b396a9d66ecebd34454c4e6866c6eba6157071b4d",
+        "yaffo/routes/home.py": "614675c2c7ac8701c279167fd45cd30495f026cd6bf33bac8e8a14791851e743",
+        "yaffo/routes/media.py": "73160b91a3456da52c392affc978d1c950fd8859dced0ba9b8f2565b51ae4145",
         "yaffo/routes/settings.py": "e268a6b2f63e65ee4fe9a3de6e30ea0ee9b4e575c53a08a13cb7a0cb0b822f13",
-        "yaffo/routes/utilities/index_photos.py": "ffd5521d521733504e6415f4a6fe6dd7d035c579f9f8c50cd31326de3a7730f5",
+        "yaffo/routes/utilities/index_photos.py": "e061783d1e7e8a7b079f2fe8babdc649aca07f249c267e8b1793904cc6a746e2",
         "yaffo/site_agents/assistant/plans.py": "da9c9312dd8b9a12f2b11ca23cdd5bf4033a3582a37dc90c83b92e7e17f7ba61",
         "yaffo/site_agents/assistant/prompt_generator/prompt.py": "ea7a93830e821450a35a486f0c21f34918e4c4e35e503b04e82ace60891e7d4c",
         "yaffo/site_agents/assistant/redact.py": "f8891a84a003018a9119d97df8a1bc2899dcc61f5efdfd39b5b17d8d7395f68b",
         "yaffo/site_agents/assistant/settings.py": "486dc649e328dafb77d27797e4e805e465a46ced32f11c95391652d75031c354",
         "yaffo/site_agents/assistant/tool_providers/web_tool.py": "d3d35d8b467283e82d41f89069ef6cb072f8474819f09588e29534440ba8d605",
         "yaffo/static/action-links.css": "fb3fd8e47c18993d826f7d34f8ccb24dc1aeb18a9aacb45c3a4fc41a901a4300",
-        "yaffo/static/app.js": "166c8895269cf5469fd1797b9c34b2281acc77240f74edc75e5b06d581cd9fd8",
+        "yaffo/static/app.js": "7aa9b2b8c921352f3928e5735a3210f9b085911c03085269e3e33c260ac6511b",
         "yaffo/static/assistant/assistant.css": "51af784b2881e1c3f119d97f2e88227a17e5fe28a88e67a63e9de83d711a46ca",
         "yaffo/static/assistant/assistant.js": "117173da2d7541ee51a23dcee1d19acd102bba8a1b66585a0e9bba687f38a112",
         "yaffo/static/assistant/plan_card.js": "22339c5d29df625ce95a94124b30fe474512d9a17b3d8420ee20f87c37daaf32",
@@ -221,7 +221,7 @@
         "yaffo/static/form.css": "16dbfa5177212d3d33d72f5d82fac909ff38dca0e75836134ee44925e28e6ba7",
         "yaffo/static/i18n.js": "55b8645a19d8f982b14aa541c820605c9c9d81b2222e1a1628f69b0eaa7e6bc5",
         "yaffo/static/index.css": "77eaa96e9b010a70fee00af7f551f4a77baf103c195cf413f8813e3268bdbc91",
-        "yaffo/static/locales/en.json": "0b637610172e977308d449dcaa30283747c0a4c02611dffa442baa855a64189a",
+        "yaffo/static/locales/en.json": "09181f92004b05a7cfc7fac7b25ba09ce46853067d2f92fc9aed10a4a3dab38d",
         "yaffo/static/match-type.css": "46a6ac0ede55c7800265e54c0e8b760d5a997aec8b1b5ebd0bb2991b7542e82c",
         "yaffo/static/media/favorite.js": "6e7205e89be78a409b15e1ee670eb2f4a90952bbb7b26a88c7549af63c1a2a24",
         "yaffo/static/media/gallery_video.js": "5c291a7c3915d59f79339a9fc58621ad8d3ba5475d016fa8f69ab73aa4deb8c2",
@@ -229,7 +229,7 @@
         "yaffo/static/media/timeline_stream.js": "73bfba297ab76ccfece495c848d7012105b5b3fe67f9746116eee108aef58a89",
         "yaffo/static/multi-select.css": "2b898c7aecedd140e3fefc0be2e2dc11e59e4c6ccde1d0c555376f1177772ddb",
         "yaffo/static/multi-select.js": "d4ddd83c069e0900dc22e3d0de3a4b757f96477f820e7f6d78e4c38dc47c238f",
-        "yaffo/static/nav.js": "d57a9ad21b7d2001629b423806c03f6e1b76b0b8fa77c49e44e0cab8643c219f",
+        "yaffo/static/nav.js": "a6bb503219a68e61620faaddf503d60258ae4c15df42c9d2d093ee5510a8eb04",
         "yaffo/static/notification.css": "117f20bef2fe58da95491a59e414edc59bf866bf51f761edd785568eb219d3af",
         "yaffo/static/notification.js": "9ef3dd46a45373580066ccb53d402b189c658f429bd6d2d879167d51b98fb05a",
         "yaffo/static/pages/nav.css": "5bf844bd1ecc91c5c33e88b3ece44c307f2d233c0f16576e3514123f331b49b1",
@@ -263,7 +263,7 @@
         "yaffo/static/tokens.css": "64eba738b485774d05f255660bdb7055313003c6a87d5c320aad550847a52953",
         "yaffo/static/utilities/_base.css": "88ba38de1b2f83e13008efc45ef2ae143c4add99a4f05db4fb300fa85998f411",
         "yaffo/static/utilities/_base.js": "d1ddbb0f4fd52e01532391ea913a2151b2bb23467af8a3228bc8f97b394bdc17",
-        "yaffo/static/utilities/index_photos.js": "91e0acfd190b8fc114f85fe6e2fd4f24ca5d934c3f55e619d2d5179d6635289f",
+        "yaffo/static/utilities/index_photos.js": "ebcfa41c76729c685544406c63d119711916b810360ee84420d92f0b04469388",
         "yaffo/static/utils.js": "0d4990647fb99c0c611f38f9f140fdba555043ce3857dbe082c53fd193861c4a",
         "yaffo/static/vendor/htmx/2.0.4/htmx.min.js": "e209dda5c8235479f3166defc7750e1dbcd5a5c1808b7792fc2e6733768fb447",
         "yaffo/static/vendor/i18next/25.7.4/i18next.min.js": "a91c328a3b79354160f6e68543657805230f0b51aba6e8534f7b1fb772af9ef2",
@@ -271,7 +271,7 @@
         "yaffo/templates/_sidebar.html": "872d04cc9a7caceb7773e4fa6c4e59f49b8c98052b935d6ded1d3c5158df2a08",
         "yaffo/templates/assistant/_panel.html": "bf015dfd85d361bbc7a33b304c7220eafa2b4622a293ddee75543cf75dad2eb3",
         "yaffo/templates/assistant/index.html": "30a70819d03b486431bd5fb9bb8e34c0994b76eb411e2968e6c552d4865ad08b",
-        "yaffo/templates/base.html": "5a5f17e2a502b283ef5373d9fc8e70aec936fab448d083b6011f67cb26889378",
+        "yaffo/templates/base.html": "d1a23bae375d6d2c1243d0fa22b17920cb5e61f95625dffaca5a1621694fba44",
         "yaffo/templates/components/chat_dialog.html": "da8bfac5ca28f361fb0f621f409d644adb29fda577022cad1dab9771e84c2c37",
         "yaffo/templates/components/file_browser.html": "bf31857c253875f9dd66d57a8a5058f2c3877c9e763fd15e2d1e996c505bab73",
         "yaffo/templates/components/issue_card.html": "0d9776ce60ce42cbce42d98509172e702d4107d99499df5c0379f87d9d87fcfc",
@@ -307,18 +307,18 @@
         "yaffo/templates/settings/_llm_models.html": "811bd8442c6fdc191623115bd9fc0f05212875e7c84bfb5ee93291371c69be3d",
         "yaffo/templates/settings/index.html": "f2520e7640c5d95551b82701ab76b08becc76885a9bc126acf278d566b71ebc8",
         "yaffo/templates/utilities/_base.html": "40892abe87f897632093b968fe0db44ba407f1a60f37377ea6687e4e126f0c3d",
-        "yaffo/templates/utilities/index_photos.html": "aed40f7225f464289a9b1b6aebb6ef5bc563fb75eebff74c3353e3a7889522f3"
+        "yaffo/templates/utilities/index_photos.html": "855568d6ba2e60fb4c354a94670284dbe5c201654f2c23be9b2547218a2161d3"
     },
     "shots": {
         "start-here/assets/ask-yaffo/ask-yaffo-conversation.webp": {
             "width": 1392,
-            "height": 891,
-            "sha256": "b62b1fb64f5216d6175a30bd8b027829df03e848d51b2b07659d46df77d0d8c4"
+            "height": 927,
+            "sha256": "20be590c073bccf784fb759ce7a31a5b6d5d0b8ccb5d1b64e4b4be27b0dd721e"
         },
         "start-here/assets/ask-yaffo/ask-yaffo-context.webp": {
             "width": 456,
-            "height": 939,
-            "sha256": "dde0ddc83cfc178c0332045ead0c49bccf8b226e83f11dc16dd83d228efecde2"
+            "height": 959,
+            "sha256": "93726b72e5acb4b58ad7e20d9c7ec022d3c505b3a19b043b22c5657c0fefe2d3"
         },
         "start-here/assets/ask-yaffo/ask-yaffo-change-card.webp": {
             "width": 1200,

@@ -19,6 +19,12 @@
   dependency diff on the page: media/view.css, responsive.css, index.css, nav.js...). Geometry
   is still dvh/viewport-derived, content inside the overlap still pixel-identical, so still
   fixture/frame, not the product change the diff touches -> quarantine, still needs a pinned crop.
+- Recurrence again (later run): 2784x2106 -> 2784x2178 (+72 device = +36 CSS px; pane now
+  equals the configured 1400x1150 viewport: 100dvh-60 = 1090 CSS). 215122 px differ, 200448
+  of them the new bottom band; ~14.7k inside the overlap = the sidebar's `overflow:hidden`
+  clip point moving with `max-height: calc(100dvh - navbar - 36px)`, revealing the rest of
+  the "No tags" placeholder and the top of the always-present "Edit Tags" `.detail-actions`
+  button (templates/media/view.html). Same dvh/viewport frame signature -> quarantine.
 - Prose unaffected: the section text lists preview / file info / capture date+device /
   location / people / faces / labels, all still visible; nothing describes the tags
   section.
