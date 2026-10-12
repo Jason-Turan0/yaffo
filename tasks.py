@@ -1,4 +1,4 @@
-from invoke import Exit, task
+from invoke import Context, Exit, task
 from pathlib import Path
 from urllib.request import urlopen
 import json
@@ -357,6 +357,12 @@ def init_db(c):
         inv init-db
     """
     migrate(c)
+
+
+@task
+def build_assistant_knowledge(c: Context) -> None:
+    """Regenerate the assistant knowledge sections and manifest from the docs."""
+    c.run("python -m scripts.build_assistant_knowledge", pty=True)
 
 
 @task
