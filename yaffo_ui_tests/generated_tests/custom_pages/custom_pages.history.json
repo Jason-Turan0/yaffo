@@ -1,0 +1,36 @@
+{
+  "testRunHistory": [
+    {
+      "timestamp": "2026-10-12T16:13:32.912Z",
+      "success": false,
+      "summary": {
+        "total": 18,
+        "passed": 0,
+        "failed": 1,
+        "skipped": 17
+      },
+      "failedTests": [
+        {
+          "testName": "Custom Pages › pages_create_new_page",
+          "error": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-10-12T16:22:30.148Z",
+      "success": false,
+      "summary": {
+        "total": 18,
+        "passed": 0,
+        "failed": 1,
+        "skipped": 17
+      },
+      "failedTests": [
+        {
+          "testName": "Custom Pages › pages_create_new_page",
+          "error": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+        }
+      ]
+    }
+  ]
+}
