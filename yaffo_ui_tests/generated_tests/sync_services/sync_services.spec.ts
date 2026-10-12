@@ -337,8 +337,12 @@ test('flickr_test_account_oauth_and_adapter_test_use_the_local_fake', async ({ p
     await expect(livePermission).toContainText('read-only calls');
     await livePermission.getByRole('button', { name: 'Allow', exact: true }).click();
     await expect(livePermission).toHaveClass(/is-answered/);
+    const builderFinished = page.waitForEvent('framenavigated', {
+      predicate: frame => frame === page.mainFrame(),
+    });
     runFlickrFixture(slug, '--ready');
-    await page.reload();
+    await builderFinished;
+    await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('.service-permission')).toContainText('Live read-only tests allowed');
 
     await page.getByRole('link', { name: 'Access' }).click();
