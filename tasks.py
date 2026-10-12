@@ -1,4 +1,4 @@
-from invoke import task
+from invoke import Exit, task
 from pathlib import Path
 from urllib.request import urlopen
 import json
@@ -299,6 +299,36 @@ def test(c, verbose=False, coverage=False, path="tests", k=None, failed=False, m
     cmd = " ".join(cmd_parts)
     print(f"Running: {cmd}")
     c.run(cmd, pty=True)
+
+
+@task
+def lint(c, fix=False):
+    """
+    Lint everything CI lints: Python (ruff), the app's JavaScript, and the UI tests.
+
+    Every linter runs even when an earlier one fails, so one run shows every problem.
+
+    Args:
+        fix: Apply the fixes the linters can make on their own (default: False)
+
+    Example:
+        inv lint
+        inv lint --fix
+    """
+    eslint_fix = " -- --fix" if fix else ""
+    linters = [
+        ("Python (ruff)", f"python -m ruff check yaffo{' --fix' if fix else ''}"),
+        ("App JavaScript (eslint)", f"npm run lint{eslint_fix}"),
+        ("UI tests (eslint)", f"npm --prefix yaffo_ui_tests run lint{eslint_fix}"),
+    ]
+    failed = []
+    for name, cmd in linters:
+        print(f"\n==> {name}: {cmd}")
+        if c.run(cmd, pty=True, warn=True).failed:
+            failed.append(name)
+    if failed:
+        raise Exit(f"\nLint failed: {', '.join(failed)}", code=1)
+    print("\nAll linters passed.")
 
 
 @task

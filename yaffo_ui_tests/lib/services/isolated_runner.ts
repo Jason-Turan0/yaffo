@@ -682,7 +682,7 @@ export const startIsolatedEnvironment = async (
     let fakeFlickrUrl: string | undefined;
     let fakeOneDriveUrl: string | undefined;
     let fakeImmichUrl: string | undefined;
-    let flaskOnlyEnv: Record<string, string> = withPeer ? p2pEnv(port) : {};
+    const flaskOnlyEnv: Record<string, string> = withPeer ? p2pEnv(port) : {};
     const originOverrides: Record<string, string> = {};
     try {
         if (withFakeSyncServices) {

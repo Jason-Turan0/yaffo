@@ -1,4 +1,5 @@
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
+import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const createdSlugs: string[] = [];
@@ -305,7 +306,7 @@ test('onedrive_target_reviews_destination_and_selection_changes', async ({ page 
 test('send_album_to_folder_runs_and_requires_consent_after_a_change', async ({ page }, testInfo) => {
   const slug = await createSync(page, 'send', 'Folder', `UI Sync Export ${Date.now()}`);
   try {
-    const count = await createDestination(page, testInfo, slug);
+    const destination = await createDestination(page, testInfo, slug);
     await chooseSearchableOption(page, '#sync-option-convert', 'Yes');
     await saveFolderOptions(page, slug);
     await expect(page.locator('#sync-option-folder')).toHaveValue(/sync-destination-/);
@@ -329,6 +330,12 @@ test('send_album_to_folder_runs_and_requires_consent_after_a_change', async ({ p
     const run = page.locator('#automation-runs .run-history-row').first();
     await expect(run).toContainText(new RegExp(`Wrote ${albumCount} photos to the folder`), { timeout: RUN_TIMEOUT });
     await expect(run.locator('.chip')).toContainText(/Completed|Done/);
+    // The run says it wrote them; check they're really in the folder. "Convert to JPEG"
+    // accepts JPEG and PNG as they are (the fixture is PNG) and converts anything else.
+    const written = readdirSync(destination, { recursive: true, withFileTypes: true })
+      .filter((entry) => entry.isFile() && !entry.name.startsWith('.'));
+    expect(written).toHaveLength(albumCount);
+    expect(written.map((entry) => entry.name).filter((name) => !/\.(jpe?g|png)$/i.test(name))).toEqual([]);
 
     await page.reload();
     const items = page.locator('#sync-items');

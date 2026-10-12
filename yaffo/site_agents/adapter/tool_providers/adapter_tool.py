@@ -32,7 +32,7 @@ from yaffo.sync import connections
 from yaffo.sync.adapter_test import run_adapter_test
 from yaffo.sync.failures import failure_report
 from yaffo.sync.fetch_docs import (
-    MAX_URLS_PER_BATCH, STATUS_DENIED, STATUS_ERROR, STATUS_NEEDS_APPROVAL, STATUS_OK, fetch_docs,
+    MAX_URLS_PER_BATCH, STATUS_DENIED, STATUS_ERROR, STATUS_OK, fetch_docs,
 )
 
 MAX_CODE_CHARS = 60_000

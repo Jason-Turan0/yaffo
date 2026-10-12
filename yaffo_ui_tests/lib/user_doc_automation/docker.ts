@@ -1,7 +1,6 @@
 import {spawnSync} from "child_process";
 import {mkdirSync} from "fs";
 import {captureEnv} from "./env";
-import {DOCS_DATA_DIR} from "./paths";
 
 export const DOCS_CAPTURE_IMAGE = "yaffo-docs-capture:latest";
 

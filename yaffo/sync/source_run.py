@@ -58,7 +58,7 @@ from yaffo.sync.handlers import (
 )
 from yaffo.sync.run_common import (
     HookOutputError, RunContext, RunResult, check_error, merge_state, pause, record_item_error,
-    schedule_continuation, set_runtime, stop,
+    schedule_continuation, stop,
 )
 from yaffo.sync.starlark_adapter import HookFailed
 from yaffo.sync.web import WebClient, url_hash
