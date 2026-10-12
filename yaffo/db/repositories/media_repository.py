@@ -5,6 +5,7 @@ from pathlib import Path
 from sqlalchemy import insert, or_
 from sqlalchemy.orm import Session
 from yaffo.db.models import Face, PersonFace, MediaItem, MediaLabel, Tag, MEDIA_STATUS_INDEXED
+from yaffo.sync.deletes import announce_deleted, queue_target_removals
 
 # Ids per IN-clause — stay under SQLite's ~999 bound-param cap.
 _DELETE_CHUNK = 500
@@ -135,6 +136,7 @@ def delete_media_items(session: Session, media_item_ids: list[int]) -> list[str]
     if not ids:
         return []
     thumbnails: list[str] = []
+    sync_ids = queue_target_removals(session, ids)
     for start in range(0, len(ids), _DELETE_CHUNK):
         chunk = ids[start:start + _DELETE_CHUNK]
         face_rows = (
@@ -150,6 +152,7 @@ def delete_media_items(session: Session, media_item_ids: list[int]) -> list[str]
         session.query(Tag).filter(Tag.media_item_id.in_(chunk)).delete(synchronize_session=False)
         session.query(MediaItem).filter(MediaItem.id.in_(chunk)).delete(synchronize_session=False)
     session.commit()
+    announce_deleted(ids, sync_ids)
     return thumbnails
 
 

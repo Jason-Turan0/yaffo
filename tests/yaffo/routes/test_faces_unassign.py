@@ -1,4 +1,4 @@
-"""/api/faces/unassign: the photo detail screen's "Clear" on a face."""
+"""PATCH /api/faces with person_id null: the photo detail screen's "Clear" on a face."""
 import pytest
 
 from yaffo.db import db
@@ -19,7 +19,7 @@ pytestmark = pytest.mark.unit
 def recorded(monkeypatch):
     """Record emitted events and rebuilt embeddings instead of doing the work."""
     calls = {"events": [], "embeddings": []}
-    monkeypatch.setattr("yaffo.routes.faces.emit_event", lambda name, payload: calls["events"].append((name, payload)))
+    monkeypatch.setattr("yaffo.routes.api.emit_event", lambda name, payload: calls["events"].append((name, payload)))
     monkeypatch.setattr(
         "yaffo.db.repositories.person_repository.update_person_embedding",
         lambda person_id, session: calls["embeddings"].append(person_id),
@@ -51,11 +51,12 @@ def _status(app, face_id):
 
 
 def test_clears_an_assigned_face(app, client, faces, recorded):
-    response = client.post("/api/faces/unassign", json={"faces": [faces["assigned"]]})
+    response = client.patch("/api/faces", json={"ids": [faces["assigned"]], "person_id": None})
 
     assert response.status_code == 200
     body = response.get_json()
-    assert body["code"] == "faces_unassigned" and body["face_ids"] == [faces["assigned"]]
+    assert body["code"] == "faces_unassigned"
+    assert body["faces"] == [{"id": faces["assigned"], "status": FACE_STATUS_UNASSIGNED, "person_id": None}]
     assert _status(app, faces["assigned"]) == FACE_STATUS_UNASSIGNED
     with app.app_context():
         assert db.session.query(PersonFace).count() == 0
@@ -64,7 +65,7 @@ def test_clears_an_assigned_face(app, client, faces, recorded):
 
 
 def test_clears_an_ignored_face(app, client, faces, recorded):
-    response = client.post("/api/faces/unassign", json={"faces": [faces["ignored"]]})
+    response = client.patch("/api/faces", json={"ids": [faces["ignored"]], "person_id": None})
 
     assert response.status_code == 200
     assert _status(app, faces["ignored"]) == FACE_STATUS_UNASSIGNED
@@ -72,16 +73,16 @@ def test_clears_an_ignored_face(app, client, faces, recorded):
 
 
 def test_an_unassigned_face_has_nothing_to_clear(app, client, faces, recorded):
-    response = client.post("/api/faces/unassign", json={"faces": [faces["unassigned"]]})
+    response = client.patch("/api/faces", json={"ids": [faces["unassigned"]], "person_id": None})
 
     assert response.status_code == 409
     assert response.get_json()["code"] == "faces_not_assigned"
     assert recorded["events"] == []
 
 
-@pytest.mark.parametrize("payload", [{}, {"faces": []}, {"faces": "1"}, {"faces": ["x"]}])
-def test_rejects_bad_face_ids(client, payload):
-    response = client.post("/api/faces/unassign", json=payload)
+@pytest.mark.parametrize("ids", [None, [], "1", ["x"]])
+def test_rejects_bad_face_ids(client, ids):
+    response = client.patch("/api/faces", json={"ids": ids, "person_id": None})
     assert response.status_code == 400
     assert response.get_json()["code"] == "invalid_face_ids"
 

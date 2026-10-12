@@ -44,6 +44,8 @@ await jest.unstable_mockModule("../observe", () => ({
 await jest.unstable_mockModule("../media_lookup", () => ({mediaIdByFilename}));
 await jest.unstable_mockModule("../side_effects", () => ({blockOsSideEffects}));
 await jest.unstable_mockModule("../settle", () => ({settle}));
+const waitForApp = jest.fn(async () => true);
+await jest.unstable_mockModule("../app_reachability", () => ({APP_UNREACHABLE: "app_unreachable", waitForApp}));
 
 const {
     captureWalkthroughs,
@@ -280,6 +282,25 @@ describe("captureWalkthroughs", () => {
         expect(context.close).toHaveBeenCalledTimes(1);
         expect(takeServerObservation).toHaveBeenCalledTimes(1);
         expect(observerResult).toHaveBeenCalledTimes(1);
+        expect(browser.close).toHaveBeenCalledTimes(1);
+    });
+
+    it("records an unreachable app without running the walkthrough", async () => {
+        const {browser} = browserFake();
+        launch.mockResolvedValue(browser);
+        waitForApp.mockResolvedValueOnce(false);
+        const setup = jest.fn(async () => undefined);
+        const walkthrough: Walkthrough = {
+            page: "library/offline",
+            shots: {"offline.webp": {viewport: {width: 800, height: 600}, goto: "/", setup}},
+        };
+
+        const [captured] = await captureWalkthroughs([walkthrough], {baseUrl: "http://app.test", stagingDir});
+
+        expect(captured.error).toMatch(/^app_unreachable: the app at http:\/\/app\.test didn't answer/);
+        expect(captured.shots).toEqual([]);
+        expect(browser.newContext).not.toHaveBeenCalled();
+        expect(setup).not.toHaveBeenCalled();
         expect(browser.close).toHaveBeenCalledTimes(1);
     });
 

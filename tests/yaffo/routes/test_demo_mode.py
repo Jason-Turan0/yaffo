@@ -269,9 +269,9 @@ def test_blocked_non_javascript_form_gets_html_fallback(demo_app):
 
 
 def test_exception_requires_csrf_token(demo_app):
-    response = demo_app.test_client().post(
-        "/api/faces/assign",
-        json={"faces": [], "person": None, "faceStatus": None},
+    response = demo_app.test_client().patch(
+        "/api/faces",
+        json={"ids": [], "person_id": None},
     )
 
     assert response.status_code == 403
@@ -331,27 +331,27 @@ def test_demo_face_assignment_runs_in_web_process_and_protects_seeded_faces(
         session.commit()
         return len(face_ids)
 
-    monkeypatch.setattr("yaffo.routes.faces.assign_faces_to_person_now", assign_now)
+    monkeypatch.setattr("yaffo.routes.api.assign_faces_to_person_now", assign_now)
     monkeypatch.setattr(
-        "yaffo.routes.faces.assign_faces_to_person",
+        "yaffo.routes.api.assign_faces_to_person",
         lambda *_args, **_kwargs: pytest.fail("demo mode must not enqueue face assignment"),
     )
 
     client = demo_app.test_client()
     token = _csrf_token(client)
-    response = client.post(
-        "/api/faces/assign",
+    response = client.patch(
+        "/api/faces",
         headers={"X-CSRF-Token": token},
-        json={"faces": [unassigned_id], "person": person_id, "faceStatus": FACE_STATUS_ASSIGNED},
+        json={"ids": [unassigned_id], "person_id": person_id},
     )
 
     assert response.status_code == 200
     assert calls == [(person_id, [unassigned_id], False)]
 
-    protected = client.post(
-        "/api/faces/assign",
+    protected = client.patch(
+        "/api/faces",
         headers={"X-CSRF-Token": token},
-        json={"faces": [seeded_id], "person": person_id, "faceStatus": FACE_STATUS_ASSIGNED},
+        json={"ids": [seeded_id], "person_id": person_id},
     )
     assert protected.status_code == 409
     assert protected.get_json()["code"] == "faces_not_available"

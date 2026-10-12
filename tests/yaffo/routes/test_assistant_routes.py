@@ -31,7 +31,7 @@ def with_key(monkeypatch):
 
 
 def _start(client, message="How do I add folders?"):
-    return client.post("/api/assistant/conversations", json={"message": message})
+    return client.post("/assistant/conversations", json={"message": message})
 
 
 def test_first_message_creates_a_titled_conversation_and_starts_a_run(client, runs, with_key):
@@ -48,7 +48,7 @@ def test_poll_returns_the_chat_dialog_body(client, runs, with_key):
     conversation_id = _start(client).get_json()["conversation"]["id"]
     repo.add_event(db.session, conversation_id, "tool", "", {"tool": "search_docs", "count": 1})
 
-    body = client.get(f"/api/assistant/conversations/{conversation_id}").get_json()
+    body = client.get(f"/assistant/conversations/{conversation_id}").get_json()
 
     assert body["status"] == ASSISTANT_STATUS_RUNNING
     assert body["started_at"].endswith("+00:00")
@@ -59,7 +59,7 @@ def test_poll_returns_the_chat_dialog_body(client, runs, with_key):
 
 def test_poll_says_why_a_queued_reply_has_not_started(client, runs, with_key, queue_store):
     conversation_id = _start(client).get_json()["conversation"]["id"]
-    url = f"/api/assistant/conversations/{conversation_id}"
+    url = f"/assistant/conversations/{conversation_id}"
     assert client.get(url).get_json()["queue"] is None  # nothing queued in this test queue
 
     busy = queue_store.insert_task("index_photo_task", [], {})
@@ -78,7 +78,7 @@ def test_poll_says_why_a_queued_reply_has_not_started(client, runs, with_key, qu
 
 def test_follow_up_is_refused_while_answering_then_accepted(client, runs, with_key):
     conversation_id = _start(client).get_json()["conversation"]["id"]
-    url = f"/api/assistant/conversations/{conversation_id}/messages"
+    url = f"/assistant/conversations/{conversation_id}/messages"
 
     busy = client.post(url, json={"message": "and then?"})
     assert busy.status_code == 409
@@ -97,7 +97,7 @@ def test_follow_up_is_refused_while_answering_then_accepted(client, runs, with_k
     ({"message": "x" * 4001}, "message_too_long"),
 ])
 def test_invalid_messages(client, runs, with_key, payload, code):
-    response = client.post("/api/assistant/conversations", json=payload)
+    response = client.post("/assistant/conversations", json=payload)
     assert response.status_code == 400
     assert response.get_json()["code"] == code
     assert runs == []
@@ -113,13 +113,13 @@ def test_missing_api_key_is_refused_before_anything_is_saved(client, runs):
 
 def test_cancel_list_rename_and_delete(client, runs, with_key):
     conversation_id = _start(client).get_json()["conversation"]["id"]
-    base = f"/api/assistant/conversations/{conversation_id}"
+    base = f"/assistant/conversations/{conversation_id}"
 
     assert client.post(f"{base}/cancel").status_code == 204
     assert repo.get_conversation(db.session, conversation_id).status == ASSISTANT_STATUS_IDLE
 
     assert client.patch(base, json={"title": "  Folders  "}).status_code == 204
-    listed = client.get("/api/assistant/conversations").get_json()["conversations"]
+    listed = client.get("/assistant/conversations").get_json()["conversations"]
     assert [(c["id"], c["title"]) for c in listed] == [(conversation_id, "Folders")]
     assert client.patch(base, json={"title": " "}).get_json()["code"] == "title_required"
 
@@ -131,7 +131,7 @@ def test_cancel_list_rename_and_delete(client, runs, with_key):
 def test_delete_all(client, runs, with_key):
     _start(client)
     _start(client, "Another")
-    body = client.post("/api/assistant/conversations/delete-all").get_json()
+    body = client.post("/assistant/conversations/delete-all").get_json()
     assert body == {"deleted": 2}
     assert repo.count_conversations(db.session) == 0
 
@@ -140,7 +140,7 @@ def test_turned_off_hides_everything(client, runs, with_key):
     assistant_settings.set_enabled(False)
 
     assert _start(client).status_code == 404
-    assert client.get("/api/assistant/conversations").status_code == 404
+    assert client.get("/assistant/conversations").status_code == 404
     assert client.get("/assistant").status_code == 404
     assert 'id="assistant-open"' not in client.get("/settings").get_data(as_text=True)
 
@@ -189,7 +189,7 @@ def test_settings_section_and_switches(client):
 def test_demo_mode_hides_the_assistant(app, client, runs, with_key):
     app.config["DEMO_MODE"] = True
     try:
-        assert client.get("/api/assistant/conversations").status_code == 404
+        assert client.get("/assistant/conversations").status_code == 404
         assert 'id="assistant-open"' not in client.get("/").get_data(as_text=True)
     finally:
         app.config["DEMO_MODE"] = False
@@ -209,7 +209,7 @@ def test_empty_conversation_notice_links_to_settings(client, with_key):
 
 
 def test_attached_context_is_allowlisted_and_capped(client, runs, with_key):
-    response = client.post("/api/assistant/conversations", json={
+    response = client.post("/assistant/conversations", json={
         "message": "Why did this fail?",
         "context": {"page": "Utilities → Index Photos", "error": "x" * 900, "job_id": "abc",
                     "api_key": "sk-nope", "error_code": True},
@@ -318,60 +318,6 @@ def test_job_help_is_shown_for_partial_errors(client, with_key):
     assert 'data-assistant-help' in body
 
 
-@pytest.fixture
-def opened(monkeypatch):
-    """Record what the open route would hand the OS instead of opening it."""
-    calls = []
-    monkeypatch.setattr("yaffo.routes.assistant.open_in_os", lambda path, reveal=False: calls.append((path, reveal)))
-    return calls
-
-
-@pytest.fixture
-def media_root(tmp_path, monkeypatch):
-    from types import SimpleNamespace
-    root = tmp_path / "Photos"
-    (root / "2019").mkdir(parents=True)
-    (root / "2019" / "a.jpg").write_bytes(b"x")
-    monkeypatch.setattr("yaffo.site_agents.assistant.file_targets.get_media_dir_entries",
-                        lambda session: [SimpleNamespace(id="m1", path=root)])
-    return root
-
-
-def test_open_button_opens_the_looked_up_path(client, opened, media_root):
-    photo = media_root / "2019" / "a.jpg"
-    item = MediaItem(full_file_path=str(photo))
-    db.session.add(item)
-    db.session.commit()
-
-    assert client.post("/api/assistant/open", json={"media_item_id": item.id, "show": "folder"}).status_code == 204
-    assert client.post("/api/assistant/open", json={"media_dir_id": "m1", "path": "2019", "show": "file"}).status_code == 204
-    # A file shown "in its folder" is revealed; a folder just opens.
-    assert opened == [(photo.resolve(), True), ((media_root / "2019").resolve(), False)]
-
-
-@pytest.mark.parametrize("body", [
-    {"media_dir_id": "m1", "path": "../..", "show": "file"},
-    {"media_dir_id": "m1", "path": "/etc", "show": "file"},
-    {"path": "/etc/passwd", "show": "file"},
-    {"media_dir_id": "m1", "path": "missing.jpg", "show": "file"},
-    {"media_item_id": 424242, "show": "file"},
-    "not an object",
-])
-def test_open_button_refuses_anything_else(client, opened, media_root, body):
-    response = client.post("/api/assistant/open", json=body)
-    assert response.status_code == 404
-    assert response.get_json()["code"] == "open_target_unavailable"
-    assert opened == []
-
-
-def test_open_button_reports_when_the_os_cannot_open(client, media_root, monkeypatch):
-    def fail(path, reveal=False):
-        raise OSError("no handler")
-    monkeypatch.setattr("yaffo.routes.assistant.open_in_os", fail)
-    response = client.post("/api/assistant/open", json={"media_dir_id": "m1", "path": "", "show": "file"})
-    assert response.status_code == 500 and response.get_json()["code"] == "open_failed"
-
-
 # ---- change plans ---------------------------------------------------------------------
 
 @pytest.fixture
@@ -391,7 +337,7 @@ def _plan(conversation_id, code='tag_media_items([{"media_item_id": 1, "name": "
 
 
 def _plans_url(conversation_id, plan_id, action):
-    return f"/api/assistant/conversations/{conversation_id}/plans/{plan_id}/{action}"
+    return f"/assistant/conversations/{conversation_id}/plans/{plan_id}/{action}"
 
 
 def _tag_count():
@@ -404,14 +350,14 @@ def test_poll_carries_the_plan_card_and_the_list_flags_it(client, runs, with_key
     conversation_id = _start(client).get_json()["conversation"]["id"]
     plan_id = _plan(conversation_id)
 
-    body = client.get(f"/api/assistant/conversations/{conversation_id}").get_json()
+    body = client.get(f"/assistant/conversations/{conversation_id}").get_json()
     payload = body["messages"][-1]["payload"]
     assert payload["plan_id"] == plan_id
     assert payload["plan"]["status"] == "PENDING"
     assert payload["plan"]["steps"][0]["name"] == "tag_media_items"
     assert payload["plan"]["steps"][0]["facts"]["names"] == ["beach"]
     assert body["conversation"]["pending_plans"] == 1
-    listed = client.get("/api/assistant/conversations").get_json()["conversations"]
+    listed = client.get("/assistant/conversations").get_json()["conversations"]
     assert listed[0]["pending_plans"] == 1
 
 
@@ -432,7 +378,7 @@ def test_approve_then_undo(client, runs, with_key, no_events):
     undone = client.post(_plans_url(conversation_id, plan_id, "undo"), json={})
     assert undone.get_json()["plan"]["status"] == "UNDONE"
     assert _tag_count() == 0
-    kinds = [m["type"] for m in client.get(f"/api/assistant/conversations/{conversation_id}").get_json()["messages"]]
+    kinds = [m["type"] for m in client.get(f"/assistant/conversations/{conversation_id}").get_json()["messages"]]
     assert kinds[-2:] == ["plan", "plan"]
 
 
@@ -526,5 +472,5 @@ def test_settings_labels_are_short_with_explanations_in_info_tips(app, client):
     assert not [label for label in labels if "(" in label]
 
     section = _settings_section(client)
-    assert section.count('class="help-tip"') == len(tips) + 1 == 16  # + the confirm-count threshold
+    assert section.count('class="help-tip"') == len(tips) + 1 == 17  # + the confirm-count threshold
     assert "Delete albums\n" in section and "The photos in the album stay in your library." in section

@@ -6,12 +6,57 @@
     {% block utility_styles %}{% endblock %}
 {% endblock %}
 
+{% macro kind_option(value, title, description, checked=False) %}
+    <label class="choice-card">
+        <input type="radio" name="kind" value="{{ value }}" {{ "checked" if checked }}>
+        <span class="choice-card-text">
+            <span class="choice-card-title">{{ title }}</span>
+            <span class="choice-card-description">{{ description }}</span>
+        </span>
+    </label>
+{% endmacro %}
+
 {% macro render_new_automation_form() %}
+    <div class="form-group" role="radiogroup" aria-labelledby="new-automation-kind-label">
+        <span class="form-label" id="new-automation-kind-label">{{ _("What kind of automation?") }}</span>
+        <div class="choice-cards">
+            {{ kind_option("custom", _("Custom"), _("Describe what it should do, and Yaffo writes it."), checked=True) }}
+            {% if sync_services.import %}
+                {{ kind_option("import", _("Import from…"), _("Bring new photos into your library from a folder, an SD card, or OneDrive.")) }}
+            {% endif %}
+            {% if sync_services.send %}
+                {{ kind_option("send", _("Send to…"), _("Keep an album, or the photos matching a filter, copied to a folder.")) }}
+            {% endif %}
+            {{ kind_option("service", _("Add a new service…"), _("Connect another photo service. Describe it, and Yaffo writes and tests the connection.")) }}
+        </div>
+    </div>
+    {% for kind in ("import", "send") %}
+        {% if sync_services[kind] %}
+        <div class="form-group" data-sync-services="{{ kind }}" role="radiogroup"
+             aria-labelledby="new-automation-service-{{ kind }}-label" hidden>
+            <span class="form-label" id="new-automation-service-{{ kind }}-label">{{ _("Service") }}</span>
+            <div class="choice-cards">
+                {% for service in sync_services[kind] %}
+                    <label class="choice-card">
+                        <input type="radio" name="adapter_id" value="{{ service.id }}" {{ "checked" if loop.first }} disabled>
+                        <span class="choice-card-text">
+                            <span class="choice-card-title">{{ _(service.name) }}</span>
+                            <span class="choice-card-description">{{ service.description }}</span>
+                        </span>
+                    </label>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
     <div class="form-group">
         <label for="new-automation-name">{{ _("Name") }}</label>
         <input type="text" id="new-automation-name" name="name" required
                placeholder="{{ _('e.g. Tag beach photos, Weekly cleanup') }}">
-        <p class="hint-text">{{ _("Starts empty — build it through a conversation, then publish.") }}</p>
+        <p class="hint-text" data-kind-hint="custom">{{ _("Starts empty — build it through a conversation, then publish.") }}</p>
+        <p class="hint-text" data-kind-hint="import" hidden>{{ _("e.g. Camera card. Next you choose the folder and where photos go.") }}</p>
+        <p class="hint-text" data-kind-hint="send" hidden>{{ _("e.g. For Mom. Next you choose the folder and what to send.") }}</p>
+        <p class="hint-text" data-kind-hint="service" hidden>{{ _("e.g. Flickr sets. Next you describe the service in a chat.") }}</p>
     </div>
 {% endmacro %}
 
@@ -64,11 +109,33 @@
                     <p class="no-data">{{ _("None") }}</p>
                 {% endif %}
 
+                <h3 class="automations-nav-heading">{{ _("Syncs") }}</h3>
+                {% if sync_automations %}
+                    {{ automation_nav_list(sync_automations) }}
+                {% else %}
+                    <p class="no-data">{{ _("No syncs yet") }}</p>
+                {% endif %}
+
                 <h3 class="automations-nav-heading">{{ _("Custom") }}</h3>
                 {% if custom_automations %}
                     {{ automation_nav_list(custom_automations) }}
                 {% else %}
                     <p class="no-data">{{ _("No custom automations yet") }}</p>
+                {% endif %}
+
+                {% if custom_services %}
+                    <h3 class="automations-nav-heading">{{ _("Services") }}</h3>
+                    <ul class="panel-nav">
+                        {% for service in custom_services %}
+                            <li>
+                                <a href="{{ url_for('sync_service', slug=service.slug) }}"
+                                   class="{% if request.endpoint == 'sync_service' and request.view_args.slug == service.slug %}active{% endif %}">
+                                    <span class="panel-nav-label">{{ service.name }}</span>
+                                    {% if not service.published %}<span class="chip">{{ _("Draft") }}</span>{% endif %}
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
                 {% endif %}
 
                 <button type="button" id="new-automation-button" class="btn-secondary new-automation-button"

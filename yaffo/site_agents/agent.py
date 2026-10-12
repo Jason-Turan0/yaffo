@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterator, Optional
+from typing import Callable, Iterator, Optional, Sequence
 
 from sqlalchemy.orm import Session
 
@@ -24,6 +24,7 @@ from yaffo.site_agents.model_clients import (
 from yaffo.site_agents.page.prompt_generator import build_system_prompt
 from yaffo.site_agents.theme.prompt_generator.theme_system_prompt import build_template_builder_system_prompt
 from yaffo.site_agents.automation.prompt_generator.automation_system_prompt import build_automation_builder_system_prompt
+from yaffo.background_tasks.automation_sandbox.automation_host import render_host_api
 from yaffo.site_agents.assistant.prompt_generator.prompt import build_assistant_system_prompt
 from yaffo.site_agents.assistant.tool_providers.diagnostics.diagnostics import DiagnosticsToolProvider
 from yaffo.site_agents.assistant.tool_providers.links import LinkToolProvider
@@ -31,6 +32,9 @@ from yaffo.site_agents.assistant.redact import Redactor
 from yaffo.site_agents.assistant.tool_providers.script_tool import ScriptToolProvider
 from yaffo.site_agents.assistant.settings import DIAG_LIBRARY
 from yaffo.site_agents.assistant.tool_providers.knowledge.tools import KnowledgeToolProvider
+from yaffo.site_agents.assistant.tool_providers.web_tool import WebToolProvider
+from yaffo.site_agents.adapter.prompt_generator.adapter_system_prompt import build_adapter_builder_system_prompt
+from yaffo.site_agents.adapter.tool_providers.adapter_tool import AdapterToolProvider
 from yaffo.site_agents.automation.tool_providers.automation_tool import AutomationToolProvider
 from yaffo.site_agents.automation.tool_providers.automation_trigger_tool import AutomationTriggerToolProvider
 from yaffo.site_agents.common.tool_providers.tool_provider_types import ContentBlock
@@ -203,6 +207,7 @@ def create_page_builder_agent(
     api_key: str,
     session: Session,
     max_iterations: int = _MAX_ITERATIONS,
+    history: Sequence[tuple[str, str]] = (),
 ) -> Agent:
     """Wire the agent for a working version: data-query + widget tools, the stable
     system prompt, and an Anthropic client. The widget tool persists directly into
@@ -223,6 +228,7 @@ def create_page_builder_agent(
         providers=providers,
         api_key=api_key,
     )
+    client.load_history(list(history))
     return Agent(client, providers, max_iterations=max_iterations)
 
 def create_theme_builder_agent(
@@ -232,6 +238,7 @@ def create_theme_builder_agent(
     api_key: str,
     session: Session,
     max_iterations: int = _MAX_ITERATIONS,
+    history: Sequence[tuple[str, str]] = (),
 ) -> Agent:
     """Wire the agent for a custom theme: the write_theme tool (scoped to `slug`, which
     persists the working draft via `session`) and the stable theme-builder system
@@ -248,6 +255,7 @@ def create_theme_builder_agent(
         providers=providers,
         api_key=api_key,
     )
+    client.load_history(list(history))
     return Agent(client, providers, max_iterations=max_iterations)
 
 def create_automation_builder_agent(
@@ -257,6 +265,8 @@ def create_automation_builder_agent(
     api_key: str,
     session: Session,
     max_iterations: int = _MAX_ITERATIONS,
+    history: Sequence[tuple[str, str]] = (),
+    selector_mode: bool = False,
 ) -> Agent:
     """Wire the agent for a custom automation: the write_automation_code tool (scoped
     to `slug`, which persists the working draft via `session`) plus the data-query
@@ -266,16 +276,49 @@ def create_automation_builder_agent(
     this nor the client falls through to db.session or a global key lookup."""
     providers: list[ToolProvider] = [
         DataQueryToolProvider(session=session),
-        AutomationToolProvider(slug, session=session),
-        AutomationTriggerToolProvider(slug, session=session),
+        AutomationToolProvider(slug, session=session, selector_mode=selector_mode),
     ]
+    if not selector_mode:
+        providers.append(AutomationTriggerToolProvider(slug, session=session))
+    prompt = ("You write a Starlark custom selection rule for a photo sync. "
+              "It runs across the library on each sync, without an event scope. "
+              "Use only the read-only host functions below. The trailing expression must be a list "
+              "of {media_item_id: integer, target: nonempty string, caption: optional string} records, "
+              "at most 5,000. Call write_automation_code to save it. "
+              "Do not add triggers or mutate the library.\n\n"
+              + render_host_api(include_mutating=False)) if selector_mode else build_automation_builder_system_prompt()
     client = create_model_client(
         model=model,
-        system_prompt=build_automation_builder_system_prompt(),
+        system_prompt=prompt,
         log_feature="automation",
         providers=providers,
         api_key=api_key,
     )
+    client.load_history(list(history))
+    return Agent(client, providers, max_iterations=max_iterations)
+
+
+def create_adapter_builder_agent(
+    adapter_id: int,
+    *,
+    model: ModelAlias,
+    api_key: str,
+    session: Session,
+    max_iterations: int = _MAX_ITERATIONS,
+    history: Sequence[tuple[str, str]] = (),
+) -> Agent:
+    """Wire the service builder for one custom adapter: write_adapter_code and
+    test_adapter, scoped to `adapter_id`, and the adapter contract as the system
+    prompt. No data-query tool: an adapter never reads the library."""
+    providers: list[ToolProvider] = [AdapterToolProvider(adapter_id, session=session)]
+    client = create_model_client(
+        model=model,
+        system_prompt=build_adapter_builder_system_prompt(),
+        log_feature="adapter",
+        providers=providers,
+        api_key=api_key,
+    )
+    client.load_history(list(history))
     return Agent(client, providers, max_iterations=max_iterations)
 
 
@@ -292,6 +335,7 @@ def create_assistant_agent(
     max_iterations: int = _MAX_ITERATIONS,
     conversation_id: Optional[int] = None,
     actions: frozenset[str] = frozenset(),
+    web: bool = False,
 ) -> Agent:
     """Wire the in-app assistant: the docs tools (search_docs / read_doc over the
     bundled knowledge), plus the read-only diagnostic tools for the enabled
@@ -303,6 +347,11 @@ def create_assistant_agent(
     the caller resolves them from the assistant settings; `session` is required
     when any diagnostics group is enabled."""
     providers: list[ToolProvider] = [KnowledgeToolProvider()]
+    if web:
+        if session is None or conversation_id is None:
+            raise ValueError("Web reads need a database session and conversation")
+        redactor = redactor or Redactor()
+        providers.append(WebToolProvider(session, conversation_id, redactor))
     if DIAG_LIBRARY not in diagnostics or conversation_id is None:
         actions = frozenset()
     if diagnostics:
@@ -317,7 +366,7 @@ def create_assistant_agent(
             providers.append(LinkToolProvider(session))
     client = create_model_client(
         model=model,
-        system_prompt=build_assistant_system_prompt(diagnostics, actions),
+        system_prompt=build_assistant_system_prompt(diagnostics, actions, web=web),
         log_feature="assistant",
         log_dir=log_dir, persistent_log=log_dir is not None,
         providers=providers,

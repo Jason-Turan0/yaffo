@@ -66,7 +66,7 @@ def _plan_update(event: AssistantEvent, redact: Callable[[str], str]) -> str:
 
 
 def transcript_turns(events: list[AssistantEvent], groups: frozenset[str],
-                     redact: Callable[[str], str]) -> list[tuple[str, str]]:
+                     redact: Callable[[str], str], *, web: bool = False) -> list[tuple[str, str]]:
     """Replay bounded historical evidence as quoted data, never as new tool calls.
 
     Recheck enabled groups and redaction so disabling a diagnostic group stops
@@ -76,6 +76,8 @@ def transcript_turns(events: list[AssistantEvent], groups: frozenset[str],
     turn instead (build_assistant_user_message), so it isn't repeated here.
     """
     allowed = {"search_docs", "read_doc"} | set(tool_names(groups))
+    if web:
+        allowed.add("fetch_docs")
     if DIAG_LIBRARY in groups:
         allowed |= {"run_script", "describe_data_source", "link_to_page", "link_to_photos"}
     remaining = 24000

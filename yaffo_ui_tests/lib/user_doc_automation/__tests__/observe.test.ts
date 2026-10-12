@@ -2,6 +2,7 @@ import {afterEach, describe, expect, it, jest} from "@jest/globals";
 import type {BrowserContext, Request} from "@playwright/test";
 import {
     createObserver,
+    normalize,
     PAGE_HEADER,
     RUN_HEADER,
     takeServerObservation,
@@ -50,6 +51,15 @@ describe("takeServerObservation", () => {
 });
 
 describe("createObserver", () => {
+    it("normalizes numeric, UUID and 32-hex id segments but not names", () => {
+        expect(normalize("/media/view/42")).toBe("/media/view/:id");
+        expect(normalize("/utilities/remove-duplicates/results/e807a864-8575-445d-945b-40600ec7015f"))
+            .toBe("/utilities/remove-duplicates/results/:id");
+        expect(normalize("/pages/3/widgets/95c9e75269fd413895110f99e26e5912/frame")).toBe("/pages/:id/widgets/:id/frame");
+        expect(normalize("/themes/classic")).toBe("/themes/classic");
+        expect(normalize("/static/abc123/app.css")).toBe("/static/abc123/app.css");
+    });
+
     it("collects, normalizes, deduplicates, and sorts same-origin dependencies", () => {
         let record: ((request: Request) => void) | undefined;
         const context = {

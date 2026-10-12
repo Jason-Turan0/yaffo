@@ -219,6 +219,65 @@ describe('assistant conversations', () => {
   });
 });
 
+describe('assistant web approval', () => {
+  const permission = (status = 'pending', allowed = [], denied = []) => ({
+    id: 42, status, allowed, denied,
+    domains: { 'example.org': ['https://example.org/docs'], 'example.net': ['https://example.net/api'] },
+  });
+
+  it('shows the requested URLs, submits only the selected domains, and updates the card', async () => {
+    window.localStorage.setItem('yaffo.assistant.conversation', '7');
+    let decided = false;
+    const fetchMock = server({
+      'GET /api/conversations': { conversations: [conversation(7)] },
+      'GET /assistant_conversation/conversation_id/7': () => json(statusBody([
+        { type: 'user', content: 'Read these pages' },
+        { type: 'web_permission', payload: decided
+          ? permission('partial', ['example.org'], ['example.net']) : permission() },
+        { type: 'assistant', content: 'Please approve these domains.' },
+      ])),
+      'POST /assistant_web_permission/conversation_id/7/permission_id/42': () => {
+        decided = true;
+        return json({ conversation: conversation(7, 'Read these pages', 'RUNNING') }, 202);
+      },
+    });
+    await start();
+    const card = document.querySelector('.assistant-web-permission');
+    expect(card.textContent).toContain('https://example.org/docs');
+    const inputs = card.querySelectorAll('input[type="checkbox"]');
+    inputs[1].checked = false;
+    inputs[1].dispatchEvent(new Event('change'));
+    card.querySelector('.btn-primary').click();
+    await vi.waitFor(() => expect(decided).toBe(true));
+    await settle();
+    const request = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST');
+    expect(JSON.parse(request[1].body)).toEqual({ decision: 'allow', domains: ['example.org'] });
+    expect(document.querySelector('.assistant-web-permission').classList).toContain('assistant-plan-partial');
+    expect(document.querySelectorAll('.assistant-web-permission button')).toHaveLength(0);
+  });
+
+  it('disables approval while the assistant is running and links successful reads as sources', async () => {
+    window.localStorage.setItem('yaffo.assistant.conversation', '7');
+    server({
+      'GET /api/conversations': { conversations: [conversation(7, 'Read these pages', 'RUNNING')] },
+      'GET /assistant_conversation/conversation_id/7': statusBody([
+        { type: 'user', content: 'Read these pages' },
+        { type: 'web_permission', payload: permission() },
+        { type: 'tool', payload: { tool: 'fetch_docs', count: 1, detail: 'The page text.', sources: [
+          { title: 'example.org', heading: '', scope: 'web', url: 'https://example.org/docs' },
+        ] } },
+        { type: 'assistant', content: 'I read the documentation.' },
+      ], 'RUNNING'),
+    });
+    await start();
+    for (const button of document.querySelectorAll('.assistant-web-permission button')) {
+      expect(button.disabled).toBe(true);
+    }
+    expect(document.querySelector('.assistant-sources a').href).toBe('https://example.org/docs');
+    expect(document.querySelector('.assistant-tool-detail').textContent).toBe('The page text.');
+  });
+});
+
 describe('floating panel', () => {
   it('the corner button opens the panel, hides while it is open, and takes focus back', async () => {
     server({ 'GET /api/conversations': { conversations: [] } });
@@ -610,18 +669,18 @@ describe('app links', () => {
           opens: [{ title: 'IMG_0412.HEIC', show: 'folder', target }] } },
         { type: 'assistant', content: 'This one.' },
       ]),
-      'POST /api/assistant/open': () => Promise.resolve({ ok: true, status: 204, json: () => Promise.resolve({}) }),
+      'POST /api/openings': () => Promise.resolve({ ok: true, status: 202, json: () => Promise.resolve({}) }),
     });
     window.notification = { success: vi.fn(), error: vi.fn() };
     await start();
-    window.APP_CONFIG.urls.assistant_open = '/api/assistant/open';
+    window.APP_CONFIG.urls.api_openings_create = '/api/openings';
 
     const button = document.querySelector('.assistant-links button.assistant-open-link');
     expect(button.textContent).toBe('IMG_0412.HEIC');
     expect(button.dataset.icon).toBe('folder');
     button.click();
     await settle();
-    const post = fetchMock.mock.calls.find(([url]) => url === '/api/assistant/open');
+    const post = fetchMock.mock.calls.find(([url]) => url === '/api/openings');
     expect(JSON.parse(post[1].body)).toEqual(target);
     expect(window.notification.success).toHaveBeenCalled();
   });

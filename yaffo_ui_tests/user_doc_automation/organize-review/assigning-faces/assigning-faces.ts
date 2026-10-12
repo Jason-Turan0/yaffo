@@ -21,14 +21,20 @@ const choosePerson = async (page: Page, name = PERSON_NAME): Promise<void> => {
     await control.locator(".searchable-select-text").filter({hasText: name}).waitFor();
 };
 
+// Faces are assigned and ignored with one PATCH /api/faces ({ids, person_id} or
+// {ids, status: "IGNORED"}). Fulfilled in the browser so the walkthrough exercises
+// the UI without ever writing to the shared fixture. Any other method passes through.
+const FACES_API = "**/api/faces";
+
 const stubFaceAssignment = async (page: Page): Promise<void> => {
-    await page.route("**/api/faces/assign", async (route) => {
-        const body = route.request().postDataJSON() as {
-            faces?: unknown[];
-            faceStatus?: string;
-        };
-        const count = body.faces?.length ?? 0;
-        const action = body.faceStatus === "IGNORED" ? "ignored" : "assigned";
+    await page.route(FACES_API, async (route) => {
+        if (route.request().method() !== "PATCH") {
+            await route.fallback();
+            return;
+        }
+        const body = route.request().postDataJSON() as {ids?: unknown[]; status?: string};
+        const count = body.ids?.length ?? 0;
+        const action = body.status === "IGNORED" ? "ignored" : "assigned";
         await route.fulfill({
             contentType: "application/json",
             body: JSON.stringify({
@@ -120,7 +126,7 @@ export default defineWalkthrough({
                 ?.dataset.clusterIndex !== index,
             initialCluster
         );
-        await page.unroute("**/api/faces/assign");
+        await page.unroute(FACES_API);
 
         // Ignoring uses the same endpoint with a different status. Stub it on a
         // fresh page, then verify the request rather than persisting the result.
@@ -128,12 +134,13 @@ export default defineWalkthrough({
         await waitForCluster(page);
         await stubFaceAssignment(page);
         const ignored = page.waitForRequest((request) =>
-            request.url().endsWith("/api/faces/assign")
-            && request.postDataJSON()?.faceStatus === "IGNORED"
+            new URL(request.url()).pathname === "/api/faces"
+            && request.method() === "PATCH"
+            && request.postDataJSON()?.status === "IGNORED"
         );
         await page.locator("#sidebar-ignore-btn").click();
         await ignored;
-        await page.unroute("**/api/faces/assign");
+        await page.unroute(FACES_API);
 
         // People mode owns the quick assignment button; Skip advances without a
         // write and leaves the faces available for a later pass.

@@ -83,6 +83,9 @@ nav:
           - Custom Pages: guide/create-customize/custom-pages.md
           - Themes: guide/create-customize/themes.md
           - Automations: guide/create-customize/automations.md
+          - Importing Photos: guide/create-customize/importing.md
+          - Exporting Photos: guide/create-customize/exporting.md
+          - Creating a Photo Service: guide/create-customize/photo-services.md
       - Reference & Maintenance:
           - Settings Reference: guide/reference-maintenance/settings.md
           - Comparison: guide/reference-maintenance/comparison.md

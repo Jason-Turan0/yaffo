@@ -448,6 +448,20 @@ jobs:
             echo "No healed spec changes to propose."
             exit 0
           fi
+          # A run that healed nothing still leaves the healer's bookkeeping (run
+          # history, triage notes, memories). That's not worth a PR: propose only
+          # when a spec passed after healing and a spec or shared helper changed.
+          healed=0
+          healed_files=(assessments/**/*.json)
+          if [ "${#healed_files[@]}" -gt 0 ]; then
+            healed=$(jq -s '[.[] | select(.success == true)] | length' "${healed_files[@]}")
+          fi
+          spec_changes=$(git status --porcelain -- 'yaffo_ui_tests/generated_tests/**/*.spec.ts' \
+            'yaffo_ui_tests/generated_tests/_support')
+          if [ "$healed" -eq 0 ] || [ -z "$spec_changes" ]; then
+            echo "No spec was healed (${healed} passing after healing); not opening a PR."
+            exit 0
+          fi
 
           # Build the PR body from the per-spec assessments. Collected once:
           # `jq -s` with no file arguments would block on stdin, so every use
@@ -512,12 +526,16 @@ jobs:
             echo "_Per-spec triage logs are in the \`heal-logs-*\` artifacts of run ${RUN_ID}._"
           } > "$BODY_FILE"
 
-          BRANCH="auto-heal/playwright-${RUN_ID}"
+          # One healing branch (and so one PR) per base branch: a later failing run
+          # replaces the previous proposal instead of opening another PR beside it.
+          BRANCH="auto-heal/playwright-$(printf '%s' "$BASE_BRANCH" | tr -c 'A-Za-z0-9._-' '-')"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Fetched so --force-with-lease has the current tip to compare against.
+          git fetch origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" 2>/dev/null || true
           git switch -c "$BRANCH"
           git add yaffo_ui_tests/generated_tests
-          git commit -m "Auto-heal Playwright tests (${applied} spec file(s))"
+          git commit -m "Auto-heal Playwright tests (run ${RUN_ID}, ${healed} spec file(s) healed)"
           git push --force-with-lease origin "$BRANCH"
           gh pr create \
             --base "$BASE_BRANCH" \

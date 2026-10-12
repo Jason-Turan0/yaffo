@@ -1,0 +1,29 @@
+<div id="llm-provider-models"
+     hx-get="{{ url_for('settings_llm_models') }}"
+     hx-trigger="llm-models-refresh from:body" hx-include="#llm-provider"
+     hx-swap="outerHTML">
+    {% if lookup_provider %}
+    <div class="form-group">
+        {% set model_lookup_help = _("Models are looked up using your saved provider keys. The last saved list is available offline.") %}
+        {% set provider_models = llm.models|selectattr('provider', 'equalto', lookup_provider.id)|list %}
+        {% set model_ids = provider_models|map(attribute='id')|list %}
+        <div class="llm-field-label">
+            <label for="llm-model">{{ _("Model") }}</label>
+            <button type="button" class="help-tip" data-icon="info"
+                    aria-label="{{ model_lookup_help }}" data-tooltip="{{ model_lookup_help }}"></button>
+        </div>
+        <select id="llm-model" name="model" class="searchable-select"
+                hx-post="{{ url_for('settings_llm_model') }}"
+                hx-target="#llm-api-key" hx-swap="outerHTML">
+            <option value="" disabled {% if llm.model not in model_ids %}selected{% endif %}>{{ _("Choose a model") }}</option>
+            {% for m in provider_models %}
+            <option value="{{ m.id }}" {% if m.id == llm.model %}selected{% endif %}>{{ m.label }}</option>
+            {% endfor %}
+        </select>
+        {% if model_lookup_error %}<p class="hint-text">{{ model_lookup_error }}</p>{% endif %}
+    </div>
+    {% with provider=lookup_provider %}
+    {% include 'settings/_llm_api_key.html' %}
+    {% endwith %}
+    {% endif %}
+</div>

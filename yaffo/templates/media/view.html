@@ -71,11 +71,11 @@
                         {% endif %}
                     {% endif %}
                     <div class="detail-actions">
-                        <button onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.openFile('{{ absolute_file_path }}')"
+                        <button onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.openFile({{ media_item.id }})"
                                 class="action-button">
                             {{ _("Open File") }}
                         </button>
-                        <button onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.openFolder('{{ absolute_folder_path }}')"
+                        <button onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.openFolder({{ media_item.id }})"
                                 class="action-button">
                             {{ _("Open Folder") }}
                         </button>
@@ -219,7 +219,7 @@
                              alt="{{ file_name }}" class="photo-main">
                         <div class="video-unplayable">
                             <span>{{ _("This format can't play in the browser.") }}</span>
-                            <button onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.openFile('{{ absolute_file_path }}')"
+                            <button onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.openFile({{ media_item.id }})"
                                     class="action-button">{{ _("Open in default player") }}</button>
                         </div>
                     {% elif media_item.media_type == 'video' %}
@@ -278,8 +278,6 @@
             app.media.favorite.init(app.i18n, window.APP_CONFIG);
             app.VIEW_PHOTO.photoView = app.VIEW_PHOTO.initPhotoView(
                 {{ faces_with_locations | tojson }},
-                {{ absolute_file_path | tojson }},
-                {{ absolute_folder_path | tojson }},
                 app.i18n,
                 window.APP_CONFIG
             );

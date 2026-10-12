@@ -7,6 +7,7 @@ import {compareShots} from "./compare";
 import type {CompareResult} from "./compare";
 import type {Box} from "./framing";
 import {resolveClip, resolveIgnoreRegions} from "./framing";
+import {APP_UNREACHABLE, waitForApp} from "./app_reachability";
 import {toWebp} from "./encode";
 import {createObserver, PAGE_HEADER, RUN_HEADER, takeServerObservation} from "./observe";
 import type {Observation} from "./observe";
@@ -123,7 +124,7 @@ const captureOne = async (
         // Relative URLs resolve against this, the same as `playwright.config.ts` does
         // for generated specs. Without it `page.waitForURL("/")` never matches — the
         // page really is at "/", but the pattern has nothing to resolve against, and
-        // under a containerized capture the address is `host.docker.internal` anyway.
+        // under a containerized capture the address is `yaffo-docs-app` anyway.
         // A walkthrough written in the idiom of the Playwright specs should just work.
         baseURL: baseUrl,
         // Fixed so a shot never changes because the machine's settings differ.
@@ -178,7 +179,11 @@ const captureOne = async (
                 });
                 console.log(`      captured ${filename}`);
             } finally {
-                await page.close();
+                try {
+                    if (shot.teardown) await shot.teardown(page);
+                } finally {
+                    await page.close();
+                }
             }
         }
 
@@ -235,7 +240,16 @@ export const captureWalkthroughs = async (
         for (const [index, walkthrough] of walkthroughs.entries()) {
             console.log(`  [${index + 1}/${walkthroughs.length}] ${walkthrough.page}`);
             const startedAt = Date.now();
-            const result = await captureOne(browser, walkthrough, options);
+            // Waiting first turns an app that's still starting into a short delay
+            // rather than a failed walkthrough sent off for repair.
+            const result: RawResult = await waitForApp(options.baseUrl)
+                ? await captureOne(browser, walkthrough, options)
+                : {
+                    page: walkthrough.page,
+                    shots: [],
+                    observation: createObserver(walkthrough.page, options.baseUrl).result(),
+                    error: `${APP_UNREACHABLE}: the app at ${options.baseUrl} didn't answer, so the walkthrough didn't run`,
+                };
             results.push(result);
             const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
             console.log(`    ${result.error ? "failed" : "complete"}: ${result.shots.length} shot(s) in ${elapsed}s`);

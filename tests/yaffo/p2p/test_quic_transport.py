@@ -6,8 +6,10 @@ import socket
 import pytest
 
 from yaffo.p2p.identity import InMemorySecretStore, load_or_create_identity
+from yaffo.p2p.identity import fingerprint_of_x509_cert
 from yaffo.p2p.quic_transport import (
     TransportError,
+    open_pinned_connection_fresh_socket,
     quic_pinned_request_fresh_socket,
     start_quic_server,
 )
@@ -32,6 +34,33 @@ def test_aioquic_private_peer_certificate_api_still_exists():
     # round-trip test below exercises that full chain); the attribute the pin
     # ultimately reads lives on the TLS context class.
     assert hasattr(Context(is_client=True), "_peer_certificate")
+
+
+async def _peer_certificate_after_handshake():
+    """Complete a real handshake and read the peer certificate exactly where
+    verify_peer_pin does."""
+    identity = load_or_create_identity(InMemorySecretStore())
+    port = _free_udp_port()
+    server = await start_quic_server("127.0.0.1", port, identity, lambda body: {"status": "ok"})
+    try:
+        connection = await open_pinned_connection_fresh_socket("127.0.0.1", port, identity.device_id)
+        try:
+            return identity.device_id, connection._protocol._quic.tls._peer_certificate
+        finally:
+            connection.close()
+    finally:
+        server.close()
+
+
+def test_aioquic_exposes_the_peer_certificate_after_a_real_handshake():
+    """The canary that matters: after a handshake, the private attribute the pin
+    reads holds the server's certificate, and its fingerprint is the server's
+    device id. An aioquic upgrade that renames the attribute, stops populating
+    it, or changes its type fails here instead of silently disabling pinning."""
+    device_id, peer_certificate = asyncio.run(_peer_certificate_after_handshake())
+
+    assert peer_certificate is not None
+    assert fingerprint_of_x509_cert(peer_certificate) == device_id
 
 
 async def _serve_and_dial(expected_device_id_override=None):

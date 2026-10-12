@@ -6,6 +6,7 @@ from datetime import datetime
 
 import pytest
 
+import yaffo.routes.albums as albums_routes
 from yaffo.db import db
 from yaffo.db.models import (
     GRANT_SCOPE_ALBUM,
@@ -666,3 +667,33 @@ def test_delete_album_keeps_the_photos(app, client):
 
 def test_delete_unknown_album_404(app, client):
     assert client.post("/albums/999/delete").status_code == 404
+
+
+@pytest.fixture
+def album_events(monkeypatch):
+    """album_changed events the album routes emit, captured instead of dispatched."""
+    captured: list[tuple] = []
+    monkeypatch.setattr(albums_routes, "emit_album_changed",
+                        lambda album_id, change, ids=None: captured.append((album_id, change, ids)))
+    return captured
+
+
+def test_membership_and_name_changes_emit_album_changed(app, client, album_events):
+    _photos(app)
+    album_id = _album(app, "Trip", items=[1])
+
+    client.post(f"/albums/{album_id}/items/add?select_id=2&select_id=3")
+    client.post(f"/albums/{album_id}/items/add?select_id=2")            # already in: nothing changed
+    client.post(f"/albums/{album_id}/items/remove?select_id=1")
+    client.post(f"/albums/{album_id}/items/add?select=all")             # bulk: ids not listed
+    client.post(f"/albums/{album_id}/details", data={"name": "Trip", "description": "only the text"})
+    client.post(f"/albums/{album_id}/details", data={"name": "Road trip"})
+    client.post(f"/albums/{album_id}/delete")
+
+    assert album_events == [
+        (album_id, "added", [2, 3]),
+        (album_id, "removed", [1]),
+        (album_id, "added", None),
+        (album_id, "renamed", None),
+        (album_id, "deleted", None),
+    ]

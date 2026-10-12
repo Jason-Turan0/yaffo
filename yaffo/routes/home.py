@@ -1,9 +1,7 @@
 from pathlib import Path
 from urllib.parse import urlencode
 
-import pydash as py_
-import requests
-from flask import Flask, flash, jsonify, render_template, request, url_for
+from flask import Flask, flash, render_template, request, url_for
 from flask_babel import format_date as babel_format_date
 from flask_babel import gettext
 from sqlalchemy import func
@@ -15,7 +13,6 @@ from yaffo.db.models import (
     Face,
     MediaItem,
     MediaLabel,
-    Tag,
 )
 from yaffo.db.repositories.media_dir_repository import get_media_dirs
 from yaffo.db.repositories.media_filter_repository import apply_media_filters
@@ -361,99 +358,3 @@ def init_home_routes(app: Flask):
             filter_layout=filter_config.load_layout(db.session),
             filter_default_keys=filter_config.default_keys(),
         )
-
-    @app.route("/api/tag-values", methods=["GET"])
-    def get_tag_values():
-        """
-        API endpoint to get distinct tag values for a given tag name.
-        Query params: tag_name
-        """
-        tag_name = request.args.get("tag_name")
-        if not tag_name:
-            return jsonify({
-                "error": gettext("The tag_name parameter is required"),
-                "code": "tag_name_required",
-            }), 400
-
-        distinct_values = (
-            db.session.query(Tag.tag_value)
-            .filter(Tag.tag_name == tag_name)
-            .filter(Tag.tag_value.isnot(None))
-            .distinct()
-            .order_by(Tag.tag_value)
-            .all()
-        )
-
-        values = [val[0] for val in distinct_values if val[0]]
-        return jsonify({"tag_name": tag_name, "values": values})
-
-    @app.route("/api/location-autocomplete", methods=["GET"])
-    def location_autocomplete():
-        """
-        API endpoint for location autocomplete with geocoding.
-        Combines results from:
-        1. Existing photo locations in database
-        2. OpenStreetMap Nominatim geocoding
-        Query params: q (search query)
-        """
-        query = request.args.get("q", "").strip()
-        if not query or len(query) < 2:
-            return jsonify({"results": []})
-
-        results = []
-
-        db_locations = (
-            db.session.query(MediaItem.location_name, MediaItem.latitude, MediaItem.longitude)
-            .filter(MediaItem.location_name.isnot(None))
-            .filter(MediaItem.location_name.ilike(f"%{query}%"))
-            .limit(5)
-            .all()
-        )
-
-        for photos_by_name in py_.group_by(
-            db_locations,
-            lambda media_item: media_item.location_name,
-        ).values():
-            lat = py_.sum_by(
-                photos_by_name,
-                lambda media_item: media_item.latitude,
-            ) / len(photos_by_name)
-            lon = py_.sum_by(
-                photos_by_name,
-                lambda media_item: media_item.longitude,
-            ) / len(photos_by_name)
-            if lat is not None and lon is not None:
-                results.append({
-                    "name": photos_by_name[0].location_name,
-                    "lat": lat,
-                    "lon": lon,
-                    "source": "photos"
-                })
-
-        try:
-            osm_response = requests.get(
-                "https://nominatim.openstreetmap.org/search",
-                params={
-                    "q": query,
-                    "format": "json",
-                    "limit": 5
-                },
-                headers={
-                    "User-Agent": "PhotoOrganizer/1.0"
-                },
-                timeout=3
-            )
-
-            if osm_response.status_code == 200:
-                osm_data = osm_response.json()
-                for item in osm_data:
-                    results.append({
-                        "name": item.get("display_name"),
-                        "lat": float(item.get("lat")),
-                        "lon": float(item.get("lon")),
-                        "source": "osm"
-                    })
-        except requests.RequestException:
-            pass
-
-        return jsonify({"results": results})

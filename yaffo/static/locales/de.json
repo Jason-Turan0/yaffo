@@ -368,6 +368,78 @@
         "starting": "Wird gestartet…"
       },
       "thumbnailFolderUnavailable": "Der Miniaturansichten-Ordner ist nicht verfügbar, daher wurden die Miniaturansichten nicht überprüft. Stelle sicher, dass das Laufwerk verbunden ist."
+    },
+    "sync": {
+      "device": {
+        "done": "Angemeldet.",
+        "failed": "Die Anmeldung konnte nicht gestartet werden. Versuche es erneut.",
+        "waiting": "Warte darauf, dass du den Code eingibst …"
+      },
+      "picker": {
+        "choose": "Auswählen",
+        "empty": "Hier gibt es keine Ordner.",
+        "failed": "Die Ordner konnten nicht geladen werden.",
+        "loading": "Wird geladen …",
+        "open": "Öffnen",
+        "suggested": "Vorgeschlagen",
+        "top": "Oben"
+      },
+      "service": {
+        "allow": "Erlauben",
+        "allowSelected": "Ausgewählte erlauben",
+        "answerFailed": "Deine Antwort konnte nicht gespeichert werden. Versuche es erneut.",
+        "cancelMessage": "Builder stoppen? Der bisher gespeicherte Entwurf bleibt erhalten.",
+        "deleteMessage": "Der Entwurf, die Unterhaltung und die Anmeldung beim Testkonto werden ebenfalls gelöscht. Es wird nicht synchronisiert.",
+        "deleteTitle": "Diesen Dienst löschen?",
+        "denyAll": "Alle ablehnen",
+        "docsAllowed": "✓ Erlaubt: {{domains}}.",
+        "docsAsk_one": "Der Builder möchte Seiten von einer neuen Website lesen:",
+        "docsAsk_other": "Der Builder möchte Seiten von {{count}} neuen Websites lesen:",
+        "docsDenied": "Nicht erlaubt: {{domains}}.",
+        "docsDomain_one": "{{domain}} · {{count}} Seite",
+        "docsDomain_other": "{{domain}} · {{count}} Seiten",
+        "docsNote": "Zulässige Websites werden beim Erstellen dieses Dienstes nicht erneut abgefragt. Yaffo ruft nur den Text der Seiten ab.",
+        "dontAllow": "Nicht erlauben",
+        "liveAllowed": "✓ Live-Tests mit Lesezugriff für {{account}} erlaubt.",
+        "liveAsk": "Darf der Builder beim Erstellen schreibgeschützte Aufrufe an {{account}} senden? Die Antworten werden an das KI-Modell gesendet.",
+        "liveDenied": "Live-Tests mit Lesezugriff nicht erlaubt.",
+        "superseded": "Durch eine neuere Anfrage ersetzt."
+      },
+      "test": {
+        "checked": "Geprüft um {{time}} · eine Vorschau; es wurde nichts kopiert oder geändert",
+        "columns": {
+          "action": "Aktion",
+          "destination": "Ziel",
+          "file": "Datei",
+          "size": "Größe",
+          "state": "Was passiert"
+        },
+        "failed": "Der Test konnte nicht ausgeführt werden.",
+        "nothingNew": "Nichts Neues zum Importieren.",
+        "nothingToDo": "Nichts zu tun: Das Ziel entspricht bereits dem aktuellen Stand.",
+        "partial": "Die ersten {{counted}} Dateien wurden gezählt; für den Rest dauerte das Auflisten zu lange. Bei einem Lauf werden alle importiert.",
+        "partialOf": "{{counted}} von {{total}} Dateien wurden gezählt; für den Rest dauerte das Auflisten zu lange. Bei einem Lauf werden alle importiert.",
+        "preview": {
+          "copy": "Kopieren",
+          "remove": "Entfernen",
+          "showing": "{{shown}} von {{total}} werden angezeigt"
+        },
+        "running": "Wird überprüft…",
+        "stat": {
+          "convert": "in JPEG konvertiert",
+          "copy": "zum Kopieren",
+          "remove": "zum Entfernen",
+          "unchanged": "bereits vorhanden",
+          "unsupported": "kann nicht gesendet werden (dieses Ziel unterstützt diesen Dateityp nicht)"
+        },
+        "state": {
+          "changed": "Seit dem letzten Import geändert",
+          "deleted_at_source": "An der Quelle gelöscht",
+          "imported": "Bereits importiert",
+          "in_library": "Bereits in deiner Bibliothek",
+          "new": "Neu"
+        }
+      }
     }
   },
   "assistant": {
@@ -614,6 +686,17 @@
     },
     "settings": {
       "groupCount": "{{on}} von {{total}} aktiv"
+    },
+    "web": {
+      "readPages_one": "{{count}} Webseite gelesen",
+      "readPages_other": "{{count}} Webseiten gelesen",
+      "title": "Lesen von Webseiten erlauben?",
+      "explanation": "Erlaube die ausgewählten Domains für dieses Gespräch. Yaffo liest die Seiten und sendet deren Inhalte an deinen KI-Anbieter.",
+      "allow": "Auswahl erlauben",
+      "deny": "Ablehnen",
+      "domainAllowed": "{{domain}}: erlaubt",
+      "domainDenied": "{{domain}}: abgelehnt",
+      "failed": "Die Entscheidung zum Webzugriff konnte nicht gespeichert werden."
     }
   }
 }

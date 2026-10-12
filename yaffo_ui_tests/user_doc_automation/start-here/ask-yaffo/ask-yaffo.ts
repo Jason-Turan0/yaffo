@@ -185,11 +185,11 @@ const statusBody = (conversation: Conversation, status = "IDLE"): Json => ({
  * (looked up on every request, so a flow can change them between polls).
  */
 const serveConversations = async (page: Page, conversations: () => Conversation[]): Promise<void> => {
-    await page.route("**/api/assistant/conversations", async (route) => {
+    await page.route("**/assistant/conversations", async (route) => {
         if (route.request().method() !== "GET") return route.fallback();
         await json(route, {conversations: conversations().map((c) => summary(c))});
     });
-    await page.route(/\/api\/assistant\/conversations\/(\d+)$/, async (route) => {
+    await page.route(/\/assistant\/conversations\/(\d+)$/, async (route) => {
         if (route.request().method() !== "GET") return route.fallback();
         const id = Number(route.request().url().match(/(\d+)$/)?.[1]);
         const conversation = conversations().find((c) => c.id === id);
@@ -319,12 +319,12 @@ export default defineWalkthrough({
             // Sending a follow-up: the reply is written while the client polls.
             const followUp = "Which of those is Maya's favorite?";
             let polls = 0;
-            await page.route(`**/api/assistant/conversations/${HELP.id}/messages`, async (route) => {
+            await page.route(`**/assistant/conversations/${HELP.id}/messages`, async (route) => {
                 help.messages = [...help.messages, {seq: help.messages.length + 1, type: "user", content: followUp,
                     payload: null}];
                 await json(route, {conversation: summary(help, "RUNNING")}, 202);
             });
-            await page.route(`**/api/assistant/conversations/${HELP.id}`, async (route) => {
+            await page.route(`**/assistant/conversations/${HELP.id}`, async (route) => {
                 if (route.request().method() !== "GET") return route.fallback();
                 polls += 1;
                 if (polls === 1) return json(route, statusBody(help, "RUNNING"));
@@ -337,15 +337,15 @@ export default defineWalkthrough({
             await page.locator("#assistant-chat-message").fill(followUp);
             await page.locator('#assistant-chat-form button[type="submit"]').click();
             await answers(page).filter({hasText: "marked as a favorite"}).waitFor({timeout: 15_000});
-            await page.unroute(`**/api/assistant/conversations/${HELP.id}/messages`);
-            await page.unroute(`**/api/assistant/conversations/${HELP.id}`);
+            await page.unroute(`**/assistant/conversations/${HELP.id}/messages`);
+            await page.unroute(`**/assistant/conversations/${HELP.id}`);
 
             // Approve the proposed change, then undo it through the confirm dialog.
-            await page.route("**/api/assistant/conversations/902/plans/31/approve", async (route) => {
+            await page.route("**/assistant/conversations/902/plans/31/approve", async (route) => {
                 album = albumConversation("EXECUTED");
                 await json(route, {plan: plan("EXECUTED")});
             });
-            await page.route("**/api/assistant/conversations/902/plans/31/undo", async (route) => {
+            await page.route("**/assistant/conversations/902/plans/31/undo", async (route) => {
                 album = albumConversation("UNDONE");
                 await json(route, {plan: plan("UNDONE")});
             });

@@ -1035,13 +1035,14 @@ reports it in the result body rather than by throwing. A model given that does n
 — it improvises, and the forty-round run above is what improvising looks like. Preflight
 navigates once, fails loudly with the command that fixes it, and refuses to start.
 
-**`side_effects.ts` — stub what reaches outside the browser.** `/api/open-file` and
-`/api/open-folder` shell out to `open`/`xdg-open`/`os.startfile` against the real file.
-The guide documents both controls, so a `photo-details` walkthrough reasonably clicks
-them — and every capture run then opens Preview windows on whoever is running it, or
-spawns processes on a CI runner. They are stubbed to the same `{"success": true}` a real
-call returns rather than aborted, so the UI still reaches the state the shot is meant to
-show; aborting would surface an error toast and document a failure.
+**`side_effects.ts` — stub what reaches outside the browser.** `POST /api/openings` (Open
+File, Open Folder, the assistant's open links) shells out to `open`/`xdg-open`/
+`os.startfile` against the real file. The guide documents those controls, so a
+`photo-details` walkthrough reasonably clicks them — and every capture run then opens
+Preview windows on whoever is running it, or spawns processes on a CI runner. It is
+stubbed to the same empty `202` a real call returns rather than aborted, so the UI still
+reaches the state the shot is meant to show; aborting would surface an error toast and
+document a failure.
 
 ### Flake detection and history are separate
 
@@ -1210,7 +1211,7 @@ yaffo_ui_tests/
 │   ├── observe.ts                  client half of the dependency recorder
 │   ├── dependency_changes.ts       lockfile hashes vs the working tree
 │   ├── strings.ts                  the two string catalogues and their diff (Detector B)
-│   ├── side_effects.ts             stub /api/open-file & open-folder for the run
+│   ├── side_effects.ts             stub /api/openings for the run
 │   ├── media_lookup.ts             resolve a media id from a stable filename
 │   ├── sandbox_facts.ts            runtime facts handed to the agent up front
 │   ├── preflight.ts                prove the browser tool works before the agent starts

@@ -12,7 +12,7 @@
 
 ## Tags editing
 - Modal: `#tagsModal`, title `#tagsModalTitle` (NOT `#modalTitle`). Editor list `#tags-editor-list` with `.tag-editor-item` rows (tag name/value live in INPUT values, not text content); add inputs `#modal-new-tag-name` / `#modal-new-tag-value`; add button text "+ Add Tag".
-- Saving PUTs the WHOLE tag set to `PUT /api/media/{id}/tags` with `{tags: [{tag_name, tag_value}]}`, then closes the modal and reloads the page (success toast is flashed through sessionStorage).
+- Saving PUTs the WHOLE tag set to `PUT /media/{id}/tags` with `{tags: [{tag_name, tag_value}]}`, then closes the modal and reloads the page (success toast is flashed through sessionStorage).
 - There is NO per-tag endpoint anymore (old `POST /api/photo/{id}/tags`, `PUT/DELETE /api/photo/tags/{tag_id}` are gone). Cleanup = snapshot the `.tag-item` name/value pairs before the test, PUT them back after.
 
 ## Seeded test data

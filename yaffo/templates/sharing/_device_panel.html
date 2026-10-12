@@ -42,6 +42,19 @@
         </form>
     </div>
 
+    {% set returning_shares = sharing.outbound_shares
+        | selectattr('device_id', 'equalto', device.device_id)
+        | selectattr('contains_peer_import') | list %}
+    {% if returning_shares %}
+    <div class="sharing-import-notice">
+        <strong>{{ _("These shares include photos imported from this device:") }}</strong>
+        <ul>
+            {% for share in returning_shares %}<li>{{ share.share_name }}</li>{% endfor %}
+        </ul>
+        <p>{{ _("If this device imports them from you, older versions may transfer the same photos again.") }}</p>
+    </div>
+    {% endif %}
+
     {# Shares granted to this device are listed (and revoked) in the sidebar's
        "Shared With Others"; this panel only adds new ones. #}
     <div class="sharing-panel">

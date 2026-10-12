@@ -1,0 +1,68 @@
+{# The body of a sync's Items panel (sync_detail.html): status chips with counts,
+   one page of the ledger newest first, and the pager. All of it reflects the search
+   box above it, which stays put while this swaps. Served by sync_views.sync_items. #}
+{% from "macros/local_datetime.html" import local_datetime %}
+{% from "components/htmx_pagination.html" import htmx_pagination %}
+{% set url = url_for('sync_items', slug=selected.slug) %}
+{% set all_count = items.counts.values() | sum %}
+<input type="hidden" id="sync-items-status" name="status" value="{{ status or '' }}">
+{% if all_count or search %}
+    <div class="sync-items-filters" role="group" aria-label="{{ _('Show') }}">
+        <button type="button" class="chip {{ 'chip-accent' if not status }}" aria-pressed="{{ 'false' if status else 'true' }}"
+                hx-get="{{ url }}" hx-include="closest form" hx-vals='{"status": "", "page": 0}'
+                hx-target="#sync-items-body" hx-swap="innerHTML">{{ _("All") }} · {{ all_count | format_integer }}</button>
+        {% for chip in items.chips %}
+            <button type="button" class="chip {{ 'chip-accent' if status == chip.code }}" aria-pressed="{{ 'true' if status == chip.code else 'false' }}"
+                    hx-get="{{ url }}" hx-include="closest form" hx-vals='{"status": {{ chip.code | tojson }}, "page": 0}'
+                    hx-target="#sync-items-body" hx-swap="innerHTML">{{ chip.label }} · {{ chip.count | format_integer }}</button>
+        {% endfor %}
+        {% if items.counts.get('failed') %}
+            <button type="submit" form="sync-retry-form" class="btn-secondary btn-sm sync-retry">{{ _("Retry failed") }}</button>
+        {% endif %}
+    </div>
+{% endif %}
+{% if items.rows %}
+    <div class="table-container">
+        <table class="data-table sync-items-table">
+            <thead>
+                <tr>
+                    <th>{{ _("Photo") }}</th>
+                    <th>{{ _("Status") }}</th>
+                    <th>{{ _("In your library") if role == 'source' else _("Sent to") }}</th>
+                    <th>{{ _("Updated") }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in items.rows %}
+                    <tr>
+                        <td class="sync-items-name">
+                            {% if row.media_item_id %}
+                                <a class="row-link" href="{{ url_for('media_view', media_item_id=row.media_item_id) }}">{{ row.label }}</a>
+                            {% else %}{{ row.label }}{% endif %}
+                        </td>
+                        <td>
+                            {{ row.status_label }}{% if row.sent_as %} <span class="hint-text">({{ row.sent_as }})</span>{% endif %}
+                            {% if row.error %}<div class="hint-text">{{ row.error }}</div>{% endif %}
+                        </td>
+                        <td class="sync-items-where">{{ row.where or '—' }}</td>
+                        <td class="sync-items-when">{{ local_datetime(row.updated_at) }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% elif search %}
+    <p class="no-data">{{ _("No items match “%(search)s”.", search=search) }}</p>
+{% elif all_count %}
+    <p class="no-data">{{ _("Nothing with this status.") }}</p>
+{% else %}
+    <p class="no-data">{{ _("Nothing yet. Items appear here after the first run.") }}</p>
+{% endif %}
+{# The pager sits outside #sync-items-body (sync_detail.html); this replaces it in
+   place, so it isn't redrawn with the table. Empty when there's nothing to page. #}
+<div id="sync-items-pager" hx-swap-oob="true">
+    {% if items.rows %}
+        {{ htmx_pagination(pagination=items.pagination, hx_endpoint=url, hx_target="#sync-items-body",
+                           method="GET", hx_swap="innerHTML") }}
+    {% endif %}
+</div>

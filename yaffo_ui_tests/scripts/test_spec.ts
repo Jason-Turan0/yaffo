@@ -16,11 +16,30 @@ import {spawn} from "node:child_process";
 import {resolve} from "node:path";
 
 import {startIsolatedEnvironment} from "../lib/services/isolated_runner";
+import {needsFakeSyncServices} from "../lib/services/run_sandboxed_suites";
 import {toEntry} from "./list_specs";
 
 function parsePort(args: string[]): number {
     const i = args.findIndex((a) => a === "--port");
     return i !== -1 && args[i + 1] ? parseInt(args[i + 1], 10) : 5002;
+}
+
+function parseSyncOriginOverrides(args: string[]): Record<string, string> {
+    const index = args.findIndex(arg => arg === "--sync-origin-overrides");
+    if (index === -1) return {};
+    const raw = args[index + 1];
+    if (!raw) throw new Error("--sync-origin-overrides requires a JSON object mapping provider origins to URLs");
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(raw);
+    } catch {
+        throw new Error("--sync-origin-overrides must be valid JSON");
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)
+        || Object.entries(parsed).some(([origin, url]) => !/^https?:\/\//.test(origin) || typeof url !== "string" || !/^https?:\/\//.test(url))) {
+        throw new Error("--sync-origin-overrides must map http(s) origins to http(s) URLs");
+    }
+    return parsed as Record<string, string>;
 }
 
 async function runPlaywright(spec: string, project: string, env: NodeJS.ProcessEnv): Promise<number> {
@@ -37,7 +56,10 @@ async function main(): Promise<void> {
     const args = process.argv.slice(2);
     const fresh = args.includes("--fresh");
     const port = parsePort(args);
-    const specArg = args.find((a) => !a.startsWith("--") && a !== String(port));
+    const argsWithValues = new Set(["--port", "--sync-origin-overrides"]);
+    const values = args.filter((arg, index) => !argsWithValues.has(args[index - 1] ?? ""));
+    const specArg = values.find((a) => !a.startsWith("--") && a !== String(port));
+    const syncOriginOverrides = parseSyncOriginOverrides(args);
 
     if (!specArg) {
         console.error("Usage: npm run test:spec -- <spec-file> [--fresh] [--port <n>]");
@@ -54,6 +76,8 @@ async function main(): Promise<void> {
             withPeer,
             preseeded: !fresh,
             copyPreseeded: !fresh,
+            withFakeSyncServices: needsFakeSyncServices([entry.spec]),
+            syncOriginOverrides,
         });
     } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
@@ -70,6 +94,11 @@ async function main(): Promise<void> {
             SUITE: entry.id,
             BASE_URL: environment.baseUrl,
             PEER_URL: environment.peer?.baseUrl ?? "",
+            FAKE_FLICKR_URL: environment.fakeFlickrUrl ?? "",
+            FAKE_ONEDRIVE_URL: environment.fakeOneDriveUrl ?? "",
+            FAKE_IMMICH_URL: environment.fakeImmichUrl ?? "",
+            YAFFO_DATA_DIR: environment.tempDir,
+            PATH: `${resolve(process.cwd(), "../venv/bin")}:${process.env.PATH ?? ""}`,
         });
         process.exitCode = code;
     } finally {

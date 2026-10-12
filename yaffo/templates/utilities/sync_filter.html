@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% from "_sidebar.html" import render_sidebar %}
+{% from "components/page_header.html" import page_header %}
+
+{# "Photos matching a filter" for a Send to… sync: the library's filter panel, how many
+   photos it matches now, and a preview. "Send these photos" saves the filters (in the
+   sharing wire format) as the sync's selection; the sync re-evaluates them each run,
+   so new photos that match are sent too. Its own screen for the same reason as the
+   album add screen: the filter panel needs the left column. #}
+
+{% block title %}{{ _("Choose photos for %(name)s - Yaffo", name=selected.name) }}{% endblock %}
+
+{% block extra_styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='filters/location-autocomplete.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='filters/filter_config.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='utilities/sync.css') }}">
+{% endblock %}
+
+{% from "components/nav_panel.html" import sidebar_toggles %}
+{% block nav_context_toggles %}
+    {{ sidebar_toggles('sync-filter', filter_count=applied_gallery_filter_count(request.args)) }}
+{% endblock %}
+
+{% block content %}
+<div class="main-container-layout">
+    {{ render_sidebar(url_for('sync_filter', slug=selected.slug), filters,
+                  filter_layout=filter_layout, panel_prefix='sync-filter') }}
+    <div class="main-content photo-gallery">
+        {% set header_actions %}
+            <a class="btn-secondary" href="{{ url_for('automations_show', slug=selected.slug) }}">{{ _("Cancel") }}</a>
+            <form method="POST" class="sync-filter-save"
+                  action="{{ url_for('sync_update_selection', slug=selected.slug) }}{{ ('?' ~ request.query_string.decode()) if request.query_string else '' }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="kind" value="query">
+                <button type="submit" class="btn-primary" {{ "disabled" if not has_filters }}>{{ _("Send these photos") }}</button>
+            </form>
+        {% endset %}
+        {% call page_header(_("Choose photos for %(name)s", name=selected.name), actions=header_actions) %}
+            <span class="chip chip-accent">{{ ngettext("%(num)d photo matches", "%(num)d photos match", match_count) }}</span>
+            {{ _("Set the filters. Photos that match later are sent too, and photos that stop matching are removed.") }}
+        {% endcall %}
+
+        {% if not has_filters %}
+            <p class="hint-text sync-filter-hint">{{ _("Choose at least one filter: sending your whole library isn't offered here.") }}</p>
+        {% endif %}
+
+        {% if preview %}
+        <div class="photo-grid">
+            {% for media_item in preview %}
+            <div class="photo-card">
+                <div class="photo-thumb">
+                    {% if media_item.media_type == 'video' %}
+                    <img src="{{ media_item.poster_path and url_for('media_poster', media_item_id=media_item.id) or url_for('static', filename='video_placeholder.svg') }}"
+                         data-fallback="{{ url_for('static', filename='video_placeholder.svg') }}"
+                         alt="{{ _('Video from %(date)s', date=media_item.date_taken | format_date('date')) }}">
+                    {% else %}
+                    <img src="{{ url_for('media', media_item_id=media_item.id) }}"
+                         data-fallback="{{ url_for('placeholder') }}"
+                         alt="{{ _('Photo from %(date)s', date=media_item.date_taken | format_date('date')) }}">
+                    {% endif %}
+                </div>
+                <div class="photo-info">
+                    <div class="photo-date">{{ media_item.date_taken | format_date("date") if media_item.date_taken else _("Unknown date") }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h2>{{ _("No photos found") }}</h2>
+            <p>{{ _("Try adjusting your filters.") }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% from "filters/_config_modal.html" import filter_config_modal %}
+{{ filter_config_modal(filter_layout, filter_default_keys) }}
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='filters/location-autocomplete.js') }}"></script>
+    <script src="{{ url_for('static', filename='filters/filter_config.js') }}"></script>
+    <script>
+        document.addEventListener('yaffo:app-init-complete', (event) => {
+            const app = event.detail.app;
+            app.filters.initTags(app.i18n, window.APP_CONFIG);
+            app.filters.initLocationAutocomplete(app.i18n, window.APP_CONFIG);
+            app.filters.initConfig(app.i18n, window.APP_CONFIG);
+        });
+    </script>
+{% endblock %}

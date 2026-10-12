@@ -111,3 +111,73 @@
     border-color: var(--color-accent);
     box-shadow: var(--focus-ring);
 }
+/* A group's label when the group isn't one control (a set of choice cards). */
+.form-label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+/* Choice cards: a radio choice where each option needs a line of explanation. The
+   whole card is the click target; the chosen one takes the accent. */
+.choice-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label.choice-card,
+.choice-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 0;
+    padding: 10px 12px;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-weight: normal;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.choice-card:hover {
+    border-color: var(--color-border-hover);
+}
+
+.choice-card:has(input:checked) {
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
+}
+
+.choice-card:has(input:focus-visible) {
+    box-shadow: var(--focus-ring);
+}
+
+.form-group .choice-card input[type="radio"],
+.choice-card input[type="radio"] {
+    width: auto;
+    padding: 0;
+    margin: 2px 0 0;
+    accent-color: var(--color-accent);
+    flex-shrink: 0;
+}
+
+.choice-card-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.choice-card-title {
+    font-weight: 600;
+}
+
+.choice-card-description {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+}

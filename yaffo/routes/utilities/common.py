@@ -2,7 +2,12 @@ import yaffo.db.repositories.media_dir_repository
 from yaffo.db import db
 from pathlib import Path
 
-from yaffo.db.models import Automation
+from flask_babel import gettext
+
+from yaffo.db.models import Automation, SYNC_ROLE_SOURCE, SYNC_ROLE_TARGET
+from yaffo.db.repositories import service_builder_repository as services
+from yaffo.sync.adapters import runnable_adapters
+from yaffo.sync.providers import CUSTOM_PREFIX
 from yaffo.utils import settings
 from yaffo.utils.index_photos import is_system_file  # re-exported for route modules
 
@@ -26,5 +31,35 @@ def automations_sidebar_context() -> dict:
     automations = db.session.query(Automation).order_by(Automation.name).all()
     return {
         "system_automations": [a for a in automations if a.is_system],
-        "custom_automations": [a for a in automations if not a.is_system],
+        "custom_automations": [a for a in automations if not a.is_system and not a.is_sync],
+        "sync_automations": [a for a in automations if a.is_sync],
+        "sync_services": _sync_services(),
+        "custom_services": services.list_services(db.session),
     }
+
+
+def _service_description(adapter) -> str:
+    if adapter.is_builtin:
+        return (gettext("A folder on this computer, a drive, or a card.") if adapter.role == SYNC_ROLE_SOURCE
+                else gettext("A folder a desktop app syncs, a drive, a network share, or a card for a photo frame."))
+    if adapter.slug == "preset.onedrive_source":
+        return gettext("New photos and videos in a OneDrive folder. Sign in with your Microsoft account.")
+    if adapter.slug == "preset.immich_source":
+        return gettext("New photos and videos in an Immich album or library. Connect with an API key from your server.")
+    if adapter.slug == "preset.immich_target":
+        return gettext("Keep photos in an Immich album. Connect with an API key from your server.")
+    description = adapter.metadata.get("description") or adapter.name
+    if adapter.provider.startswith(CUSTOM_PREFIX):
+        return gettext("%(description)s A service you added.", description=description)
+    return description
+
+
+def _sync_services() -> dict[str, list[dict]]:
+    """The services the New automation dialog offers for Import from… / Send to…:
+    built-ins first, then presets."""
+    services: dict[str, list[dict]] = {"import": [], "send": []}
+    for kind, role in (("import", SYNC_ROLE_SOURCE), ("send", SYNC_ROLE_TARGET)):
+        for adapter in runnable_adapters(db.session, role):
+            services[kind].append({"id": adapter.id, "name": adapter.name,
+                                   "description": _service_description(adapter)})
+    return services

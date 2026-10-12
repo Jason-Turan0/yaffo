@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sync Account Types</title>
+<style>
+:root {
+  --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --bg: #f8f9fa; --surface: #fff; --sunken: #eef0f2;
+  --text: #212529; --text2: #495057; --muted: #6c757d; --faint: #adb5bd;
+  --border: #dee2e6; --border-strong: #ced4da;
+  --accent: #007bff; --accent-soft: #e7f3ff; --accent-soft-text: #004085;
+  --success: #28a745; --success-soft: #d4edda; --success-soft-text: #155724;
+  --warning-soft: #fff3cd; --warning-soft-text: #856404;
+  --note-bg: #fbfaf5; --note-border: #e8e2c8;
+  --radius: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171a; --surface: #1e2125; --sunken: #26292e;
+    --text: #e9ecef; --text2: #ced4da; --muted: #98a2ad; --faint: #5c636a;
+    --border: #33383e; --border-strong: #454b52;
+    --accent: #4da3ff; --accent-soft: #10263d; --accent-soft-text: #a9d1ff;
+    --success-soft: #133020; --success-soft-text: #9fdcae;
+    --warning-soft: #3a3010; --warning-soft-text: #f0d68a;
+    --note-bg: #22211c; --note-border: #4a4532;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 var(--font-body); }
+a { color: var(--accent); text-decoration: none; }
+code { font-family: var(--font-mono); font-size: 12px; }
+
+.wrap { display: grid; grid-template-columns: 270px 1fr; min-height: 100vh; }
+nav { background: var(--surface); border-right: 1px solid var(--border); padding: 16px 10px; }
+nav h2 { font-size: 15px; margin: 0 8px 4px; }
+nav p { font-size: 12px; color: var(--muted); margin: 0 8px 12px; }
+nav h4 { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 14px 8px 4px; }
+nav button { display: block; width: 100%; text-align: left; font: inherit; font-size: 13px; background: none; border: 0; border-radius: var(--radius); padding: 6px 8px; cursor: pointer; color: var(--text); }
+nav button:hover { background: var(--sunken); }
+nav button.on { background: var(--accent-soft); color: var(--accent-soft-text); font-weight: 600; }
+nav button small { display: block; font-weight: 400; color: var(--muted); font-size: 11px; }
+nav button.on small { color: inherit; opacity: .8; }
+
+main { padding: 24px 28px 60px; max-width: 760px; }
+.kind { display: none; }
+.kind.on { display: block; }
+.kind > h1 { font-size: 22px; margin: 0 0 2px; }
+.kind > .sub { color: var(--muted); margin: 0 0 16px; }
+
+.step { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 14px; }
+.step > header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
+.num { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; background: var(--accent); color: #fff; flex: none; }
+.step h3 { margin: 0; font-size: 15px; }
+.step .summary { color: var(--muted); font-size: 13px; }
+.spacer { flex: 1; }
+.body { padding: 0 14px 16px 46px; }
+
+.btn { font: inherit; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); border-radius: var(--radius); padding: 6px 12px; cursor: pointer; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.small { padding: 3px 9px; font-size: 12px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.note { font-size: 12px; color: var(--muted); }
+.chip { font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 600; white-space: nowrap; }
+.chip.ok { background: var(--success-soft); color: var(--success-soft-text); }
+.chip.warn { background: var(--warning-soft); color: var(--warning-soft-text); }
+
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 4px; }
+.field .hint { font-size: 12px; color: var(--muted); margin-top: 3px; }
+input[type=text], input[type=password], select { font: inherit; width: 100%; max-width: 420px; padding: 6px 9px; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface); color: var(--text); }
+.copybox { display: flex; gap: 6px; max-width: 460px; }
+.copybox input { font-family: var(--font-mono); font-size: 12px; }
+.steps { margin: 0 0 12px; padding-left: 18px; font-size: 13px; color: var(--text2); }
+.steps li { margin-bottom: 6px; }
+.sep { border: 0; border-top: 1px solid var(--border); margin: 14px 0; }
+
+.pick { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.pick label { display: flex; gap: 10px; align-items: center; border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; cursor: pointer; }
+.pick label.on { border-color: var(--accent); background: var(--accent-soft); }
+.avatar { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 12px; flex: none; }
+
+.devcode { display: flex; gap: 16px; align-items: center; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 14px; margin: 6px 0 10px; flex-wrap: wrap; }
+.devcode .code { font-family: var(--font-mono); font-size: 26px; letter-spacing: .12em; font-weight: 700; }
+.spin { width: 14px; height: 14px; border: 2px solid var(--border-strong); border-top-color: var(--accent); border-radius: 50%; display: inline-block; animation: s 1s linear infinite; vertical-align: -2px; }
+@keyframes s { to { transform: rotate(360deg); } }
+.browser { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin: 6px 0 10px; max-width: 460px; }
+.browser .bar { background: var(--sunken); padding: 5px 10px; font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.browser .page { padding: 14px; font-size: 13px; }
+
+.design { background: var(--note-bg); border: 1px solid var(--note-border); border-radius: var(--radius); padding: 10px 12px; font-size: 12px; color: var(--text2); }
+.design b { color: var(--text); }
+.design dl { display: grid; grid-template-columns: 120px 1fr; gap: 3px 10px; margin: 6px 0 0; }
+.design dt { color: var(--muted); }
+.design dd { margin: 0; }
+.proposed { display: inline-block; font-size: 11px; font-weight: 700; background: var(--warning-soft); color: var(--warning-soft-text); border-radius: 999px; padding: 1px 8px; margin-left: 6px; vertical-align: 3px; }
+
+@media (max-width: 760px) {
+  .wrap { grid-template-columns: 1fr; }
+  nav { border-right: 0; border-bottom: 1px solid var(--border); }
+  main { padding: 16px; }
+  .body { padding-left: 14px; }
+  .design dl { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <h2>Account types</h2>
+    <p>The <b>Account</b> step of a sync's setup, for each way a service can sign in. Custom services show the same thing on the builder's <i>Test account</i> tab.</p>
+
+    <h4>OAuth 2</h4>
+    <button data-k="o2-preset" class="on">Preset service<small>Google Photos, OneDrive</small></button>
+    <button data-k="o2-shared">Account already signed in<small>reusing a shared connection</small></button>
+    <button data-k="o2-loopback">Custom · any local address<small><code>redirect: any_loopback</code></small></button>
+    <button data-k="o2-registered">Custom · registered address<small><code>redirect: registered</code></small></button>
+    <button data-k="o2-device">Device code<small><code>redirect: device_code</code></small></button>
+
+    <h4>OAuth 1.0a</h4>
+    <button data-k="o1">Custom service<small>Flickr, SmugMug</small></button>
+
+    <h4>API key</h4>
+    <button data-k="key-hosted">Hosted service token<small>Pixelfed</small></button>
+    <button data-k="key-self">Self-hosted server<small>Immich</small></button>
+
+    <h4>AWS SigV4</h4>
+    <button data-k="sigv4">S3-compatible storage<small>Amazon S3, Cloudflare R2, Backblaze B2</small></button>
+
+    <h4>Username + password</h4>
+    <button data-k="basic">Basic / digest<small>Nextcloud, other WebDAV</small></button>
+    <button data-k="session">Session login + 2FA<small>Synology Photos, PhotoPrism</small></button>
+  </nav>
+
+  <main>
+    <!-- ============ OAuth 2 preset ============ -->
+    <section class="kind on" data-k="o2-preset">
+      <h1>OAuth 2 · preset service</h1>
+      <p class="sub">Yaffo ships the app registration, so the user only signs in.</p>
+      <div class="step">
+        <header><span class="num">1</span><h3>Account</h3><span class="summary">Google Photos</span></header>
+        <div class="body">
+          <p style="margin-top:0">Sign in to the Google account whose Google Photos should receive these photos.</p>
+          <div class="row"><button class="btn primary">Sign in at accounts.google.com</button><a href="#" style="font-size:13px">Signing in on another device?</a></div>
+          <p class="note">Opens Google in your browser. Yaffo will be able to <b>add photos it uploads</b> and <b>manage albums it creates</b>. It can't see your other photos.</p>
+          <hr class="sep">
+          <div class="row"><span class="spin"></span><span>Waiting for you to finish in the browser…</span><button class="btn small">Cancel</button></div>
+        </div>
+      </div>
+      <div class="design"><b>Design note</b>
+        <dl>
+          <dt>Stored</dt><dd>refresh + access token in the keychain; connection row <code>sync_connection:google_photos:&lt;sub&gt;</code></dd>
+          <dt>Account id</dt><dd>Google's <code>sub</code> from the ID token; label = email</dd>
+          <dt>Return address</dt><dd>loopback, handled by Yaffo's preset; never shown</dd>
+          <dt>Other device</dt><dd>the link switches to the device-code screen where the provider supports it (Yaffo on a home server, browser on a laptop)</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- ============ shared ============ -->
+    <section class="kind" data-k="o2-shared">
+      <h1>Account already signed in</h1>
+      <p class="sub">Any type: when a connection for this service exists, it's preselected. Shown for OneDrive.</p>
+      <div class="step">
+        <header><span class="num">1</span><h3>Account</h3><span class="summary">OneDrive</span></header>
+        <div class="body">
+          <div class="pick">
+            <label class="on"><input type="radio" name="acct" checked><span class="avatar" style="background:#0078d4">J</span><span><b>jason@outlook.com</b><div class="note">Used by <i>OneDrive camera roll</i></div></span><span class="spacer"></span><span class="chip ok">Signed in</span></label>
+            <label><input type="radio" name="acct"><span>Sign in to another OneDrive account…</span></label>
+          </div>
+          <div class="field" style="background:var(--warning-soft);color:var(--warning-soft-text);border-radius:var(--radius);padding:10px 12px;max-width:520px">
+            This account is signed in for <b>reading</b> files. This sync also needs to <b>upload</b> files.
+            <div class="row" style="margin-top:8px"><button class="btn small primary">Also allow uploads</button><span class="note" style="color:inherit">Opens OneDrive once more. <i>OneDrive camera roll</i> keeps working.</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="design"><b>Design note</b>
+        <dl>
+          <dt>Scopes</dt><dd>connection keeps the union; this sync stores its <code>scopes_needed</code></dd>
+          <dt>No prompt when</dt><dd>the connection already has every scope this sync needs</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- ============ OAuth 2 custom loopback ============ -->
+    <section class="kind" data-k="o2-loopback">
+      <h1>OAuth 2 · custom · any local address</h1>
+      <p class="sub">The user registers their own app, but the service accepts Yaffo's local return address without registering it.</p>
+      <div class="step">
+        <header><span class="num">1</span><h3>Account</h3><span class="summary">Dropbox (custom)</span></header>
+        <div class="body">
+          <b>App credentials</b> <span class="chip ok">Saved</span>
+          <p class="note" style="margin-top:2px">Entered once when the service was added · <a href="#">Change</a></p>
+          <hr class="sep">
+          <div class="row"><button class="btn primary">Sign in at www.dropbox.com</button></div>
+          <p class="note">Yaffo will be able to <b>read and write files in its own app folder</b>.</p>
+        </div>
+      </div>
+      <p class="note">While building the service, the <i>App credentials</i> box has only two steps: create the app on the service's site, then paste the two values. No address to copy.</p>
+      <div class="step">
+        <header><span class="num">·</span><h3>App credentials (builder's Test account tab)</h3></header>
+        <div class="body">
+          <ol class="steps">
+            <li>Open <a href="#">Dropbox's <i>App Console</i></a>, choose <i>Create app</i> › <i>App folder</i>.</li>
+            <li>Dropbox shows an <b>App key</b> and an <b>App secret</b>. Paste them here:</li>
+          </ol>
+          <div class="field"><label>App key</label><input type="text" value="q3x8…"></div>
+          <div class="field"><label>App secret</label><input type="password" value="xxxxxxxx"><div class="hint">Stored in your system keychain.</div></div>
+        </div>
+      </div>
+      <div class="design"><b>Design note</b>
+        <dl>
+          <dt>Connection block</dt><dd><code>auth_kind: oauth2</code>, <code>redirect: any_loopback</code>, <code>app_form_labels</code> = App key / App secret</dd>
+          <dt>Return address</dt><dd>Yaffo picks it; the service accepts any <code>127.0.0.1</code> port (RFC 8252)</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- ============ OAuth 2 custom registered ============ -->
+    <section class="kind" data-k="o2-registered">
+      <h1>OAuth 2 · custom · registered address</h1>
+      <p class="sub">The service only returns to addresses registered with the app, so registration includes one copy-paste.</p>
+      <div class="step">
+        <header><span class="num">·</span><h3>App credentials (builder's Test account tab)</h3></header>
+        <div class="body">
+          <ol class="steps">
+            <li>Open <a href="#">pCloud's <i>My applications</i></a> and choose <i>New app</i>.</li>
+            <li>pCloud asks where to send you back after signing in. Paste this into <b>Redirect URIs</b>:
+              <div class="copybox" style="margin-top:6px"><input type="text" readonly value="http://127.0.0.1:5001/sync/oauth/callback"><button class="btn small">Copy</button></div>
+            </li>
+            <li>pCloud shows a <b>Client ID</b> and a <b>Client secret</b>. Paste them here:</li>
+          </ol>
+          <div class="field"><label>Client ID</label><input type="text" value="8hJ2…"></div>
+          <div class="field"><label>Client secret</label><input type="password" value="xxxxxxxx"></div>
+          <div class="row"><button class="btn small">Save credentials</button></div>
+        </div>
+      </div>
+      <p class="note">A sync's Account step then looks like the preset case: one <i>Sign in at …</i> button.</p>
+      <div class="design"><b>Design note</b>
+        <dl>
+          <dt>Connection block</dt><dd><code>redirect: registered</code>; the address is built from <code>web.port</code>, never random</dd>
+          <dt>If the port changes</dt><dd>"Update the return address on pCloud", connections go to <code>needs_sign_in</code></dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- ============ OAuth 2 device ============ -->
+    <section class="kind" data-k="o2-device">
+      <h1>OAuth 2 · device code</h1>
+      <p class="sub">No return address at all: the user types a short code on the service's site. Works for presets and custom services that support it.</p>
+      <div class="step">
+        <header><span class="num">1</span><h3>Account</h3><span class="summary">OneDrive</span></header>
+        <div class="body">
+          <p style="margin-top:0">Go to <a href="#"><b>microsoft.com/devicelogin</b></a> and enter this code:</p>
+          <div class="devcode">
+            <span class="code">WDJB-MJHT</span>
+            <div class="row"><button class="btn small">Copy code</button><button class="btn small primary">Open microsoft.com/devicelogin</button></div>
+          </div>
+          <div class="row"><span class="spin"></span><span>Waiting for you to enter the code… expires in 14:32</span></div>
+          <p class="note">Useful when Yaffo runs on another computer than your browser (e.g. a home server you open from a laptop).</p>
+        </div>
+      </div>
+      <div class="design"><b>Design note</b>
+        <dl>
+          <dt>Flow</dt><dd>RFC 8628: Yaffo polls the token endpoint until approved or expired</dd>
+          <dt>Shown when</dt><dd>the connection block says <code>device_code</code>, or as a fallback link ("Signing in on another device?") where the preset supports both</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- ============ OAuth 1.0a ============ -->
+    <section class="kind" data-k="o1">
+      <h1>OAuth 1.0a · custom service</h1>
+      <p class="sub">Same experience as OAuth 2 for the user; Yaffo signs every request instead of sending a bearer token.</p>
+      <div class="step">
+        <header><span class="num">·</span><h3>App credentials (builder's Test account tab)</h3></header>
+        <div class="body">
+          <ol class="steps">
+            <li>Open <a href="#">Flickr's <i>Create an app</i> form</a> and choose <i>Non-commercial key</i>.</li>
+            <li>Flickr asks where to send you back after signing in. Paste this into <b>Callback URL</b>:
+              <div class="copybox" style="margin-top:6px"><input type="text" readonly value="http://127.0.0.1:5001/sync/oauth/callback"><button class="btn small">Copy</button></div>
+            </li>
+            <li>Flickr shows a <b>Key</b> and a <b>Secret</b>. Paste them here:</li>
+          </ol>
+          <div class="field"><label>Key</label><input type="text" value="9f2c41e0a7…"></div>
+          <div class="field"><label>Secret</label><input type="password" value="xxxxxxxx"></div>
+        </div>
+      </div>
+      <div class="step">
+        <header><span class="num">1</span><h3>Account</h3><span class="summary">Flickr sets (custom)</span></header>
+        <div class="body">
+          <div class="row"><button class="btn primary">Sign in at www.flickr.com</button></div>
+          <p class="note">Yaffo will be able to <b>upload photos and edit sets</b> (Flickr's <code>write</code> permission).</p>
+        </div>
+      </div>
+      <div class="design"><b>Design note</b>
+        <dl>
+          <dt>Stored</dt><dd>access token + token secret in the keychain (they don't expire)</dd>
+          <dt>Account id</dt><dd>Flickr <code>user_nsid</code> from the access-token response; label = username</dd>
+          <dt>Return address</dt><dd><code>registered</code> shown here; if Flickr accepts <code>oauth_callback</code> per request it becomes <code>per_request</code> and step 2 disappears (unverified)</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- ============ API key hosted ============ -->
+    <section class="kind" data-k="key-hosted">
+      <h1>API key · hosted service token</h1>
+      <p class="sub">No browser sign-in: the user creates a token on the service and pastes it.</p>
+      <div class="step">
+        <header><span class="num">1</span><h3>Account</h3><span class="summary">Pixelfed (custom)</span></header>
+        <div class="body">
+          <div class="field"><label>Server</label><input type="text" value="https://pixelfed.social"><div class="hint">The Pixelfed server your account is on.</div></div>
+          <ol class="steps">
+            <li>On Pixelfed, open <b>Settings › Applications</b> and create a <i>personal access token</i> with the <i>read</i> and <i>write</i> scopes.</li>
+            <li>Pixelfed shows the token once. Paste it here:</li>
+          </ol>
+          <div class="field"><label>Personal access token</label><input type="password" value="xxxxxxxxxxxxxxxxxxxxxxxx"><div class="hint">Stored in your system keychain. Anyone with this token can post as you.</div></div>
+          <div class="row"><button class="btn primary">Check token</button><span class="chip ok">Signed in as @jturan</span></div>
+        </div>
+      </div>
+      <div class="design"><b>Design note</b>
+        <dl>
+          <dt>Check</dt><dd>the connection block's <code>check</code> call (<code>/api/v1/accounts/verify_credentials</code>) proves the token and yields the account id + label</dd>
+          <dt>Account id</dt><dd>account id from <code>verify_credentials</code> + server; a key with no such call falls back to a key fingerprint</dd>
+          <dt>Placement</dt><dd>header <code>Authorization: Bearer …</code> here; other services put it in a query parameter or the URL path, as declared; scripts never see it</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- ============ API key self-hosted ============ -->
+    <section class="kind" data-k="key-self">
+      <h1>API key · self-hosted server</h1>
+      <p class="sub">Like a token, plus the server's address. The address becomes part of the connection's allowed hosts.</p>
+      <div class="step">
+        <header><span class="num">1</span><h3>Account</h3><span class="summary">Immich</span></header>
+        <div class="body">
+          <div class="field"><label>Server address</label><input type="text" value="https://immich.home.lan"><div class="hint">The address you open Immich at.</div></div>
+          <ol class="steps">
+            <li>In Immich, open <b>Account settings › API keys</b> and choose <i>New API key</i>.</li>
+            <li>Give it the <i>asset.upload</i> and <i>album.update</i> permissions, then paste the key:</li>
+          </ol>
+          <div class="field"><label>API key</label><input type="password" value="xxxxxxxxxxxxxxxx"></div>
+          <div class="row"><button class="btn primary">Check</button><span class="chip ok">Signed in as jason@home.lan</span></div>
+          <p class="note">Yaffo will only talk to <code>immich.home.lan</code>.</p>
+        </div>
+      </div>
+      <div class="design"><b>Design note</b>
+        <dl>
+          <dt>Instance</dt><dd><code>instance.base_url</code> on the connection; added to <code>base_urls</code> at run time and shown in consent</dd>
+          <dt>Account id</dt><dd>Immich user id from <code>/api/users/me</code>; the row key includes the server, so two servers are two connections</dd>
+          <dt>https</dt><dd>required; plain <code>http</code> allowed only for a private-network address after an explicit warning (open question)</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- ============ SigV4 ============ -->
+    <section class="kind" data-k="sigv4">
+      <h1>AWS SigV4 · S3-compatible storage</h1>
+      <p class="sub">An access key pair. Yaffo signs each request; the same form works for any S3-compatible provider.</p>
+      <div class="step">
+        <header><span class="num">1</span><h3>Account</h3><span class="summary">S3-compatible bucket</span></header>
+        <div class="body">
+          <div class="field"><label>Provider</label>
+            <select><option>Cloudflare R2</option><option>Amazon S3</option><option>Backblaze B2</option><option>Other S3-compatible…</option></select>
+          </div>
+          <div class="field"><label>Account ID</label><input type="text" value="3f9e…"><div class="hint">Shown on R2's overview page. Yaffo builds the endpoint from it.</div></div>
+          <ol class="steps">
+            <li>In Cloudflare, open <b>R2 › Manage API tokens</b> and create a token with <i>Object Read &amp; Write</i> on one bucket.</li>
+            <li>Paste the two values it shows:</li>
+          </ol>
+          <div class="field"><label>Access key ID</label><input type="text" value="a1b2…"></div>
+          <div class="field"><label>Secret access key</label><input type="password" value="xxxxxxxx"></div>
+          <div class="row"><button class="btn primary">Check</button><span class="chip ok">Can write to bucket <b>family-photos</b></span></div>
+        </div>
+      </div>
+      <div class="design"><b>Design note</b>
+        <dl>
+          <dt>Instance</dt><dd>endpoint + region on the connection; the bucket is an adapter option, not part of the account</dd>
+          <dt>Account id</dt><dd>key fingerprint + endpoint (S3 keys have no portable "who am I")</dd>
+          <dt>Check</dt><dd>a <code>HEAD</code> on the bucket chosen in Options; sign-in can't check more than the key is scoped to</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- ============ Basic (proposed) ============ -->
+    <section class="kind" data-k="basic">
+      <h1>Basic / digest · username + app password</h1>
+      <p class="sub">Nextcloud and other WebDAV servers. Yaffo sends the username and password with each request (https only).</p>
+      <div class="step">
+        <header><span class="num">1</span><h3>Account</h3><span class="summary">Nextcloud</span></header>
+        <div class="body">
+          <div class="field"><label>Server address</label><input type="text" value="https://cloud.example.org"></div>
+          <ol class="steps">
+            <li>In Nextcloud, open <b>Settings › Security › Devices &amp; sessions</b>.</li>
+            <li>Enter "Yaffo" as the app name and choose <i>Create new app password</i>.</li>
+            <li>Paste the username and app password it shows. <b>Not</b> your normal password.</li>
+          </ol>
+          <div class="field"><label>Username</label><input type="text" value="jason"></div>
+          <div class="field"><label>App password</label><input type="password" value="xxxxx-xxxxx-xxxxx-xxxxx-xxxxx"></div>
+          <div class="row"><button class="btn primary">Check</button><span class="chip ok">Signed in as jason</span></div>
+        </div>
+      </div>
+      <div class="design"><b>Design note</b>
+        <dl>
+          <dt>Block</dt><dd><code>auth_kind: basic</code>, <code>scheme: basic | digest</code>, <code>instance: ["base_url"]</code>; same instance handling as Immich</dd>
+          <dt>Account id</dt><dd>username + server</dd>
+          <dt>Nextcloud extra</dt><dd>its Login Flow v2 gives a browser sign-in that hands back an app password, which avoids copy-paste</dd>
+        </dl>
+      </div>
+    </section>
+    <!-- ============ Session ============ -->
+    <section class="kind" data-k="session">
+      <h1>Session login · with a 2FA code</h1>
+      <p class="sub">Yaffo trades a username and password for a session, and logs in again by itself when the session expires.</p>
+      <div class="step">
+        <header><span class="num">1</span><h3>Account</h3><span class="summary">Synology Photos</span></header>
+        <div class="body">
+          <div class="field"><label>Server address</label><input type="text" value="https://nas.home.lan:5001"></div>
+          <p class="note" style="margin-top:-4px">Tip: create a separate DSM user for Yaffo with access to Synology Photos only. Yaffo has to keep this password to sign in again.</p>
+          <div class="field"><label>Username</label><input type="text" value="yaffo"></div>
+          <div class="field"><label>Password</label><input type="password" value="xxxxxxxxxx"><div class="hint">Stored in your system keychain. Never sent to the AI model.</div></div>
+          <div class="row"><button class="btn primary">Sign in</button></div>
+          <hr class="sep">
+          <div class="field" style="max-width:420px">
+            <label>Verification code</label>
+            <p class="note" style="margin:0 0 6px">This account uses 2-step verification. Enter the 6-digit code from your authenticator app.</p>
+            <input type="text" value="" placeholder="123 456" style="max-width:160px;font-family:var(--font-mono);letter-spacing:.1em">
+          </div>
+          <label class="row" style="font-size:13px;margin-bottom:10px"><input type="checkbox" checked> Trust Yaffo on this NAS, so it can sign in again without a code</label>
+          <div class="row"><button class="btn primary">Verify</button><button class="btn small">Cancel</button></div>
+          <hr class="sep">
+          <div class="row"><span class="chip ok">Signed in as yaffo</span><span class="note">Trusted device · signs in again by itself</span></div>
+        </div>
+      </div>
+      <p class="note">If the NAS later asks for a code again (trust revoked, password changed), every sync using this account shows <b>Sign in again</b>.</p>
+      <div class="design"><b>Design note</b>
+        <dl>
+          <dt>Block</dt><dd><code>auth_kind: session</code>: <code>login</code> request with <code>{username}</code>/<code>{password}</code>/<code>{otp}</code>, <code>token_from</code> <code>/data/sid</code>, <code>attach</code> query <code>_sid</code>, <code>expired_when</code> error 106/107/119, <code>otp: optional</code></dd>
+          <dt>Stored</dt><dd>username + password + Synology device token in the keychain; the current <code>sid</code> too</dd>
+          <dt>Re-login</dt><dd>on an <code>expired_when</code> match, once, under the refresh lease; a login that demands a code sets <code>needs_sign_in</code></dd>
+          <dt>Account id</dt><dd>username + server</dd>
+        </dl>
+      </div>
+    </section>
+  </main>
+</div>
+<script>
+document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.kind').forEach(k => k.classList.toggle('on', k.dataset.k === b.dataset.k));
+}));
+document.querySelectorAll('.pick label').forEach(l => l.addEventListener('click', () => {
+  l.parentElement.querySelectorAll('label').forEach(x => x.classList.toggle('on', x === l));
+}));
+</script>
+</body>
+</html>

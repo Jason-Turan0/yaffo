@@ -7,7 +7,6 @@ generate_automation_task; the run lives on the automation, so the browser polls
 /status. Publish copies working_code -> published_code. System automations are
 code-backed built-ins: read-only chat, can't be deleted.
 """
-import re
 from pathlib import Path
 from dataclasses import asdict, dataclass
 from datetime import timezone
@@ -33,6 +32,7 @@ from yaffo.db.models import (
     AUTOMATION_STATUS_READY,
     CONVERSATION_TYPE_USER,
     EVENTS,
+    SyncItem,
 )
 from yaffo.db.repositories import automation_repository as repo
 from yaffo.db.repositories import media_dir_repository
@@ -47,8 +47,11 @@ from yaffo.distance_units import (
 from yaffo.site_agents import llm_config
 from yaffo.routes.utilities.common import automations_sidebar_context
 from yaffo.routes.utilities.run_history import RunView, run_views
+from yaffo.db.repositories import service_builder_repository as services
+from yaffo.routes.utilities import sync_views
+from yaffo.sync import connections
+from yaffo.sync.schemas import SELECTION_SCRIPT
 
-_MAX_BASE_SLUG_LENGTH = 30
 
 # Rows in an automation's run history.
 RUN_HISTORY_ROWS = 10
@@ -100,26 +103,11 @@ class AutomationRunStarted:
 def _recent_runs(automation: Automation | None) -> list[RunView]:
     if automation is None:
         return []
-    # Read further back than the rows shown: a started sync's import/index Jobs fold
-    # into its row and repeated in-sync checks collapse, so jobs outnumber rows.
-    jobs = repo.get_recent_jobs(db.session, automation.id, limit=RUN_HISTORY_ROWS * 6)
+    # Read further back than the rows shown so repeated in-sync checks collapse.
+    # A source sync's index batches are background work, not separate sync runs.
+    jobs = repo.get_recent_jobs(db.session, automation.id, limit=RUN_HISTORY_ROWS * 6,
+                                exclude_index_batches=automation.is_sync)
     return run_views(db.session, jobs, limit=RUN_HISTORY_ROWS)
-
-
-def _slugify(name: str) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
-    if not re.match(r"^[a-z]", slug):
-        slug = f"automation-{slug}" if slug else "automation"
-    return slug[:_MAX_BASE_SLUG_LENGTH].rstrip("-")
-
-
-def _unique_slug(name: str) -> str:
-    base = _slugify(name)
-    slug, counter = base, 2
-    while repo.get_by_slug(db.session, slug) is not None:
-        slug = f"{base}-{counter}"
-        counter += 1
-    return slug
 
 
 def init_automations_routes(app: Flask):
@@ -146,12 +134,14 @@ def init_automations_routes(app: Flask):
                 "Duplicates found": gettext("Duplicates found"),
                 "Media modified": gettext("Media modified"),
                 "Media labeled": gettext("Media labeled"),
+                "Album changed": gettext("Album changed"),
+                "Media deleted": gettext("Media deleted"),
             }.get(label, label)
             for event_type, label in EVENTS.items()
         }
 
     def _config_fields(automation: Automation | None) -> list[dict]:
-        """The Configure-modal context: each declared field plus its live value."""
+        """The Configure-panel context: each declared field plus its live value."""
         if automation is None:
             return []
         fields = []
@@ -184,6 +174,8 @@ def init_automations_routes(app: Flask):
 
     def _render_page(selected_slug: str | None):
         selected = repo.get_by_slug(db.session, selected_slug) if selected_slug else None
+        if selected is not None and selected.is_sync:
+            return sync_views.render_sync_page(selected, _recent_runs(selected), _triggers_context(selected))
         media_dirs = media_dir_repository.list_media_dirs(db.session)
         return render_template(
             "utilities/automations.html",
@@ -193,6 +185,7 @@ def init_automations_routes(app: Flask):
             # rather than home; None when none is configured.
             default_media_dir=(media_dirs[0]["path"] if media_dirs else None),
             config_fields=_config_fields(selected),
+            **(_triggers_context(selected) if selected is not None else {}),
             recent_runs=_recent_runs(selected),
             **automations_sidebar_context(),
         )
@@ -259,7 +252,16 @@ def init_automations_routes(app: Flask):
         name = (request.form.get("name") or "").strip()
         if not name:
             return _error(gettext("Automation name is required"), "automation_name_required", 400)
-        slug = _unique_slug(name)
+        kind = request.form.get("kind") or "custom"
+        if kind == "service":
+            service = services.create_service(db.session, name)
+            return redirect(url_for("sync_service", slug=service.slug))
+        if kind != "custom":
+            automation = sync_views.create_from_form(db.session, name, kind, request.form.get("adapter_id"))
+            if automation is None:
+                return _error(gettext("Choose a service"), "sync_service_required", 400)
+            return redirect(url_for("automations_show", slug=automation.slug))
+        slug = repo.unique_slug(db.session, name)
         db.session.add(Automation(
             slug=slug, name=name, is_system=False, enabled=False,
             status=AUTOMATION_STATUS_ACCEPTED,
@@ -292,12 +294,15 @@ def init_automations_routes(app: Flask):
         if automation is None or automation.is_system:
             abort(404)
         media_dirs = media_dir_repository.list_media_dirs(db.session)
+        selection = ((automation.sync or {}).get("config") or {}).get("selection") or {}
+        selector_mode = selection.get("kind") == SELECTION_SCRIPT
         return render_template(
             "utilities/automations_edit.html",
             selected=automation,
             selected_slug=slug,
             default_media_dir=(media_dirs[0]["path"] if media_dirs else None),
             selected_status=automation.status,
+            selector_mode=selector_mode,
             selected_has_draft=(
                 automation.status == AUTOMATION_STATUS_READY
                 and automation.working_code is not None
@@ -429,8 +434,15 @@ def init_automations_routes(app: Flask):
             abort(404)
         if automation.is_system:
             return _error(gettext("System automations cannot be deleted"), "system_automation_locked", 400)
+        # SQLite doesn't enforce the cascade, so a sync's ledger goes explicitly. Nothing
+        # is removed remotely and no imported file is deleted. Its account is released
+        # (row and keychain entry) once no other sync uses it.
+        connection_key = sync_views.connection_key_of(automation)
+        db.session.query(SyncItem).filter(SyncItem.automation_id == automation.id).delete(
+            synchronize_session=False)
         db.session.delete(automation)
         db.session.commit()
+        connections.release_if_unreferenced(db.session, connection_key)
         return redirect(url_for("automations_index"))
 
     @app.route("/utilities/automations/<slug>/enabled", methods=["POST"])
@@ -438,6 +450,9 @@ def init_automations_routes(app: Flask):
         automation = repo.get_by_slug(db.session, slug)
         if automation is None:
             abort(404)
+        if automation.is_sync and not automation.enabled and not sync_views.can_enable(db.session, automation):
+            return _error(gettext("Review the setup and turn the sync on from its page."),
+                          "sync_needs_consent", 409)
         automation.enabled = not automation.enabled
         db.session.commit()
         return _hx_refresh()

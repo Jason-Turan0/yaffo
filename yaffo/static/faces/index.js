@@ -355,18 +355,25 @@ facesNamespace.initAssignment = (
             advanceCluster();
             return;
         }
+        const change = faceStatus === 'IGNORED'
+            ? { status: 'IGNORED' }
+            : { person_id: personId === null || personId === '' ? null : Number(personId) };
+        if ('person_id' in change && change.person_id === null) {
+            facesWindow.notification.error(i18n.t('faces:assignment.selectPersonFirst'));
+            return;
+        }
         try {
-            const response = await fetch(config.urls.faces_assign, {
-                method: 'POST',
+            const response = await fetch(config.urls.api_faces_update, {
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ faces: faceIds, person: personId, faceStatus: faceStatus })
+                body: JSON.stringify({ ids: faceIds, ...change })
             });
             const result = await response.json();
-            if (result.success) {
+            if (response.ok) {
                 facesWindow.showNotification?.(result.message, 'success');
                 advanceCluster();
             } else {
-                facesWindow.showNotification?.(result.message, 'error');
+                facesWindow.showNotification?.(result.error, 'error');
             }
         } catch (error) {
             facesWindow.notification.failure(i18n.t('faces:assignment.requestFailed', {
@@ -672,7 +679,7 @@ facesNamespace.initAssignment = (
             }
             createPersonBtn.disabled = true;
             try {
-                const createResponse = await fetch(config.urls.api_people_create, {
+                const createResponse = await fetch(config.urls.faces_person_create, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name: personName.trim() })

@@ -1,33 +1,71 @@
-"""Guard for the automation-builder progress labels.
-
-The conversation feed shows a friendly status line per tool the agent calls
-(_TOOL_STATUS); anything unmapped falls back to a generic "Working…". This test
-keeps that map in sync with the agent's real tool set, so a newly added tool (or a
-renamed one — the data-query tool is `run_data_query`, not the sandbox's `data_query`)
-gets a label instead of silently defaulting to "Working…".
-"""
+"""The generate_automation background task (run_automation_generation), with the agent
+stubbed, against a throwaway SQLite database."""
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
-from yaffo.background_tasks.tasks.generate_automation import _TOOL_STATUS
-from yaffo.site_agents.automation.tool_providers.automation_tool import AutomationToolProvider
-from yaffo.site_agents.automation.tool_providers.automation_trigger_tool import AutomationTriggerToolProvider
-from yaffo.site_agents.common.tool_providers.data_query_tool import DataQueryToolProvider
+from yaffo.background_tasks.tasks import generate_automation as task
+from yaffo.db import db
+from yaffo.db.models import (
+    AUTOMATION_STATUS_IN_PROGRESS,
+    AUTOMATION_STATUS_READY,
+    CONVERSATION_TYPE_ASSISTANT,
+    CONVERSATION_TYPE_STATUS,
+    CONVERSATION_TYPE_USER,
+    Automation,
+)
+from yaffo.db.repositories import automation_repository as repo
+from yaffo.site_agents.agent import AgentEvent
 
 pytestmark = pytest.mark.unit
 
-
-def _agent_tool_names() -> set[str]:
-    # The same providers create_automation_builder_agent wires; get_tools doesn't
-    # touch the session, so a sentinel is fine.
-    session = object()
-    providers = [
-        DataQueryToolProvider(session=session),
-        AutomationToolProvider("slug", session=session),
-        AutomationTriggerToolProvider("slug", session=session),
-    ]
-    return {tool.name for provider in providers for tool in provider.get_tools()}
+SLUG = "tag-beach-photos"
 
 
-def test_every_agent_tool_has_a_progress_label():
-    missing = _agent_tool_names() - set(_TOOL_STATUS)
-    assert not missing, f"_TOOL_STATUS is missing progress text for: {sorted(missing)}"
+@pytest.fixture(autouse=True)
+def api_key(monkeypatch):
+    monkeypatch.setattr("yaffo.site_agents.llm_config.get_api_key", lambda *a, **k: "test-key")
+
+
+@pytest.fixture
+def session(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
+    db.metadata.create_all(engine)
+    with Session(engine) as sess:
+        yield sess
+    engine.dispose()
+
+
+@pytest.fixture
+def automation(session):
+    row = Automation(slug=SLUG, name="Tag beach photos", status=AUTOMATION_STATUS_IN_PROGRESS,
+                     working_code="tag_photos([], 'beach')")
+    session.add(row)
+    session.commit()
+    return row
+
+
+class _FakeAgent:
+    def __init__(self, events):
+        self._events = events
+
+    def run_events(self, user_message, should_cancel=None):
+        yield from self._events
+
+
+def test_a_follow_up_sends_the_earlier_turns(session, automation, monkeypatch):
+    seen = {}
+
+    def agent(*args, **kwargs):
+        seen["history"] = kwargs.get("history")
+        return _FakeAgent([AgentEvent("done")])
+    monkeypatch.setattr(task, "create_automation_builder_agent", agent)
+    repo.add_message(session, automation.id, CONVERSATION_TYPE_USER, "tag beach photos")
+    repo.add_message(session, automation.id, CONVERSATION_TYPE_STATUS, "Writing the automation…")
+    repo.add_message(session, automation.id, CONVERSATION_TYPE_ASSISTANT, "Done. Skipping videos.")
+    repo.add_message(session, automation.id, CONVERSATION_TYPE_USER, "also lakes")
+
+    task.run_automation_generation(session, SLUG, "also lakes", should_cancel=lambda: False)
+
+    assert seen["history"] == [("user", "tag beach photos"), ("assistant", "Done. Skipping videos.")]
+    assert repo.get_by_slug(session, SLUG).status == AUTOMATION_STATUS_READY

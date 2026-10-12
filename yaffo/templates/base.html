@@ -135,7 +135,7 @@
             <li><a href="{{ url_for('albums_index') }}" data-icon="albums"
                    class="nav-link {% if request.endpoint and request.endpoint.startswith('albums_') %}active{% endif %}">{{ _("Albums") }}</a></li>
             <li><a href="{{ url_for('faces_index') }}" data-icon="faces"
-                   class="nav-link {% if request.endpoint == 'faces_index' or request.endpoint == 'faces_assign' or request.endpoint == 'faces_remove' %}active{% endif %}">{{ _("Faces") }}</a>
+                   class="nav-link {% if request.endpoint == 'faces_index' %}active{% endif %}">{{ _("Faces") }}</a>
             </li>
             <li><a href="{{ url_for('people_list') }}" data-icon="people"
                    class="nav-link {% if request.endpoint and 'people' in request.endpoint %}active{% endif %}">{{ _("People") }}</a></li>

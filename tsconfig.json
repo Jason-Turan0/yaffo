@@ -50,6 +50,7 @@
     "yaffo/static/utils.js",
     "yaffo/static/utilities/_base.js",
     "yaffo/static/utilities/automations.js",
+    "yaffo/static/utilities/sync.js",
     "yaffo/static/utilities/index_photos.js",
     "yaffo/static/utilities/remove_duplicates.js"
   ]

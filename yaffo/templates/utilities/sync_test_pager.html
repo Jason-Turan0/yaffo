@@ -1,0 +1,4 @@
+{% from "components/htmx_pagination.html" import htmx_pagination %}
+{% if pagination.total_items %}
+    {{ htmx_pagination(pagination, '', '#sync-test-result', client=true) }}
+{% endif %}

@@ -62,7 +62,7 @@ async function createPersonViaApi(page: Page, personName: string): Promise<Perso
     // Use page.evaluate so the fetch goes through the browser's security.js
     // interceptor, which automatically adds the X-CSRF-Token header.
     const result = await page.evaluate(async (name) => {
-        const response = await fetch('/api/people/create', {
+        const response = await fetch('/faces/people/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name }),
@@ -96,14 +96,10 @@ async function createPersonViaApi(page: Page, personName: string): Promise<Perso
  */
 async function assignFaceToPersonViaApi(page: Page, faceId: number, personId: number): Promise<void> {
     const result = await page.evaluate(async (params) => {
-        const response = await fetch('/api/faces/assign', {
-            method: 'POST',
+        const response = await fetch('/api/faces', {
+            method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                faces: [params.faceId],
-                person: params.personId,
-                faceStatus: 'ASSIGNED'
-            }),
+            body: JSON.stringify({ ids: [params.faceId], person_id: params.personId }),
         });
         return { ok: response.ok, status: response.status };
     }, { faceId, personId });
@@ -151,7 +147,7 @@ test.describe('Face Assignment', () => {
     // Type in the name 'Obama' and click Create Person
     await page.locator('#create-person-name').fill('Obama');
     const [response] = await Promise.all([
-      page.waitForResponse(resp => resp.url().includes('/api/people/create')),
+      page.waitForResponse(resp => resp.url().includes('/faces/people/create')),
       page.locator('#create-person-btn').click(),
     ]);
     expect(response.status()).toBe(201);
@@ -189,7 +185,7 @@ test.describe('Face Assignment', () => {
     // Pick Obama in the sidebar's searchable person select and assign
     await pickSearchableOption(page, '#sidebar-person-select', 'Obama');
     const [response] = await Promise.all([
-      page.waitForResponse(resp => resp.url().includes('/api/faces/assign')),
+      page.waitForResponse(resp => resp.url().includes('/api/faces')),
       page.locator('#sidebar-assign-selected-btn').click(),
     ]);
     expect(response.ok()).toBeTruthy();
@@ -283,7 +279,7 @@ test.describe('Face Assignment', () => {
 
     // Press the shortcut key to assign the whole selected cluster
     const [response] = await Promise.all([
-      page.waitForResponse(resp => resp.url().includes('/api/faces/assign')),
+      page.waitForResponse(resp => resp.url().includes('/api/faces')),
       page.keyboard.press(shortcutKey!),
     ]);
     expect(response.ok()).toBeTruthy();

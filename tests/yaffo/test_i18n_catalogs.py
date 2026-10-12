@@ -15,6 +15,7 @@ from scripts.i18n_catalogs import (
     validate_browser_catalog,
     validate_gettext_catalog,
 )
+from scripts.i18n_llm_cli import CliOptions, CliUnavailableError
 
 pytestmark = pytest.mark.unit
 
@@ -130,7 +131,7 @@ def test_translate_missing_populates_browser_keys(
     monkeypatch.setattr(
         i18n_catalogs,
         "_translate_batch_with_engine",
-        lambda entries, locale, engine: {
+        lambda entries, locale, engine, **kwargs: {
             "browser:common.greeting": "Hallo {{name}}",
         },
     )
@@ -170,7 +171,7 @@ def test_translate_missing_overwrite_regenerates_existing_browser_entries(
     monkeypatch.setattr(
         i18n_catalogs,
         "_translate_batch_with_engine",
-        lambda entries, locale, engine: {
+        lambda entries, locale, engine, **kwargs: {
             "browser:common.greeting": "Hola {{name}}",
             "browser:common.save": "Guardar",
         },
@@ -198,7 +199,7 @@ def test_translate_missing_retries_rejected_entries_then_skips_them(monkeypatch,
     monkeypatch.setattr(i18n_catalogs, "_missing_gettext_entries", lambda locale: [])
     requests = []
 
-    def fake_engine(entries, locale, engine):
+    def fake_engine(entries, locale, engine, **kwargs):
         requests.append([entry.id for entry in entries])
         greeting = "Bonjour {{name}}" if len(requests) > 1 else "Bonjour"
         return {
@@ -230,6 +231,43 @@ def test_generated_translation_must_preserve_placeholders():
 
     with pytest.raises(ValueError, match="placeholders differ"):
         i18n_catalogs._validate_translation(entry, "Hallo")
+
+
+def test_llm_translation_uses_the_cli_with_the_requested_options(monkeypatch):
+    received = []
+    def translated(entries, locale, options):
+        received.append((entries, locale, options))
+        return {"browser:common.greeting": "Hallo {{name}}"}
+    monkeypatch.setattr(i18n_catalogs, "translate_with_cli", translated)
+    entry = TranslationEntry("browser:common.greeting", "Hello {{name}}", "common.greeting")
+    options = CliOptions("claude", "sonnet", 60)
+    assert i18n_catalogs._translate_batch_with_engine([entry], "de", engine="llm", llm=options) == {
+        entry.id: "Hallo {{name}}"}
+    assert received == [([{"id": entry.id, "source": entry.source, "context": entry.context}], "de", options)]
+
+
+def test_auto_falls_back_only_when_no_cli_is_available(monkeypatch):
+    def unavailable(*args, **kwargs):
+        raise CliUnavailableError("missing CLI")
+    monkeypatch.setattr(i18n_catalogs, "translate_with_cli", unavailable)
+    monkeypatch.setattr(i18n_catalogs, "_translate_batch_with_deep_translator", lambda entries, locale: {"fallback": "ok"})
+    entries = [TranslationEntry("browser:common.save", "Save", "common.save")]
+    assert i18n_catalogs._translate_batch_with_engine(entries, "de", engine="auto") == {"fallback": "ok"}
+    with pytest.raises(CliUnavailableError):
+        i18n_catalogs._translate_batch_with_engine(entries, "de", engine="llm")
+    with pytest.raises(CliUnavailableError):
+        i18n_catalogs._translate_batch_with_engine(entries, "de", engine="auto", llm=CliOptions("claude"))
+    def failed(*args, **kwargs):
+        raise ValueError("CLI sign-in failed")
+    monkeypatch.setattr(i18n_catalogs, "translate_with_cli", failed)
+    with pytest.raises(ValueError, match="sign-in failed"):
+        i18n_catalogs._translate_batch_with_engine(entries, "de", engine="auto")
+
+
+def test_generated_translation_preserves_scalar_and_plural_shapes():
+    entry = TranslationEntry("browser:common.greeting", "Hello", "common.greeting")
+    with pytest.raises(ValueError, match="shape changed"):
+        i18n_catalogs._validate_translation(entry, ["Hallo"])
 
 
 def test_deep_translator_backend_preserves_placeholders_and_html(monkeypatch):
@@ -421,8 +459,8 @@ def test_settings_media_controls_use_catalog_keys_and_delegated_actions():
     assert "settings:media.removeMessage" in source
     assert "settings:thumbnail.moveMessage" in source
     assert "settings:thumbnail.moveSucceeded" in source
-    assert "config.urls.add_media_dir" in source
-    assert "config.urls.update_thumbnail_dir" in source
+    assert "config.urls.settings_media_dirs_add" in source
+    assert "config.urls.settings_thumbnail_dir" in source
     assert "window.location.reload()" in source
     assert "escapeHtml(dir.path)" in source
     assert 'data-action="remove-media-dir"' in template
@@ -445,17 +483,18 @@ def test_settings_label_management_uses_gettext_and_delegated_filtering():
 
 def test_settings_llm_forms_use_gettext_and_localized_notifications():
     llm_template = Path("yaffo/templates/settings/_llm.html").read_text(encoding="utf-8")
+    models_template = Path("yaffo/templates/settings/_llm_models.html").read_text(encoding="utf-8")
     key_template = Path("yaffo/templates/settings/_llm_api_key.html").read_text(encoding="utf-8")
     routes = Path("yaffo/routes/settings.py").read_text(encoding="utf-8")
 
     assert '{{ _("AI Generation") }}' in llm_template
-    assert '{{ _("Model") }}' in llm_template
+    assert '{{ _("Model") }}' in models_template
     assert '_("%(provider)s API key:"' in key_template
     assert "_('API key')" in key_template
     assert 'gettext("AI model updated.")' in routes
     # The translated model labels are shared with the Assistant settings dropdown.
     llm_config = Path("yaffo/site_agents/llm_config.py").read_text(encoding="utf-8")
-    assert '"claude-sonnet-4-6": gettext(' in llm_config
+    assert 'gettext("Claude Sonnet 4.6 — balanced")' in llm_config
 
 
 def test_themes_page_uses_gettext_and_localized_javascript():

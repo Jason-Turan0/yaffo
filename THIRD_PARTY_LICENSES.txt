@@ -107,6 +107,11 @@ The authoritative dependency list is in pyproject.toml. Major dependencies:
 - requests (Apache-2.0)
 - watchdog (Apache-2.0)
 - platformdirs (MIT), keyring (MIT), tqdm (MPL-2.0 / MIT)
+- beautifulsoup4 (MIT) with soupsieve (MIT), markdownify (MIT) with six (MIT):
+  documentation pages the service builder reads, as Markdown
+- Public Suffix List (MPL-2.0, https://publicsuffix.org): a snapshot is bundled
+  as yaffo/sync/data/public_suffix_list.dat, unmodified; it decides which website
+  domains the service builder asks before reading
 
 Run `pip-licenses` to generate a complete, current license report.
 

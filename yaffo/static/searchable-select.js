@@ -83,9 +83,11 @@ class SearchableSelect {
         displayButton.type = 'button';
         displayButton.className = 'searchable-select-display';
         displayButton.innerHTML = `
-            <span class="searchable-select-text">${this.getSelectedText()}</span>
+            <span class="searchable-select-text"></span>
             <span class="searchable-select-arrow">▼</span>
         `;
+        const selectedText = displayButton.querySelector('.searchable-select-text');
+        if (selectedText) selectedText.textContent = this.getSelectedText();
 
         // Create dropdown container
         const dropdown = document.createElement('div');

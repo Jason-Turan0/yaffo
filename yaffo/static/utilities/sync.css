@@ -1,0 +1,815 @@
+/* The sync automation page (templates/utilities/sync_detail.html) and its filter
+   screen. The steps are `settings-section` cards, so every theme skins them the way it
+   skins Settings; the card base is restated here because settings/index.css, which
+   owns it, isn't loaded on this page. */
+
+.sync-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.sync-detail .settings-section {
+    margin: 0;
+    padding: 20px;
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.sync-detail .settings-section h2 {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    color: var(--color-text);
+}
+
+.sync-detail .section-description {
+    margin: 0 0 16px;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-base);
+}
+
+/* ---- header ---- */
+
+.sync-header-status {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.sync-header-summary {
+    color: var(--color-text-secondary);
+    overflow-wrap: anywhere;
+}
+
+/* ---- forms ---- */
+
+.sync-form {
+    max-width: 720px;
+}
+
+.sync-form .form-group {
+    margin-bottom: 16px;
+}
+
+.sync-option-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 5px;
+}
+
+.sync-form .sync-option-label label {
+    margin-bottom: 0;
+}
+
+.sync-detail .help-tip[data-icon]::before,
+.service-panel .help-tip[data-icon]::before {
+    display: block;
+}
+
+@media (hover: none), (pointer: coarse) {
+    .sync-detail .help-tip {
+        min-width: 44px;
+    }
+
+    .sync-detail .help-tip[data-tooltip]:focus::after,
+    .sync-detail .help-tip[data-tooltip]:active::after {
+        opacity: 1;
+    }
+}
+
+.sync-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.sync-form-actions form {
+    margin: 0;
+}
+
+.sync-selection-choices {
+    display: grid;
+    gap: 8px;
+    margin: 0 0 16px;
+    padding: 0;
+    border: 0;
+}
+
+.sync-selection-choices legend {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.sync-selection-choice {
+    padding: 12px 14px;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.sync-selection-choice.is-selected {
+    border-color: var(--color-accent);
+    background: var(--color-bg);
+}
+
+.sync-selection-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.sync-selection-label input {
+    margin: 0;
+}
+
+.sync-selection-detail {
+    margin: 10px 0 0 26px;
+}
+
+.sync-selection-detail[hidden] {
+    display: none;
+}
+
+.sync-selection-detail .hint-text {
+    margin: 0 0 6px;
+}
+
+.sync-selection-detail select {
+    width: 100%;
+    margin-top: 5px;
+}
+
+.sync-folder-input {
+    display: flex;
+    gap: 8px;
+}
+
+.sync-folder-input input {
+    flex: 1;
+    min-width: 0;
+}
+
+.sync-folder-input .btn-secondary {
+    flex-shrink: 0;
+}
+
+/* ---- When ---- */
+
+.sync-step .automation-triggers {
+    margin: 0;
+}
+
+.sync-inline-action {
+    display: contents;
+}
+
+.sync-header-since {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+}
+
+/* ---- Test result ---- */
+
+/* What a run would do now: a title with when it was checked, number tiles for what
+   would happen, then a sample of the files. */
+.sync-test-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.sync-test-meta {
+    margin: 4px 0 0;
+}
+
+.sync-test-nothing {
+    margin: 0 0 12px;
+    color: var(--color-text);
+}
+
+.sync-test-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 16px;
+}
+
+.sync-test-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 96px;
+    padding: 8px 12px;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+}
+
+/* The label comes first in the markup (dt before dd); the number shows on top. */
+.sync-test-stat-value {
+    order: -1;
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.sync-test-stat-label {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+}
+
+.sync-test-table th:last-child,
+.sync-test-table td:last-child {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.sync-test-note {
+    margin: 8px 0 0;
+}
+
+/* ---- Items ---- */
+
+.sync-items-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.sync-items-filters .chip {
+    cursor: pointer;
+    border: none;
+    font: inherit;
+    font-size: var(--font-size-xs);
+}
+
+.sync-retry {
+    margin-left: auto;
+}
+
+.sync-items-toolbar {
+    max-width: 720px;
+    margin-bottom: 12px;
+}
+
+.sync-items-search {
+    width: 100%;
+}
+
+.sync-items-name,
+.sync-items-where {
+    overflow-wrap: anywhere;
+}
+
+.sync-items-where {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.sync-items-when {
+    white-space: nowrap;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+}
+
+/* ---- filter screen ---- */
+
+.sync-filter-save {
+    margin: 0;
+}
+
+.sync-filter-hint {
+    margin: 0 0 16px;
+}
+
+@media (max-width: 640px) {
+    .sync-detail .settings-section {
+        padding: 16px;
+    }
+
+    .sync-folder-input {
+        flex-direction: column;
+    }
+
+    .sync-term {
+        grid-template-columns: 1fr;
+    }
+
+    .sync-retry {
+        margin-left: 0;
+    }
+}
+
+/* ---- account (web syncs) ---- */
+
+/* The signed-in account as one row: who and its status on the left, the sign-in
+   actions on the right; they wrap under each other on narrow screens. */
+.sync-account-card {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 16px;
+    max-width: 720px;
+    padding: 12px 16px;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.sync-account-who {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.sync-account-name {
+    font-weight: 600;
+    color: var(--color-text);
+    overflow-wrap: anywhere;
+}
+
+.sync-account-meta {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+}
+
+.sync-account-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.sync-account-others {
+    margin-top: 16px;
+}
+
+.sync-account-others label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+/* "Signing in on another device?" reads as a link, not a disclosure widget. */
+.sync-device-code {
+    margin-top: 12px;
+    max-width: 720px;
+}
+
+.sync-device-code summary {
+    display: inline-block;
+    cursor: pointer;
+    list-style: none;
+    color: var(--color-accent);
+    font-size: var(--font-size-sm);
+}
+
+.sync-device-code summary::-webkit-details-marker {
+    display: none;
+}
+
+.sync-device-code summary:hover {
+    text-decoration: underline;
+}
+
+.sync-device-code-body {
+    margin-top: 8px;
+}
+
+.sync-device-code-body .hint-text {
+    margin: 0 0 8px;
+}
+
+.sync-device-code-value {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-lg);
+    letter-spacing: 0.15em;
+    color: var(--color-text);
+}
+
+/* ---- picker for a folder in the account ---- */
+
+.sync-remote-value[readonly] {
+    cursor: pointer;
+}
+
+.sync-picker {
+    margin-top: 8px;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    overflow: hidden;
+}
+
+.sync-picker-crumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px;
+    border-bottom: var(--border-width) solid var(--color-border);
+    background: var(--color-bg);
+    font-size: var(--font-size-sm);
+    overflow-wrap: anywhere;
+}
+
+.sync-picker-crumb {
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--color-accent);
+    font: inherit;
+    cursor: pointer;
+}
+
+.sync-picker-crumb:hover {
+    text-decoration: underline;
+}
+
+.sync-picker-sep {
+    color: var(--color-text-muted);
+}
+
+.sync-picker-here {
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.sync-picker-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.sync-picker-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.sync-picker-item:last-child {
+    border-bottom: none;
+}
+
+.sync-picker-name {
+    display: inline-flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--color-text);
+    font: inherit;
+    text-align: start;
+    overflow-wrap: anywhere;
+}
+
+.sync-picker-open {
+    cursor: pointer;
+}
+
+.sync-picker-open:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
+}
+
+.sync-picker-name[data-icon] {
+    justify-content: flex-start;
+}
+
+/* One icon size for openable (button) and plain (span) rows. */
+.sync-picker-name[data-icon]::before {
+    width: 16px;
+    height: 16px;
+}
+
+/* Folders that can't be opened are plain text, not buttons, so they don't get the
+   icon base from components/icons.css; restate it (the per-icon mask still applies). */
+span.sync-picker-name[data-icon]::before {
+    content: "";
+    flex: none;
+    background-color: currentColor;
+    -webkit-mask-position: center;
+    -webkit-mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+    mask-repeat: no-repeat;
+}
+
+.sync-picker-status:not(:empty) {
+    margin: 0;
+    padding: 10px 12px;
+}
+
+.sync-picker-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: var(--border-width) solid var(--color-border);
+}
+
+.sync-picker-spacer {
+    flex: 1;
+}
+
+.sync-picker-new {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.sync-picker-new input {
+    flex: 1;
+    min-width: 12rem;
+}
+
+/* ---- review before enabling a web sync ---- */
+
+.sync-review-terms {
+    margin: 0 0 12px;
+}
+
+.sync-review-term {
+    display: grid;
+    grid-template-columns: minmax(120px, 1fr) 2fr;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.sync-review-term dt {
+    color: var(--color-text-muted);
+}
+
+.sync-review-term dd {
+    margin: 0;
+    color: var(--color-text);
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+    .sync-review-term {
+        grid-template-columns: 1fr;
+        gap: 2px;
+    }
+}
+
+/* The service builder (sync_service.html): the chat beside a tabbed panel. */
+.service-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+.service-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 4px;
+    border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.service-tab {
+    padding: 8px 10px;
+    white-space: nowrap;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: calc(-1 * var(--border-width));
+}
+
+.service-tab:hover {
+    color: var(--color-text);
+}
+
+.service-tab.is-active {
+    color: var(--color-text);
+    border-bottom-color: var(--color-accent);
+}
+
+.service-problems {
+    margin: 8px 0 0;
+    padding-left: 20px;
+}
+
+.service-method {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    white-space: nowrap;
+}
+
+.service-endpoint-list {
+    list-style: none;
+    margin: 0 0 16px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.service-endpoints code,
+.service-test-calls code,
+.service-endpoint-list code,
+.service-return-address {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    overflow-wrap: anywhere;
+}
+
+.service-test-report {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.service-permission {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border: var(--border-width) solid var(--color-accent);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    background: var(--color-surface);
+}
+
+.service-permission.is-answered {
+    border-color: var(--color-border);
+    color: var(--color-text-muted);
+    padding: 6px 12px;
+}
+
+.service-permission p {
+    margin: 0;
+}
+
+.service-permission-domains,
+.service-permission-urls {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.service-permission-urls {
+    padding-left: 24px;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    overflow-wrap: anywhere;
+}
+
+.service-permission-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* The http confirmation under a server address: spaced from the field, its box level
+   with the first line of its (two-line) text. */
+.sync-allow-http {
+    margin-top: 10px;
+    align-items: flex-start;
+    font-size: var(--font-size-sm);
+    line-height: 1.4;
+}
+
+.sync-allow-http input[type="checkbox"] {
+    margin-top: 1px;
+}
+
+/* The service builder's two columns: the chat keeps at least 360px and ~60% of the
+   width; the tab panel takes the rest and scrolls its own wide content (code, tables)
+   instead of squeezing the chat. Overrides .automation-edit-screen's flex row, sized
+   for the automation builder's narrower code panel. */
+.automation-edit-screen.service-builder {
+    display: grid;
+    grid-template-columns: minmax(360px, 3fr) minmax(0, 2fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.service-builder > .automation-conversation {
+    min-width: 360px;
+}
+
+/* The tab panel is a card like the chat's (components/chat_dialog.css .chat-card). */
+.service-builder > .service-panel {
+    min-width: 0;
+    overflow-x: auto;
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    padding: 8px 16px 16px;
+}
+
+.service-builder .automation-code {
+    max-height: 70vh;
+    max-height: 70dvh;
+}
+
+@media (max-width: 900px) {
+    .automation-edit-screen.service-builder {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .service-builder > .automation-conversation {
+        min-width: 0;
+    }
+}
+
+
+/* One body size for the whole tab panel (the theme's base, as form labels use
+   everywhere): text, labels, hints, terms and cells. Navigation and headings (tabs,
+   section titles, table headers) stay at the small size, code at extra-small. */
+.service-panel {
+    font-size: var(--font-size-base);
+}
+
+.service-panel .sync-review-term dt,
+.service-panel .sync-review-term dd,
+.service-panel label,
+.service-panel .hint-text,
+.service-panel .no-data,
+.service-panel td,
+.service-panel p {
+    font-size: var(--font-size-base);
+}
+
+.service-heading {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 20px 0 10px;
+}
+
+.service-heading:first-of-type {
+    margin-top: 4px;
+}
+
+.service-heading .automation-section-title {
+    margin: 0;
+}
+
+.service-account-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.service-readonly {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+}
+
+.service-endpoint-rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.service-endpoint-rows li {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.service-endpoint-rows code {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    overflow-wrap: anywhere;
+}

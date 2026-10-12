@@ -44,11 +44,24 @@ Powers Yaffo's AI features, such as the
 [automations](../create-customize/automations.md), and
 [Ask Yaffo](../start-here/ask-yaffo.md).
 
-- **Model** — the model used for AI generation.
+- **Active model** — shows the saved provider and model currently used by Yaffo,
+  and updates when you select a model.
+- **Provider** — starts empty. Choose a provider to look up its models using its
+  saved API key and show its key settings.
+- **Model** — search the chosen provider's models and select one to use for AI
+  generation. The last successful list is available offline; a small starter list
+  is available before the provider's first successful lookup. Saving or clearing
+  its key updates the lookup too. The info icon beside **Model** explains where
+  the choices come from.
 
 The API key for the selected model's provider is stored securely in your
 operating system's credential store (the OS keychain), **not** in Yaffo's
 database.
+
+Selecting a provider opens that provider's key settings. If its key is not set,
+save one there to look up its available models. Selecting a model updates
+**Active model** and the choice used by the builders and Ask Yaffo. The info icon
+beside **Model** explains the saved-list fallback.
 
 ## Assistant
 
@@ -67,6 +80,9 @@ the model and key from **AI Generation**.
   - **Background jobs** — jobs, the background task host, and automation runs.
   - **Capture-date metadata** — read a photo's capture date from its file when
     checking a date problem. Off by default.
+  - **Read public websites** — read public HTTPS pages after you approve their
+    domains for the conversation. Enabled by default; website contents are sent
+    to your AI provider.
 - **Changes it can propose** — one switch per kind of change, in groups: Tags and
   favorites, Albums, People and faces, Dates and places, Labels, Files on disk,
   Library upkeep, and Preferences. Each group shows how many are on, and changes
@@ -96,5 +112,5 @@ when reporting a problem.
 
 Scheduled and event-driven behaviors are configured on their own screen, under
 **Library** → **Automations**, not on the Settings page. Their tunable defaults
-are edited there through each automation's **Configure** panel. See
+are edited there through each automation's **Configuration** panel. See
 [Automations](../create-customize/automations.md).

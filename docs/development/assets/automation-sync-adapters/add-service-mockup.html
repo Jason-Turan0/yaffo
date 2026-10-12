@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Add a Service Mockup</title>
+<style>
+:root {
+  --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --bg: #f8f9fa; --surface: #fff; --sunken: #eef0f2;
+  --text: #212529; --text2: #495057; --muted: #6c757d; --faint: #adb5bd;
+  --border: #dee2e6; --border-strong: #ced4da;
+  --accent: #007bff; --accent-soft: #e7f3ff; --accent-soft-text: #004085;
+  --success: #28a745; --success-soft: #d4edda; --success-soft-text: #155724;
+  --danger-soft: #f8d7da; --danger-soft-text: #721c24;
+  --warning-soft: #fff3cd; --warning-soft-text: #856404; --warning-border: #f0d78a;
+  --code-bg: #f4f5f7;
+  --radius: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171a; --surface: #1e2125; --sunken: #26292e;
+    --text: #e9ecef; --text2: #ced4da; --muted: #98a2ad; --faint: #5c636a;
+    --border: #33383e; --border-strong: #454b52;
+    --accent: #4da3ff; --accent-soft: #10263d; --accent-soft-text: #a9d1ff;
+    --success-soft: #133020; --success-soft-text: #9fdcae;
+    --danger-soft: #3a1418; --danger-soft-text: #f1a7ae;
+    --warning-soft: #3a3010; --warning-soft-text: #f0d68a; --warning-border: #6b5a1c;
+    --code-bg: #191b1f;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 var(--font-body); }
+a { color: var(--accent); text-decoration: none; }
+code, .mono { font-family: var(--font-mono); font-size: 12px; }
+
+.mock-bar { background: #222; color: #ddd; padding: 6px 16px; font-size: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.mock-bar button { background: #444; color: #eee; border: 0; border-radius: 4px; padding: 3px 9px; cursor: pointer; font-size: 12px; }
+.mock-bar button.on { background: #f0b429; color: #222; }
+
+.page { max-width: 1240px; margin: 0 auto; padding: 18px 24px 60px; }
+.crumbs { font-size: 12px; color: var(--muted); }
+.title-row { display: flex; align-items: center; gap: 10px; margin: 4px 0 14px; flex-wrap: wrap; }
+h1 { font-size: 24px; margin: 0; }
+.spacer { flex: 1; }
+.chip { font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 600; white-space: nowrap; }
+.chip.ok { background: var(--success-soft); color: var(--success-soft-text); }
+.chip.warn { background: var(--warning-soft); color: var(--warning-soft-text); }
+.chip.info { background: var(--accent-soft); color: var(--accent-soft-text); }
+.chip.muted { background: var(--sunken); color: var(--muted); }
+.chip.bad { background: var(--danger-soft); color: var(--danger-soft-text); }
+
+.btn { font: inherit; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); border-radius: var(--radius); padding: 6px 12px; cursor: pointer; }
+.btn:hover { background: var(--sunken); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:disabled { opacity: .45; cursor: not-allowed; }
+.btn.small { padding: 3px 9px; font-size: 12px; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 16px; align-items: start; }
+
+/* chat */
+.chat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; display: flex; flex-direction: column; min-height: 640px; }
+.chat-head { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.chat-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.msg { max-width: 92%; padding: 9px 12px; border-radius: 10px; }
+.msg.user { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 3px; }
+.msg.user a { color: #fff; text-decoration: underline; }
+.msg.bot { align-self: flex-start; background: var(--sunken); border-bottom-left-radius: 3px; }
+.msg.bot ol { margin: 6px 0 0; padding-left: 20px; }
+.tool { align-self: flex-start; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; padding: 2px 4px; }
+.tool .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+.tool .dot.rec { background: var(--faint); }
+.ask { align-self: stretch; border: 1px solid var(--warning-border); background: var(--warning-soft); color: var(--warning-soft-text); border-radius: 8px; padding: 10px 12px; }
+.ask b { color: inherit; }
+.ask .row { margin-top: 8px; }
+.ask .fine { font-size: 12px; opacity: .85; margin-top: 4px; }
+.ask.done { background: var(--surface); border-color: var(--border); color: var(--muted); font-size: 12px; padding: 6px 10px; }
+.chat-input { border-top: 1px solid var(--border); padding: 10px; display: flex; gap: 8px; }
+.chat-input input { flex: 1; }
+.suggest { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.suggest button { text-align: left; font: inherit; font-size: 13px; background: var(--surface); border: 1px dashed var(--border-strong); border-radius: var(--radius); padding: 7px 10px; cursor: pointer; color: var(--text2); }
+.empty-chat { margin: auto 0; text-align: center; color: var(--muted); padding: 20px; }
+.empty-chat h3 { color: var(--text); margin: 0 0 4px; font-size: 16px; }
+.settings-note { font-size: 12px; color: var(--muted); padding: 0 14px 10px; }
+
+/* right panel */
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); padding: 0 10px; flex-wrap: wrap; }
+.tabs button { font: inherit; background: none; border: 0; padding: 10px 12px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs button.on { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+.tabpane { display: none; padding: 14px 16px 18px; }
+.tabpane.on { display: block; }
+.empty { color: var(--muted); text-align: center; padding: 40px 10px; }
+
+.sec { margin-bottom: 16px; }
+.sec h4 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.kv { display: grid; grid-template-columns: 130px 1fr; gap: 4px 12px; font-size: 13px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; }
+.hostlist { display: flex; gap: 6px; flex-wrap: wrap; }
+.host { font-family: var(--font-mono); font-size: 12px; background: var(--sunken); border-radius: 4px; padding: 2px 7px; }
+.opt { display: flex; gap: 8px; font-size: 13px; padding: 4px 0; border-bottom: 1px solid var(--border); }
+.opt:last-child { border-bottom: 0; }
+.opt .type { color: var(--muted); font-family: var(--font-mono); font-size: 12px; }
+
+.ep { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); align-items: center; font-size: 13px; }
+.ep:last-child { border-bottom: 0; }
+.ep .m { font-family: var(--font-mono); font-size: 11px; font-weight: 700; }
+.ep code { color: var(--muted); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.new-tag { font-size: 10px; font-weight: 700; color: var(--accent); margin-left: 4px; }
+
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 4px; }
+.field .hint { font-size: 12px; color: var(--muted); margin-top: 3px; }
+input[type=text], input[type=password] { font: inherit; width: 100%; padding: 6px 9px; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface); color: var(--text); }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.copybox { display: flex; gap: 6px; }
+.copybox input { font-family: var(--font-mono); font-size: 12px; }
+.steps { margin: 0 0 12px; padding-left: 18px; font-size: 13px; color: var(--text2); }
+.steps li { margin-bottom: 3px; }
+
+pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; font: 12px/1.5 var(--font-mono); overflow-x: auto; margin: 0; max-height: 470px; }
+pre .k { color: #a626a4; } pre .s { color: #50a14f; } pre .c { color: var(--muted); font-style: italic; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) pre .k { color: #c678dd; } :root:not([data-theme="light"]) pre .s { color: #98c379; } }
+
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th { text-align: left; color: var(--text2); background: var(--sunken); padding: 6px 8px; font-weight: 600; }
+td { padding: 6px 8px; border-top: 1px solid var(--border); vertical-align: top; }
+td code { word-break: break-all; }
+.diff { padding: 10px 12px; border-radius: var(--radius); background: var(--accent-soft); color: var(--accent-soft-text); margin-bottom: 12px; font-size: 13px; }
+.box-sec { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 12px; }
+.box-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.panel-foot { border-top: 1px solid var(--border); padding: 10px 16px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.note { font-size: 12px; color: var(--muted); }
+
+/* publish modal */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; padding: 16px; }
+.overlay.on { display: flex; }
+.modal { background: var(--surface); border-radius: 10px; width: 100%; max-width: 560px; max-height: 92vh; overflow: auto; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+.modal h2 { margin: 0 0 4px; font-size: 18px; }
+.modal .lead { color: var(--muted); margin: 0 0 14px; font-size: 13px; }
+.modal .box { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 10px; }
+.modal footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.check { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; }
+
+.variant { display: none; }
+.variant.on { display: flex; }
+
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+  .chat { min-height: 0; }
+  .page { padding: 14px 16px 40px; }
+  .kv { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="mock-bar">
+  <strong>Mockup:</strong>
+  <button data-go="1" class="on">1 · Describe</button>
+  <button data-go="2">2 · Reading docs</button>
+  <button data-go="3">3 · Test account</button>
+  <button data-go="4">4 · Live test</button>
+  <button data-go="5">5 · Publish</button>
+</div>
+
+<div class="page">
+  <div class="crumbs">Utilities › Automations › Add a new service</div>
+  <div class="title-row">
+    <h1 id="title">New service</h1>
+    <span class="chip muted" id="status-chip">Draft</span>
+    <span class="spacer"></span>
+    <button class="btn small" id="publish-btn" disabled>Publish</button>
+  </div>
+
+  <div class="layout">
+    <!-- ================= CHAT ================= -->
+    <section class="chat">
+      <div class="chat-head">Service builder · <span>Claude Opus 5.5</span></div>
+
+      <!-- step 1 -->
+      <div class="chat-body variant on" data-step="1">
+        <div class="chat-body" style="padding:0">
+          <div class="empty-chat">
+            <h3>Which service do you want to connect?</h3>
+            <p>Say what it is and whether photos go <b>to</b> it or come <b>from</b> it. The builder finds the service's API docs itself and asks before reading from any new site.</p>
+            <div class="suggest">
+              <button>Send albums to Flickr as sets</button>
+              <button>Import photos from my Nextcloud (WebDAV)</button>
+              <button>Send photos to a Discord channel through a webhook</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- step 2 -->
+      <div class="chat-body variant" data-step="2">
+        <div class="msg user">I want to send Yaffo albums to Flickr as sets.</div>
+        <div class="ask done">✓ <b>flickr.com</b> allowed · 3 pages</div>
+        <div class="tool"><span class="dot"></span>Read 3 pages from flickr.com · 29 KB</div>
+        <div class="msg bot">Flickr signs requests with <b>OAuth 1.0a</b>, uploads go to <code>up.flickr.com</code>, and sets are called <i>photosets</i>. The docs pages don't show the exact response shape for the photoset methods, so I'm looking for a machine-readable spec.</div>
+        <div class="ask done">✓ <b>brave.com</b> allowed (web search) · 1 of 10 searches used</div>
+        <div class="tool"><span class="dot"></span>Searched: flickr api openapi spec photosets · 6 results</div>
+        <div class="tool"><span class="dot"></span>Read 1 page from flickr.com (already allowed)</div>
+        <div class="ask">
+          The builder wants to read pages from <b>2 new sites</b>:
+          <div style="margin:8px 0 2px">
+            <label class="check"><input type="checkbox" checked> <span><b>githubusercontent.com</b> · 1 page<div class="fine mono">raw.githubusercontent.com/…/flickr-api-spec/main/openapi.yaml</div></span></label>
+          </div>
+          <div style="margin:6px 0 2px">
+            <label class="check"><input type="checkbox" checked> <span><b>stackoverflow.com</b> · 2 pages<div class="fine mono">stackoverflow.com/questions/…/flickr-photosets-getlist-title<br>stackoverflow.com/questions/…/flickr-oauth-signature</div></span></label>
+          </div>
+          <div class="fine">Allowed sites aren't asked about again while building this service. Only page text is fetched, by Yaffo.</div>
+          <div class="row"><button class="btn small primary">Allow selected</button><button class="btn small">Deny all</button></div>
+        </div>
+      </div>
+
+      <!-- step 3 -->
+      <div class="chat-body variant" data-step="3">
+        <div class="msg user">I want to send Yaffo albums to Flickr as sets.</div>
+        <div class="tool"><span class="dot"></span>Read 4 pages from flickr.com · searched once</div>
+        <div class="ask done">✓ <b>githubusercontent.com</b>, <b>stackoverflow.com</b> allowed</div>
+        <div class="tool"><span class="dot"></span>Read …/flickr-api-spec/main/openapi.yaml · condensed to 41 endpoints</div>
+        <div class="tool"><span class="dot"></span>Read 2 pages from stackoverflow.com</div>
+        <div class="tool"><span class="dot"></span>Saved draft · 118 lines · 4 endpoints found</div>
+        <div class="msg bot">
+          I've drafted the service (see the panel). Flickr doesn't know Yaffo, so you need your own free API key:
+          <ol>
+            <li>Open <a href="#">flickr.com/services/apps/create</a> and choose <i>Non-commercial key</i>.</li>
+            <li>Follow the steps on the <i>Test account</i> tab: it has the one address Flickr asks for, ready to copy.</li>
+            <li>Paste the <b>Key</b> and <b>Secret</b> Flickr gives you, then sign in a test account.</li>
+          </ol>
+          Then I can test against your real account.
+        </div>
+      </div>
+
+      <!-- step 4 -->
+      <div class="chat-body variant" data-step="4">
+        <div class="tool"><span class="dot"></span>Saved draft · 118 lines</div>
+        <div class="msg bot">You're signed in as <b>jturan</b>. I'd like to run the test myself so I can check my field mapping against real responses.</div>
+        <div class="ask done">✓ Live read-only tests allowed for <b>Flickr (jturan)</b> · <a href="#">Revoke</a></div>
+        <div class="tool"><span class="dot"></span>Test · <code>GET photosets.getList</code> · 200 · 3 sets (live)</div>
+        <div class="tool"><span class="dot rec"></span>Test · <code>POST upload</code> ×5, <code>photosets.create</code> ×1 · recorded, not sent</div>
+        <div class="msg bot">The real response wraps titles as <code>title._content</code>, not <code>title</code> as the docs page says, so <code>list_remote</code> missed your existing <i>Portfolio</i> set. Fixed and re-tested: it now matches, and the test would add 5 photos to the existing set instead of creating a duplicate.</div>
+        <div class="tool"><span class="dot"></span>Saved draft · 121 lines · Test passed</div>
+      </div>
+
+      <!-- step 5 -->
+      <div class="chat-body variant" data-step="5">
+        <div class="tool"><span class="dot"></span>Saved draft · 121 lines · Test passed</div>
+        <div class="msg bot">Ready to publish. After that, pick <b>Send to… › Flickr sets</b> to set up a sync, or I can open one for you with your <i>Portfolio</i> album selected. Your <b>jturan</b> account is already signed in, so the sync just confirms it.</div>
+        <div class="msg user">Publish it.</div>
+      </div>
+
+      <div class="chat-input"><input type="text" placeholder="Describe the service, or ask for a change…"><button class="btn primary">Send</button></div>
+    </section>
+
+    <!-- ================= SERVICE PANEL ================= -->
+    <section class="panel">
+      <div class="tabs" id="tabs">
+        <button class="on" data-tab="overview">Overview</button>
+        <button data-tab="signin">Test account</button>
+        <button data-tab="access">Web access</button>
+        <button data-tab="code">Code</button>
+        <button data-tab="test">Test</button>
+      </div>
+
+      <!-- overview -->
+      <div class="tabpane on" data-pane="overview">
+        <div class="empty" data-only="1">Nothing yet. The builder fills this in as it writes the service.</div>
+        <div data-from="2">
+          <div class="sec">
+            <h4>Service</h4>
+            <dl class="kv">
+              <dt>Name</dt><dd><b>Flickr sets</b></dd>
+              <dt>Direction</dt><dd>↑ Send to (photos leave Yaffo)</dd>
+              <dt>Sign-in method</dt><dd>OAuth 1.0a · you supply a key and secret</dd>
+              <dt>Permission asked</dt><dd><code>write</code> (upload, create and edit sets)</dd>
+              <dt>Talks to</dt><dd><div class="hostlist"><span class="host">api.flickr.com</span><span class="host">up.flickr.com</span><span class="host">www.flickr.com</span></div></dd>
+            </dl>
+          </div>
+          <div class="sec">
+            <h4>Options a sync will ask for</h4>
+            <div class="opt"><b>Set title</b><span class="type">string</span><span class="spacer"></span><span class="note">default: album name</span></div>
+            <div class="opt"><b>Make photos public</b><span class="type">bool</span><span class="spacer"></span><span class="note">default: off</span></div>
+          </div>
+          <div class="sec">
+            <h4>What it can do</h4>
+            <div class="row"><span class="chip ok">Add</span><span class="chip ok">Remove</span><span class="chip muted">Edit captions — no</span><span class="chip ok">Recover after a crash</span><span class="chip info">Many sets</span><span class="chip muted">Batch 10</span></div>
+          </div>
+          <div class="sec" data-from="3">
+            <h4>Status</h4>
+            <div class="row" id="ov-status"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- sign in -->
+      <div class="tabpane" data-pane="signin">
+        <div class="empty" data-only="1 2">Appears once the builder knows how this service signs in.</div>
+        <div data-from="3">
+          <div class="box-sec">
+            <div class="box-head"><b>1 · App credentials</b><span class="spacer"></span><span id="app-chip"></span></div>
+            <p class="note">Flickr needs to know which app is asking. You register Yaffo with Flickr once; every sync that uses this service reuses it.</p>
+            <ol class="steps">
+              <li>Open <a href="#">Flickr's <i>Create an app</i> form</a> and choose <i>Non-commercial key</i>.</li>
+              <li>Flickr asks where to send you back after signing in. Paste this into <b>Callback URL</b>:
+                <div class="copybox" style="margin-top:6px"><input type="text" readonly value="http://127.0.0.1:5001/sync/oauth/callback"><button class="btn small">Copy</button></div>
+              </li>
+              <li>Flickr then shows a <b>Key</b> and a <b>Secret</b>. Paste them here:</li>
+            </ol>
+            <div class="field"><label>Key</label><input type="text" value="9f2c41e0a7…" ></div>
+            <div class="field"><label>Secret</label><input type="password" value="xxxxxxxxxxxx"><div class="hint">Stored in your system keychain. Never in Yaffo's database, never sent to the AI model.</div></div>
+            <div class="row"><button class="btn small">Save credentials</button><span class="note">Changing these later signs every sync using this service out.</span></div>
+          </div>
+          <div class="box-sec">
+            <div class="box-head"><b>2 · Test account</b></div>
+            <p class="note">The account the builder tests against while you build or edit this service. It's saved like any sign-in: when you set up a sync with this service, this account is already signed in.</p>
+            <div class="row" id="signin-row"></div>
+            <p class="note" id="live-note"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- web access -->
+      <div class="tabpane" data-pane="access">
+        <div class="empty" data-only="1">No web calls yet.</div>
+        <div data-from="2">
+          <p class="note" style="margin-top:0">Found in the code. Nothing else can be called. You approve this list when you publish.</p>
+          <div class="ep"><span class="m">GET</span><span>List sets <span class="chip ok" style="margin-left:4px">read</span><code>api.flickr.com/services/rest?method=flickr.photosets.getList</code></span><span></span></div>
+          <div class="ep"><span class="m">POST</span><span>Upload a photo <span class="chip warn" style="margin-left:4px">write</span><code>up.flickr.com/services/upload/</code></span><span></span></div>
+          <div class="ep"><span class="m">POST</span><span>Create a set <span class="chip warn" style="margin-left:4px">write</span><code>api.flickr.com/services/rest?method=flickr.photosets.create</code></span><span></span></div>
+          <div class="ep"><span class="m">POST</span><span>Add / remove photos in a set <span class="chip warn" style="margin-left:4px">write</span><code>api.flickr.com/services/rest?method=flickr.photosets.{addPhoto|removePhoto}</code></span><span></span></div>
+        </div>
+      </div>
+
+      <!-- code -->
+      <div class="tabpane" data-pane="code">
+        <div class="empty" data-only="1">No code yet.</div>
+        <div data-from="2">
+<pre><span class="c"># Flickr sets — custom target adapter (draft)</span>
+REST = <span class="s">"https://api.flickr.com/services/rest"</span>
+UP = <span class="s">"https://up.flickr.com/services/upload/"</span>
+
+<span class="k">def</span> push(batch, ctx):
+    sets = dict(ctx[<span class="s">"state"</span>].get(<span class="s">"sets"</span>, {}))
+    results = []
+    <span class="k">for</span> item <span class="k">in</span> batch:
+        up = web_upload_media(CONNECTION, <span class="s">"POST"</span>, UP, item[<span class="s">"media_item_id"</span>],
+                              encoding=<span class="s">"multipart"</span>, field=<span class="s">"photo"</span>,
+                              fields={<span class="s">"is_public"</span>: <span class="s">"1"</span> <span class="k">if</span> ctx[<span class="s">"options"</span>][<span class="s">"public"</span>] <span class="k">else</span> <span class="s">"0"</span>})
+        ...
+    <span class="k">return</span> {<span class="s">"results"</span>: results, <span class="s">"state_patch"</span>: {<span class="s">"sets"</span>: sets}}
+
+<span class="k">def</span> list_remote(cursor, ctx):
+    r = web_request(CONNECTION, <span class="s">"GET"</span>, REST,
+                    query={<span class="s">"method"</span>: <span class="s">"flickr.photosets.getList"</span>, <span class="s">"format"</span>: <span class="s">"json"</span>})
+    ...  <span class="c"># title["_content"], not title (checked against a live response)</span>
+
+ADAPTER = {
+    <span class="s">"contract"</span>: 1, <span class="s">"role"</span>: <span class="s">"target"</span>, <span class="s">"provider"</span>: <span class="s">"custom"</span>,
+    <span class="s">"title"</span>: <span class="s">"Flickr sets"</span>,
+    <span class="s">"connection"</span>: {
+        <span class="s">"auth_kind"</span>: <span class="s">"oauth1a"</span>,
+        <span class="s">"auth"</span>: {<span class="s">"request_token_url"</span>: <span class="s">"https://www.flickr.com/services/oauth/request_token"</span>, ...,
+                 <span class="s">"scopes"</span>: [<span class="s">"write"</span>]},
+        <span class="s">"base_urls"</span>: [<span class="s">"https://api.flickr.com"</span>, <span class="s">"https://up.flickr.com"</span>],
+        <span class="s">"user_supplies"</span>: [<span class="s">"client_id"</span>, <span class="s">"client_secret"</span>],
+    },
+    <span class="s">"options"</span>: {<span class="s">"set_title"</span>: {...}, <span class="s">"public"</span>: {<span class="s">"type"</span>: <span class="s">"bool"</span>, <span class="s">"default"</span>: False}},
+    <span class="s">"capabilities"</span>: {<span class="s">"max_batch"</span>: 10, <span class="s">"remove"</span>: True, <span class="s">"reconcile"</span>: True, ...},
+    <span class="s">"hooks"</span>: {<span class="s">"push"</span>: push, <span class="s">"remove"</span>: remove, <span class="s">"list_remote"</span>: list_remote},
+}</pre>
+        </div>
+      </div>
+
+      <!-- test -->
+      <div class="tabpane" data-pane="test">
+        <div class="empty" data-only="1 2">Sign in a test account to test against real responses. Until then tests use made-up ones.</div>
+        <div class="empty" data-only="3">Signed in. Run a test, or let the builder run them.<br><br><button class="btn">Run test</button></div>
+        <div data-from="4">
+          <div class="field row">
+            <label style="margin:0">Test with album</label>
+            <select class="btn small"><option>Portfolio (5 photos)</option></select>
+            <span class="spacer"></span><button class="btn small">Run again</button>
+          </div>
+          <div class="diff">Would add <b>5 photos</b> to the existing Flickr set <b>Portfolio</b>. Nothing to remove.</div>
+          <table>
+            <tr><th>Call</th><th>Endpoint</th><th>Result</th></tr>
+            <tr><td><span class="chip ok">live</span></td><td><code>GET photosets.getList</code></td><td>200 · 3 sets · matched “Portfolio” → 72157720…</td></tr>
+            <tr><td><span class="chip muted">recorded</span></td><td><code>POST upload</code> ×5</td><td>not sent · <code>$ref:1…5</code></td></tr>
+            <tr><td><span class="chip muted">recorded</span></td><td><code>POST photosets.addPhoto</code> ×5</td><td>not sent</td></tr>
+          </table>
+          <p class="note">Writes are never sent from a test. Live reads use the endpoints marked <i>read</i>.</p>
+        </div>
+      </div>
+
+      <div class="panel-foot">
+        <span class="note" id="foot-note">Draft · not usable by syncs until published</span>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- publish modal -->
+<div class="overlay" id="publish">
+  <div class="modal">
+    <h2>Publish “Flickr sets”?</h2>
+    <p class="lead">Once published, you can pick it under <b>Send to…</b>. Each sync that uses it will still ask you to confirm what it sends; your Flickr account (jturan) is already signed in for them.</p>
+    <div class="box">
+      <b>This service talks to</b>
+      <div class="hostlist" style="margin-top:6px"><span class="host">api.flickr.com</span><span class="host">up.flickr.com</span><span class="host">www.flickr.com</span> <span class="note">(sign-in only)</span></div>
+    </div>
+    <div class="box">
+      <b>It may make these calls</b>
+      <div class="ep"><span class="m">GET</span><span>List sets <span class="chip ok">read</span></span><span></span></div>
+      <div class="ep"><span class="m">POST</span><span>Upload a photo <span class="chip warn">write</span></span><span></span></div>
+      <div class="ep"><span class="m">POST</span><span>Create a set <span class="chip warn">write</span></span><span></span></div>
+      <div class="ep"><span class="m">POST</span><span>Add / remove photos in a set <span class="chip warn">write</span></span><span></span></div>
+    </div>
+    <div class="box">
+      <b>Signs in with</b> OAuth 1.0a, using your own Flickr key · asks for <code>write</code>
+    </div>
+    <label class="check"><input type="checkbox" checked> I've reviewed the hosts and calls above.</label>
+    <footer><button class="btn" id="pub-cancel">Cancel</button><button class="btn primary">Publish</button></footer>
+  </div>
+</div>
+
+<script>
+const state = {
+  1: { title: 'New service', chip: ['muted', 'Draft'], pub: false, foot: 'Draft · not usable by syncs until published' },
+  2: { title: 'Flickr sets', chip: ['muted', 'Draft'], pub: false, foot: 'Draft · 4 web calls found · not tested' },
+  3: { title: 'Flickr sets', chip: ['warn', 'Not tested'], pub: false, foot: 'Add app credentials and a test account' },
+  4: { title: 'Flickr sets', chip: ['ok', 'Test passed'], pub: true, foot: 'Draft · test passed 1 min ago' },
+  5: { title: 'Flickr sets', chip: ['ok', 'Test passed'], pub: true, foot: 'Draft · test passed 1 min ago' },
+};
+const defaultTab = { 1: 'overview', 2: 'overview', 3: 'signin', 4: 'test', 5: 'access' };
+
+function tab(id) {
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === id));
+  document.querySelectorAll('.tabpane').forEach(p => p.classList.toggle('on', p.dataset.pane === id));
+}
+function go(n) {
+  n = +n;
+  document.querySelectorAll('.mock-bar [data-go]').forEach(b => b.classList.toggle('on', +b.dataset.go === n));
+  document.querySelectorAll('.variant').forEach(v => v.classList.toggle('on', +v.dataset.step === n));
+  document.querySelectorAll('[data-from]').forEach(e => e.style.display = n >= +e.dataset.from ? '' : 'none');
+  document.querySelectorAll('[data-only]').forEach(e => e.style.display = e.dataset.only.split(' ').includes(String(n)) ? '' : 'none');
+  const s = state[n];
+  document.getElementById('title').textContent = s.title;
+  const chip = document.getElementById('status-chip');
+  chip.className = 'chip ' + s.chip[0]; chip.textContent = s.chip[1];
+  const pb = document.getElementById('publish-btn');
+  pb.disabled = !s.pub; pb.classList.toggle('primary', s.pub);
+  document.getElementById('foot-note').textContent = s.foot;
+  document.getElementById('app-chip').innerHTML = n >= 4 ? '<span class="chip ok">Saved</span>' : '<span class="chip warn">Needed</span>';
+  document.getElementById('live-note').innerHTML = n >= 4
+    ? 'Builder may run live read-only tests with this account · <a href="#">Revoke</a>'
+    : 'After signing in, the builder will ask before it runs live tests itself.';
+  document.getElementById('signin-row').innerHTML = n >= 4
+    ? '<span class="chip ok">Signed in as jturan</span><button class="btn small">Sign in again</button><button class="btn small">Use a different account</button>'
+    : '<button class="btn primary">Sign in to Flickr</button>';
+  document.getElementById('ov-status').innerHTML = n >= 4
+    ? '<span class="chip ok">Signed in as jturan</span><span class="chip ok">Test passed</span>'
+    : '<span class="chip warn">Not signed in</span><span class="chip muted">Not tested</span>';
+  tab(defaultTab[n]);
+  document.getElementById('publish').classList.toggle('on', n === 5);
+}
+document.querySelectorAll('.mock-bar [data-go]').forEach(b => b.addEventListener('click', () => go(b.dataset.go)));
+document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => tab(b.dataset.tab)));
+document.getElementById('publish-btn').addEventListener('click', () => document.getElementById('publish').classList.add('on'));
+document.getElementById('pub-cancel').addEventListener('click', () => document.getElementById('publish').classList.remove('on'));
+document.getElementById('publish').addEventListener('click', e => { if (e.target.id === 'publish') e.target.classList.remove('on'); });
+go(1);
+</script>
+</body>
+</html>

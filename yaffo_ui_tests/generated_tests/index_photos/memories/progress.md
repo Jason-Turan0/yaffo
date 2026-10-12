@@ -40,9 +40,9 @@
 - Fix flow: drop A → Index them; delete A + drop B → both cards → Index them (orphan
   stays) → Remove them; delete B → Remove them → in sync. `afterAll` unlinks anything
   left and deletes the test person.
-- Missing thumbnail: create a person (`/api/people/create`), assign the tail of the
+- Missing thumbnail: create a person (`/faces/people/create`), assign the tail of the
   unassigned pool (skipping the face_assignment suite's active similarity cluster)
-  via `/api/faces/assign`, fetch `/faces/<id>`, find the crop by content
+  via `PATCH /api/faces`, fetch `/faces/<id>`, find the crop by content
   (`findFileWithContentIn`), delete it (`/faces/<id>` → 404), then regenerate and
   check it's 200 again and the face is still on `/people/<id>/faces`.
 

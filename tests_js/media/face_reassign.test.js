@@ -2,7 +2,7 @@ import { loadModule } from '../support/load_module.js';
 
 // The photo detail screen's face popover: Clear takes the person off a face.
 
-const config = { urls: { faces_assign: '/api/faces/assign', faces_unassign: '/api/faces/unassign' } };
+const config = { urls: { api_faces_update: '/api/faces' } };
 
 const fixture = () => {
   document.body.innerHTML = `
@@ -42,7 +42,7 @@ afterEach(() => {
 
 describe('face reassign Clear', () => {
   it('is offered on an assigned face and clears it', async () => {
-    const fetchMock = vi.fn(() => json({ success: true, message: 'Cleared 1 face' }));
+    const fetchMock = vi.fn(() => json({ faces: [], message: 'Cleared 1 face' }));
     vi.stubGlobal('fetch', fetchMock);
     const reload = vi.fn();
     vi.stubGlobal('location', { reload });
@@ -54,8 +54,8 @@ describe('face reassign Clear', () => {
 
     clear.click();
     await vi.waitFor(() => expect(window.notification.success).toHaveBeenCalledWith('Cleared 1 face'));
-    expect(fetchMock).toHaveBeenCalledWith('/api/faces/unassign', expect.objectContaining({
-      method: 'POST', body: JSON.stringify({ faces: [7] }),
+    expect(fetchMock).toHaveBeenCalledWith('/api/faces', expect.objectContaining({
+      method: 'PATCH', body: JSON.stringify({ ids: [7], person_id: null }),
     }));
     vi.advanceTimersByTime(500);
     expect(reload).toHaveBeenCalled();
@@ -69,7 +69,7 @@ describe('face reassign Clear', () => {
   });
 
   it('shows the server error and lets the user try again', async () => {
-    vi.stubGlobal('fetch', vi.fn(() => json({ success: false, message: "This face isn't assigned to anyone" }, false)));
+    vi.stubGlobal('fetch', vi.fn(() => json({ error: "This face isn't assigned to anyone", code: 'faces_not_assigned' }, false)));
     await start();
 
     document.getElementById('face-thumbnail-7').click();

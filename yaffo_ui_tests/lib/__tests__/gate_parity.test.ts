@@ -62,13 +62,12 @@ describe("generation and healing run the same gates", () => {
     it("stubs the endpoints that reach outside the browser", () => {
         expect(source("runner.ts")).toMatch(/blockOsSideEffects\(context\)/);
         const routes = source("side_effects.ts");
-        expect(routes).toContain("**/api/open-file");
-        expect(routes).toContain("**/api/open-folder");
+        expect(routes).toContain("**/api/openings");
     });
 
     it("stubs them with success, so the shot shows the real state", () => {
         // Aborting would surface an error toast and document a failure.
-        expect(source("side_effects.ts")).toMatch(/status:\s*200/);
+        expect(source("side_effects.ts")).toMatch(/status:\s*202/);
     });
 
     it("reverts the lockfile and catalog, which are not in `written`", () => {

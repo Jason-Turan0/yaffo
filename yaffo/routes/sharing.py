@@ -36,18 +36,24 @@ from yaffo.db.models import (
     GRANT_SCOPE_ALBUM,
     GRANT_SCOPE_FOLDER,
     GRANT_SCOPE_MEDIA_DIR,
+    AlbumItem,
+    MediaItem,
+    SYNC_HANDLER_PEER_SOURCE,
+    SyncAdapter,
     TRUST_STATE_TRUSTED,
 )
-from yaffo.db.repositories import album_repository, media_dir_repository, p2p_repository
-from yaffo.db.repositories.media_repository import get_distinct_months
+from yaffo.db.repositories import album_repository, media_dir_repository, p2p_repository, sync_repository
 from yaffo.demo import DEMO_ROLE_RECEIVER, demo_unsafe_allowed
 from yaffo.routes import filter_config
-from yaffo.routes.filter_panel import filter_selections, gender_options, to_query_params, to_wire_filters
+from yaffo.routes.filter_panel import filter_selections, remote_filters_context, to_query_params, to_wire_filters
 from yaffo.routes.selection import selection_from_args
 from yaffo.logging_config import get_logger
 from yaffo.p2p.pairing import PairingError
 from yaffo.p2p.service import P2PServiceError
 from yaffo.p2p.signaling import CallError
+from yaffo.sync.files import is_within
+from yaffo.sync.guards import resolve_import_root
+from yaffo.sync.schemas import SyncSchemaError
 from yaffo.utils.settings import get_shared_download_dir, set_shared_download_dir
 
 
@@ -163,6 +169,7 @@ def _outbound_share_rows() -> list[dict]:
     devices = {device.device_id: device for device in p2p_repository.list_known_devices(db.session)}
     media_dirs = {choice["id"]: choice for choice in _media_dir_choices()}
     albums = {album.id: album for album in album_repository.list_albums(db.session)}
+    peer_import_roots = _peer_import_roots()
     rows = []
     for grant in p2p_repository.list_active_grants(db.session):
         device = devices.get(grant.peer_device_id)
@@ -184,9 +191,51 @@ def _outbound_share_rows() -> list[dict]:
                 "device_id": grant.peer_device_id,
                 "device_name": (device.display_name if device else grant.peer_device_id) or grant.peer_device_id,
                 "share_name": share_name,
+                "contains_peer_import": _grant_contains_peer_import(grant, media_dirs, peer_import_roots),
             }
         )
     return rows
+
+
+def _peer_import_roots() -> dict[str, list[Path]]:
+    roots: dict[str, list[Path]] = {}
+    for automation in sync_repository.sync_automations(db.session):
+        try:
+            config = sync_repository.load_sync(automation).config
+        except SyncSchemaError:
+            continue
+        adapter = db.session.get(SyncAdapter, config.adapter_id)
+        if adapter is None or adapter.handler != SYNC_HANDLER_PEER_SOURCE or not config.import_root:
+            continue
+        device = config.options.get("device")
+        device_id = device.get("id") if isinstance(device, dict) else device
+        if not device_id:
+            continue
+        root, problem = resolve_import_root(db.session, config.import_root)
+        if root is not None and problem is None:
+            roots.setdefault(device_id, []).append(root)
+    return roots
+
+
+def _grant_contains_peer_import(grant, media_dirs: dict, roots_by_device: dict[str, list[Path]]) -> bool:
+    roots = roots_by_device.get(grant.peer_device_id, [])
+    if not roots:
+        return False
+    if grant.scope_type == GRANT_SCOPE_ALBUM:
+        paths = (db.session.query(MediaItem.full_file_path)
+                 .join(AlbumItem, AlbumItem.media_item_id == MediaItem.id)
+                 .filter(AlbumItem.album_id == grant.album_id).yield_per(100))
+        for path, in paths:
+            if path and any(is_within(Path(path), root) for root in roots):
+                return True
+        return False
+    media_dir = media_dirs.get(grant.media_dir_id or "")
+    if media_dir is None:
+        return False
+    scope = Path(media_dir["path"])
+    if grant.scope_type == GRANT_SCOPE_FOLDER and grant.relative_path:
+        scope = scope / grant.relative_path
+    return any(is_within(root, scope) for root in roots)
 
 
 def _remote_scope_label(scope: dict) -> str:
@@ -562,22 +611,7 @@ def init_sharing_routes(app: Flask):
             except FutureTimeoutError:
                 error = gettext("Loading shared files timed out — is the other device online?")
 
-        facets = result.get("facets") or {}
-        filters = {
-            # The option lists the reused filter partials render from — all
-            # facets come from the PEER's library (scoped to the grant), not
-            # the local DB. People/label entries are the peer's own entity
-            # ids, echoed back to it when selected.
-            "years": facets.get("years", []),
-            "months": get_distinct_months(),
-            "devices": facets.get("devices", []),
-            "people": facets.get("people", []),
-            "labels": facets.get("labels", []),
-            "tag_names": facets.get("tag_names", []),
-            "location_names": facets.get("locations", []),
-            "genders": gender_options(),
-            **selections,
-        }
+        filters = remote_filters_context(selections, result.get("facets") or {})
         total = result.get("total", 0)
         # A remote file is identified by the PEER's media item id — the handle its
         # manifests hand out, and what a pull is authorized against.
@@ -619,19 +653,21 @@ def init_sharing_routes(app: Flask):
     @app.route("/sharing/devices/<device_id>/tag-values", methods=["GET"])
     def sharing_device_tag_values(device_id: str):
         """Peer-side tag values for the remote gallery's tag filter — same
-        response shape as the home page's /api/tag-values, but the values
+        values as the library's /api/tags/<name>/values, but the values
         come from the peer, scoped to the grant (a facets-only list_files
         call; no manifests wanted, hence limit=1)."""
         service = _service()
         tag_name = (request.args.get("tag_name") or "").strip()
         media_dir_id = (request.args.get("media_dir_id") or "").strip()
         scope = (request.args.get("scope") or "").strip()
-        if not tag_name or not media_dir_id:
+        album_id = request.args.get("album_id", type=int)
+        if not tag_name or (not media_dir_id and album_id is None):
             return jsonify({"error": gettext("The tag_name parameter is required"), "code": "tag_name_required"}), 400
         if service is None:
             return jsonify({"tag_name": tag_name, "values": []}), 503
         try:
-            result = service.list_files.send(device_id, media_dir_id, scope, {"tag_name": tag_name}, limit=1)
+            result = service.list_files.send(device_id, media_dir_id, scope, {"tag_name": tag_name}, limit=1,
+                                             album_id=album_id)
         except (CallError, P2PServiceError):
             return jsonify({"tag_name": tag_name, "values": []}), 502
         except FutureTimeoutError:

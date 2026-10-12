@@ -1,25 +1,34 @@
 /**
  * Run guide walkthroughs against a sandbox.
  *
- *   npm run isolatedEnvironment:start
- *   npm run docs:capture
- *   npm run docs:capture -- --promote library-basics/browsing-filtering
+ *   npm run docs:sandbox:start            # the app, in the pinned container
  *   npm run docs:capture -- --docker
+ *   npm run docs:capture -- --docker --promote library-basics/browsing-filtering
+ *   npm run docs:capture                  # host browser against a host sandbox
  *
  * Captures land in .staging/ and are compared against what is committed. Nothing
  * touches docs/ unless --promote is passed, so a plain run can answer "is anything
  * stale?" without dirtying the tree.
  *
- * `--docker` moves the browser half into a container. The committed screenshots are
- * compared per-pixel, and macOS and Linux disagree on font metrics — which changes
- * line wrapping, which moves layout. Captured on a laptop and again in CI, the same
- * page differs every time and the comparison is noise. The container pins the
- * rendering stack so the two agree. Encoding and comparison stay on the host either
- * way: they need Pillow and NumPy from the project virtualenv.
+ * `--docker` captures from the same pinned image CI uses, on both sides: the app
+ * container built the fixture and serves it, and a capture container on the same
+ * network drives the browser. The committed screenshots are compared per-pixel, and
+ * a laptop differs from CI in font metrics, thumbnail encoding, face and label
+ * results, and fixture paths, so a capture that is not containerized end to end is
+ * not comparable. Encoding and comparison stay on the host: they need Pillow and
+ * NumPy from the project virtualenv.
  */
 import {createHash} from "crypto";
 import {scrubProcessEnv} from "./env";
-import {DOCS_CAPTURE_IMAGE, dockerAvailable, runCaptureContainer, snapshotDockerEnv} from "./docker";
+import {
+    appContainerRunning,
+    CONTAINER_BASE_URL,
+    DOCS_APP_CONTAINER,
+    DOCS_CAPTURE_IMAGE,
+    dockerAvailable,
+    runCaptureContainer,
+    snapshotDockerEnv,
+} from "./docker";
 import {existsSync, readFileSync, writeFileSync} from "fs";
 import {join, resolve} from "path";
 import {pathToFileURL} from "url";
@@ -116,15 +125,20 @@ export const main = async (
                 "then `npm run docker:build:docs-capture`. See README.md#docker.");
             return 1;
         }
+        if (!appContainerRunning(dockerEnv)) {
+            console.error(`The ${DOCS_APP_CONTAINER} container is not running. A --docker capture ` +
+                "drives the containerized sandbox, never a host one: start it with " +
+                "`npm run docs:sandbox:start`. See README.md#docker.");
+            return 1;
+        }
         // The host never imports the walkthroughs in this mode: loading a module runs
         // its top-level code, and keeping model-generated code out of this process is
         // most of the reason the container exists.
-        console.log(`Capturing in ${DOCS_CAPTURE_IMAGE} against ${BASE_URL}`);
+        console.log(`Capturing in ${DOCS_CAPTURE_IMAGE} against ${CONTAINER_BASE_URL}`);
         console.log(`  staging: ${CAPTURE_DIR}${promote ? "  (promoting changes)" : ""}\n`);
         const code = runCaptureContainer({
             repoDir: REPO,
             stagingDir: CAPTURE_DIR,
-            baseUrl: BASE_URL,
             pages: only,
             dockerEnv,
         });
@@ -147,7 +161,6 @@ export const main = async (
             const repeatedCode = runCaptureContainer({
                 repoDir: REPO,
                 stagingDir: repeatedDir,
-                baseUrl: BASE_URL,
                 pages: stabilityPages,
                 shotsOnly: true,
                 dockerEnv,

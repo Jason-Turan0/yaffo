@@ -9,10 +9,48 @@ from yaffo.background_tasks.schedule import compute_next_run
 from yaffo.background_tasks.schedule_scope import selected_paths, media_item_ids
 from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.utils import SessionFactory
-from yaffo.db.models import Automation, AutomationTrigger, TRIGGER_TYPE_SCHEDULE
+from yaffo.db.models import Automation, AutomationTrigger, TRIGGER_TYPE_EVENT, TRIGGER_TYPE_SCHEDULE
+from yaffo.db.repositories.job_repository import has_running_run
 from yaffo.logging_config import get_logger
 
 logger = get_logger(__name__, 'background_tasks')
+
+
+def _dispatch_due_event_triggers(session, now) -> None:
+    """Start the runs event dispatch deferred through a settle window (see
+    background_tasks/event_filters.py). A trigger whose automation is still running is
+    left due and tried on the next tick, so the change that deferred it isn't lost.
+    The deferred run starts with an empty causal chain: it's started by the tick, not
+    by the event."""
+    due = (
+        session.query(AutomationTrigger)
+        .join(Automation)
+        .filter(
+            AutomationTrigger.trigger_type == TRIGGER_TYPE_EVENT,
+            AutomationTrigger.next_run_at.isnot(None),
+            AutomationTrigger.next_run_at <= now,
+            AutomationTrigger.enabled.is_(True),
+            Automation.enabled.is_(True),
+        )
+        .all()
+    )
+    for trigger in due:
+        if has_running_run(session, trigger.automation_id):
+            continue
+        try:
+            trigger.next_run_at = None
+            trigger.last_run_at = now
+            session.commit()
+            if not invoke_automation(trigger.automation, EventContext(event_type=trigger.event_type)):
+                raise ValueError("Automation has no runnable handler or published code")
+            logger.info(f"Dispatched deferred '{trigger.automation.slug}' for {trigger.event_type}")
+        except Exception as exc:
+            logger.exception(f"Failed to dispatch deferred trigger {trigger.id}")
+            session.rollback()
+            trigger = session.get(AutomationTrigger, trigger.id)
+            if trigger is not None:
+                record_dispatch_failure(session, trigger.automation, trigger.id, None, exc, trigger_type="event")
+                session.commit()
 
 
 @task_queue.periodic_task(crontab(minute='*'))
@@ -46,6 +84,11 @@ def dispatch_scheduled_tasks():
                     continue
                 if trigger.next_run_at > now:
                     continue
+                # A sync still running keeps its due slot for the next tick: the
+                # queue lock would drop this run, and a continuation the running
+                # sync just scheduled (see sync/run_common.py) would be lost.
+                if trigger.automation.sync is not None and has_running_run(session, trigger.automation_id):
+                    continue
 
                 paths = selected_paths(session, trigger.config)
                 context = EventContext(
@@ -76,6 +119,7 @@ def dispatch_scheduled_tasks():
                 except Exception:
                     session.rollback()
                     logger.exception(f"Could not record dispatch failure for trigger {trigger_id}")
+        _dispatch_due_event_triggers(session, now)
     except Exception:
         session.rollback()
         logger.exception("dispatch_scheduled_tasks failed")

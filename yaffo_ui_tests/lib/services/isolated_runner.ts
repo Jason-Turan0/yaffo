@@ -1,7 +1,7 @@
 import {ChildProcess, execFileSync, execSync, spawn} from "child_process";
 import {randomBytes} from "crypto";
 import {join, resolve} from "path";
-import {cpSync, existsSync, mkdirSync, realpathSync, rmSync, writeFileSync} from "fs";
+import {cpSync, existsSync, mkdirSync, readdirSync, realpathSync, rmSync, writeFileSync} from "fs";
 import {tmpdir} from "os";
 import {createServer} from "net";
 import {DOCS_DATA_DIR as AUTOMATION_DOCS_DATA_DIR} from "../user_doc_automation/paths";
@@ -25,6 +25,12 @@ export interface IsolatedInstance {
 export interface IsolatedEnvironment extends IsolatedInstance {
     /** Second instance ("instance B" in specs/sharing.yaml) when started with withPeer. */
     peer?: IsolatedInstance;
+    /** Local fake Flickr server when requested by an integration spec. */
+    fakeFlickrUrl?: string;
+    /** Local fake Microsoft identity + OneDrive server when requested. */
+    fakeOneDriveUrl?: string;
+    /** Local fake Immich server when requested. */
+    fakeImmichUrl?: string;
     cleanup: () => Promise<void>;
 }
 
@@ -57,6 +63,12 @@ export interface IsolatedEnvironmentOptions {
     copyPreseeded?: boolean;
     /** Serve the reproducible documentation fixture instead of the UI-test seed. */
     docsFixture?: boolean;
+    /** Start scripts/fake_flickr.py and route Flickr origins to it. */
+    withFakeFlickr?: boolean;
+    /** Start the three local sync-provider fakes (OneDrive, Immich, Flickr). */
+    withFakeSyncServices?: boolean;
+    /** Additional or replacement real-origin to local-origin mappings for the app. */
+    syncOriginOverrides?: Record<string, string>;
 }
 
 export interface TestResult {
@@ -94,6 +106,9 @@ export interface TestRunResult {
 const UI_TESTS_DIR = resolve(process.cwd());
 const YAFFO_DIR = resolve(join(UI_TESTS_DIR, ".."));
 const SCRIPTS_DIR = join(UI_TESTS_DIR, "scripts");
+// The docs container mounts the repo with the host's venv in it, built for the host's
+// OS; it points this at the venv baked into its image instead.
+const VENV_DIR = process.env.YAFFO_VENV || join(YAFFO_DIR, "venv");
 
 /**
  * Fixed across macOS and Linux so paths rendered by Settings have identical pixels.
@@ -156,6 +171,40 @@ export const isTcpPortAvailable = (port: number): Promise<boolean> => new Promis
     });
 });
 
+const allocateLocalPort = async (): Promise<number> => {
+    const probe = createServer();
+    return new Promise<number>((resolvePort, reject) => {
+        probe.once("error", reject);
+        probe.listen(0, "127.0.0.1", () => {
+            const address = probe.address();
+            if (!address || typeof address === "string") return reject(new Error("Could not allocate local service port"));
+            probe.close(error => error ? reject(error) : resolvePort(address.port));
+        });
+    });
+};
+
+const startFakeService = async (
+    module: string,
+    label: string,
+    args: string[] = [],
+): Promise<{process: ChildProcess; url: string}> => {
+    const port = await allocateLocalPort();
+    const url = `http://127.0.0.1:${port}`;
+    const child = spawn("python", ["-m", module, "--port", String(port), ...args], {
+        env: venvEnvironment(), cwd: YAFFO_DIR, stdio: ["ignore", "pipe", "pipe"],
+    });
+    let output = "";
+    child.stdout?.on("data", data => { output += data.toString(); });
+    child.stderr?.on("data", data => { output += data.toString(); });
+    if (!(await waitForServer(`${url}/_admin/state`)) || child.exitCode !== null) {
+        child.kill();
+        await waitForExit(child);
+        throw new Error(`Fake ${label} server failed to start: ${output}`);
+    }
+    console.log(`\n🪞 Fake ${label} server ready at ${url}`);
+    return {process: child, url};
+};
+
 const portInUseError = (port: number): Error => new Error(
     `Port ${port} is already in use; choose another sandbox range with ` +
     "TEST_SANDBOX_BASE_PORT or --base-port"
@@ -180,6 +229,8 @@ interface StartInstanceOptions {
      * web process — the only one whose engine the sharing UI can use — can lose.
      */
     flaskOnlyEnv?: Record<string, string>;
+    /** Shared app/taskq environment; unlike flaskOnlyEnv this reaches task execution too. */
+    syncOriginOverrides?: Record<string, string>;
     /**
      * The data dir is already seeded (restored from the seed cache): skip
      * provisioning and serve it directly. The dir must be at the same absolute
@@ -209,13 +260,65 @@ export const SHARED_TRIP_PHOTOS = [
 // instance. Kept identical between build-seed and serve so a data dir seeded in
 // one job serves correctly in another (the seeded DB stores absolute
 // full_file_path values under YAFFO_DATA_DIR).
+/** Specs that sign in to OneDrive, Immich or Flickr need the local fakes of those services. */
+export const needsFakeSyncServices = (specs: string[]): boolean =>
+    specs.some((spec) => /generated_tests[\\/]sync_(?:services|automations)[\\/]/.test(spec));
+
+/**
+ * What a spec run in another process needs to know about a started environment, as
+ * KEY=value lines a shell can source: the fake services' URLs and the data dir that
+ * fixture scripts must open (CI starts the environment and the tests separately).
+ */
+export const environmentFileContents = (environment: IsolatedEnvironment): string => [
+    `FAKE_FLICKR_URL=${environment.fakeFlickrUrl ?? ""}`,
+    `FAKE_ONEDRIVE_URL=${environment.fakeOneDriveUrl ?? ""}`,
+    `FAKE_IMMICH_URL=${environment.fakeImmichUrl ?? ""}`,
+    `YAFFO_DATA_DIR=${environment.tempDir}`,
+].join("\n") + "\n";
+
+/**
+ * The AI providers' API key variables (yaffo/site_agents/model_clients/providers.py).
+ * An environment key wins over the keychain, so one inherited from the developer's
+ * shell or .env would give the app under test a real, billed key: it would show
+ * Ask Yaffo, hide Settings' key controls, and could call the provider for real.
+ */
+export const PROVIDER_KEY_ENV_VARS = [
+    "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "XAI_API_KEY", "GEMINI_API_KEY", "MOONSHOT_API_KEY", "DEEPSEEK_API_KEY",
+];
+
+/** process.env without the provider API keys. */
+export const environmentWithoutProviderKeys = (env: NodeJS.ProcessEnv = process.env): Record<string, string> => {
+    const kept: Record<string, string> = {};
+    for (const [name, value] of Object.entries(env)) {
+        if (value !== undefined && !PROVIDER_KEY_ENV_VARS.includes(name)) kept[name] = value;
+    }
+    return kept;
+};
+
+/**
+ * process.env without provider keys, with the project's venv first on PATH: CI
+ * installs the dependencies only there, so a bare `python` would otherwise be the
+ * runner's own interpreter, without Flask or Pillow.
+ */
+const venvEnvironment = (): Record<string, string> => ({
+    ...environmentWithoutProviderKeys(),
+    VIRTUAL_ENV: VENV_DIR,
+    PATH: `${join(VENV_DIR, "bin")}:${process.env.PATH}`,
+});
+
 const instanceEnv = (
     tempDir: string,
     seedProfile: "bennett" | "obama",
     assetDir?: string,
 ): Record<string, string> => ({
-    ...process.env,
+    ...venvEnvironment(),
     YAFFO_DATA_DIR: tempDir,
+    YAFFO_SYNC_SECRETS_FILE: join(tempDir, "sync-secrets.json"),
+    // No OS keychain: the developer's real one holds their AI keys (an app that finds
+    // one shows Ask Yaffo and can call the provider) and would collect an entry per
+    // run. Sync secrets go to the file above; P2P identity lives in memory, as it does
+    // with YAFFO_P2P_EPHEMERAL_IDENTITY. The docs container does the same.
+    PYTHON_KEYRING_BACKEND: "keyring.backends.null.Keyring",
     YAFFO_SEED_PROFILE: seedProfile,
     FLASK_APP: "yaffo.app:create_app",
     FLASK_ENV: "testing",
@@ -225,9 +328,18 @@ const instanceEnv = (
     YAFFO_DEMO_MODE: "0",
     YAFFO_DEMO_ROLE: "",
     ...(assetDir ? {YAFFO_ASSET_DIR: assetDir} : {}),
-    VIRTUAL_ENV: join(YAFFO_DIR, "venv"),
-    PATH: `${join(YAFFO_DIR, "venv", "bin")}:${process.env.PATH}`,
 });
+
+/**
+ * Remove everything inside a directory but keep the directory. In the docs container
+ * the data dir is a mount point, which cannot itself be removed (EPERM).
+ */
+const emptyDirectory = (dir: string): void => {
+    mkdirSync(dir, {recursive: true});
+    for (const entry of readdirSync(dir)) {
+        rmSync(join(dir, entry), {recursive: true, force: true});
+    }
+};
 
 interface ProvisionOptions {
     label: string;
@@ -292,7 +404,7 @@ export const provisionInstanceData = (options: ProvisionOptions): void => {
         if (strictSeed) {
             // Don't leave the empty yaffo.db behind: a later --preseeded run (or a
             // CI cache save) would otherwise serve it as a valid seed.
-            rmSync(tempDir, {recursive: true, force: true});
+            emptyDirectory(tempDir);
             throw e;
         }
     }
@@ -309,7 +421,7 @@ export const provisionInstanceData = (options: ProvisionOptions): void => {
  * every other guide page continues to see one canonical copy of each photo.
  */
 export const buildDocumentationFixture = (dataDir = DOCS_DATA_DIR): string => {
-    rmSync(dataDir, {recursive: true, force: true});
+    emptyDirectory(dataDir);
     provisionInstanceData({
         label: "docs",
         tempDir: dataDir,
@@ -349,6 +461,7 @@ const startInstance = async (options: StartInstanceOptions): Promise<IsolatedIns
         includeVideos = false,
         demoRole,
         flaskOnlyEnv = {},
+        syncOriginOverrides,
         preseeded = false,
         disposableData = false,
         assetDir,
@@ -369,7 +482,12 @@ const startInstance = async (options: StartInstanceOptions): Promise<IsolatedIns
         provisionInstanceData({label, tempDir, fixtureDir, seedProfile, includeVideos});
     }
 
-    const env = instanceEnv(tempDir, seedProfile, assetDir);
+    const env = {
+        ...instanceEnv(tempDir, seedProfile, assetDir),
+        ...(syncOriginOverrides && Object.keys(syncOriginOverrides).length
+            ? {YAFFO_SYNC_ORIGIN_OVERRIDES: JSON.stringify(syncOriginOverrides)}
+            : {}),
+    };
     const demoEnv = demoRole ? {
         YAFFO_DEMO_MODE: "1",
         YAFFO_DEMO_ROLE: demoRole,
@@ -402,10 +520,10 @@ const startInstance = async (options: StartInstanceOptions): Promise<IsolatedIns
     console.log(`\n🚀 Starting Flask for instance ${label}${modeLabel} on port ${port}...`);
     const flaskProcess = spawn(
         "python",
-        // Loopback by default. Containerized docs capture sets YAFFO_SANDBOX_HOST=0.0.0.0
-        // so the container can reach the app through host.docker.internal — on macOS a
-        // container cannot see the host's loopback, and --network host joins the Linux
-        // VM rather than the Mac. Opt-in, because 0.0.0.0 exposes the sandbox on the LAN.
+        // Loopback by default. The docs app container sets YAFFO_SANDBOX_HOST=0.0.0.0
+        // (and YAFFO_WEB_ALLOWED_HOSTS, which reaches Flask through the environment) so
+        // the capture container can reach it over the docs network. On a host that
+        // would expose the sandbox to the LAN, so it is never the default.
         ["-m", "flask", "run", `--host=${process.env.YAFFO_SANDBOX_HOST || "127.0.0.1"}`,
          `--port=${port}`, "--no-reload"],
         {
@@ -550,6 +668,9 @@ export const startIsolatedEnvironment = async (
         preseeded = false,
         copyPreseeded = false,
         docsFixture = false,
+        withFakeFlickr = false,
+        withFakeSyncServices = false,
+        syncOriginOverrides = {},
     } = options;
     if (docsFixture && withPeer) {
         throw new Error("The documentation fixture does not have a peer instance");
@@ -582,6 +703,40 @@ export const startIsolatedEnvironment = async (
         tempDir = copySeedCache("primary", join(TEMP_ROOT, `yaffo_test_${runId}`));
     }
 
+    const fakeProcesses: ChildProcess[] = [];
+    let fakeFlickrUrl: string | undefined;
+    let fakeOneDriveUrl: string | undefined;
+    let fakeImmichUrl: string | undefined;
+    const flaskOnlyEnv: Record<string, string> = withPeer ? p2pEnv(port) : {};
+    const originOverrides: Record<string, string> = {};
+    try {
+        if (withFakeSyncServices) {
+            const oneDrive = await startFakeService("scripts.fake_onedrive", "OneDrive", ["--photos", "40"]);
+            fakeProcesses.push(oneDrive.process);
+            fakeOneDriveUrl = oneDrive.url;
+            for (const origin of ["https://graph.microsoft.com", "https://login.microsoftonline.com", "https://public.files.1drv.com"]) {
+                originOverrides[origin] = oneDrive.url;
+            }
+
+            const immich = await startFakeService("scripts.fake_immich", "Immich", ["--photos", "40"]);
+            fakeProcesses.push(immich.process);
+            fakeImmichUrl = immich.url;
+        }
+        if (withFakeSyncServices || withFakeFlickr) {
+            const flickr = await startFakeService("scripts.fake_flickr", "Flickr");
+            fakeProcesses.push(flickr.process);
+            fakeFlickrUrl = flickr.url;
+            for (const origin of ["https://www.flickr.com", "https://api.flickr.com", "https://up.flickr.com"]) {
+                originOverrides[origin] = flickr.url;
+            }
+        }
+    } catch (error) {
+        for (const child of fakeProcesses) child.kill();
+        await Promise.all(fakeProcesses.map(child => waitForExit(child)));
+        throw error;
+    }
+    Object.assign(originOverrides, syncOriginOverrides);
+
     let primary: IsolatedInstance;
     try {
         primary = await startInstance({
@@ -592,12 +747,15 @@ export const startIsolatedEnvironment = async (
             seedProfile: "bennett",
             includeVideos: true,
             demoRole: demoMode ? "source" : undefined,
-            flaskOnlyEnv: withPeer ? p2pEnv(port) : {},
+            flaskOnlyEnv,
+            syncOriginOverrides: originOverrides,
             preseeded,
             disposableData: copyPreseeded,
             assetDir: copyPreseeded ? seedCacheDir("primary") : undefined,
         });
     } catch (error) {
+        for (const child of fakeProcesses) child.kill();
+        await Promise.all(fakeProcesses.map(child => waitForExit(child)));
         if (copyPreseeded && existsSync(tempDir)) {
             rmSync(tempDir, {recursive: true, force: true, maxRetries: 5, retryDelay: 100});
         }
@@ -631,6 +789,8 @@ export const startIsolatedEnvironment = async (
                 rmSync(peerTempDir, {recursive: true, force: true, maxRetries: 5, retryDelay: 100});
             }
             await stopInstance(primary);
+            for (const child of fakeProcesses) child.kill();
+            await Promise.all(fakeProcesses.map(child => waitForExit(child)));
             throw e;
         }
         console.log(`\n🔗 Sharing sandbox up: A=${primary.baseUrl} B=${peer.baseUrl} (hub unreachable, LAN pairing only)`);
@@ -639,12 +799,17 @@ export const startIsolatedEnvironment = async (
     const cleanup = async () => {
         console.log(`\n🧹 Cleaning up isolated environment...`);
         await Promise.all([stopInstance(primary), stopInstance(peer)]);
+        for (const child of fakeProcesses) child.kill();
+        await Promise.all(fakeProcesses.map(child => waitForExit(child)));
         console.log(`   ✅ Stopped isolated process(es)`);
     };
 
     return {
         ...primary,
         peer,
+        fakeFlickrUrl,
+        fakeOneDriveUrl,
+        fakeImmichUrl,
         cleanup,
     };
 };
@@ -660,6 +825,15 @@ async function main() {
     const demoMode = args.includes("--demo");
     const preseeded = args.includes("--preseeded");
     const docsFixture = args.includes("--docs");
+    // --for-spec <path>: start what that spec needs (the fake sync services).
+    // --write-env <path>: once ready, write environmentFileContents there.
+    const valueOf = (flag: string): string | undefined => {
+        const index = args.indexOf(flag);
+        return index !== -1 ? args[index + 1] : undefined;
+    };
+    const forSpec = valueOf("--for-spec");
+    const envFile = valueOf("--write-env");
+    const withFakeSyncServices = forSpec !== undefined && needsFakeSyncServices([forSpec]);
 
     // Build-seed mode: seed the canonical cache dir(s) and exit without serving.
     // Used by the CI seed-cache job so per-spec jobs can restore and skip seeding.
@@ -680,7 +854,10 @@ async function main() {
     process.on('SIGTERM', handleCleanup);
 
     try {
-        environment = await startIsolatedEnvironment(port, {withPeer, demoMode, preseeded, docsFixture});
+        environment = await startIsolatedEnvironment(port, {
+            withPeer, demoMode, preseeded, docsFixture, withFakeSyncServices,
+        });
+        if (envFile) writeFileSync(envFile, environmentFileContents(environment));
         if (environment.peer) {
             console.log(`\nRun the sharing tests with: BASE_URL=${environment.baseUrl} PEER_URL=${environment.peer.baseUrl} npx playwright test generated_tests/sharing/sharing.spec.ts`);
         }

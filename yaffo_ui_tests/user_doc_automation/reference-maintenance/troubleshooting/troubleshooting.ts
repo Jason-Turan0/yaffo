@@ -17,6 +17,19 @@ const waitForIndexScan = async (page: Page): Promise<void> => {
     await page.locator("#status-in-sync").getByText("Everything is in sync").waitFor();
 };
 
+/**
+ * The provider starts empty; choosing one swaps in its model list and key settings.
+ * With no key saved, the lookup uses the starter list and calls no provider.
+ */
+const chooseProvider = async (page: Page, label = "Anthropic"): Promise<void> => {
+    const provider = page.locator("#llm-provider + .searchable-select-wrapper");
+    await provider.locator(".searchable-select-display").click();
+    await provider.locator(".searchable-select-option").filter({hasText: label}).click();
+    await page.locator("#llm-model[data-searchable-initialized]").waitFor({state: "attached"});
+    await page.locator("#llm-model + .searchable-select-wrapper").waitFor();
+    await page.locator("#llm-api-key").waitFor();
+};
+
 export default defineWalkthrough({
     page: "reference-maintenance/troubleshooting",
 
@@ -32,13 +45,9 @@ export default defineWalkthrough({
             goto: "/settings",
             clip: "#llm-section",
             setup: async (page) => {
-                // The enhanced native select is intentionally hidden behind its
-                // searchable-select wrapper once initialization completes.
-                await page.locator("#llm-model[data-searchable-initialized]")
-                    .waitFor({state: "attached"});
-                await page.locator("#llm-model + .searchable-select-wrapper").waitFor();
-                await page.locator("#llm-api-key").waitFor();
+                await chooseProvider(page);
                 await page.locator("#llm-section").scrollIntoViewIfNeeded();
+                await page.mouse.move(0, 0);
             },
         },
     },
@@ -68,6 +77,6 @@ export default defineWalkthrough({
         // the form: the docs sandbox deliberately has no real provider credentials.
         await visit("/settings");
         await page.locator("#llm-section").waitFor();
-        await page.locator("#llm-api-key").waitFor();
+        await chooseProvider(page);
     },
 });

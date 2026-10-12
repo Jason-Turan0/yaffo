@@ -143,7 +143,7 @@ def test_saved_locale_translates_automation_detail_page(app, client):
     client.post("/settings/locale", data={"locale": "de"})
     body = client.get("/utilities/automations/a1").get_data(as_text=True)
 
-    assert "Auslöser bearbeiten" in body
+    assert "Auslöser bearbeiten" not in body
     assert "Noch keine Beschreibung" in body
     assert "Ausführungsverlauf" in body
     assert 'class="btn-secondary" data-icon="edit">Bearbeiten</a>' in body
@@ -935,14 +935,19 @@ def test_config_rejected_for_non_configurable(app, client):
 def test_detail_page_shows_configure_for_configurable(app, client):
     _add_system_assign_faces(app)
     body = client.get("/utilities/automations/auto_assign_faces").get_data(as_text=True)
-    assert "configure-automation-button" in body
-    assert "configureAutomationModal" in body
+    assert 'id="automation-configure-panel"' in body
+    assert body.count('class="settings-section sync-step collapsible-panel"') == 2
+    assert 'id="config-threshold"' in body
+    assert body.index('id="automation-trigger-panel"') < body.index('id="automation-configure-panel"')
+    assert body.index('id="automation-configure-panel"') < body.index('id="automation-runs"')
+    assert 'btn-secondary btn-sm">Configure</span>' not in body
+    assert 'btn-secondary btn-sm">Edit triggers</span>' not in body
 
 
 def test_detail_page_hides_configure_when_no_config(app, client):
     _add(app)
     body = client.get("/utilities/automations/a1").get_data(as_text=True)
-    assert "configure-automation-button" not in body
+    assert 'id="automation-configure-panel"' not in body
 
 
 def test_delete_removes_custom(app, client):
@@ -959,9 +964,13 @@ def test_delete_system_rejected(app, client):
 
 def test_toggle_enabled_flips(app, client):
     _add(app, enabled=False)
+    page = client.get("/utilities/automations/a1").get_data(as_text=True)
+    assert 'role="switch"' in page and 'aria-label="A1" aria-checked="false"' in page
     assert client.post("/utilities/automations/a1/enabled").status_code == 204
     with app.app_context():
         assert db.session.query(Automation).filter_by(slug="a1").first().enabled is True
+    page = client.get("/utilities/automations/a1").get_data(as_text=True)
+    assert 'aria-label="A1" aria-checked="true"' in page
 
 
 def test_edit_triggers_page_renders(app, client):
@@ -993,11 +1002,13 @@ def test_edit_triggers_unknown_404(app, client):
     assert client.get("/utilities/automations/nope/triggers/edit").status_code == 404
 
 
-def test_detail_page_shows_edit_triggers_link(app, client):
+def test_detail_page_embeds_trigger_editor_above_run_history(app, client):
     _add(app)
     body = client.get("/utilities/automations/a1").get_data(as_text=True)
-    assert "/utilities/automations/a1/triggers/edit" in body
-    assert "data-cron-builder" not in body  # editor moved off the detail page
+    assert 'id="automation-trigger-panel"' in body
+    assert 'class="settings-section sync-step collapsible-panel"' in body
+    assert "data-cron-builder" in body
+    assert body.index('id="automation-trigger-panel"') < body.index('id="automation-runs"')
 
 
 def test_save_schedule_adds_trigger(app, client):
@@ -1155,11 +1166,12 @@ def test_remove_trigger(app, client):
 def test_toggle_trigger_enabled(app, client):
     _add(app)
     tid = _add_trigger(app, trigger_type=TRIGGER_TYPE_SCHEDULE, enabled=True, cron="* * * * *")
-    client.post(
+    resp = client.post(
         "/utilities/automations/a1/triggers",
         data={"action": "toggle", "trigger_id": tid},
     )
     assert _triggers(app)[0].enabled is False
+    assert 'aria-label="Schedule * * * * *" aria-checked="false"' in resp.get_data(as_text=True)
 
 
 def test_validate_cron_endpoint(app, client):

@@ -3,6 +3,7 @@ from yaffo.background_tasks.tasks.index_photo import index_photo_task
 from yaffo.background_tasks.tasks.complete_job import (
     complete_job_task, complete_job_callback, finalize_job,
 )
+from yaffo.background_tasks.tasks.orphaned_jobs import sweep_orphaned_jobs
 from yaffo.background_tasks.tasks.index_stage import start_index_stage
 from yaffo.background_tasks.tasks.regenerate_thumbnails import regenerate_thumbnails_task
 from yaffo.background_tasks.tasks.find_duplicates import find_duplicates_task
@@ -19,7 +20,9 @@ from yaffo.background_tasks.tasks.classify_labels_automation import classify_lab
 from yaffo.background_tasks.tasks.dispatcher import dispatch_scheduled_tasks
 from yaffo.background_tasks.tasks.dispatch_event import dispatch_event_task
 from yaffo.background_tasks.tasks.run_automation import run_automation_code_task
+from yaffo.background_tasks.tasks.sync_run import sync_run_task
 from yaffo.background_tasks.tasks.generate_automation import generate_automation_task
+from yaffo.background_tasks.tasks.generate_adapter import generate_adapter_task
 from yaffo.background_tasks.tasks.assign_faces_to_person import assign_faces_to_person
 from yaffo.background_tasks.tasks.assistant_run import assistant_run_task
 
@@ -37,6 +40,8 @@ __all__ = [
     'index_photo_task',
     'complete_job_task',
     'complete_job_callback',
+    'sweep_orphaned_jobs',
+    'generate_adapter_task',
     'finalize_job',
     'start_index_stage',
     'regenerate_thumbnails_task',
@@ -54,6 +59,7 @@ __all__ = [
     'dispatch_scheduled_tasks',
     'dispatch_event_task',
     'run_automation_code_task',
+    'sync_run_task',
     'generate_automation_task',
     'assign_faces_to_person',
     'assistant_run_task',

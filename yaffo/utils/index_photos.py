@@ -30,6 +30,7 @@ from yaffo.utils.face_analysis import detect_faces
 from yaffo.utils.index_errors import IndexFailure, classify_index_error
 from yaffo.utils.exiftool_path import get_exiftool_path
 from yaffo.utils.settings import get_thumbnail_dir
+from yaffo.sync.deletes import announce_deleted, queue_target_removals
 
 logger = get_logger(__name__, 'background_tasks')
 
@@ -600,7 +601,9 @@ def delete_orphaned_media_items(session: Session, media_item_ids: List[int]) -> 
         session.query(Face.full_file_path).filter(Face.media_item_id.in_(media_item_ids)).all()
     ]
 
-    # Delete dependents first (SQLite foreign keys may not cascade)
+    # Queue removal from sync targets, then delete dependents (SQLite foreign keys
+    # don't cascade).
+    sync_ids = queue_target_removals(session, media_item_ids)
     session.query(Tag).filter(Tag.media_item_id.in_(media_item_ids)).delete(synchronize_session=False)
     deleted_faces = session.query(Face).filter(Face.media_item_id.in_(media_item_ids)).delete(synchronize_session=False)
 
@@ -608,6 +611,7 @@ def delete_orphaned_media_items(session: Session, media_item_ids: List[int]) -> 
     deleted_count = session.query(MediaItem).filter(MediaItem.id.in_(media_item_ids)).delete(synchronize_session=False)
 
     session.commit()
+    announce_deleted(media_item_ids, sync_ids)
 
     unlink_face_thumbnails(face_thumbnails)
 

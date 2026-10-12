@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace as dataclass_replace
 from typing import Any, Callable, Optional
 
 from yaffo.taskq.cron import CronSpec
@@ -82,6 +82,13 @@ class Task:
 
     def __call__(self, *args, **kwargs) -> Result:
         return self.queue.enqueue(Pipeline([SingleLink(self.s(*args, **kwargs))]))
+
+    def enqueue_locked(self, lock_name: str, *args, **kwargs) -> Result:
+        """Enqueue one call under a lock named at call time (e.g. one lock per
+        automation), with `lock_task`'s semantics: if another task holds that lock
+        when this one is dispatched, this one is skipped."""
+        sig = dataclass_replace(self.s(*args, **kwargs), lock_name=lock_name)
+        return self.queue.enqueue(Pipeline([SingleLink(sig)]))
 
     def schedule(self, args: tuple = (), delay: float = 0) -> Result:
         return self.queue.enqueue(

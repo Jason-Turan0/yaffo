@@ -44,6 +44,10 @@ class TestRenderMigration:
         tomllib.loads(rendered)  # parses
         assert "# Verbosity of the log files" in rendered  # doc comments survive
 
+    def test_preserves_user_allowed_hosts_list(self):
+        merged = tomllib.loads(_render({"web": {"allowed_hosts": ["yaffo.lan", "nas"]}}))
+        assert merged["web"]["allowed_hosts"] == ["yaffo.lan", "nas"]
+
     def test_unknown_user_keys_are_dropped(self):
         merged = tomllib.loads(_render({"logging": {"bogus_removed_key": 1}}))
         assert "bogus_removed_key" not in merged.get("logging", {})

@@ -42,7 +42,7 @@ async function createPersonViaApi(page: Page, name: string): Promise<number> {
   await page.goto('/people');
 
   const result = await page.evaluate(async (personName) => {
-    const response = await fetch('/api/people/create', {
+    const response = await fetch('/faces/people/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: personName }),
@@ -147,14 +147,10 @@ async function waitForFaceBackInPool(page: Page, faceId: number): Promise<void> 
  */
 async function assignFaceToPersonViaApi(page: Page, faceId: number, personId: number): Promise<void> {
   const result = await page.evaluate(async (params) => {
-    const response = await fetch('/api/faces/assign', {
-      method: 'POST',
+    const response = await fetch('/api/faces', {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        faces: [params.faceId],
-        person: params.personId,
-        faceStatus: 'ASSIGNED',
-      }),
+      body: JSON.stringify({ ids: [params.faceId], person_id: params.personId }),
     });
     return { ok: response.ok, status: response.status };
   }, { faceId, personId });

@@ -358,6 +358,36 @@ class Store:
         )
         return cur.rowcount
 
+    # ---- open work (the orphaned-job sweep) -----------------------------
+
+    def open_references(self) -> tuple[set[str], str]:
+        """What unfinished queue work still refers to: the ids of ready and running
+        tasks, and the text of their arguments and follow-ups plus those of chords
+        still waiting on members. An app id (a Job's) found in neither has no queue
+        work left that would update it.
+
+        One read transaction, groups before tasks: a chord that finishes between the
+        two reads has already inserted its callback by the time tasks are read."""
+        conn = self._conn()
+        parts: list[str] = []
+        conn.execute("BEGIN")
+        try:
+            for row in conn.execute("SELECT callback_json, continuation_json FROM task_group WHERE finished < total"):
+                parts += [row["callback_json"] or "", row["continuation_json"] or ""]
+            ids = set()
+            for row in conn.execute(
+                "SELECT id, args_json, kwargs_json, continuation_json FROM task WHERE status IN (?, ?)",
+                (STATUS_READY, STATUS_RUNNING),
+            ):
+                ids.add(row["id"])
+                parts += [row["args_json"], row["kwargs_json"], row["continuation_json"] or ""]
+        finally:
+            conn.execute("COMMIT")
+        return ids, "\n".join(parts)
+
+    def has_task(self, task_id: str) -> bool:
+        return self._conn().execute("SELECT 1 FROM task WHERE id=?", (task_id,)).fetchone() is not None
+
     # ---- read-only views (diagnostics) ---------------------------------
 
     def status_counts(self, names: Optional[list[str]] = None) -> dict[str, int]:

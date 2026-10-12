@@ -18,11 +18,15 @@
     "download:obama": "tsx scripts/download_obama_gallery_photos.ts",
     "isolatedEnvironment:start": "tsx lib/services/isolated_runner.ts --port 5002",
     "isolatedEnvironment:start:sharing": "tsx lib/services/isolated_runner.ts --port 5002 --peer",
-    "isolatedEnvironment:start:docs": "YAFFO_DOC_OBSERVER=1 YAFFO_SANDBOX_HOST=0.0.0.0 tsx lib/services/isolated_runner.ts --port 5002 --preseeded --docs",
+    "isolatedEnvironment:start:docs": "YAFFO_DOC_OBSERVER=1 tsx lib/services/isolated_runner.ts --port 5002 --preseeded --docs",
     "test:heal": "tsx lib/test_generator/heal_test.ts",
     "test:heal:repo": "tsx lib/test_generator/heal_repo.ts",
     "docs:capture": "tsx lib/user_doc_automation/docs_capture.ts",
     "docs:capture:docker": "tsx lib/user_doc_automation/docs_capture.ts -- --docker",
+    "docs:capture:docker:local": "node --import tsx scripts/docs_capture_docker_local.ts",
+    "docs:sandbox:build": "tsx lib/user_doc_automation/sandbox.ts build",
+    "docs:sandbox:start": "tsx lib/user_doc_automation/sandbox.ts start",
+    "docs:sandbox:stop": "tsx lib/user_doc_automation/sandbox.ts stop",
     "docs:detect": "tsx lib/user_doc_automation/detect.ts",
     "docs:generate": "tsx lib/user_doc_automation/generate_cli.ts",
     "docs:heal": "tsx lib/user_doc_automation/heal.ts",
@@ -35,7 +39,7 @@
     "logs": "tsx scripts/browse_api_logs.ts",
     "validate:specs": "tsx scripts/validate_specs.ts",
     "docker:build:mcp-filesystem": "docker build -t yaffo-mcp-filesystem:latest docker/mcp-filesystem",
-    "docker:build:docs-capture": "docker build -t yaffo-docs-capture:latest -f docker/docs-capture/Dockerfile ."
+    "docker:build:docs-capture": "docker build --platform ${DOCS_DOCKER_PLATFORM:-linux/amd64} --build-context repo=.. -t yaffo-docs-capture:latest -f docker/docs-capture/Dockerfile . && docker image prune -f"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.27",

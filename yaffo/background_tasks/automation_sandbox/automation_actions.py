@@ -17,9 +17,12 @@ from typing import Annotated, Any, Optional
 import send2trash
 from sqlalchemy.orm import Session
 
-from yaffo.background_tasks.events import emit_event
+from yaffo.background_tasks.events import emit_album_changed, emit_event
 from yaffo.background_tasks.progress_reporter import ProgressReporter
-from yaffo.db.models import EVENT_MEDIA_MODIFIED, ClassificationLabel, Tag
+from yaffo.db.models import (
+    ALBUM_CHANGE_ADDED, ALBUM_CHANGE_DELETED, ALBUM_CHANGE_REMOVED, ALBUM_CHANGE_RENAMED, EVENT_MEDIA_MODIFIED,
+    ClassificationLabel, Tag,
+)
 from yaffo.db.repositories import album_repository, classification_repository, person_repository, media_repository
 from yaffo.db.repositories import sandbox_edit_repository as edits
 from yaffo.db.repositories.media_dir_repository import media_dir_by_id
@@ -271,7 +274,10 @@ def update_album(
     """Rename an album / change its description. Membership is not touched."""
     if expected is not None and edits.album_state(session, album_id) != expected:
         return
-    album_repository.update_album(session, album_id, name, description)
+    album = album_repository.get_album(session, album_id)
+    old_name = album.name if album else None
+    if album_repository.update_album(session, album_id, name, description).name != old_name:
+        emit_album_changed(album_id, ALBUM_CHANGE_RENAMED)
 
 
 def summarize_update_album(args: list[Any], session: Session) -> str:
@@ -284,10 +290,13 @@ def add_to_album(
     restore_cover: Optional[int] = None,
 ) -> None:
     """Add photos to an album in one batched write. Photos already in it are skipped."""
+    ids = list(media_item_ids or [])
     if positions is None:
-        album_repository.add_items(session, album_id, list(media_item_ids or []))
+        added = album_repository.add_items(session, album_id, ids)
     else:
-        album_repository.add_items(session, album_id, list(media_item_ids or []), positions=positions)
+        added = album_repository.add_items(session, album_id, ids, positions=positions)
+    if added:
+        emit_album_changed(album_id, ALBUM_CHANGE_ADDED, ids)
     if restore_cover is not None:
         album_repository.restore_cover_if_empty(session, album_id, restore_cover)
 
@@ -306,7 +315,9 @@ def remove_from_album(
         current = edits.album_members(session, album_id, media_item_ids)
         media_item_ids = [item for item in media_item_ids if item in current
                           and expected_positions.get(str(item)) == current[item]]
-    album_repository.remove_items(session, album_id, list(media_item_ids or []))
+    ids = list(media_item_ids or [])
+    if album_repository.remove_items(session, album_id, ids):
+        emit_album_changed(album_id, ALBUM_CHANGE_REMOVED, ids)
 
 
 def summarize_remove_from_album(args: list[Any], session: Session) -> str:
@@ -319,7 +330,8 @@ def delete_album(session: Session, album_id: int, expected: Optional[dict] = Non
     and neither are their files."""
     if expected is not None and not edits.album_is_unchanged(session, album_id, expected):
         return
-    album_repository.delete_album(session, album_id)
+    if album_repository.delete_album(session, album_id):
+        emit_album_changed(album_id, ALBUM_CHANGE_DELETED)
 
 
 def summarize_delete_album(args: list[Any], session: Session) -> str:

@@ -67,8 +67,8 @@ recognition model understands English text.
 
 ## Configure Classification
 
-Open **Library** → **Automations** → **Classify labels**, then click
-**Configure**. Two settings control the results:
+Open **Library** → **Automations** → **Classify labels**, then expand
+**Configuration**. Two settings control the results:
 
 - **Confidence threshold:** the minimum image-to-text similarity required for a
   label. Higher values produce fewer, more confident labels. The default is

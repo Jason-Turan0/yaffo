@@ -1,5 +1,13 @@
+from yaffo.p2p.messages import PROTOCOL_VERSION
+
+
 def handle_stream_request(service, body: dict) -> dict:
-    """Dispatch one authenticated QUIC stream request to its message handler."""
+    """Dispatch one authenticated QUIC stream request to its message handler.
+    Every answer, errors included, says which protocol version we speak."""
+    return {**_dispatch(service, body), "protocol": PROTOCOL_VERSION}
+
+
+def _dispatch(service, body: dict) -> dict:
     kind = body.get("type")
     handlers = {
         "ping": service.ping.handle,

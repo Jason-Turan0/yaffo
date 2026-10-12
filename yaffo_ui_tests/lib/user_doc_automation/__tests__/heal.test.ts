@@ -299,6 +299,35 @@ describe("heal CLI", () => {
         });
     });
 
+    it("never sends an unreachable app to the repair agent and fails the run", async () => {
+        writeReport([result({shots: [], error: "page.goto: net::ERR_CONNECTION_REFUSED at http://yaffo-docs-app:5002/settings"})]);
+
+        await expect(main(["--apply", "--docker"])).resolves.toBe(2);
+
+        expect(openSession).not.toHaveBeenCalled();
+        expect(applyFix).not.toHaveBeenCalled();
+        const saved = JSON.parse(readFileSync(join(STAGING_DIR, "triage.json"), "utf8"));
+        expect(saved.verdicts[0]).toMatchObject({
+            triage: {classification: "environment_instability", recommendedAction: "quarantine"},
+        });
+        expect(saved.verdicts[0]).not.toHaveProperty("resolved");
+    });
+
+    it("reports a walkthrough that passes again unchanged as environment, not a repair", async () => {
+        writeReport([result({shots: [], error: "locator.waitFor timed out"})]);
+        applyFix.mockResolvedValue({...outcome, written: []});
+
+        await expect(main(["--apply", "--docker"])).resolves.toBe(0);
+
+        expect(log).not.toHaveBeenCalledWith("   → repaired and verified");
+        expect(log).toHaveBeenCalledWith("   → passed on re-run with no changes; not a walkthrough defect");
+        const saved = JSON.parse(readFileSync(join(STAGING_DIR, "triage.json"), "utf8"));
+        expect(saved.verdicts[0]).toMatchObject({
+            resolved: true,
+            triage: {classification: "environment_instability", recommendedAction: "quarantine"},
+        });
+    });
+
     it("keeps a failed walkthrough unresolved when the repair gates fail", async () => {
         writeReport([result({shots: [], error: "locator.waitFor timed out"})]);
         applyFix.mockResolvedValue({...outcome, failures: ["capture failed"], reverted: true});

@@ -5,7 +5,9 @@ pre-existing database created before the migration table existed.
 The runner manages the transaction and records this migration; do not open a
 connection or commit here.
 """
+import importlib.util
 import sqlite3
+from pathlib import Path
 
 from yaffo.db.models import CLASSIFY_LABELS_DEFAULT_THRESHOLD, CLASSIFY_LABELS_DEFAULT_MAX
 
@@ -84,10 +86,12 @@ def migrate(conn: sqlite3.Connection) -> None:
                 index_error TEXT,
                 index_error_detail TEXT,
                 index_failed_at TIMESTAMP,
-                index_failed_signature TEXT
+                index_failed_signature TEXT,
+                sha1 VARCHAR(40)
             )
         """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_photos_full_file_path ON photos(full_file_path)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS ix_media_items_sha1 ON photos(sha1)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_photos_date_taken ON photos(date_taken)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_photos_location_name ON photos(location_name)")
 
@@ -248,6 +252,7 @@ def migrate(conn: sqlite3.Connection) -> None:
             published_code TEXT,
             working_code TEXT,
             config TEXT,
+            sync TEXT,
             status TEXT NOT NULL DEFAULT 'READY',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -475,6 +480,7 @@ def migrate(conn: sqlite3.Connection) -> None:
                       id INTEGER PRIMARY KEY AUTOINCREMENT,
                       version_id INTEGER,
                       automation_id INTEGER,
+                      sync_adapter_id INTEGER,
                       type TEXT NOT NULL,
                       content TEXT NOT NULL,
                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -526,3 +532,24 @@ def migrate(conn: sqlite3.Connection) -> None:
                    """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_assistant_change_plans_conversation "
                    "ON assistant_change_plans(conversation_id)")
+
+    # Sync automations: adapters (seeded with the built-in Folder source/target) and the
+    # per-item ledger. Same DDL as migration 016, which also covers existing databases.
+    sync = _load_sibling("016_MIGRATION_20261010_add_sync_tables.py")
+    cursor.execute(sync.SYNC_ADAPTERS_DDL)
+    cursor.execute(sync.SYNC_ITEMS_DDL)
+    for statement in sync.SYNC_ITEMS_INDEXES:
+        cursor.execute(statement)
+    cursor.execute(sync.SEED_BUILTIN_ADAPTERS)
+    items_index = _load_sibling("017_MIGRATION_20261010_sync_items_updated_index.py")
+    cursor.execute(items_index.SYNC_ITEMS_UPDATED_INDEX)
+
+
+def _load_sibling(filename: str):
+    """Load another migration module by file name (digit-prefixed names can't be
+    imported normally; the runner loads migrations by path the same way)."""
+    path = Path(__file__).resolve().parent / filename
+    spec = importlib.util.spec_from_file_location(path.stem, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module

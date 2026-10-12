@@ -22,7 +22,7 @@ export {mediaIdByFilename} from "./media_lookup";
 export {gatherSandboxFacts, describeSandboxFacts, PRIMARY_DETAIL_IMAGE} from "./sandbox_facts";
 export type {SandboxFacts} from "./sandbox_facts";
 export {verifyBrowserTool} from "./preflight";
-export {buildCaptureArgs, containerBaseUrl, dockerAvailable, runCaptureContainer, snapshotDockerEnv, DOCS_CAPTURE_IMAGE} from "./docker";
+export {appContainerRunning, buildAppArgs, buildCaptureArgs, dockerAvailable, runCaptureContainer, snapshotDockerEnv, DOCS_CAPTURE_IMAGE} from "./docker";
 export type {CaptureContainerOptions} from "./docker";
 export {buildEvidence} from "./evidence";
 export type {Evidence, EvidenceOptions} from "./evidence";

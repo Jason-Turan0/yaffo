@@ -1,0 +1,9 @@
+# Sync services UI test notes
+
+- Run with `npm run test:local -- --suite sync_services --mode headless` or `npm run test:spec -- generated_tests/sync_services/sync_services.spec.ts`. Both runners start the isolated app and `scripts/fake_flickr.py`, then set `YAFFO_SYNC_ORIGIN_OVERRIDES` for Flask and pass `FAKE_FLICKR_URL` to Playwright.
+- Service creation is browser-driven at `/utilities/automations` → New automation → Add a new service…; it redirects to `/utilities/automations/services/<slug>`. The page exposes Overview, Account, Access, Code, and Test tabs.
+- `scripts/seed_flickr_service.py` loads `yaffo/site_agents/adapter/examples/flickr_target.star` into a service created through the UI. Browser actions save app credentials, approve OAuth at the fake server, answer a pending live-read request, review/publish endpoints, and run Test.
+- The fake verifies OAuth 1 signatures against Flickr's real origin URLs. The test confirms OAuth login and a photoset read reach the fake while uploads and set mutations are recorded and fake-server write counters stay zero. OAuth app keys and tokens stay in the disposable data directory.
+- The service is created as a Send target through the New automation modal. `scripts/seed_flickr_sync.py` gives the UI-created sync prior consent and a selected seed album; `--wider` on the adapter fixture adds a statically detected GET endpoint. Republish invalidates the old consent, removes Run now, and presents the enable review. The service Delete control stays disabled until the sync is deleted.
+- The generation/Overview case mocks builder chat and status, then persists the checked-in adapter fixture before the completion reload. It verifies Overview fields against real service-page state and confirms the unpublished draft is omitted from Send to…. Docs-domain permission presentation remains intercepted in its focused UI test.
+- The suite stays within the repository's 30-second per-test timeout.

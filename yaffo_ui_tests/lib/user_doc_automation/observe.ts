@@ -74,11 +74,13 @@ export const takeServerObservation = async (
 };
 
 /**
- * Numeric path segments are fixture-dependent — /media/view/6 becomes /media/view/6
- * only for this seed. Normalizing keeps the lockfile stable when the fixture is
- * rebuilt and ids shift.
+ * Id path segments are fixture- or run-dependent: numeric row ids shift when the
+ * fixture is rebuilt, and UUIDs (a duplicate scan) and 32-hex ids (a page widget)
+ * are new on every run. Normalizing keeps the lockfile stable.
  */
-const normalize = (pathname: string): string => pathname.replace(/\/\d+(?=\/|$)/g, "/:id");
+const ID_SEGMENT = /\/(?:\d+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{32})(?=\/|$)/gi;
+
+export const normalize = (pathname: string): string => pathname.replace(ID_SEGMENT, "/:id");
 
 export interface Observer {
     attach: (context: BrowserContext) => void;

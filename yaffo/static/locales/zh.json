@@ -368,6 +368,78 @@
         "starting": "正在启动…"
       },
       "thumbnailFolderUnavailable": "缩略图文件夹不可用，因此未检查缩略图。请检查其所在驱动器是否已连接。"
+    },
+    "sync": {
+      "device": {
+        "done": "已登录。",
+        "failed": "无法开始登录。请重试。",
+        "waiting": "正在等待你输入代码…"
+      },
+      "picker": {
+        "choose": "选择",
+        "empty": "这里没有文件夹。",
+        "failed": "无法加载文件夹。",
+        "loading": "正在加载…",
+        "open": "打开",
+        "suggested": "推荐",
+        "top": "顶部"
+      },
+      "service": {
+        "allow": "允许",
+        "allowSelected": "允许所选项",
+        "answerFailed": "无法记录你的回答。请重试。",
+        "cancelMessage": "要停止构建器吗？目前已保存的草稿会保留。",
+        "deleteMessage": "它的草稿、对话和测试账号登录信息也会一并删除。没有任何同步会使用它。",
+        "deleteTitle": "要删除此服务吗？",
+        "denyAll": "全部拒绝",
+        "docsAllowed": "✓ 已允许：{{domains}}。",
+        "docsAsk_one": "构建器想要读取来自一个新网站的页面：",
+        "docsAsk_other": "构建器想要读取来自 {{count}} 个新网站的页面：",
+        "docsDenied": "不允许：{{domains}}。",
+        "docsDomain_one": "{{domain}} · {{count}} 个页面",
+        "docsDomain_other": "{{domain}} · {{count}} 个页面",
+        "docsNote": "构建此服务时，对于已允许的网站不会再次询问。Yaffo 只会获取页面文本。",
+        "dontAllow": "不允许",
+        "liveAllowed": "✓ 已允许对 {{account}} 进行实时只读测试。",
+        "liveAsk": "构建过程中允许构建器对 {{account}} 发起只读调用吗？响应会发送给 AI 模型。",
+        "liveDenied": "未允许实时只读测试。",
+        "superseded": "已被更新的请求取代。"
+      },
+      "test": {
+        "checked": "检查时间：{{time}} · 仅为预览；未复制或更改任何内容",
+        "columns": {
+          "action": "操作",
+          "destination": "目标位置",
+          "file": "文件",
+          "size": "大小",
+          "state": "将会发生什么"
+        },
+        "failed": "无法运行测试。",
+        "nothingNew": "没有新的内容可导入。",
+        "nothingToDo": "无需操作：目标内容已匹配。",
+        "partial": "已统计前 {{counted}} 个文件；其余文件的列表耗时过长。运行时会导入全部文件。",
+        "partialOf": "已统计 {{total}} 个文件中的 {{counted}} 个；其余文件的列表耗时过长。运行时会导入全部文件。",
+        "preview": {
+          "copy": "复制",
+          "remove": "移除",
+          "showing": "正在显示 {{shown}} / {{total}}"
+        },
+        "running": "正在检查…",
+        "stat": {
+          "convert": "已转换为 JPEG",
+          "copy": "待复制",
+          "remove": "待移除",
+          "unchanged": "已存在",
+          "unsupported": "无法发送（此目标不接受此类文件）"
+        },
+        "state": {
+          "changed": "自上次导入后已编辑",
+          "deleted_at_source": "已在源位置删除",
+          "imported": "已导入",
+          "in_library": "已在你的资料库中",
+          "new": "新增"
+        }
+      }
     }
   },
   "assistant": {
@@ -614,6 +686,17 @@
     },
     "settings": {
       "groupCount": "{{total}} 个中有 {{on}} 个开启"
+    },
+    "web": {
+      "readPages_one": "已读取 {{count}} 个网页",
+      "readPages_other": "已读取 {{count}} 个网页",
+      "title": "允许读取网页？",
+      "explanation": "允许在此对话中访问所选域名。Yaffo 会读取网页并将其内容发送给你的 AI 提供商。",
+      "allow": "允许所选域名",
+      "deny": "拒绝",
+      "domainAllowed": "{{domain}}：已允许",
+      "domainDenied": "{{domain}}：已拒绝",
+      "failed": "无法保存网页访问决定。"
     }
   }
 }

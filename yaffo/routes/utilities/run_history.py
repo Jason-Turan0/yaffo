@@ -28,6 +28,7 @@ from yaffo.db.models import (
     JOB_STATUS_PENDING,
     JOB_STATUS_RUNNING,
 )
+from yaffo.routes.utilities import sync_text
 from yaffo.utils import job_codes as codes
 from yaffo.utils.thumbnail_repair import THUMBNAIL_REPAIR_JOB
 from yaffo.utils.time import utcnow
@@ -202,7 +203,7 @@ def _automation_outcome(data: dict) -> str | None:
     if outcome == codes.OUTCOME_WRITTEN:
         return ngettext("Wrote metadata to %(written)s of %(num)d file",
                         "Wrote metadata to %(written)s of %(num)d files", total, written=_count(data, "written"))
-    return None
+    return sync_text.outcome_sentence(data)
 
 
 def _thumbnail_repair_outcome(data: dict) -> str | None:
@@ -319,6 +320,9 @@ def problem_text(job: Any, data: dict | None = None) -> str | None:
     if code == codes.PROBLEM_INVALID_SCOPE:
         return gettext("The scheduled scope is no longer valid. Edit the trigger to choose a configured "
                        "media directory or a folder inside one.")
+    sync_problem = sync_text.problem_sentence(code, params)
+    if sync_problem:
+        return sync_problem
     if code in (codes.PROBLEM_DISPATCH_FAILED, codes.PROBLEM_EVENT_DISPATCH_FAILED):
         return gettext("The scheduled run could not start.") if code == codes.PROBLEM_DISPATCH_FAILED \
             else gettext("The run could not start.")

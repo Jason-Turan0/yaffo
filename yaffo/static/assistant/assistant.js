@@ -182,6 +182,7 @@ assistant.init = (i18n, config) => {
     let conversations = [];
     /** @type {AssistantContext | null} */
     let pendingContext = null;
+    let webPermissionBusy = false;
     // The polled conversation status; plan buttons wait while a reply is written.
     let conversationStatus = 'IDLE';
     // A plan action in flight: its card's buttons stay off until the next render.
@@ -205,6 +206,10 @@ assistant.init = (i18n, config) => {
             return payload.error
                 ? i18n.t('assistant:activity.readMissing', { title: payload.title || '' })
                 : i18n.t('assistant:activity.read', { title: payload.title || '' });
+        }
+        if (payload.tool === 'fetch_docs') {
+            const line = i18n.t('assistant:web.readPages', { count: Number(payload.count) || 0 });
+            return payload.error ? i18n.t('assistant:activity.failed', { line }) : line;
         }
         if (payload.tool === 'run_script') {
             const key = payload.error ? 'scriptFailed' : payload.plan_id ? 'scriptPlan' : 'script';
@@ -289,7 +294,7 @@ assistant.init = (i18n, config) => {
      */
     const openOnComputer = async (open) => {
         try {
-            const response = await fetch(config.urls.assistant_open, {
+            const response = await fetch(config.urls.api_openings_create, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(open.target),
@@ -357,7 +362,7 @@ assistant.init = (i18n, config) => {
             const payload = /** @type {Record<string, any>} */ (tool.payload || {});
             const sources = /** @type {AssistantDocSource[]} */ (Array.isArray(payload.sources) ? payload.sources : []);
             // A read is a stronger signal than a search hit, so reads go first.
-            if (payload.tool === 'read_doc') {
+            if (payload.tool === 'read_doc' || payload.tool === 'fetch_docs') {
                 for (const source of sources) byUrl.set(source.url, source);
             }
         }
@@ -451,6 +456,81 @@ assistant.init = (i18n, config) => {
         },
     }) ?? null;
 
+    /** @param {AssistantWebPermission} permission */
+    const renderWebPermission = (permission) => {
+        const card = el('section', `assistant-plan assistant-web-permission assistant-plan-${permission.status}`);
+        card.appendChild(el('h3', 'assistant-plan-title', i18n.t('assistant:web.title')));
+        card.appendChild(el('p', 'assistant-plan-facts', i18n.t('assistant:web.explanation')));
+        const list = el('ul', 'assistant-plan-steps');
+        /** @type {Map<string, HTMLInputElement>} */
+        const choices = new Map();
+        for (const [domain, urls] of Object.entries(permission.domains)) {
+            const item = el('li');
+            if (permission.status === 'pending') {
+                const label = el('label', 'checkbox-label');
+                const input = document.createElement('input');
+                input.type = 'checkbox';
+                input.checked = true;
+                input.disabled = webPermissionBusy || conversationStatus === RUNNING;
+                label.append(input, document.createTextNode(domain));
+                item.appendChild(label);
+                choices.set(domain, input);
+            } else {
+                item.appendChild(el('span', undefined, i18n.t(
+                    permission.allowed.includes(domain) ? 'assistant:web.domainAllowed' : 'assistant:web.domainDenied',
+                    { domain })));
+            }
+            const pages = el('ul');
+            for (const url of urls) pages.appendChild(el('li', undefined, url));
+            item.appendChild(pages);
+            list.appendChild(item);
+        }
+        card.appendChild(list);
+        if (permission.status !== 'pending') return card;
+        const actions = el('div', 'assistant-plan-actions');
+        const allow = /** @type {HTMLButtonElement} */ (el('button', 'btn btn-primary', i18n.t('assistant:web.allow')));
+        const deny = /** @type {HTMLButtonElement} */ (el('button', 'btn btn-secondary', i18n.t('assistant:web.deny')));
+        allow.type = deny.type = 'button';
+        const updateAllow = () => {
+            allow.disabled = webPermissionBusy || conversationStatus === RUNNING
+                || ![...choices.values()].some((input) => input.checked);
+        };
+        updateAllow();
+        deny.disabled = webPermissionBusy || conversationStatus === RUNNING;
+        for (const input of choices.values()) input.addEventListener('change', updateAllow);
+        /** @param {'allow' | 'deny'} decision */
+        const decide = async (decision) => {
+            if (currentId === null || webPermissionBusy || conversationStatus === RUNNING) return;
+            const conversationId = currentId;
+            webPermissionBusy = true;
+            allow.disabled = deny.disabled = true;
+            try {
+                const response = await fetch(config.buildUrl('assistant_web_permission', {
+                    conversation_id: conversationId, permission_id: permission.id,
+                }), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ decision, domains: [...choices.entries()]
+                        .filter(([, input]) => input.checked).map(([domain]) => domain) }),
+                });
+                if (!response.ok) {
+                    window.notification.failure(await errorMessage(response, i18n.t('assistant:web.failed')));
+                }
+            } catch {
+                window.notification.failure(i18n.t('assistant:web.failed'));
+            } finally {
+                webPermissionBusy = false;
+                if (currentId === conversationId) chat?.load();
+                refreshList();
+            }
+        };
+        allow.addEventListener('click', () => decide('allow'));
+        deny.addEventListener('click', () => decide('deny'));
+        actions.append(allow, deny);
+        card.appendChild(actions);
+        return card;
+    };
+
     /**
      * One run = a user message and everything after it until the next one.
      * @param {ChatMessage[]} messages
@@ -463,6 +543,8 @@ assistant.init = (i18n, config) => {
         let runTools = [];
         /** @type {ChatMessage[]} */
         let pendingTools = [];
+        /** @type {AssistantWebPermission[]} */
+        let runPermissions = [];
         /** @type {HTMLElement | null} */
         let lastAnswer = null;
 
@@ -477,6 +559,7 @@ assistant.init = (i18n, config) => {
                 .map((tool) => renderPlan(
                     /** @type {AssistantPlan} */ (tool.payload?.plan), String(tool.payload?.script || '')))
                 .filter((card) => card !== null);
+            cards.push(...runPermissions.map(renderWebPermission));
             if (lastAnswer) {
                 // Proposed changes first, then the links the answer offers, then the docs it drew on.
                 const extras = [...cards, renderLinks(runTools), renderSources(runTools)]
@@ -486,6 +569,7 @@ assistant.init = (i18n, config) => {
                 nodes.push(...cards);  // a run that stopped before answering still shows its plan
             }
             runTools = [];
+            runPermissions = [];
             lastAnswer = null;
         };
 
@@ -498,6 +582,8 @@ assistant.init = (i18n, config) => {
             } else if (message.type === 'tool') {
                 pendingTools.push(message);
                 runTools.push(message);
+            } else if (message.type === 'web_permission') {
+                runPermissions.push(/** @type {AssistantWebPermission} */ (message.payload));
             } else if (message.type === 'assistant') {
                 flushTools();
                 lastAnswer = el('div', 'chat-message chat-message-assistant', message.content);

@@ -293,6 +293,20 @@ def _load_default_classification_labels() -> list[tuple]:
     return module.DEFAULT_CLASSIFICATION_LABELS
 
 
+def seed_sync_adapters(db) -> None:
+    """The built-in Folder source and target (migration 016's seed). Preset adapters
+    such as OneDrive seed themselves on first use."""
+    from yaffo.db.models import SyncAdapter
+
+    db.session.add_all([
+        SyncAdapter(slug="builtin.folder_source", name="Folder", role="source", provider="local",
+                    is_preset=True, preset_version="1", handler="folder_source", grants=[], doc_domains=[]),
+        SyncAdapter(slug="builtin.folder_target", name="Folder", role="target", provider="local",
+                    is_preset=True, preset_version="1", handler="folder_target", grants=[], doc_domains=[]),
+    ])
+    db.session.commit()
+
+
 def seed_system_automations(db) -> None:
     """Seed the built-in system automations + triggers, mirroring what the
     production migrations seed (000_INIT, with events renamed by 002)."""
@@ -732,6 +746,7 @@ def seed_database() -> int:
         # (in production these come from the DB migrations, which the test
         # sandbox skips by using db.create_all()).
         seed_system_automations(db)
+        seed_sync_adapters(db)
         seed_classification_labels(db)
         seed_custom_automations(db, seed_profile)
         seed_custom_themes(db)

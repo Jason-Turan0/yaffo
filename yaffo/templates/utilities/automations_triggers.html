@@ -1,4 +1,5 @@
-{# Trigger list + add controls for one automation. Included by automations.html on
+{% from "components/switch.html" import switch %}
+{# Trigger list + add controls for one automation. Included by the detail panel on
    first render and re-rendered in place by the automations_triggers HTMX endpoint
    (single endpoint, action via hx-vals). Expects: triggers, slug, events, error.
 
@@ -15,35 +16,40 @@
             <ul class="automation-triggers">
                 {% for trigger in triggers %}
                     <li class="automation-trigger-row{{ ' is-off' if not trigger.enabled }}">
-                        {% if trigger.trigger_type == 'schedule' %}
-                            <span class="automation-trigger-kind">{{ _("Schedule") }}</span>
-                            <span class="automation-trigger-desc" data-cron="{{ trigger.cron }}">{{ trigger.cron }}</span>
-                            {% set scope = trigger.config or {} %}
-                            <small class="automation-trigger-scope">
-                                {% if scope.get('scope_type') == 'media_dirs' or (not scope.get('scope_type') and scope.get('media_dir_ids')) %}
-                                    {% trans count=scope.get('media_dir_ids', [])|length %}{{ count }} media directory{% pluralize %}{{ count }} media directories{% endtrans %}
-                                {% elif scope.get('scope_type') == 'paths' or (not scope.get('scope_type') and scope.get('folder_paths')) %}
-                                    {% trans count=scope.get('folder_paths', [])|length %}{{ count }} path{% pluralize %}{{ count }} paths{% endtrans %}
-                                {% else %}{{ _("Everything") }}{% endif %}
-                            </small>
-                        {% else %}
-                            <span class="automation-trigger-kind">{{ _("Event") }}</span>
-                            <code class="automation-trigger-event">{{ events.get(trigger.event_type, trigger.event_type) }}</code>
-                        {% endif %}
-                        <span class="automation-trigger-spacer"></span>
-                        {% if trigger.trigger_type == 'schedule' %}
-                            <button type="button" class="btn-secondary js-edit-schedule"
-                                    data-cron-value="{{ trigger.cron }}" data-trigger-id="{{ trigger.id }}"
-                                    data-scope='{{ (trigger.config or {})|tojson|forceescape }}'>{{ _("Edit") }}</button>
-                        {% endif %}
-                        <button type="button" class="btn-secondary"
-                                hx-post="{{ url_for('automations_triggers', slug=slug) }}"
-                                hx-vals='{"action": "toggle", "trigger_id": {{ trigger.id }}}'
-                                hx-target="#automation-triggers">{{ _("Disable") if trigger.enabled else _("Enable") }}</button>
-                        <button type="button" class="btn-danger"
-                                hx-post="{{ url_for('automations_triggers', slug=slug) }}"
-                                hx-vals='{"action": "remove", "trigger_id": {{ trigger.id }}}'
-                                hx-target="#automation-triggers">{{ _("Delete") }}</button>
+                        <div class="automation-trigger-main">
+                            {% if trigger.trigger_type == 'schedule' %}
+                                <span class="automation-trigger-kind">{{ _("Schedule") }}</span>
+                                <span class="automation-trigger-desc" data-cron="{{ trigger.cron }}">{{ trigger.cron }}</span>
+                                {% set scope = trigger.config or {} %}
+                                <small class="automation-trigger-scope">
+                                    {% if scope.get('scope_type') == 'media_dirs' or (not scope.get('scope_type') and scope.get('media_dir_ids')) %}
+                                        {% trans count=scope.get('media_dir_ids', [])|length %}{{ count }} media directory{% pluralize %}{{ count }} media directories{% endtrans %}
+                                    {% elif scope.get('scope_type') == 'paths' or (not scope.get('scope_type') and scope.get('folder_paths')) %}
+                                        {% trans count=scope.get('folder_paths', [])|length %}{{ count }} path{% pluralize %}{{ count }} paths{% endtrans %}
+                                    {% else %}{{ _("Everything") }}{% endif %}
+                                </small>
+                            {% else %}
+                                <span class="automation-trigger-kind">{{ _("Event") }}</span>
+                                <span class="automation-trigger-event">{{ events.get(trigger.event_type, trigger.event_type) }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="automation-trigger-toggle">
+                            {{ switch(((_('Schedule') ~ ' ' ~ trigger.cron) if trigger.trigger_type == 'schedule' else events.get(trigger.event_type, trigger.event_type)), trigger.enabled,
+                                      hx_post=url_for('automations_triggers', slug=slug),
+                                      hx_vals='{"action": "toggle", "trigger_id": ' ~ trigger.id ~ '}',
+                                      hx_target='#automation-triggers') }}
+                        </div>
+                        <div class="automation-trigger-actions">
+                            {% if trigger.trigger_type == 'schedule' %}
+                                <button type="button" class="btn-secondary js-edit-schedule"
+                                        data-cron-value="{{ trigger.cron }}" data-trigger-id="{{ trigger.id }}"
+                                        data-scope='{{ (trigger.config or {})|tojson|forceescape }}'>{{ _("Edit") }}</button>
+                            {% endif %}
+                            <button type="button" class="btn-danger"
+                                    hx-post="{{ url_for('automations_triggers', slug=slug) }}"
+                                    hx-vals='{"action": "remove", "trigger_id": {{ trigger.id }}}'
+                                    hx-target="#automation-triggers">{{ _("Delete") }}</button>
+                        </div>
                     </li>
                 {% endfor %}
             </ul>

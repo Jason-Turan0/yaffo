@@ -40,6 +40,7 @@ from yaffo.p2p.identity import (
     load_or_create_identity,
 )
 from yaffo.p2p.lan_discovery import create_lan_discovery
+from yaffo.p2p.rate_limits import PeerRateLimiter
 from yaffo.p2p.quic_transport import (
     PunchAwareQuicServer,
     TransportError,
@@ -48,7 +49,10 @@ from yaffo.p2p.quic_transport import (
     start_quic_server,
 )
 from yaffo.p2p.signaling import CallError, HubClient
-from yaffo.p2p.transfers import PeerSession, TransferManager
+from yaffo.p2p.peer_api import PeerApi
+from yaffo.p2p.presence import PresenceWatcher
+from yaffo.p2p.puller import PeerSession
+from yaffo.p2p.transfers import TransferManager
 from yaffo.process_status import register_web_extra
 
 if TYPE_CHECKING:
@@ -93,6 +97,7 @@ def start_p2p_service(flask_app) -> Optional["P2PService"]:
         flask_app.extensions["p2p_service"] = service
         atexit.register(service.stop)
         register_web_extra("sharing", service.status_snapshot)
+        service.watch_presence()
         return service
     except Exception:
         logger.exception("p2p service failed to start; device sharing disabled")
@@ -129,6 +134,7 @@ class P2PService:
         self._pending_lock = threading.Lock()
         self._ready = threading.Event()
         self._startup_error: Optional[BaseException] = None
+        self.rate_limits = PeerRateLimiter()
         self.ping = PingEndpoint(self)
         self.peering = PeeringEndpoint(self)
         self.list_shared = ListSharedEndpoint(self)
@@ -136,6 +142,7 @@ class P2PService:
         self.pull_preview = PullPreviewEndpoint(self)
         self.pull_file = PullFileEndpoint(self)
         self.transfers = TransferManager(self)
+        self.peer_api = PeerApi(self)
 
     # ---- lifecycle ---------------------------------------------------------
 
@@ -263,6 +270,12 @@ class P2PService:
                 for batch in batches
             ],
         }
+
+    def watch_presence(self) -> None:
+        """Start emitting device_online (yaffo/p2p/presence.py). Only the real web
+        process does this; tests drive PresenceWatcher directly."""
+        watcher = PresenceWatcher(self)
+        self._loop.call_soon_threadsafe(lambda: asyncio.ensure_future(watcher.run()))
 
     def connected_device_ids(self, timeout: float = 5.0) -> Optional[set[str]]:
         """Presence from the hub: the device IDs currently online, or None

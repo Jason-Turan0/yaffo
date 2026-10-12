@@ -53,6 +53,24 @@
     box-shadow: var(--shadow-sm);
 }
 
+.sharing-import-notice {
+    margin-bottom: 30px;
+    padding: 12px 16px;
+    background: var(--color-warning-soft);
+    border: var(--border-width) solid var(--color-warning-soft-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-warning-soft-text);
+}
+
+.sharing-import-notice ul {
+    margin: 8px 0;
+    padding-left: 24px;
+}
+
+.sharing-import-notice p {
+    margin: 0;
+}
+
 .sharing-panel h3 {
     margin-top: 0;
     margin-bottom: 10px;

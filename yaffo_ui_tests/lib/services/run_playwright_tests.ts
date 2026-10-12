@@ -370,7 +370,7 @@ export const runPlaywrightTests = async (
     // the provider API keys never reach the generated test code.
     const SPAWN_ENV_ALLOWLIST = [
         "PATH", "HOME", "SHELL", "TMPDIR", "USER", "LOGNAME", "LANG", "LC_ALL", "TERM",
-        "CI", "SUITE", "PEER_URL", "TEST_SANDBOX", "PLAYWRIGHT_BROWSERS_PATH",
+        "CI", "SUITE", "PEER_URL", "FAKE_FLICKR_URL", "FAKE_ONEDRIVE_URL", "FAKE_IMMICH_URL", "YAFFO_DATA_DIR", "TEST_SANDBOX", "PLAYWRIGHT_BROWSERS_PATH",
         "PLAYWRIGHT_HTML_OUTPUT_DIR", "PLAYWRIGHT_HTML_OPEN", "PLAYWRIGHT_JUNIT_OUTPUT_FILE", "GITHUB_WORKSPACE",
     ];
     const env: NodeJS.ProcessEnv = {};

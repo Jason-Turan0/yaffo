@@ -46,7 +46,8 @@ automations do?", "How many photos of Billy do I have from 2019?"
 - **Questions about your library** are answered by looking it up. The assistant
   writes a short script that reads your library and shows it as an activity line,
   such as "Ran a script: Count photos of Billy by year". Click **Show script** to
-  see exactly what ran. Scripts can only read; they can't change anything.
+  see exactly what ran. A script can read your library and propose changes as
+  approval cards; the changes are applied only after you approve them.
 - **Links.** When an answer points somewhere in the app, the assistant adds links
   under it (**Open:**), such as a gallery already filtered to the photos it found.
   For a file or folder on your computer it adds a button: **Open on this computer**
@@ -54,6 +55,27 @@ automations do?", "How many photos of Billy do I have from 2019?"
 
 While it's answering, you can stop it. What it already wrote stays in the
 conversation.
+
+### Read a Web Page
+
+Include a public page's HTTPS URL in your question to let Ask Yaffo read it.
+**Read public websites** is enabled by default under **Settings** → **Assistant**
+→ **What it can look at**. Turn it off there to disable web reads.
+
+Before reading a new website, the assistant shows an approval card with its
+domain and the pages it wants to read. Choose the domains to allow and click
+**Allow selected**, or click **Deny**. Your decision applies only to that
+conversation, and the assistant continues when you decide. A link in your message
+does not grant access by itself.
+
+Page contents are sent to your AI provider, and successful reads appear under
+**Sources**. Expand the activity line to see the text the assistant received.
+This reads pages at known URLs; it does not run search-engine queries.
+
+Allowed domains can be read again in the same conversation. A new conversation
+starts with no website approvals, and denying a domain stops reads from it in
+that conversation. Turning **Read public websites** off removes the web tool
+from future turns and stops earlier web results from being sent again.
 
 ## Troubleshoot Problems
 
@@ -148,21 +170,23 @@ new photo from this camera", the assistant points you to
 
 - **Your messages**, and the results of the checks and scripts the assistant runs:
   log lines, file and folder names, people's names, counts, and settings.
-- **Before sending**, Yaffo replaces your home folder with `~`, shows media
+- **Tool results and attached error context** are redacted before sending. Yaffo
+  replaces your home folder with `~`, shows media
   folders as labels instead of full paths, rounds GPS coordinates, and hides
   email addresses and anything that looks like a key.
 - **Never sent:** your photos and videos themselves, the database, or your API
   keys. Reading capture dates from files is a separate setting, off by default.
 
-The assistant connects to nothing except your AI provider. Conversations and the
+The assistant connects to your AI provider and to public websites whose domains
+you approve for the conversation. Conversations and the
 record of what was sent stay on this computer until you delete them, one
 conversation at a time, or all at once with **Delete all conversations** on the
 full Ask Yaffo page.
 
 To limit what it can check, turn groups off in
 [Settings → Assistant](../reference-maintenance/settings.md#assistant). With
-every group off, it answers from the documentation only, and nothing from this
-computer is sent.
+every group and **Read public websites** off, it answers from the bundled
+documentation without reading local diagnostics or public web pages.
 
 ![The Assistant section of Settings, with what it can look at and the groups of changes it can propose](assets/ask-yaffo/settings-assistant.webp)
 

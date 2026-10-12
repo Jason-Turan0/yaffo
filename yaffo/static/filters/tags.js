@@ -41,10 +41,10 @@ window.PHOTO_ORGANIZER.filters.initTags = (i18n, config) => {
         tagValueSelect.innerHTML = `<option value="">${i18n.t('media:filters.loading')}</option>`;
 
         try {
-            // URL API instead of string concatenation: the endpoint may
-            // already carry query params (the remote gallery's proxy does).
-            const url = new URL(config.urls.get_tag_values, window.location.origin);
-            url.searchParams.set('tag_name', tagName);
+            // The tag name is a path segment. The remote gallery swaps in its
+            // peer proxy URL, which carries the same <tag_name> placeholder.
+            const url = config.buildUrl('api_tag_values_list', { tag_name: encodeURIComponent(tagName) });
+            if (!url) throw new Error('Tag values endpoint missing');
             const response = await fetch(url);
 
             if (!response.ok) {

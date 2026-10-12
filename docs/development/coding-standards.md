@@ -178,13 +178,58 @@ Rules:
 `APP_CONFIG` exposes Flask routes to JavaScript:
 
 ```javascript
-APP_CONFIG.urls.faces_assign;
+APP_CONFIG.urls.api_faces_update;
 
 const url = APP_CONFIG.buildUrl('person_update', { person_id: 123 });
 ```
 
 Use `APP_CONFIG.buildUrl()` for parameterized routes instead of hardcoding URLs
-in JavaScript.
+in JavaScript. Blueprint endpoints appear with the dot replaced by an underscore:
+`api.faces_update` is `APP_CONFIG.urls.api_faces_update`.
+
+## Web Routes and the API
+
+Every request passes an app-wide check (`yaffo/security.py`): the `Host` must be a
+loopback name or one listed in `web.allowed_hosts` / `YAFFO_WEB_ALLOWED_HOSTS`, and
+a POST, PUT, PATCH, or DELETE sent by another site's page (`Sec-Fetch-Site:
+cross-site`/`same-site`, or a mismatched `Origin`) is refused. Routes don't need
+their own cross-site protection; see
+[Web Routes and Request Security](web-routes-and-request-security.md).
+
+Never accept a filesystem path from the browser for something that acts on the
+computer (opening, revealing, deleting). Name the file by id and look the path up
+on the server, as `POST /api/openings` does.
+
+### What goes in `/api/`
+
+The `api` blueprint (`yaffo/routes/api.py`) holds a resource only if both are true:
+
+- **More than one page uses it.** A JavaScript module counts once for each page
+  that loads it.
+- **It's independent of any page's UI.** It's library data (photos, faces, tags,
+  places) and returns plain data, not markup or a shape built for one page.
+
+Everything else is a page route under the page's own prefix (`/assistant/…`,
+`/settings/…`, `/faces/…`), named `<area>_<thing>`, using whatever method and body
+is simplest for that page.
+
+### API conventions
+
+- **Paths name resources.** Plural collections (`/api/faces`), members by id
+  (`/api/media/41`), sub-resources nested (`/api/tags/<name>/values`). No verbs.
+- **The method says what happens.** `GET` reads; `POST` to a collection creates
+  (`201`, or `202` when the work happens after the response); `PUT` replaces;
+  `PATCH` changes the given fields; `DELETE` removes (`204`, also when already
+  gone).
+- **Actions become state or new resources.** Favoriting sets a photo's
+  `favorite`; assigning sets faces' `person_id`; opening a file creates an
+  opening. Send the wanted state, never a toggle.
+- **Batches are a PATCH of the collection** with the member ids:
+  `{"ids": [12, 13], "person_id": 7}`.
+- **JSON in and out.** A body that isn't `application/json` gets `415`.
+- **One error shape:** `{"error": "<translated message>", "code": "<stable
+  code>"}` with `400`, `404`, `409`, or `415`.
+- **No version in the path**, and endpoints are named `api.<resource>_<role>`.
 
 ## HTMX vs JavaScript Modules
 

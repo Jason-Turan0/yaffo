@@ -32,7 +32,7 @@ describe("local interactive runner lifecycle", () => {
         const {suite, dependencies, cleanup} = setup(sharing);
         expect(await runLocalSuite(suite, {port: 5502, fresh: false, mode: "headed"}, dependencies)).toBe(1);
         expect(dependencies.startEnvironment).toHaveBeenCalledWith(5502, {
-            withPeer: sharing, preseeded: true, copyPreseeded: true,
+            withPeer: sharing, preseeded: true, copyPreseeded: true, withFakeSyncServices: false, syncOriginOverrides: undefined,
         });
         expect(dependencies.runTests).toHaveBeenCalledWith("http://127.0.0.1:5502", suite.specs, expect.objectContaining({
             mode: "headed",
@@ -41,12 +41,49 @@ describe("local interactive runner lifecycle", () => {
         expect(cleanup).toHaveBeenCalledTimes(1);
     });
 
+    it("starts fake Flickr and forwards its URL for the sync-services suite", async () => {
+        const {dependencies, suite} = setup(false);
+        suite.id = "sync__services";
+        suite.directory = "generated_tests/sync_services";
+        suite.specs = ["generated_tests/sync_services/sync_services.spec.ts"];
+        dependencies.startEnvironment.mockResolvedValue({
+            tempDir: "/tmp/local-test", port: 5502, baseUrl: "http://127.0.0.1:5502",
+            flaskProcess: null, taskqProcess: null, fakeFlickrUrl: "http://127.0.0.1:5503",
+            cleanup: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
+        });
+        await runLocalSuite(suite, {port: 5502, fresh: false, mode: "headless"}, dependencies);
+        expect(dependencies.startEnvironment).toHaveBeenCalledWith(5502, expect.objectContaining({withFakeSyncServices: true}));
+        expect(dependencies.runTests).toHaveBeenCalledWith("http://127.0.0.1:5502", suite.specs,
+            expect.objectContaining({environment: expect.objectContaining({FAKE_FLICKR_URL: "http://127.0.0.1:5503"})}));
+    });
+
+    it("starts all fake providers for sync automations and forwards their URLs", async () => {
+        const {dependencies, suite} = setup(false);
+        suite.id = "sync__automations";
+        suite.directory = "generated_tests/sync_automations";
+        suite.specs = ["generated_tests/sync_automations/sync_automations.spec.ts"];
+        dependencies.startEnvironment.mockResolvedValue({
+            tempDir: "/tmp/local-test", port: 5502, baseUrl: "http://127.0.0.1:5502",
+            flaskProcess: null, taskqProcess: null,
+            fakeFlickrUrl: "http://127.0.0.1:5503", fakeOneDriveUrl: "http://127.0.0.1:5504",
+            fakeImmichUrl: "http://127.0.0.1:5505", cleanup: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
+        });
+        await runLocalSuite(suite, {port: 5502, fresh: false, mode: "headless"}, dependencies);
+        expect(dependencies.startEnvironment).toHaveBeenCalledWith(5502, expect.objectContaining({withFakeSyncServices: true}));
+        expect(dependencies.runTests).toHaveBeenCalledWith("http://127.0.0.1:5502", suite.specs,
+            expect.objectContaining({environment: expect.objectContaining({
+                FAKE_FLICKR_URL: "http://127.0.0.1:5503",
+                FAKE_ONEDRIVE_URL: "http://127.0.0.1:5504",
+                FAKE_IMMICH_URL: "http://127.0.0.1:5505",
+            })}));
+    });
+
     it("cleans up a fresh environment even when Playwright cannot start", async () => {
         const {suite, dependencies, cleanup} = setup(false);
         dependencies.runTests.mockRejectedValue(new Error("spawn failed"));
         await expect(runLocalSuite(suite, {port: 5502, fresh: true, mode: "ui"}, dependencies)).rejects.toThrow("spawn failed");
         expect(dependencies.startEnvironment).toHaveBeenCalledWith(5502, {
-            withPeer: false, preseeded: false, copyPreseeded: false,
+            withPeer: false, preseeded: false, copyPreseeded: false, withFakeSyncServices: false, syncOriginOverrides: undefined,
         });
         expect(cleanup).toHaveBeenCalledTimes(1);
     });

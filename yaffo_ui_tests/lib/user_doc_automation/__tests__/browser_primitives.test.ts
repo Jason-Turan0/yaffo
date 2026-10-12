@@ -161,11 +161,7 @@ describe("blockOsSideEffects", () => {
         for (const handler of handlers) {
             const fulfill = jest.fn<(options: unknown) => Promise<void>>(async () => undefined);
             await handler({fulfill});
-            expect(fulfill).toHaveBeenCalledWith({
-                status: 200,
-                contentType: "application/json",
-                body: JSON.stringify({success: true}),
-            });
+            expect(fulfill).toHaveBeenCalledWith({status: 202, body: ""});
         }
     });
 });

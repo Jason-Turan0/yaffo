@@ -10,6 +10,7 @@ import {
     IsolatedEnvironment,
     IsolatedEnvironmentOptions,
     seedCacheDir,
+    needsFakeSyncServices,
     startIsolatedEnvironment,
 } from "@lib/services/isolated_runner";
 import {runPlaywrightTests, RunOptions} from "@lib/services/run_playwright_tests";
@@ -43,6 +44,8 @@ export interface SandboxedSuite {
     specs: string[];
     withPeer: boolean;
 }
+
+export {needsFakeSyncServices} from "@lib/services/isolated_runner";
 
 export interface SuiteRunResult {
     suite: SandboxedSuite;
@@ -204,6 +207,7 @@ export const runSandboxedSuites = async (
                 withPeer: suite.withPeer,
                 preseeded: true,
                 copyPreseeded: true,
+                withFakeSyncServices: needsFakeSyncServices(suite.specs),
             });
             if (options.signal?.aborted) {
                 throw new Error("Sandboxed test run interrupted");
@@ -216,6 +220,13 @@ export const runSandboxedSuites = async (
                 environment: {
                     SUITE: suite.id,
                     PEER_URL: environment.peer?.baseUrl ?? "",
+                    FAKE_FLICKR_URL: environment.fakeFlickrUrl ?? "",
+                    FAKE_ONEDRIVE_URL: environment.fakeOneDriveUrl ?? "",
+                    FAKE_IMMICH_URL: environment.fakeImmichUrl ?? "",
+                    // Fixture scripts the specs run (seed_flickr_service.py) open the
+                    // sandbox's data dir, not the developer's real one.
+                    YAFFO_DATA_DIR: environment.tempDir,
+                    PATH: `${resolve(process.cwd(), "..", "venv", "bin")}:${process.env.PATH ?? ""}`,
                     PLAYWRIGHT_HTML_OUTPUT_DIR: `${reportRoot}/html`,
                     PLAYWRIGHT_JUNIT_OUTPUT_FILE: `${reportRoot}/results/junit.xml`,
                 },

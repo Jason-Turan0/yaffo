@@ -4,7 +4,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterator
 
-from flask import Flask, Response, jsonify, make_response, redirect, render_template, request, stream_with_context, url_for
+from flask import Flask, Response, abort, jsonify, make_response, redirect, render_template, request, stream_with_context, url_for
 from flask_babel import gettext, ngettext
 
 import yaffo.db.repositories.media_dir_repository
@@ -25,7 +25,9 @@ from yaffo.db.repositories import automation_repository, classification_reposito
 from yaffo.distance_units import get_saved_distance_unit, set_distance_unit
 from yaffo.i18n import get_saved_locale, set_locale
 from yaffo.routes.assistant import assistant_settings_context
-from yaffo.site_agents import llm_config
+from yaffo.site_agents import llm_config, model_catalog
+from yaffo.site_agents.model_clients import providers as model_providers
+from yaffo.runtime_mode import demo_mode_enabled
 from yaffo.utils.exiftool_path import get_exiftool_path
 from yaffo.utils.face_analysis import get_model_location as get_face_model_location
 from yaffo.utils.ffmpeg_path import get_ffmpeg_path
@@ -266,13 +268,36 @@ def init_settings_routes(app: Flask):
         return render_template(
             "settings/_llm_api_key.html", provider=llm_config.provider_status(provider_id))
 
+    @app.route("/settings/llm/models", methods=["GET"])
+    def settings_llm_models():
+        provider_id = (request.args.get("provider") or "").strip()
+        if provider_id and model_providers.get_provider(provider_id) is None:
+            abort(404)
+        results = [] if not provider_id or demo_mode_enabled() else model_catalog.refresh(
+            db.session, llm_config.get_api_key, force=True, provider_id=provider_id)
+        messages = {
+            "auth": gettext("Check the API key."),
+            "unavailable": gettext("The provider could not be reached."),
+            "invalid_response": gettext("The provider returned an invalid model list."),
+            "too_large": gettext("The provider's model list exceeded the lookup limit."),
+            "no_models": gettext("The provider returned no compatible text models."),
+            "key_changed": gettext("The API key changed during the lookup. Choose the provider again."),
+        }
+        errors = [messages[result.status] for result in results if result.status != "ok"]
+        return render_template("settings/_llm_models.html", llm=llm_config.localized_status(),
+                               model_lookup_error=" ".join(errors),
+                               lookup_provider=llm_config.provider_status(provider_id) if provider_id else None)
+
     @app.route("/settings/llm/model", methods=["POST"])
     def settings_llm_model():
         # Persist the model and swap the single key box to that model's provider, with a
         # toast for confirmation. Only the key fragment is swapped (not the whole
         # section), so the model <select> keeps its state.
-        llm_config.set_model((request.form.get("model") or "").strip())
-        response = make_response(_render_api_key(llm_config.selected_model_provider()))
+        if not llm_config.set_model((request.form.get("model") or "").strip()):
+            return jsonify(model_catalog.ModelSelectionError(
+                gettext("Choose a model from the available list.")).to_dict()), 400
+        response = make_response(_render_api_key(llm_config.selected_model_provider()) + render_template(
+            "settings/_llm_active_model.html", llm=llm_config.localized_status(), active_model_oob=True))
         response.headers["HX-Trigger"] = json.dumps({
             "showNotification": {
                 "message": gettext("AI model updated."),
@@ -287,17 +312,21 @@ def init_settings_routes(app: Flask):
         key = (request.form.get("api_key") or "").strip()
         if provider and key:
             llm_config.set_api_key(provider, key)
-        return _render_api_key(provider)
+        response = make_response(_render_api_key(provider))
+        response.headers["HX-Trigger"] = "llm-models-refresh"
+        return response
 
     @app.route("/settings/llm/api-key/clear", methods=["POST"])
     def settings_llm_api_key_clear():
         provider = (request.form.get("provider") or "").strip()
         if provider:
             llm_config.clear_api_key(provider)
-        return _render_api_key(provider)
+        response = make_response(_render_api_key(provider))
+        response.headers["HX-Trigger"] = "llm-models-refresh"
+        return response
 
-    @app.route("/api/settings/media-dirs", methods=["POST"])
-    def add_media_dir():
+    @app.route("/settings/media-dirs", methods=["POST"])
+    def settings_media_dirs_add():
         """Add a new media directory"""
         if _library_update_in_progress():
             return _library_update_blocked_response()
@@ -329,8 +358,8 @@ def init_settings_routes(app: Flask):
             "media_dirs": yaffo.db.repositories.media_dir_repository.list_media_dirs(db.session)
         })
 
-    @app.route("/api/settings/media-dirs/<int:index>", methods=["DELETE"])
-    def remove_media_dir(index: int):
+    @app.route("/settings/media-dirs/<int:index>", methods=["DELETE"])
+    def settings_media_dirs_remove(index: int):
         """Remove a media directory by index"""
         if _library_update_in_progress():
             return _library_update_blocked_response()
@@ -346,8 +375,8 @@ def init_settings_routes(app: Flask):
             "media_dirs": yaffo.db.repositories.media_dir_repository.list_media_dirs(db.session),
         })
 
-    @app.route("/api/settings/thumbnail-stats", methods=["GET"])
-    def get_thumbnail_stats_api():
+    @app.route("/settings/thumbnail-stats", methods=["GET"])
+    def settings_thumbnail_stats():
         """Get current thumbnail directory statistics"""
         # Get thumbnail_dir from settings or use default
         thumbnail_setting = db.session.query(ApplicationSettings).filter_by(name="thumbnail_dir").first()
@@ -397,8 +426,8 @@ def init_settings_routes(app: Flask):
             headers={"Cache-Control": "no-store"},
         )
 
-    @app.route("/api/settings/thumbnail-dir", methods=["POST"])
-    def update_thumbnail_dir():
+    @app.route("/settings/thumbnail-dir", methods=["POST"])
+    def settings_thumbnail_dir():
         """Update thumbnail directory and move files"""
         if _library_update_in_progress():
             return _library_update_blocked_response()

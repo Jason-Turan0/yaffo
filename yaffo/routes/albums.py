@@ -17,7 +17,11 @@ from typing import Optional
 from flask import Flask, abort, redirect, render_template, request, url_for
 
 from yaffo.db import db
-from yaffo.db.models import GRANT_SCOPE_ALBUM, TRUST_STATE_TRUSTED, Album, MediaItem
+from yaffo.background_tasks.events import emit_album_changed
+from yaffo.db.models import (
+    ALBUM_CHANGE_ADDED, ALBUM_CHANGE_DELETED, ALBUM_CHANGE_REMOVED, ALBUM_CHANGE_RENAMED, GRANT_SCOPE_ALBUM,
+    TRUST_STATE_TRUSTED, Album, MediaItem,
+)
 from yaffo.db.repositories import album_repository as repo
 from yaffo.db.repositories import p2p_repository
 from yaffo.db.repositories.media_filter_repository import apply_media_filters
@@ -159,9 +163,9 @@ def init_albums_routes(app: Flask):
     def albums_update_details(album_id: int):
         """Rename / re-describe — the "Edit details" modal. Membership is edited on
         the grid, never here."""
-        _require_album(album_id)
+        old_name = _require_album(album_id).name
         try:
-            repo.update_album(
+            album = repo.update_album(
                 db.session,
                 album_id,
                 request.form.get("name") or "",
@@ -169,6 +173,8 @@ def init_albums_routes(app: Flask):
             )
         except ValueError as exc:
             return _render_album(album_id, error=str(exc)), 400
+        if album.name != old_name:
+            emit_album_changed(album_id, ALBUM_CHANGE_RENAMED)
         return redirect(url_for("albums_show", album_id=album_id))
 
     @app.route("/albums/<int:album_id>/add", methods=["GET"])
@@ -240,8 +246,12 @@ def init_albums_routes(app: Flask):
                 to_media_filters(filters),
                 exclude_ids=sorted(selection.excluded),
             )
+            if added:
+                emit_album_changed(album_id, ALBUM_CHANGE_ADDED)
         else:
             added = repo.add_items(db.session, album_id, sorted(selection.ids))
+            if added:
+                emit_album_changed(album_id, ALBUM_CHANGE_ADDED, sorted(selection.ids))
         return redirect(_add_screen_url(album_id, added=added))
 
     # Not filters: transient screen state that must never be echoed back into the
@@ -272,9 +282,13 @@ def init_albums_routes(app: Flask):
         _require_album(album_id)
         selection = _selection(total=0)
         if selection.all:
-            repo.remove_all(db.session, album_id, exclude_ids=sorted(selection.excluded))
+            removed = repo.remove_all(db.session, album_id, exclude_ids=sorted(selection.excluded))
+            if removed:
+                emit_album_changed(album_id, ALBUM_CHANGE_REMOVED)
         else:
-            repo.remove_items(db.session, album_id, sorted(selection.ids))
+            removed = repo.remove_items(db.session, album_id, sorted(selection.ids))
+            if removed:
+                emit_album_changed(album_id, ALBUM_CHANGE_REMOVED, sorted(selection.ids))
         # Back to the album with the selection dropped: it has been acted on.
         return redirect(url_for("albums_show", album_id=album_id, edit="1"))
 
@@ -343,6 +357,7 @@ def init_albums_routes(app: Flask):
         """Delete the album and its membership rows — never the photos."""
         if not repo.delete_album(db.session, album_id):
             abort(404)
+        emit_album_changed(album_id, ALBUM_CHANGE_DELETED)
         return redirect(url_for("albums_index"))
 
     def _render_album(album_id: int, error: Optional[str] = None):

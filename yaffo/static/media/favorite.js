@@ -2,6 +2,7 @@
 
 /**
  * @typedef {Object} FavoriteResponse
+ * @property {number} id
  * @property {boolean} favorite
  */
 
@@ -25,11 +26,15 @@ favoriteApi.init = (i18n, config) => {
      */
     const toggle = async (button) => {
         const photoId = button.dataset.photoId;
+        // Send the wanted state, not a toggle: a retried or doubled request
+        // then can't flip it back.
+        const favorite = button.getAttribute('aria-pressed') !== 'true';
         button.disabled = true;
         try {
-            const response = await fetch(config.buildUrl('toggle_media_favorite', { media_item_id: photoId }), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+            const response = await fetch(config.buildUrl('api_media_update', { media_item_id: photoId }), {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ favorite })
             });
             if (!response.ok) throw new Error('Request failed');
             const data = /** @type {FavoriteResponse} */ (await response.json());

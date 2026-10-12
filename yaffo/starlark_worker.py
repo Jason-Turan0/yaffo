@@ -51,8 +51,11 @@ def main() -> None:
         return response.get("value")
 
     def host(name: str) -> Callable[..., Any]:
-        def call(*args: Any) -> Any:
-            return exchange({"kind": "call", "name": name, "args": args})
+        def call(*args: Any, **kwargs: Any) -> Any:
+            message = {"kind": "call", "name": name, "args": args}
+            if kwargs:
+                message["kwargs"] = kwargs
+            return exchange(message)
         return call
 
     def capture_print(*args: Any) -> None:

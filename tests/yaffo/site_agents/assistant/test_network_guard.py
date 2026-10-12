@@ -1,6 +1,8 @@
-"""The assistant adds no network access of its own (ai-assistant.md → Network access).
+"""Local tools and actions remain offline; authorized web reads use a separate tool.
 
-1. No module in site_agents/assistant imports an HTTP or socket library.
+1. No module in site_agents/assistant imports an HTTP or socket library directly.
+   WebToolProvider delegates public web reads to the service builder's fetcher;
+   its authorization boundary is covered in test_web_tool.py.
 2. The docs tools, every diagnostic tool, and run_script (with every read host
    function of the assistant profile) work with socket connections blocked.
 3. Approving and undoing change plans with every library change opens no

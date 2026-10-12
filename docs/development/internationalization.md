@@ -341,9 +341,35 @@ Task behavior:
   drop them from every locale.
 - `i18n-translate` fills missing entries from English source text using the
   configured translation engine, with `--dry-run`, `--keys-only`,
-  `--overwrite`, `--batch-size`, and `--engine`.
+  `--overwrite`, `--batch-size`, and `--engine`. The `llm` engine uses an
+  authenticated CLI, independently of Yaffo's AI Generation model and API keys.
+  `--llm-cli=auto` prefers Codex, then Claude Code; select either explicitly with
+  `--llm-cli=codex` or `--llm-cli=claude`. `--llm-model` overrides the CLI's own
+  configured model. `--llm-timeout` bounds each batch (120 seconds by default)
+  and stops the CLI process tree on timeout or cancellation. Batches run from
+  temporary directories and return structured JSON for the usual catalog
+  validation. Codex runs with a read-only sandbox; Claude's tools are disabled.
+  The `auto` engine uses a CLI when available and falls back to deep-translator
+  only when neither CLI is installed. A CLI sign-in, model, or timeout failure
+  is reported instead of silently switching translation engines. Both single-
+  locale and all-locale Invoke tasks accept the CLI options.
 - `i18n-compile` validates catalogs, then compiles `.po` files to `.mo`.
 - `i18n-check` validates catalogs and runs the hard-coded UI text scanner.
+
+For example, after signing in to the CLI:
+
+```shell
+inv i18n-translate --locale=de --engine=llm --llm-cli=codex
+inv i18n-translate --locale=fr --engine=llm --llm-cli=claude --llm-model=sonnet --llm-timeout=180
+inv i18n-translate-all --engine=llm --llm-cli=codex
+```
+
+The all-locale command extracts source strings, updates and synchronizes the
+catalogs, translates each configured locale, validates the results, and compiles
+gettext catalogs. Use `--keys-only` to inspect entries without calling a model.
+
+CLI references: [Codex exec](https://learn.chatgpt.com/docs/developer-commands#codex-exec)
+and [Claude Code structured output](https://code.claude.com/docs/en/headless#get-structured-output).
 
 Use the stricter release check when a locale must be fully translated:
 

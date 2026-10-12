@@ -13,6 +13,7 @@
  * the new screenshot" — see "The agentic loop" in docs/documentation_automation.md.
  */
 import "dotenv/config";
+import {isAppUnreachable} from "./app_reachability";
 import {copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync} from "fs";
 import {dirname, join, resolve} from "path";
 import {pathToFileURL} from "url";
@@ -274,6 +275,27 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
         }
 
         for (const result of failedCaptures) {
+            if (isAppUnreachable(result.error)) {
+                // Nothing a walkthrough edit can fix, and a re-run would "verify" a
+                // repair that changed nothing. Report it and fail the run instead.
+                verdicts.push({
+                    page: result.page,
+                    target: walkthroughPath(result.page),
+                    triage: {
+                        classification: "environment_instability",
+                        confidence: "high",
+                        summary: "The documentation app couldn't be reached, so the walkthrough never ran.",
+                        reasoning: result.error as string,
+                        proseImpact: [],
+                        recommendedAction: "quarantine",
+                    },
+                });
+                console.error(`🌫️ ${result.page}`);
+                console.error(`   app unreachable: ${result.error}`);
+                console.error("   → not sent to the repair agent; check the app container\n");
+                failed++;
+                continue;
+            }
             const evidence = walkthroughFailureEvidence(result);
             const triage: Triage = {
                 classification: "walkthrough_defect",
@@ -319,7 +341,17 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
                     console.error(`   ‼️  ${failure.split("\n")[0]}`);
                 }
                 verdict.resolved = !outcome.failures.length && !outcome.reverted;
-                if (verdict.resolved) {
+                if (verdict.resolved && !outcome.written.length) {
+                    // It passed again with nothing changed: the first failure came from
+                    // the environment, not from the walkthrough.
+                    verdict.triage = {
+                        ...triage,
+                        classification: "environment_instability",
+                        summary: "The walkthrough failed once, then passed unchanged when re-run.",
+                        recommendedAction: "quarantine",
+                    };
+                    console.log("   → passed on re-run with no changes; not a walkthrough defect");
+                } else if (verdict.resolved) {
                     console.log("   → repaired and verified");
                 } else {
                     console.error("   → walkthrough remains unresolved");

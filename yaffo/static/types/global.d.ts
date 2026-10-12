@@ -359,8 +359,8 @@ type MediaTag = {
 type PhotoViewApi = {
     highlightFace(faceId: number): void;
     clearHighlights(): void;
-    openFile(filePath: string): void;
-    openFolder(folderPath: string): void;
+    openFile(mediaItemId: number): void;
+    openFolder(mediaItemId: number): void;
     reindex(mediaItemId: number): Promise<void>;
 };
 
@@ -377,8 +377,6 @@ type FaceReassignApi = Record<string, never>;
 type ViewPhotoNamespace = {
     initPhotoView?: (
         faceData: MediaFace[] | null,
-        absoluteFilePath: string,
-        absoluteFolderPath: string,
         i18n: I18nService,
         config: AppConfig,
     ) => PhotoViewApi;
@@ -535,6 +533,79 @@ type IndexPhotosNamespace = {
 type UtilitiesNamespace = {
     initBase?: () => void;
     initRemoveDuplicates?: () => void;
+    initNewAutomationKinds?: (modalElement: HTMLElement) => { update: () => void };
+};
+
+/** One file a source sync's Test would bring in (yaffo/sync/preview.py RecordPreview). */
+type SyncTestRecord = {
+    filename: string;
+    size: number | null;
+    state: 'new' | 'imported' | 'in_library' | 'changed' | 'deleted_at_source';
+    media_item_id: number | null;
+};
+
+type SyncTestSample = {
+    filename: string;
+    media_item_id: number | null;
+    destination?: string | null;
+};
+
+/** One folder or album a remote option's picker lists (routes/utilities/sync_account.py). */
+type SyncChoice = {
+    id: string;
+    label: string;
+    has_children?: boolean;
+    suggested?: boolean;
+};
+
+type SyncChoicesResponse = {
+    items?: SyncChoice[];
+    next_cursor?: string | null;
+    error?: string;
+};
+
+type SyncDeviceStart = {
+    handle?: string;
+    user_code: string;
+    verification_uri: string;
+    interval: number;
+    error?: string;
+};
+
+type SyncDevicePoll = {
+    status: 'pending' | 'done' | 'failed';
+    error?: string;
+};
+
+/** The sync Test payload (yaffo/sync/preview.py SyncTestResult + problem_text). */
+type SyncTestResult = {
+    role: string;
+    problem: string | null;
+    problem_text: string | null;
+    would_add: number;
+    would_remove: number;
+    unchanged: number;
+    convert: number;
+    unsupported: number;
+    add_samples: SyncTestSample[];
+    remove_samples: SyncTestSample[];
+    records: SyncTestRecord[];
+    more: boolean;
+    detail: string | null;
+    current_page: number;
+    page_size: number;
+    total_items: number;
+    state_counts: Record<string, number>;
+    source_total: number | null;
+    pagination_html: string;
+};
+
+type SyncNamespace = {
+    initSyncPage: (i18n: I18nService, config: AppConfig) => void;
+    initRemoteOption: (root: HTMLElement, i18n: Pick<I18nService, 't'>) => void;
+    initDeviceCode: (root: HTMLElement, i18n: Pick<I18nService, 't'>) => void;
+    renderTestResult: (container: HTMLElement, result: SyncTestResult, i18n: Pick<I18nService, 't'>, config: AppConfig) => void;
+    initServicePage: (slug: string, startStatus: string, i18n: Pick<I18nService, 't'>, config: AppConfig) => void;
 };
 
 type SettingsNamespace = {
@@ -680,6 +751,14 @@ type AssistantDocSource = {
     heading: string;
     url: string;
     scope: string;
+};
+
+type AssistantWebPermission = {
+    id: number;
+    domains: Record<string, string[]>;
+    status: 'pending' | 'allowed' | 'denied' | 'partial';
+    allowed: string[];
+    denied: string[];
 };
 
 type AssistantAppLink = {
@@ -828,6 +907,7 @@ type PhotoOrganizerApp = {
     automations?: AutomationsNamespace;
     themes?: ThemesNamespace;
     utilities?: UtilitiesNamespace;
+    sync?: SyncNamespace;
     assistant?: AssistantNamespace;
     confirmDialog: ConfirmDialogApi;
     pickFolder: PickFolderApi;

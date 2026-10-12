@@ -57,6 +57,9 @@ class MediaItem(db.Model):
     index_error_detail = db.Column(db.Text, nullable=True)
     index_failed_at = db.Column(db.DateTime, nullable=True)
     index_failed_signature = db.Column(db.String, nullable=True)
+    # Hex SHA-1 of the file's bytes, computed at index time. Sync imports match it to
+    # skip files already in the library (docs/development/automation-sync-adapters.md).
+    sha1 = db.Column(db.String(40), nullable=True, index=True)
     faces = db.relationship(
         "Face",
         back_populates="media_item"
@@ -327,13 +330,25 @@ EVENT_MEDIA_INDEXED = "media_indexed"
 EVENT_DUPLICATES_FOUND = "duplicates_found"
 EVENT_MEDIA_MODIFIED = "media_modified"
 EVENT_MEDIA_LABELED = "media_labeled"
+EVENT_ALBUM_CHANGED = "album_changed"
+EVENT_MEDIA_DELETED = "media_deleted"
+EVENT_DEVICE_ONLINE = "device_online"
 EVENTS = {
     EVENT_MEDIA_IMPORTED: "Media imported",
     EVENT_MEDIA_INDEXED: "Media indexed",
     EVENT_DUPLICATES_FOUND: "Duplicates found",
     EVENT_MEDIA_MODIFIED: "Media modified",
     EVENT_MEDIA_LABELED: "Media labeled",
+    EVENT_ALBUM_CHANGED: "Album changed",
+    EVENT_MEDIA_DELETED: "Media deleted",
+    EVENT_DEVICE_ONLINE: "Paired device came online",
 }
+
+# album_changed payload `change` values.
+ALBUM_CHANGE_ADDED = "added"
+ALBUM_CHANGE_REMOVED = "removed"
+ALBUM_CHANGE_RENAMED = "renamed"
+ALBUM_CHANGE_DELETED = "deleted"
 
 # Handler keys for system automations (registry in background_tasks.registry).
 AUTOMATION_HANDLER_FILE_SYNC = "file_sync"
@@ -447,6 +462,9 @@ class Automation(db.Model):
     published_code = db.Column(db.Text)     # custom: the live Starlark; system: NULL
     working_code = db.Column(db.Text)       # custom: the in-progress draft; system: NULL
     config = db.Column(db.JSON)             # system: runtime-tunable settings (e.g. a threshold); custom: NULL
+    # Sync automations only: {"config": SyncConfig, "runtime": SyncRuntime} (yaffo/sync/schemas.py).
+    # A non-NULL value routes the automation to the sync engine.
+    sync = db.Column(db.JSON)
     status = db.Column(db.String, nullable=False, default=AUTOMATION_STATUS_READY)
     created_at = db.Column(db.DateTime, default=utcnow)
     updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
@@ -475,6 +493,10 @@ class Automation(db.Model):
         automation, else the stored description verbatim."""
         text = SYSTEM_AUTOMATION_TEXT.get(self.slug) if self.is_system else None
         return str(text[1]) if text else self.description
+
+    @property
+    def is_sync(self) -> bool:
+        return self.sync is not None
 
     def to_dict(self):
         return {
@@ -530,6 +552,115 @@ class AutomationTrigger(db.Model):
         }
 
 
+# Sync adapter roles and statuses (docs/development/automation-sync-adapters.md).
+SYNC_ROLE_SOURCE = "source"
+SYNC_ROLE_TARGET = "target"
+SYNC_ADAPTER_STATUS_DRAFT = "draft"
+SYNC_ADAPTER_STATUS_READY = "ready"
+SYNC_ADAPTER_STATUS_INVALID = "invalid"
+
+# Built-in adapters: Python handlers instead of Starlark code, no account.
+SYNC_HANDLER_FOLDER_SOURCE = "folder_source"
+SYNC_HANDLER_FOLDER_TARGET = "folder_target"
+SYNC_HANDLER_PEER_SOURCE = "peer_source"
+SYNC_PROVIDER_LOCAL = "local"
+SYNC_PROVIDER_PEER = "peer"
+
+# sync_items.status. Stored as codes; the UI translates them.
+SYNC_ITEM_IMPORTED = "imported"
+SYNC_ITEM_LINKED_EXISTING = "linked_existing"
+SYNC_ITEM_SKIPPED = "skipped"
+SYNC_ITEM_DELETED_AT_SOURCE = "deleted_at_source"
+SYNC_ITEM_PENDING = "pending"
+SYNC_ITEM_SENT = "sent"
+SYNC_ITEM_FAILED = "failed"
+SYNC_ITEM_REMOVING = "removing"
+SYNC_ITEM_REMOVED = "removed"
+SYNC_ITEM_REMOVED_REMOTELY = "removed_remotely"
+SYNC_ITEM_CANT_REMOVE = "cant_remove"
+
+
+class SyncAdapter(db.Model):
+    """One adapter: the code (or, for a built-in, the Python `handler`) for one
+    direction against one provider. Built-ins and presets are seeded and read-only;
+    custom adapters (Phase 4) are written in the builder. Syncs reference a row by id
+    from their `automations.sync` JSON."""
+
+    __tablename__ = "sync_adapters"
+
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String, unique=True, nullable=False)
+    name = db.Column(db.String, nullable=False)
+    role = db.Column(db.String, nullable=False)
+    provider = db.Column(db.String, nullable=False)
+    is_preset = db.Column(db.Boolean, nullable=False, default=False)
+    preset_version = db.Column(db.String, nullable=True)
+    handler = db.Column(db.String, nullable=True)
+    working_code = db.Column(db.Text, nullable=True)
+    published_code = db.Column(db.Text, nullable=True)
+    working = db.Column(db.JSON, nullable=True)
+    published = db.Column(db.JSON, nullable=True)
+    grants = db.Column(db.JSON, nullable=False, default=list)
+    doc_domains = db.Column(db.JSON, nullable=False, default=list)
+    app_secret_ref = db.Column(db.String, nullable=True)
+    test_connection_key = db.Column(db.String, nullable=True)
+    status = db.Column(db.String, nullable=False, default=SYNC_ADAPTER_STATUS_READY)
+    # A custom adapter's builder run (AUTOMATION_STATUS_*: IN_PROGRESS / READY /
+    # FAILED); NULL for built-ins and presets.
+    builder_status = db.Column(db.String, nullable=True)
+    # The test account the user let the builder read through live (its connection
+    # key); NULL until they allow it. See the service builder's permissions.
+    live_reads_key = db.Column(db.String, nullable=True)
+    created_at = db.Column(db.DateTime, default=utcnow)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
+
+    # The builder chat. SQLite doesn't enforce conversations' ON DELETE CASCADE here,
+    # and a deleted adapter's id is reused, so without this a new service would open
+    # with the deleted one's chat and permission answers.
+    messages = db.relationship("Conversation", cascade="all, delete-orphan", order_by="Conversation.id")
+
+
+class SyncItem(db.Model):
+    """One item a sync has seen (source) or sent (target); the per-item ledger.
+    Unique on (automation, item_key), which makes re-listing and re-pushing
+    idempotent. For targets the row is also the intent log: written `pending` before
+    the push, resolved after; a run that dies leaves it `pending` for the next run to
+    reconcile.
+
+    item_key: sources -> the record's source_id; targets with one destination ->
+    f"{media_item_id}"; targets routing to many -> f"{media_item_id}:{target}".
+    media_item_id is NULLed when the photo is deleted (explicitly: SQLite foreign keys
+    are off), after a target row was set to `removing` in the same transaction. Hook
+    items and results identify a row by its id (`key`)."""
+
+    __tablename__ = "sync_items"
+
+    id = db.Column(db.Integer, primary_key=True)
+    automation_id = db.Column(
+        db.Integer, db.ForeignKey("automations.id", ondelete="CASCADE"), nullable=False
+    )
+    item_key = db.Column(db.String, nullable=False)
+    media_item_id = db.Column(
+        db.Integer, db.ForeignKey("media_items.id", ondelete="SET NULL"), nullable=True
+    )
+    remote_id = db.Column(db.String, nullable=True)
+    target = db.Column(db.String, nullable=True)
+    fingerprint = db.Column(db.String, nullable=True)
+    status = db.Column(db.String, nullable=False)
+    error_code = db.Column(db.String, nullable=True)
+    attempts = db.Column(db.Integer, nullable=False, default=0)
+    run_id = db.Column(db.String, db.ForeignKey("jobs.id", ondelete="SET NULL"), nullable=True)
+    details = db.Column(db.JSON, nullable=True)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint("automation_id", "item_key", name="uq_sync_items_automation_key"),
+        db.Index("ix_sync_items_status", "automation_id", "status"),
+        db.Index("ix_sync_items_media_item", "media_item_id"),
+        db.Index("ix_sync_items_updated", "automation_id", "updated_at"),
+    )
+
+
 # PageVersion generation state machine (see docs/development/ai-page-builder.md).
 # A version is either "working" (IN_PROGRESS/READY/FAILED) or a committed snapshot
 # (ACCEPTED); CANCELLED is transient — cancelled versions are deleted.
@@ -547,6 +678,12 @@ CONVERSATION_TYPE_USER = "user"
 CONVERSATION_TYPE_ASSISTANT = "assistant"
 CONVERSATION_TYPE_STATUS = "status"
 CONVERSATION_TYPE_ERROR = "error"
+# The service builder: a Test the user ran (with live reads). Shown in the chat, and the
+# latest one goes to the model with the next request; not replayed as a turn.
+CONVERSATION_TYPE_TEST = "test"
+# The service builder asking the user for a permission (reading docs from new
+# domains, live reads); the content is JSON with its state. Shown as a card.
+CONVERSATION_TYPE_PERMISSION = "permission"
 
 # Kinds that are real conversational turns (rebuilt as model context on a follow-up
 # / copied on fork); the rest are display-only annotations.
@@ -767,10 +904,12 @@ class Conversation(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     # A conversation message belongs to exactly one owner: a page version (the page
-    # builder) or an automation (the automation builder). Both FKs are nullable;
+    # builder), an automation (the automation builder) or a custom sync adapter (the
+    # service builder). Every FK is nullable;
     # the owning feature sets one.
     version_id = db.Column(db.Integer, db.ForeignKey("page_versions.id", ondelete="CASCADE"), nullable=True)
     automation_id = db.Column(db.Integer, db.ForeignKey("automations.id", ondelete="CASCADE"), nullable=True)
+    sync_adapter_id = db.Column(db.Integer, db.ForeignKey("sync_adapters.id", ondelete="CASCADE"), nullable=True)
     # CONVERSATION_TYPE_*: user | assistant | status | error. `status`/`error` are
     # display-only; only user/assistant are replayed to the model.
     type = db.Column(db.String, nullable=False)
@@ -794,6 +933,7 @@ ASSISTANT_STATUS_FAILED = "FAILED"
 ASSISTANT_EVENT_USER = "user"
 ASSISTANT_EVENT_ASSISTANT = "assistant"
 ASSISTANT_EVENT_TOOL = "tool"
+ASSISTANT_EVENT_WEB_PERMISSION = "web_permission"
 ASSISTANT_EVENT_ERROR = "error"
 # A change plan was decided or finished (approved, declined, undone, expired): the
 # chat's card follows the plan row, and the model sees the outcome on its next run.

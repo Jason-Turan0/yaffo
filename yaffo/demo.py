@@ -25,6 +25,8 @@ DEMO_RATE_LIMIT_CODE = "demo_rate_limit_exceeded"
 DEMO_PUBLIC_READ_ENDPOINTS = frozenset(
     {
         "albums_index",
+        "api.locations_list",
+        "api.tag_values_list",
         "albums_show",
         "automations_edit",
         "automations_edit_triggers",
@@ -33,12 +35,16 @@ DEMO_PUBLIC_READ_ENDPOINTS = frozenset(
         "automations_show",
         "automations_status",
         "automations_validate_cron",
+        "sync_choices",
+        "sync_filter",
+        "sync_peer_filter",
+        "sync_service",
+        "sync_service_status",
+        "sync_items",
         "face_thumbnail",
         "faces_index",
         "favicon",
-        "get_tag_values",
         "index",
-        "location_autocomplete",
         "locations_list",
         "media",
         "media_poster",
@@ -75,7 +81,7 @@ DEMO_PUBLIC_READ_ENDPOINTS = frozenset(
 )
 
 DEMO_UNSAFE_ENDPOINT_ROLES = {
-    "faces_assign": DEMO_ROLES,
+    "api.faces_update": DEMO_ROLES,
     "pages_version_widget_query": DEMO_ROLES,
     "sharing_device_pull_selected": frozenset({DEMO_ROLE_RECEIVER}),
 }

@@ -368,6 +368,78 @@
         "starting": "Iniciando…"
       },
       "thumbnailFolderUnavailable": "La carpeta de miniaturas no está disponible, así que no se comprobaron las miniaturas. Comprueba que su unidad esté conectada."
+    },
+    "sync": {
+      "device": {
+        "done": "Sesión iniciada.",
+        "failed": "No se pudo iniciar sesión. Inténtalo de nuevo.",
+        "waiting": "Esperando a que introduzcas el código…"
+      },
+      "picker": {
+        "choose": "Elegir",
+        "empty": "No hay carpetas aquí.",
+        "failed": "No se pudieron cargar las carpetas.",
+        "loading": "Cargando…",
+        "open": "Abrir",
+        "suggested": "Sugerido",
+        "top": "Inicio"
+      },
+      "service": {
+        "allow": "Permitir",
+        "allowSelected": "Permitir seleccionados",
+        "answerFailed": "No se pudo registrar tu respuesta. Inténtalo de nuevo.",
+        "cancelMessage": "¿Detener el creador? El borrador que ha guardado hasta ahora se conservará.",
+        "deleteMessage": "También se eliminarán su borrador, su conversación y el inicio de sesión de su cuenta de prueba. Ninguna sincronización lo utiliza.",
+        "deleteTitle": "¿Eliminar este servicio?",
+        "denyAll": "Denegar todo",
+        "docsAllowed": "✓ Permitido: {{domains}}.",
+        "docsAsk_one": "El creador quiere leer páginas de un sitio nuevo:",
+        "docsAsk_other": "El creador quiere leer páginas de {{count}} sitios nuevos:",
+        "docsDenied": "No permitido: {{domains}}.",
+        "docsDomain_one": "{{domain}} · {{count}} página",
+        "docsDomain_other": "{{domain}} · {{count}} páginas",
+        "docsNote": "No se volverá a preguntar por los sitios permitidos mientras se crea este servicio. Yaffo solo obtiene el texto de las páginas.",
+        "dontAllow": "No permitir",
+        "liveAllowed": "✓ Pruebas en vivo de solo lectura permitidas para {{account}}.",
+        "liveAsk": "¿Permitir que el creador haga llamadas de solo lectura a {{account}} mientras lo crea? Las respuestas se envían al modelo de IA.",
+        "liveDenied": "No se permiten pruebas en vivo de solo lectura.",
+        "superseded": "Sustituida por una solicitud más reciente."
+      },
+      "test": {
+        "checked": "Comprobado a las {{time}} · una vista previa; no se copió ni cambió nada",
+        "columns": {
+          "action": "Acción",
+          "destination": "Destino",
+          "file": "Archivo",
+          "size": "Tamaño",
+          "state": "Qué ocurre"
+        },
+        "failed": "No se pudo ejecutar la prueba.",
+        "nothingNew": "No hay nada nuevo que importar.",
+        "nothingToDo": "No hay nada que hacer: el destino ya coincide.",
+        "partial": "Se contaron los primeros {{counted}} archivos; listar el resto llevó demasiado tiempo. Una ejecución los importa todos.",
+        "partialOf": "Se contaron {{counted}} de {{total}} archivos; listar el resto llevó demasiado tiempo. Una ejecución los importa todos.",
+        "preview": {
+          "copy": "Copiar",
+          "remove": "Eliminar",
+          "showing": "Mostrando {{shown}} de {{total}}"
+        },
+        "running": "Comprobando…",
+        "stat": {
+          "convert": "convertidos a JPEG",
+          "copy": "por copiar",
+          "remove": "por eliminar",
+          "unchanged": "ya están ahí",
+          "unsupported": "no se pueden enviar (este destino no admite ese tipo de archivo)"
+        },
+        "state": {
+          "changed": "Editado desde la última importación",
+          "deleted_at_source": "Eliminado en el origen",
+          "imported": "Ya importado",
+          "in_library": "Ya está en tu biblioteca",
+          "new": "Nuevo"
+        }
+      }
     }
   },
   "assistant": {
@@ -614,6 +686,17 @@
     },
     "settings": {
       "groupCount": "{{on}} de {{total}} activadas"
+    },
+    "web": {
+      "readPages_one": "Leyó {{count}} página web",
+      "readPages_other": "Leyó {{count}} páginas web",
+      "title": "¿Permitir leer páginas web?",
+      "explanation": "Permite los dominios seleccionados para esta conversación. Yaffo lee las páginas y envía su contenido a tu proveedor de IA.",
+      "allow": "Permitir seleccionados",
+      "deny": "Denegar",
+      "domainAllowed": "{{domain}}: permitido",
+      "domainDenied": "{{domain}}: denegado",
+      "failed": "No se pudo guardar la decisión sobre el acceso web."
     }
   }
 }

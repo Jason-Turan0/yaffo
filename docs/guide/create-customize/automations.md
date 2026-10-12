@@ -8,9 +8,22 @@ Open **Library** → **Automations**.
 
 ![The Automations page with the system and custom list, and a selected automation's details and run history](assets/automations/automations-list.webp)
 
-The sidebar lists automations in two groups, **System** and **Custom**. Select
-one to see its description, actions, and run history on the right. A green **ON**
-badge marks the ones that are currently enabled.
+The sidebar groups automations under **System**, **Syncs**, and **Custom**.
+Custom photo services appear under **Services** after you add one. Select an
+automation to see its setup and run history. An **ON** badge marks enabled ones.
+
+**New automation** offers four choices:
+
+| Choice | Use it for |
+|---|---|
+| **Custom** | A rule written from your description, such as tagging matching photos. |
+| **Import from…** | Copying photos into your library from a folder, photo service, or paired device. |
+| **Send to…** | Keeping selected library photos copied to a folder or photo service. |
+| **Add a new service…** | Building a reusable import or send integration for another photo service. |
+
+Preset syncs are configured with forms. The model and key under
+[Settings → AI Generation](../reference-maintenance/settings.md#ai-generation)
+are used when building custom automations, selection rules, and services.
 
 ## System Automations
 
@@ -26,13 +39,13 @@ enabled, disabled, and tuned, but not deleted. They include:
 - **Geotag from neighbors** — fills in missing GPS from nearby photos taken close
   in time.
 
-Select a system automation to **Enable** or **Disable** it, **Run…** it on
-demand, **Edit triggers**, or **Configure** its tunable settings (for example, a
-similarity threshold).
+Select a system automation to turn its switch on or off or **Run…** it on demand.
+Open **When** to edit its triggers and **Configuration** to adjust its settings,
+such as a similarity threshold.
 
-## Create an Automation
+## Create a Custom Automation
 
-Click **New automation** to build your own. Give it a name, then describe what it
+Click **New automation**, choose **Custom**, and give it a name. Describe what it
 should do in plain language — *"tag every photo imported in the last day as New
 arrival"* — and the assistant writes the automation for you.
 
@@ -43,6 +56,22 @@ While you build it, your work is a draft:
 
 Use **Edit details** to change the name or description, and **Delete** to remove a
 custom automation.
+
+## Import and Export Photos
+
+Follow [Importing Photos](importing.md) to copy photos from a folder, photo
+service, or paired device into your library. Follow [Exporting Photos](exporting.md)
+to send selected library photos to a folder or photo service. Both walkthroughs
+cover setup, previews, enabling the sync, and monitoring transfers.
+
+Each sync has one direction. Creating an import and a send sync for the same
+service does not make a two-way mirror.
+
+## Add a Photo Service
+
+For a service outside the built-in choices, follow [Creating a Photo Service](photo-services.md).
+The walkthrough covers building, connecting, testing, and publishing a reusable
+service before creating an import or send sync.
 
 ## Test Before Publishing
 
@@ -65,8 +94,8 @@ you can check a change before publishing it. Once the results look right, use
 
 ## Triggers: When an Automation Runs
 
-An automation does nothing until it has a trigger. Open **Edit triggers** to add
-one — or several:
+Open **When** to inspect and edit an automation's triggers. You can add one or
+several:
 
 - **Schedule** — run on a repeating clock, set with a cron expression (for
   example, every night at 2 AM). Yaffo validates the expression as you type.
@@ -74,18 +103,28 @@ one — or several:
 
 ![The trigger editor with a new hourly schedule ready to save](assets/automations/automation-triggers.webp)
 
-An automation with no triggers stays idle until you add one.
+New syncs start with a nightly schedule. Album send syncs also react to membership
+changes and library deletions; bursts of edits are combined into one run. Paired
+device imports also react when their device comes online. An automation with no
+triggers runs only when you start it manually.
 
 ## Run and Review
 
-You can run an automation yourself with **Run…**, which is handy for testing or
-one-off cleanups.
+Use **Run…** for system and custom automations, or **Run now** for an enabled sync.
+**Test** on a sync previews the current setup without copying or removing files;
+its preview has a pager when more photos are available.
 
 Every run — scheduled, event-driven, or manual — is recorded under **Run
 history**, with a status such as **COMPLETED** and a timestamp. If an automation
 misbehaves, check its run history first to see what happened and when. A run that
 failed or finished with errors has an **Ask Yaffo** icon at the end of its row;
 it opens the [assistant](../start-here/ask-yaffo.md) with that run attached.
+
+For a sync, expand **Items** to search individual photos, filter by status, and
+read the reason for a failure or protected copy. Use **Retry failed** after
+fixing the problem. If an account needs sign-in again, completing that sign-in
+also fixes the other syncs using the same account. Turn a sync's switch off to
+pause automatic runs.
 
 ## Related
 
@@ -96,5 +135,5 @@ Several system automations power features documented elsewhere:
   Geotag from neighbors.
 - [Finding Duplicates](../organize-review/duplicates.md) — Duplicate scan.
 
-Tunable defaults for system automations also appear in the
-[Settings Reference](../reference-maintenance/settings.md).
+See the [Settings Reference](../reference-maintenance/settings.md) for media
+directory paths, AI model selection, and API keys.

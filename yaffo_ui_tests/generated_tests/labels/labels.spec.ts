@@ -79,30 +79,33 @@ async function openClassifyLabelsAutomation(page: Page): Promise<void> {
   await expect(page.locator('.page-header')).toContainText(/Classify labels/i);
 }
 
-async function readAutomationConfig(page: Page): Promise<AutomationConfig> {
+// The automation's settings live in its collapsible Configuration section.
+async function openConfigurePanel(page: Page): Promise<Locator> {
   await openClassifyLabelsAutomation(page);
-  await page.locator('#configure-automation-button').click();
-  const modal = page.locator('#configureAutomationModal');
-  await expect(modal).toHaveClass(/active/);
+  const panel = page.locator('#automation-configure-panel');
+  await panel.locator('summary').click();
+  await expect(panel).toHaveAttribute('open', '');
+  return panel;
+}
+
+async function readAutomationConfig(page: Page): Promise<AutomationConfig> {
+  const panel = await openConfigurePanel(page);
   const config = {
-    confidence_threshold: await modal.locator('#config-confidence_threshold').inputValue(),
-    max_labels: await modal.locator('#config-max_labels').inputValue(),
+    confidence_threshold: await panel.locator('#config-confidence_threshold').inputValue(),
+    max_labels: await panel.locator('#config-max_labels').inputValue(),
   };
-  await modal.locator('.modal-actions [name="cancel"]').click();
-  await expect(modal).not.toHaveClass(/active/);
+  await panel.locator('summary').click();
+  await expect(panel).not.toHaveAttribute('open', '');
   return config;
 }
 
 async function saveAutomationConfig(page: Page, config: AutomationConfig): Promise<void> {
-  await openClassifyLabelsAutomation(page);
-  await page.locator('#configure-automation-button').click();
-  const modal = page.locator('#configureAutomationModal');
-  await expect(modal).toHaveClass(/active/);
-  await modal.locator('#config-confidence_threshold').fill(config.confidence_threshold);
-  await modal.locator('#config-max_labels').fill(config.max_labels);
+  const panel = await openConfigurePanel(page);
+  await panel.locator('#config-confidence_threshold').fill(config.confidence_threshold);
+  await panel.locator('#config-max_labels').fill(config.max_labels);
   await Promise.all([
     page.waitForResponse(response => response.url().includes('/utilities/automations/classify_labels/config') && response.request().method() === 'POST'),
-    modal.locator('[type="submit"]').click(),
+    panel.locator('button[type="submit"]').click(),
   ]);
   await expect(page).toHaveURL(/\/utilities\/automations\/classify_labels$/);
 }
@@ -209,11 +212,14 @@ test.describe('Labels', () => {
 
     try {
       await openClassifyLabelsAutomation(page);
-      const triggerEvents = page.locator('.automation-trigger-event');
+      // A system automation's triggers are edited inline in its "When" section.
+      const triggerPanel = page.locator('#automation-trigger-panel');
+      await triggerPanel.locator('summary').click();
+      await expect(triggerPanel).toHaveAttribute('open', '');
+      const triggerEvents = triggerPanel.locator('.automation-trigger-event');
       if (await triggerEvents.count() > 0) {
-        await expect(triggerEvents).toContainText(/media_indexed|Media indexed/i);
+        await expect(triggerEvents.first()).toContainText(/media_indexed|Media indexed/i);
       }
-      await expect(page.locator('a[href$="/triggers/edit"]')).toBeVisible();
       await expect(page.locator('#edit-automation-button')).toHaveCount(0);
       await expect(page.locator('#delete-automation-button')).toHaveCount(0);
 

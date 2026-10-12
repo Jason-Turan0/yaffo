@@ -9,6 +9,7 @@ preconditions:
   - Both instances have YAFFO_HUB_URL pointing at an unreachable address, so there is NO hub - the devices find each other over the LAN (mDNS) instead
   - Instance A ("this device") has the seeded Bennett library (including organized/2015_chicago_baby_trip for folder grants) and the seeded album
   - Instance B ("the peer") has the independently seeded Obama library, including Barack, Michelle, Malia, and Sasha as people, and starts WITHOUT a download directory. The UI can set one but never clear one, so the "gallery without a download directory" scenario runs first and a later step sets the directory through the UI to a path the tests control
+  - The task-queue host runs for Instance B so paired-device sync runs can complete
 
 context:
   - tag: sharing-settings-template
@@ -32,6 +33,15 @@ context:
   - tag: sharing-routes
     path: routes/sharing.py
     description: Routes for pairing, devices, grants, the remote gallery, previews, and transfers
+  - tag: sync-detail-template
+    path: templates/utilities/sync_detail.html
+    description: Sync setup, peer-device source options, Test, run history, and imported Items
+  - tag: sync-peer-filter-template
+    path: templates/utilities/sync_peer_filter.html
+    description: Filter screen for selecting a subset of a paired device's shared files
+  - tag: sync-routes
+    path: routes/utilities/sync_views.py
+    description: Sync setup and peer-filter routes
   - tag: albums-album-template
     path: templates/albums/album.html
     description: One album — its Share modal (checkbox per trusted device) and the Shared chips
@@ -58,6 +68,7 @@ data:
   - Pulling needs a download directory on the PULLING device; without one the remote gallery shows a notice instead of a selection
   - Revoking any grant lives in ONE place - the sidebar's "Shared With Others" on the granting device. Revocation takes effect on the peer's NEXT request; it cannot claw back files already pulled
   - An album grant serves the album's membership AS OF EACH REQUEST - removing a photo from the album drops it from the peer's next listing
+  - Paired-device syncs are tested here because they use the same trusted devices and grants; B imports from a scope A shares, into B's library
 
 scenarios:
   - name: sharing_settings_shows_this_device
@@ -160,6 +171,39 @@ scenarios:
       - Photos outside the album are NOT reachable, even ones in the same folder as a member
     cleanup:
       - Restore the album's membership and revoke the album share
+
+  - name: sharing_sync_imports_a_filtered_album_from_peer
+    goal: A paired-device source sync imports all or a filtered subset of a peer's shared album
+    priority: high
+    steps:
+      - On instance A, share the seeded album with instance B if it is not already shared
+      - On instance B, create an Import from… › Paired device sync
+      - Choose instance A and the seeded album as the shared scope
+      - Choose to import only photos matching a filter and set a year filter
+      - Save the filter and import root, then Test, enable, and Run now
+    verify:
+      - The device picker lists trusted paired devices and links to Sharing when no device is paired
+      - The shared-scope picker lists only scopes A has shared with B
+      - The filter preview and count reflect matching photos in A's shared album
+      - Test lists matching files and identifies new and already imported items without downloading them
+      - The sync includes a device-online trigger scoped to A
+      - Run history completes and imported files appear in B's gallery and Items ledger
+    cleanup:
+      - Delete the peer sync on B; leave the album grant in place for the album-sharing scenarios
+
+  - name: sharing_peer_sync_waits_for_offline_device
+    goal: A paired-device import waits normally when its trusted peer is unavailable
+    priority: medium
+    steps:
+      - On instance B, configure a peer source sync for a scope shared by A
+      - Stop instance A so the peer is unreachable on the LAN; the hub remains unreachable
+      - On instance B, enable the sync and click Run now
+    verify:
+      - Run history reports that it is waiting for the named peer device
+      - The run is a normal waiting outcome rather than a service error or failed import
+    cleanup:
+      - Restart instance A and wait for its Local presence chip to return
+      - Delete the peer sync on B
 
   - name: sharing_album_share_modal_toggle
     goal: The album's Share modal shares with a paired device and un-shares it again (moved from the albums spec - it needs the two-instance environment)

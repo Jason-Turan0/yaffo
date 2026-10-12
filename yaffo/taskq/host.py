@@ -53,6 +53,9 @@ class WorkerHandle:
         self.inbox = inbox
         self.busy_task: Optional[TaskRow] = None
         self.lock_name: Optional[str] = None
+        # Results collected from this child. At max_tasks_per_worker it exits on its
+        # own, so it gets no more work, even while it is still alive.
+        self.finished = 0
 
 
 class Host:
@@ -148,7 +151,13 @@ class Host:
                 break
             w = self.workers.get(worker_id)
             row = w.busy_task if w else None
+            if row is not None and row.id != task_id:
+                # A result for a task the host already settled (it saw the child
+                # exit first), arriving for the child's replacement: not its task.
+                logger.warning(f"ignoring a late result for task {task_id} from worker {worker_id}")
+                continue
             if w:
+                w.finished += 1
                 if w.lock_name:
                     self.store.release_lock(w.lock_name)
                     w.lock_name = None
@@ -174,6 +183,10 @@ class Host:
                     logger.exception(f"could not even mark {task_id} errored")
 
     def _check_crashes(self) -> None:
+        if any(not w.proc.is_alive() for w in self.workers.values()):
+            # A child that sends its last result and exits can be seen dead before
+            # that result was read; it is in the outbox now, so read it first.
+            self._collect_results()
         for worker_id, w in list(self.workers.items()):
             if w.proc.is_alive():
                 continue
@@ -226,7 +239,8 @@ class Host:
             logger.exception("could not write the host heartbeat")
 
     def _dispatch(self) -> None:
-        free = [w for w in self.workers.values() if w.busy_task is None and w.proc.is_alive()]
+        free = [w for w in self.workers.values()
+                if w.busy_task is None and w.proc.is_alive() and w.finished < self.max_tasks_per_worker]
         if not free:
             return
         for row in self.store.fetch_ready(time.time(), limit=len(free)):

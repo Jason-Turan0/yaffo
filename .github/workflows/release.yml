@@ -107,6 +107,8 @@ jobs:
       # and the artifact would report "dev build" with no timestamp or sha. Stamp it
       # here, from the tagged VERSION, without bumping again.
       - name: Stamp build info
+        env:
+          YAFFO_OAUTH_GOOGLE_CLIENT_SECRET: ${{ secrets.YAFFO_OAUTH_GOOGLE_CLIENT_SECRET }}
         run: python packaging/bump_version.py --stamp-only
 
       - name: Build sdist and wheel
@@ -138,6 +140,8 @@ jobs:
 #          python -m pip install -e '.[dev]'
 #
 #      - name: Build macOS DMG
+#        env:
+#          YAFFO_OAUTH_GOOGLE_CLIENT_SECRET: ${{ secrets.YAFFO_OAUTH_GOOGLE_CLIENT_SECRET }}
 #        run: ./packaging/build_dmg.sh
 #
 #      - uses: actions/upload-artifact@v4

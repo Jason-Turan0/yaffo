@@ -2,10 +2,12 @@ from pathlib import Path
 
 from yaffo.common import MEDIA_TYPE_VIDEO, media_type_for_path
 from yaffo.db.models import Job, MediaItem, Face, JOB_STATUS_CANCELLED, FACE_STATUS_UNASSIGNED, \
-    JOB_STATUS_RUNNING, JOB_STATUS_PENDING, MEDIA_STATUS_FAILED, MEDIA_STATUS_INDEXED
+    JOB_STATUS_RUNNING, JOB_STATUS_PENDING, MEDIA_STATUS_FAILED, MEDIA_STATUS_IMPORTED, MEDIA_STATUS_INDEXED
 from yaffo.utils.index_photos import index_photo, clear_faces_for_media_items, unlink_face_thumbnails
 from yaffo.utils.index_errors import IndexFailure, file_signature
+from yaffo.sync.files import file_sha1
 from yaffo.utils.index_video import index_video
+from yaffo.utils.photo_dates import parse_date_taken
 from yaffo.domain.compare_utils import serialize_embedding
 from yaffo.logging_config import get_logger
 from yaffo.background_tasks.config import task_queue
@@ -52,6 +54,10 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
             error_count += 1
             continue
 
+        try:
+            index_results["sha1"] = file_sha1(path)
+        except OSError:
+            index_results["sha1"] = None
         processed_results.append({
             'full_file_path': file_path,
             'index_results': index_results,
@@ -91,14 +97,24 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
                 logger.error(f"Failed to find photo in db for {full_file_path}")
                 error_count += 1
                 continue
+            # A sync import's first index keeps the provider's date and place hints
+            # when the file has none of its own (file metadata always wins).
+            first_index = media_item.status == MEDIA_STATUS_IMPORTED and media_item.year is None
+            hinted_date = parse_date_taken(media_item.date_taken) if first_index else None
+            if first_index and latitude is None and media_item.latitude is not None:
+                latitude, longitude = media_item.latitude, media_item.longitude
             media_item.latitude = latitude
             media_item.longitude = longitude
             media_item.location_name = location_name
-            media_item.date_taken = index_results["date_taken"]
-            media_item.year = index_results["year"]
-            media_item.month = index_results["month"]
+            if index_results["date_taken"] is None and hinted_date is not None:
+                media_item.year, media_item.month = hinted_date.year, hinted_date.month
+            else:
+                media_item.date_taken = index_results["date_taken"]
+                media_item.year = index_results["year"]
+                media_item.month = index_results["month"]
             media_item.device = index_results["device"]
             media_item.orientation = index_results.get("orientation")
+            media_item.sha1 = index_results.get("sha1")
             # Both media types carry dimensions now (photos report theirs upright, so
             # the shape filter sees what the browser draws); the rest is video-only.
             media_item.width = index_results.get("width")

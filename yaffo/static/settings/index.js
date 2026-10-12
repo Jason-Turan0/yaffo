@@ -66,7 +66,7 @@ settings.init = (initialMediaDirs, i18n, config) => {
         }
 
         try {
-            const response = await fetch(config.urls.add_media_dir, {
+            const response = await fetch(config.urls.settings_media_dirs_add, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -108,7 +108,7 @@ settings.init = (initialMediaDirs, i18n, config) => {
         }
 
         try {
-            const url = config.buildUrl('remove_media_dir', { index });
+            const url = config.buildUrl('settings_media_dirs_remove', { index });
             const response = await fetch(url, {
                 method: 'DELETE'
             });
@@ -161,7 +161,7 @@ settings.init = (initialMediaDirs, i18n, config) => {
 
         // Get current stats before showing confirmation
         try {
-            const statsResponse = await fetch(config.urls.get_thumbnail_stats_api);
+            const statsResponse = await fetch(config.urls.settings_thumbnail_stats);
             const stats = await statsResponse.json();
 
             if (!statsResponse.ok) {
@@ -189,7 +189,7 @@ settings.init = (initialMediaDirs, i18n, config) => {
             }
 
             // Call API to move thumbnails
-            const response = await fetch(config.urls.update_thumbnail_dir, {
+            const response = await fetch(config.urls.settings_thumbnail_dir, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

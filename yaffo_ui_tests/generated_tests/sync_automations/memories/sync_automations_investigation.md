@@ -1,0 +1,20 @@
+# Sync automations UI test notes
+
+- Run this feature with the standard single-instance sandbox. Pairing scenarios belong to `sharing`, not this suite.
+- Sync details are `/utilities/automations/<slug>` and render in `templates/utilities/sync_detail.html`.
+- The New automation modal exposes Import and Send service radio groups under `[data-sync-services="import"]` and `[data-sync-services="send"]`.
+- Built-in Folder setup can be exercised without an account. For a send target, select a folder outside all configured media directories, choose a selection, use Test, enable, and Run now.
+- Target output is created inside Playwright's per-test `testInfo.outputPath()` directory so the isolated server can write the copies and Playwright can clean them with the test artifacts.
+- Source fixture files are under `yaffo_ui_tests/test_data/photos`; the test imports from that directory into the sync's default `Imports/<name>` library subfolder.
+- The sync's folder and album selects use the shared searchable-select widget. Use the visible wrapper's `.searchable-select-display` and `.searchable-select-option` controls.
+- The 30-second timeout policy applies to each test. Avoid enlarging it for background runs; investigate slow task-queue behavior instead.
+- The AI generator command could not run in this environment because Docker is unavailable. These tests were written by hand and typed with the repository's Playwright TypeScript configuration.
+- Added `immich_validates_server_and_loads_fake_server_collections`: it first submits an unreachable local server and confirms the page-level error, locked options, and disabled sync; it then connects to `FAKE_IMMICH_URL` with the fake API key and verifies the remote album picker loads `Family`. The form submits to `/utilities/automations/<slug>/sync/credentials`; the failure text is rendered in the top-level `.alert-error[role="alert"]` rather than inside the account panel.
+- Verified with `npm run test:spec -- generated_tests/sync_automations/sync_automations.spec.ts`: 6 passed with all fake provider services started and cleanly stopped. A run with `--sync-origin-overrides` also passed before the Immich success path was added.
+- Live OAuth scope expansion/shared-account behavior, provider adapter execution, and server-generated failures cannot be simulated by `page.route` alone because those requests originate from Flask. Add a server-side provider fixture or dedicated fake provider before attempting those YAML scenarios; avoid asserting a UI-only mock as a successful provider integration.
+- Added `onedrive_shares_account_and_reconsents_when_target_needs_write_scope`: the source sync signs into the local fake, selects Camera Roll, and runs a live read-only preview (delta pages increase while downloads remain unchanged). A Send sync reuses the same account, shows the missing `Files.ReadWrite` access, requests it during OAuth, then both sync pages show the shared connection signed in.
+- The fake's admin counter snapshot must be read after `#sync-test-meta` is populated; the test card appears immediately while its POST is still showing “Checking…”.
+- Verified with `npm run test:spec -- generated_tests/sync_automations/sync_automations.spec.ts`: 7 passed; fake services and app processes exited cleanly.
+- Added `onedrive_target_reviews_destination_and_selection_changes`: it connects the fake OneDrive target, chooses Camera Roll and Seeded Album, confirms the review names the album, account, destination and remote-removal behavior, enables the sync, changes to a filtered selection, and confirms the sync turns off and opens a fresh review for that selection.
+- Verified with `npm run test:spec -- generated_tests/sync_automations/sync_automations.spec.ts`: 8 passed and the isolated app/fake services shut down cleanly.
+- The YAML album-membership event scenario uses a 60-second coalescing delay (`SETTLE_SECONDS` in `yaffo/sync/setup.py`), longer than the enforced 30-second Playwright test budget. Existing coverage asserts the album-changed trigger is installed; exercising its delayed run needs an injectable/shortened settle interval.

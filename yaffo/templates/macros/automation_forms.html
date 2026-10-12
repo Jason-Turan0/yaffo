@@ -1,0 +1,12 @@
+{# Forms shared by the automation detail pages (custom and sync). #}
+{% macro render_edit_automation_form() %}
+    <div class="form-group">
+        <label for="edit-automation-name">{{ _("Name") }}</label>
+        <input type="text" id="edit-automation-name" name="name" required value="{{ selected.name }}">
+    </div>
+    <div class="form-group">
+        <label for="edit-automation-description">{{ _("Description") }}</label>
+        <textarea id="edit-automation-description" name="description" rows="3"
+                  placeholder="{{ _('What does this automation do?') }}">{{ selected.description or '' }}</textarea>
+    </div>
+{% endmacro %}

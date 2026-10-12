@@ -79,6 +79,22 @@ group before deciding what to keep or remove.
 A scheduled or event-driven behavior. Some automations are built into Yaffo;
 others can be created for your own workflows.
 
+**Sync**  
+An automation that imports photos into your library or sends selected library
+photos to a folder or photo service. It remembers completed transfers and has
+its own schedule, setup, and item history. See
+[Automations](../create-customize/automations.md).
+
+**Service**  
+A reusable import or send capability chosen when creating a sync, such as a
+OneDrive import or a Google Photos send. You can configure several syncs with
+the same service or build a custom service for another destination.
+
+**Account**  
+A saved sign-in or API-key connection to a photo service. Syncs using the same
+account share its credentials and sign-in status. This is separate from the AI
+provider key used to generate custom rules and services.
+
 **Custom page**  
 A page built from your photo library, often with AI-generated widgets. Custom
 pages can be used for dashboards, albums, summaries, or experiments.

@@ -135,14 +135,12 @@ def init_base_routes(app: Flask):
         logger.exception("unhandled error serving %s %s", request.method, request.path)
 
         # An /api caller is JS expecting JSON; handing it an HTML page just turns one
-        # error into a parse error. Mirrors the {success, message, code} shape the
-        # other API routes use.
+        # error into a parse error. The API's one error shape: {error, code}.
         if request.path.startswith('/api/'):
             schema_mismatch = is_schema_mismatch(error)
             return jsonify({
-                "success": False,
-                "message": (gettext("The library database is out of date. Restart Yaffo to update it.")
-                            if schema_mismatch else gettext("Something went wrong")),
+                "error": (gettext("The library database is out of date. Restart Yaffo to update it.")
+                          if schema_mismatch else gettext("Something went wrong")),
                 "code": "database_out_of_date" if schema_mismatch else "internal_error",
             }), 500
 

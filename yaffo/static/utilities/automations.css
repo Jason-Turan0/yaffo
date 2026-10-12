@@ -35,9 +35,15 @@
     align-items: flex-start;
 }
 
+/* The code column is a card like the conversation's (components/chat_dialog.css
+   .chat-card), as the service builder's tab panel is. */
 .automation-code-section {
     flex: 1;
     min-width: 280px;
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    padding: 14px 16px 16px;
 }
 
 .automation-section-title {
@@ -49,22 +55,69 @@
     margin: 0 0 8px;
 }
 
+/* Run history panel (utilities/automations_runs.html). It's a `settings-section`
+   so themes frame it like their other panels; the base card is restated here
+   because settings/index.css, which owns that class, isn't loaded on these pages. */
+.automation-runs.settings-section {
+    margin: 0;
+    padding: 20px;
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.automation-configure-form .form-group {
+    max-width: 560px;
+}
+
+.automation-runs-title {
+    margin: 0 0 12px;
+    font-size: var(--font-size-lg);
+    color: var(--color-text);
+}
+
 .automation-triggers {
     list-style: none;
-    margin: 0 0 12px;
+    display: grid;
+    gap: 10px;
+    margin: 0;
     padding: 0;
 }
 
 .automation-trigger-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 8px 16px;
+    padding: 12px 14px;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-md);
     font-size: var(--font-size-sm);
 }
 
-.automation-trigger-row.is-off {
-    opacity: 0.6;
+.automation-trigger-main {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    grid-row: span 2;
+    min-width: 0;
+}
+
+.automation-trigger-toggle {
+    justify-self: end;
+}
+
+.automation-trigger-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.automation-trigger-row.is-off .automation-trigger-desc,
+.automation-trigger-row.is-off .automation-trigger-event {
+    color: var(--color-text-muted);
 }
 
 .automation-trigger-kind {
@@ -72,21 +125,15 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-size: var(--font-size-xs);
-    min-width: 60px;
 }
 
 .automation-trigger-event {
-    background: var(--color-surface-sunken);
-    padding: 1px 6px;
-    border-radius: var(--radius-sm);
-}
-
-.automation-trigger-spacer {
-    flex: 1;
+    font-weight: 600;
 }
 
 .automation-trigger-desc {
     font-size: var(--font-size-sm);
+    font-weight: 600;
 }
 
 .automation-trigger-scope {
@@ -97,10 +144,12 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    padding: 16px;
-    border: var(--border-width) solid var(--color-border);
-    border-radius: var(--radius-sm);
-    background: var(--color-surface-sunken);
+    padding: 4px 0;
+}
+
+.automation-trigger-section + .automation-trigger-section {
+    padding-top: 18px;
+    border-top: var(--border-width) solid var(--color-border);
 }
 
 .automation-trigger-section .automation-section-title {
@@ -167,7 +216,9 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin-top: 4px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: var(--border-width) solid var(--color-border);
 }
 
 .automation-add-title {
@@ -182,9 +233,6 @@
     gap: 8px;
 }
 
-/* The two add panels are collapsed by default; the matching .adding-* state on the
-   container reveals one and hides the entry-point buttons. Surface (not sunken) so
-   the card separates from the page background across themes. */
 .schedule-editor,
 .event-editor {
     display: none;
@@ -194,7 +242,6 @@
     border: var(--border-width) solid var(--color-border);
     border-radius: var(--radius-md);
     background: var(--color-surface);
-    box-shadow: var(--shadow-sm);
 }
 
 .automation-trigger-add.adding-schedule .schedule-editor,
@@ -376,7 +423,6 @@
     min-width: 0;
 }
 
-.automation-trigger-row,
 .automation-add-actions,
 .automation-trigger-add-row,
 .automation-code-head,
@@ -422,12 +468,20 @@
     }
 
     .automation-trigger-row {
-        padding-block: 12px;
-        border-bottom: var(--border-width) solid var(--color-border);
+        grid-template-columns: minmax(0, 1fr);
+        gap: 10px;
     }
 
-    .automation-trigger-spacer {
-        display: none;
+    .automation-trigger-main {
+        grid-row: auto;
+    }
+
+    .automation-trigger-toggle {
+        justify-self: start;
+    }
+
+    .automation-trigger-actions {
+        justify-content: flex-start;
     }
 
     .schedule-editor .cron-field,

@@ -27,8 +27,9 @@
 - The seeded custom automation intentionally starts disabled with no trigger; the
   UI test opens and cancels the Run scope picker, confirms the empty trigger list,
   and verifies that no run is added to history.
-- The Enable/Disable button label has surrounding whitespace/newlines; a
-  `hasText: /^(Enable|Disable)$/` filter matches nothing. Use `/^\s*(Enable|Disable)\s*$/`.
+- Enabled state is an on/off switch (`components/switch.html`):
+  `.automation-actions [role="switch"]`, state in `aria-checked` ("true"/"false").
+  The old Enable/Disable text button is gone (2026-10, Phase one redesign).
   The toggle responds 204 + `HX-Refresh: true` → full page reload.
 - **Toggle race (intermittent, seen under full-suite parallel load):** after the
   HX-Refresh reload, the label assertion can pass as soon as the new DOM renders,
@@ -43,9 +44,10 @@
   cannot click `.js-add-event` while the schedule panel is open — click the panel's
   `.js-cancel` first. "One panel at a time" is asserted via container classes and
   `.schedule-editor` visibility.
-- The "Edit triggers" link href ends in `/triggers/edit`, so `a[href$="/edit"]` also
-  matches it; select the custom-only Edit link with
-  `getByRole('link', { name: 'Edit', exact: true })`.
+- Triggers are edited inline in the collapsible "When" section
+  (`#automation-trigger-panel`, open via its `summary`); there is no
+  `/triggers/edit` link on the detail page any more. Select the custom-only Edit link
+  with `getByRole('link', { name: 'Edit', exact: true })`.
 - The "No automation selected" empty state only renders when the DB holds zero
   automations; the seeded system automations make it unreachable (the index route
   redirects to the first automation). Deliberately not asserted.
@@ -58,8 +60,7 @@
   New automation: `#new-automation-button` → `#newAutomationModal` (`.active` class),
   `#new-automation-name`, `button[type="submit"]`.
 - Detail actions: `.automation-actions`; `.js-run-files` "Run…";
-  `#configure-automation-button`
-  (only with config fields); `#edit-automation-button`/`#delete-automation-button`
+  `#edit-automation-button`/`#delete-automation-button`
   (custom only). Run history: `#automation-runs` / `.run-history-row` (self-polls 5s).
   Run history is capped at the **10 most recent** jobs — on a long-lived environment a
   row-count comparison saturates and never increases; detect a new run as an
@@ -98,9 +99,10 @@
   status (anything but IN_PROGRESS, except FAILED stays open) triggers
   `window.location.reload()` — register `page.waitForEvent('load')` BEFORE submitting,
   and keep ≥2 IN_PROGRESS polls so the in-flight assertions have time to run.
-- Configure modal: `#configureAutomationModal` (`.active`), `#config-threshold`,
-  `#config-assign_multiple_matches`; cancel via `.modal-actions [name="cancel"]`;
-  save redirects back to the detail page.
+- Configuration is the collapsible `#automation-configure-panel` (open via its
+  `summary`; `open` attribute), not a modal: `#config-threshold`,
+  `#config-assign_multiple_matches`, save with `button[type="submit"]`, which
+  redirects back to the detail page.
 - Confirm dialog: `#global-confirm-dialog` (`.active`), `#confirm-dialog-confirm`.
 - Notifications: `.notification.visible`. Key string:
   "Run started — it will appear in Run history when it finishes."

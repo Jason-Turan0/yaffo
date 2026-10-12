@@ -2,6 +2,7 @@ from yaffo.background_tasks.automation_dispatch import invoke_automation
 from yaffo.background_tasks.automation_runs import record_dispatch_failure
 from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import EventContext
+from yaffo.background_tasks.event_filters import defer, settle_seconds, trigger_matches
 from yaffo.background_tasks.utils import SessionFactory
 from yaffo.db.models import Automation, AutomationTrigger, TRIGGER_TYPE_EVENT
 from yaffo.logging_config import get_logger
@@ -23,6 +24,10 @@ def dispatch_event_task(event_type: str, payload: dict):
         media_item_ids=payload.get('media_item_ids', []),
         groups=payload.get('groups', []),
         origin_automation_ids=payload.get('origin_automation_ids', []),
+        album_id=payload.get('album_id'),
+        change=payload.get('change'),
+        sync_automation_ids=payload.get('sync_automation_ids', []),
+        device_id=payload.get('device_id'),
     )
     session = SessionFactory()
     try:
@@ -47,6 +52,13 @@ def dispatch_event_task(event_type: str, payload: dict):
                     f"loop guard: skipping '{automation.slug}' for event {event_type} "
                     f"(already in causal chain {context.origin_automation_ids})"
                 )
+                continue
+            if not trigger_matches(trigger, context):
+                continue
+            settle = settle_seconds(trigger, context)
+            if settle is not None:
+                if defer(session, trigger.id, settle):
+                    logger.debug(f"Deferred '{automation.slug}' {settle}s for event {event_type}")
                 continue
             try:
                 if not invoke_automation(automation, context):

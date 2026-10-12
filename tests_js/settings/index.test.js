@@ -7,7 +7,7 @@ import { loadModule } from '../support/load_module.js';
 
 const config = () => ({
   urls: {
-    add_media_dir: '/settings/media-dir',
+    settings_media_dirs_add: '/settings/media-dirs',
     settings_thumbnail_stats_stream: '/settings/thumbnail-stats/stream',
   },
   buildUrl: (endpoint, params = {}) => {

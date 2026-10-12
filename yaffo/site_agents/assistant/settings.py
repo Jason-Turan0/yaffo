@@ -1,6 +1,8 @@
 """Assistant settings, stored in ApplicationSettings.
 
 - `assistant_enabled`: shows or hides the assistant. On by default.
+- `assistant_web_enabled`: offers public web page reads. On by default; each
+  new domain still requires an approval card in the conversation.
 - `assistant_diag_<group>`: what the assistant may look at (logs, library, files,
   jobs). On by default; all off means knowledge-only. Capture-date metadata is
   a separate, off-by-default group.
@@ -25,6 +27,7 @@ from yaffo.site_agents import llm_config
 from yaffo.site_agents.model_clients import providers
 
 ENABLED_SETTING = "assistant_enabled"
+WEB_SETTING = "assistant_web_enabled"
 
 # Diagnostics groups, in the order Settings lists them.
 DIAG_LOGS = "logs"
@@ -66,6 +69,17 @@ def is_enabled(session: Optional[Session] = None) -> bool:
 def set_enabled(enabled: bool) -> None:
     reject_in_demo("Assistant settings changes")
     _set(ENABLED_SETTING, "true" if enabled else "false")
+
+
+def web_enabled(session: Optional[Session] = None) -> bool:
+    session = session or db.session
+    value = session.query(ApplicationSettings.value).filter_by(name=WEB_SETTING).scalar()
+    return value != "false"
+
+
+def set_web_enabled(enabled: bool) -> None:
+    reject_in_demo("Assistant settings changes")
+    _set(WEB_SETTING, "true" if enabled else "false")
 
 
 def diagnostics_enabled(group: str, session: Optional[Session] = None) -> bool:

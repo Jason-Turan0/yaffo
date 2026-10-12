@@ -1,4 +1,4 @@
-from invoke import task
+from invoke import Exit, task
 from pathlib import Path
 from urllib.request import urlopen
 import json
@@ -302,6 +302,36 @@ def test(c, verbose=False, coverage=False, path="tests", k=None, failed=False, m
 
 
 @task
+def lint(c, fix=False):
+    """
+    Lint everything CI lints: Python (ruff), the app's JavaScript, and the UI tests.
+
+    Every linter runs even when an earlier one fails, so one run shows every problem.
+
+    Args:
+        fix: Apply the fixes the linters can make on their own (default: False)
+
+    Example:
+        inv lint
+        inv lint --fix
+    """
+    eslint_fix = " -- --fix" if fix else ""
+    linters = [
+        ("Python (ruff)", f"python -m ruff check yaffo{' --fix' if fix else ''}"),
+        ("App JavaScript (eslint)", f"npm run lint{eslint_fix}"),
+        ("UI tests (eslint)", f"npm --prefix yaffo_ui_tests run lint{eslint_fix}"),
+    ]
+    failed = []
+    for name, cmd in linters:
+        print(f"\n==> {name}: {cmd}")
+        if c.run(cmd, pty=True, warn=True).failed:
+            failed.append(name)
+    if failed:
+        raise Exit(f"\nLint failed: {', '.join(failed)}", code=1)
+    print("\nAll linters passed.")
+
+
+@task
 def migrate(c):
     """
     Apply pending database migrations (creates the DB from scratch on first run).
@@ -365,13 +395,18 @@ def i18n_update(c, prune=False):
 
 
 @task
-def i18n_translate(c, locale, dry_run=False, keys_only=False, overwrite=False, batch_size=20, engine="auto"):
-    """Translate entries from English with the configured LLM or deep-translator."""
+def i18n_translate(c, locale, dry_run=False, keys_only=False, overwrite=False, batch_size=20, engine="auto",
+                   llm_cli="auto", llm_model="", llm_timeout=120):
+    """Translate entries with an authenticated LLM CLI or deep-translator."""
     options = [
         f"--locale {shlex.quote(locale)}",
         f"--batch-size {int(batch_size)}",
         f"--engine {shlex.quote(engine)}",
+        f"--llm-cli {shlex.quote(llm_cli)}",
+        f"--llm-timeout {int(llm_timeout)}",
     ]
+    if llm_model:
+        options.append(f"--llm-model {shlex.quote(llm_model)}")
     if dry_run:
         options.append("--dry-run")
     if keys_only:
@@ -391,7 +426,7 @@ def _translation_locales():
 
 @task(help={"prune": "Also remove browser catalog keys that en.json no longer has"})
 def i18n_translate_all(c, dry_run=False, keys_only=False, overwrite=False, batch_size=20, engine="deep-translator",
-                       prune=False):
+                       prune=False, llm_cli="auto", llm_model="", llm_timeout=120):
     """Extract, update, translate all configured locales, then compile catalogs."""
     c.run("pybabel extract -F babel.cfg -o messages.pot .", pty=True)
     c.run("pybabel update -N --ignore-obsolete -i messages.pot -d yaffo/translations", pty=True)
@@ -402,7 +437,11 @@ def i18n_translate_all(c, dry_run=False, keys_only=False, overwrite=False, batch
             f"--locale {shlex.quote(locale)}",
             f"--batch-size {int(batch_size)}",
             f"--engine {shlex.quote(engine)}",
+            f"--llm-cli {shlex.quote(llm_cli)}",
+            f"--llm-timeout {int(llm_timeout)}",
         ]
+        if llm_model:
+            options.append(f"--llm-model {shlex.quote(llm_model)}")
         if dry_run:
             options.append("--dry-run")
         if keys_only:

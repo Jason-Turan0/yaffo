@@ -9,7 +9,9 @@ import pytest
 
 from yaffo.app import create_app
 from yaffo.db import db
-from yaffo.db.models import GRANT_SCOPE_FOLDER, GRANT_SCOPE_MEDIA_DIR, MEDIA_TYPE_PHOTO, MediaItem
+from yaffo.db.models import (
+    GRANT_SCOPE_ALBUM, GRANT_SCOPE_FOLDER, GRANT_SCOPE_MEDIA_DIR, MEDIA_TYPE_PHOTO, Album, AlbumItem, MediaItem,
+)
 from yaffo.db.repositories import media_dir_repository, p2p_repository
 from yaffo.p2p.handlers.list_files import build_list_files_request
 from yaffo.p2p.handlers.list_shared import MESSAGE_LIST_SHARED
@@ -17,6 +19,7 @@ from yaffo.p2p.handlers.pull_file import build_pull_file_request
 from yaffo.p2p.handlers.pull_preview import build_pull_preview_request
 from yaffo.p2p.identity import InMemorySecretStore, load_or_create_identity
 from yaffo.p2p.messages import build_signed_message
+from yaffo.p2p.rate_limits import RATE_LIMITED_CODE, BucketLimit, PeerRateLimiter
 from yaffo.p2p.service import P2PService
 
 
@@ -501,3 +504,100 @@ def test_list_files_shape_filter(serving_context):
     )
     assert round_shape["status"] == "error"
     assert "invalid value for filter 'shape'" in round_shape["detail"]
+
+
+def test_pull_file_is_rate_limited_per_verified_peer(serving_context):
+    app, service, requester, media_dir, root = serving_context
+    service.rate_limits = PeerRateLimiter({"pull_file": BucketLimit(per_second=0.001, burst=2)})
+    with app.app_context():
+        item_id = _index_file(root / "trip" / "a.jpg", b"abcdef")
+        p2p_repository.create_grant(db.session, requester.device_id, GRANT_SCOPE_MEDIA_DIR, media_dir_id=media_dir.id)
+
+    responses = [
+        service._handle_stream_request(build_pull_file_request(requester, item_id, offset=0, length=3))
+        for _ in range(3)
+    ]
+
+    assert [r["status"] for r in responses] == ["ok", "ok", "error"]
+    assert responses[2]["code"] == RATE_LIMITED_CODE
+
+
+def test_a_spoofed_device_id_does_not_spend_the_real_peers_allowance(serving_context):
+    """Limits are counted after the signature check, so requests that merely
+    claim the peer's device id are refused without touching its bucket."""
+    app, service, requester, media_dir, root = serving_context
+    service.rate_limits = PeerRateLimiter({"pull_file": BucketLimit(per_second=0.001, burst=1)})
+    impostor = load_or_create_identity(InMemorySecretStore())
+    with app.app_context():
+        item_id = _index_file(root / "trip" / "a.jpg", b"abcdef")
+        p2p_repository.create_grant(db.session, requester.device_id, GRANT_SCOPE_MEDIA_DIR, media_dir_id=media_dir.id)
+
+    forged = build_pull_file_request(impostor, item_id, offset=0, length=3)
+    forged["device_id"] = requester.device_id
+    for _ in range(5):
+        assert service._handle_stream_request(forged).get("code") != RATE_LIMITED_CODE
+
+    genuine = service._handle_stream_request(build_pull_file_request(requester, item_id, offset=0, length=3))
+    assert genuine["status"] == "ok"
+
+
+def test_pairing_attempts_share_one_bucket(serving_context):
+    app, service, requester, media_dir, root = serving_context
+    service.rate_limits = PeerRateLimiter({"pairing_confirm": BucketLimit(per_second=0.001, burst=2)})
+    guesses = [
+        service._handle_stream_request({"type": "pairing_confirm", "device_id": f"GUESS-{index}", "nonce": f"n{index}"})
+        for index in range(3)
+    ]
+
+    assert [g.get("code") for g in guesses] == [None, None, RATE_LIMITED_CODE]
+
+
+def test_manifests_carry_the_indexed_sha1_and_responses_the_protocol(serving_context):
+    app, service, requester, media_dir, root = serving_context
+    with app.app_context():
+        _index_file(root / "trip" / "a.jpg", b"hashed", sha1="a" * 40)
+        _index_file(root / "trip" / "b.jpg", b"not yet")
+        p2p_repository.create_grant(db.session, requester.device_id, GRANT_SCOPE_MEDIA_DIR, media_dir_id=media_dir.id)
+
+    page = service._handle_stream_request(
+        build_list_files_request(requester, media_dir.id, "trip", filters={}, offset=0, limit=10)
+    )
+
+    assert page["protocol"] == 2
+    assert {item["relative_path"]: item["sha1"] for item in page["files"]} == {
+        "trip/a.jpg": "a" * 40,
+        "trip/b.jpg": None,  # not computed yet: the importer dedupes after downloading
+    }
+
+    version_1_request = build_list_files_request(requester, media_dir.id, "trip", filters={}, offset=0, limit=10)
+    version_1_request.pop("protocol")
+    version_1_page = service._handle_stream_request(version_1_request)
+    assert version_1_page["protocol"] == 2
+    assert all("sha1" not in item for item in version_1_page["files"])
+
+
+def test_album_manifest_adapts_to_version_1_request(serving_context):
+    app, service, requester, media_dir, root = serving_context
+    with app.app_context():
+        item_id = _index_file(root / "trip" / "a.jpg", b"hashed", sha1="a" * 40)
+        album = Album(name="Trip")
+        db.session.add(album)
+        db.session.flush()
+        db.session.add(AlbumItem(album_id=album.id, media_item_id=item_id, position=0))
+        db.session.commit()
+        album_id = album.id
+        p2p_repository.create_grant(db.session, requester.device_id, GRANT_SCOPE_ALBUM, album_id=album_id)
+
+    request = build_list_files_request(requester, "", "", filters={}, offset=0, limit=10, album_id=album_id)
+    assert service._handle_stream_request(request)["files"][0]["sha1"] == "a" * 40
+    request.pop("protocol")
+    assert "sha1" not in service._handle_stream_request(request)["files"][0]
+
+
+def test_every_answer_says_its_protocol_even_errors(serving_context):
+    app, service, requester, media_dir, root = serving_context
+    assert service._handle_stream_request({"type": "ping"})["protocol"] == 2
+    unknown = service._handle_stream_request({"type": "nonsense"})
+    assert unknown["status"] == "error" and unknown["protocol"] == 2
+    denied = service._handle_stream_request(build_list_shared_request(load_or_create_identity(InMemorySecretStore())))
+    assert denied["status"] == "error" and denied["protocol"] == 2

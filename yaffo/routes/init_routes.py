@@ -1,11 +1,13 @@
 from flask import Flask
 
 from yaffo.routes.albums import init_albums_routes
+from yaffo.routes.api import init_api_routes
 from yaffo.routes.assistant import init_assistant_routes
 from yaffo.routes.base import init_base_routes
 from yaffo.routes.faces import init_faces_routes
 from yaffo.routes.filter_config import init_filter_config_routes
 from yaffo.routes.home import init_home_routes
+from yaffo.routes.internal_p2p import init_internal_p2p_routes
 from yaffo.routes.jobs import init_jobs_routes
 from yaffo.routes.locations import init_locations_routes
 from yaffo.routes.pages import init_pages_routes
@@ -19,6 +21,7 @@ from yaffo.routes.themes_page import init_themes_page_routes
 
 def init_routes(app: Flask):
     init_base_routes(app)
+    init_api_routes(app)
     init_home_routes(app)
     init_filter_config_routes(app)
     init_media_routes(app)
@@ -29,6 +32,7 @@ def init_routes(app: Flask):
     init_utilities_routes(app)
     init_settings_routes(app)
     init_sharing_routes(app)
+    init_internal_p2p_routes(app)
     init_themes_page_routes(app)
     init_pages_routes(app)
     init_albums_routes(app)

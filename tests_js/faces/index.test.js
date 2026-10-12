@@ -9,8 +9,8 @@ import { loadModule } from '../support/load_module.js';
 const config = () => ({
   urls: {
     placeholder: '/static/placeholder.png',
-    faces_assign: '/faces/assign',
-    api_people_create: '/api/people',
+    api_faces_update: '/api/faces',
+    faces_person_create: '/faces/people/create',
     face_shortcut_people_settings: '/settings/faces/shortcuts',
   },
   buildUrl: (endpoint, params = {}) => {
@@ -186,16 +186,27 @@ describe('faces initAssignment — rendering & selection', () => {
 });
 
 describe('faces initAssignment — submitFaces', () => {
-  it('POSTs the selection and advances to the next cluster on success', async () => {
+  it('never sends an assignment without a person (that would clear the faces)', async () => {
+    fixture(group([{ id: 1 }]));
+    const fetchMock = stubFetch({ faces: [] });
+    const api = await init();
+
+    await api.submitFaces(null, 'ASSIGNED');
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(window.notification.error).toHaveBeenCalled();
+  });
+
+  it('PATCHes the selection and advances to the next cluster on success', async () => {
     fixture(group([{ id: 1 }, { id: 2 }]) + group([{ id: 3 }]));
-    const fetchMock = stubFetch({ success: true, message: 'ok' });
+    const fetchMock = stubFetch({ faces: [], message: 'ok' });
     const api = await init();
 
     await api.submitFaces('7', 'ASSIGNED');
 
-    expect(fetchMock).toHaveBeenCalledWith('/faces/assign', expect.objectContaining({ method: 'POST' }));
+    expect(fetchMock).toHaveBeenCalledWith('/api/faces', expect.objectContaining({ method: 'PATCH' }));
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
-    expect(body).toEqual({ faces: [1, 2], person: '7', faceStatus: 'ASSIGNED' });
+    expect(body).toEqual({ ids: [1, 2], person_id: 7 });
 
     // The second cluster is now the visible one.
     const visible = document.querySelector('.suggestion-group:not([hidden])');
@@ -204,7 +215,7 @@ describe('faces initAssignment — submitFaces', () => {
 
   it('skips (info + advance) without fetching when nothing is selected', async () => {
     fixture(group([{ id: 1 }]) + group([{ id: 2 }]));
-    const fetchMock = stubFetch({ success: true });
+    const fetchMock = stubFetch({ faces: [] });
     const api = await init();
 
     api.selectWholeCluster(false);
@@ -393,14 +404,14 @@ describe('faces initAssignment — helpers & shortcuts', () => {
 
   it('assigns the ignored status when the "i" key is pressed', async () => {
     fixture(group([{ id: 1 }, { id: 2 }]) + group([{ id: 3 }]));
-    const fetchMock = stubFetch({ success: true, message: 'ok' });
+    const fetchMock = stubFetch({ faces: [], message: 'ok' });
     await init();
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'i', bubbles: true }));
 
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
-    expect(body).toEqual({ faces: [1, 2], person: null, faceStatus: 'IGNORED' });
+    expect(body).toEqual({ ids: [1, 2], status: 'IGNORED' });
   });
 
   it('renders keyboard shortcuts from the active cluster people', async () => {

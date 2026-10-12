@@ -35,6 +35,7 @@ from yaffo.distance_units import (
     DISTANCE_UNIT_MILES,
     distance_to_kilometers,
     kilometers_per_unit,
+    kilometers_to_distance,
 )
 
 STR = "str"
@@ -246,6 +247,20 @@ def wire_filters(values: Mapping[str, Any], distance_unit: str) -> dict[str, Any
         payload.pop("proximity_lat", None)
         payload.pop("proximity_lon", None)
     return payload
+
+
+def query_params_from_wire(filters: Mapping[str, Any], distance_unit: str) -> dict[str, Any]:
+    """A list_files request's `filters` back as querystring parameters, to reopen
+    the filter panel on a saved subset. The proximity radius comes back in this
+    device's unit."""
+    values = default_values()
+    for name, value in filters.items():
+        param = _BY_WIRE.get(name)
+        if param is not None:
+            values[param.key] = 1 if param.kind == FLAG else value
+    if filters.get(WIRE_PROXIMITY_KM) is not None:
+        values["proximity_distance"] = kilometers_to_distance(filters[WIRE_PROXIMITY_KM], distance_unit)
+    return filter_query_params(values)
 
 
 def _is_int(value: Any) -> bool:

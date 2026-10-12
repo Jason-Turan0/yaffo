@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sync Automation Mockup</title>
+<style>
+:root {
+  --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --bg: #f8f9fa; --surface: #fff; --sunken: #eef0f2;
+  --text: #212529; --text2: #495057; --muted: #6c757d; --faint: #adb5bd;
+  --border: #dee2e6; --border-strong: #ced4da;
+  --accent: #007bff; --accent-soft: #e7f3ff; --accent-soft-text: #004085;
+  --success: #28a745; --success-soft: #d4edda; --success-soft-text: #155724;
+  --danger: #dc3545; --danger-soft: #f8d7da; --danger-soft-text: #721c24;
+  --warning-soft: #fff3cd; --warning-soft-text: #856404;
+  --radius: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171a; --surface: #1e2125; --sunken: #26292e;
+    --text: #e9ecef; --text2: #ced4da; --muted: #98a2ad; --faint: #5c636a;
+    --border: #33383e; --border-strong: #454b52;
+    --accent: #4da3ff; --accent-soft: #10263d; --accent-soft-text: #a9d1ff;
+    --success-soft: #133020; --success-soft-text: #9fdcae;
+    --danger-soft: #3a1418; --danger-soft-text: #f1a7ae;
+    --warning-soft: #3a3010; --warning-soft-text: #f0d68a;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 var(--font-body); }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* mockup switcher (not part of the design) */
+.mock-bar { background: #222; color: #ddd; padding: 6px 16px; font-size: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.mock-bar button { background: #444; color: #eee; border: 0; border-radius: 4px; padding: 3px 9px; cursor: pointer; font-size: 12px; }
+.mock-bar button.on { background: #f0b429; color: #222; }
+
+.app { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 30px); }
+.nav { background: var(--surface); border-right: 1px solid var(--border); padding: 14px 10px; }
+.nav h4 { margin: 4px 8px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.nav a { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 6px 8px; border-radius: var(--radius); color: var(--text); font-size: 13px; }
+.nav a.active { background: var(--accent-soft); color: var(--accent-soft-text); font-weight: 600; }
+.nav a:hover { text-decoration: none; background: var(--sunken); }
+.nav .ico { color: var(--muted); font-size: 12px; width: 14px; display: inline-block; }
+.nav .new { margin-top: 10px; width: 100%; }
+
+main { padding: 20px 28px 60px; max-width: 920px; }
+.crumbs { font-size: 12px; color: var(--muted); }
+.title-row { display: flex; align-items: center; gap: 12px; margin: 4px 0 2px; flex-wrap: wrap; }
+h1 { font-size: 24px; margin: 0; }
+.route { color: var(--text2); font-size: 14px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.route b { font-weight: 600; color: var(--text); }
+.spacer { flex: 1; }
+
+.chip { font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 600; white-space: nowrap; }
+.chip.ok { background: var(--success-soft); color: var(--success-soft-text); }
+.chip.warn { background: var(--warning-soft); color: var(--warning-soft-text); }
+.chip.bad { background: var(--danger-soft); color: var(--danger-soft-text); }
+.chip.info { background: var(--accent-soft); color: var(--accent-soft-text); }
+.chip.muted { background: var(--sunken); color: var(--muted); }
+
+.btn { font: inherit; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); border-radius: var(--radius); padding: 6px 12px; cursor: pointer; }
+.btn:hover { background: var(--sunken); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:disabled { opacity: .45; cursor: not-allowed; }
+.btn.small { padding: 3px 9px; font-size: 12px; }
+.btn.link { border: 0; background: none; color: var(--accent); padding: 0; }
+
+.toggle { position: relative; width: 38px; height: 22px; background: var(--success); border-radius: 999px; display: inline-block; }
+.toggle::after { content: ""; position: absolute; top: 3px; right: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; }
+.toggle.off { background: var(--faint); }
+.toggle.off::after { right: auto; left: 3px; }
+
+.status { margin: 16px 0 18px; padding: 12px 14px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.status.attn { background: var(--warning-soft); border-color: transparent; color: var(--warning-soft-text); }
+.status .big { font-weight: 600; }
+.status .sub { color: var(--muted); font-size: 13px; }
+.status.attn .sub { color: inherit; opacity: .8; }
+.progress { flex-basis: 100%; height: 6px; background: var(--sunken); border-radius: 3px; overflow: hidden; }
+.progress > i { display: block; height: 100%; width: 62%; background: var(--accent); }
+
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.tabs button { font: inherit; background: none; border: 0; padding: 8px 14px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs button.on { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+.tabs .count { font-size: 11px; background: var(--danger-soft); color: var(--danger-soft-text); border-radius: 999px; padding: 0 6px; margin-left: 4px; }
+
+.step { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; }
+.step > header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; }
+.step .num { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; background: var(--sunken); color: var(--text2); flex: none; }
+.step.done .num { background: var(--success); color: #fff; }
+.step.todo .num { background: var(--accent); color: #fff; }
+.step h3 { margin: 0; font-size: 15px; }
+.step .summary { color: var(--muted); font-size: 13px; }
+.step .body { padding: 2px 14px 16px 46px; display: none; }
+.step.open .body { display: block; }
+.step .caret { color: var(--faint); font-size: 12px; }
+
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 4px; }
+.field .hint { font-size: 12px; color: var(--muted); margin-top: 3px; }
+input[type=text], input[type=number], select { font: inherit; width: 100%; max-width: 380px; padding: 6px 9px; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface); color: var(--text); }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.account { display: flex; align-items: center; gap: 10px; }
+.avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #4285f4, #34a853); color: #fff; display: grid; place-items: center; font-weight: 700; }
+.avatar.ms { background: linear-gradient(135deg, #0078d4, #28a8ea); }
+
+.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--radius); overflow: hidden; margin-bottom: 12px; flex-wrap: wrap; }
+.seg button { font: inherit; border: 0; background: var(--surface); padding: 6px 12px; cursor: pointer; color: var(--text2); border-right: 1px solid var(--border-strong); }
+.seg button:last-child { border-right: 0; }
+.seg button.on { background: var(--accent-soft); color: var(--accent-soft-text); font-weight: 600; }
+.sel-pane { display: none; }
+.sel-pane.on { display: block; }
+.filter-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.pill { border: 1px solid var(--border-strong); border-radius: 999px; padding: 3px 10px; font-size: 12px; background: var(--surface); }
+.pill.add { border-style: dashed; color: var(--muted); }
+.thumbs { display: flex; gap: 4px; margin-top: 6px; }
+.thumbs i { width: 44px; height: 44px; border-radius: 4px; background: var(--sunken); display: block; }
+.thumbs i:nth-child(2n) { background: color-mix(in srgb, var(--accent) 18%, var(--sunken)); }
+.thumbs i:nth-child(3n) { background: color-mix(in srgb, var(--success) 18%, var(--sunken)); }
+
+/* remote pickers (remote_folder / remote_collection options) */
+.picker { border: 1px solid var(--border-strong); border-radius: var(--radius); max-width: 460px; overflow: hidden; }
+.picker .crumb { background: var(--sunken); padding: 6px 10px; font-size: 12px; color: var(--text2); display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.picker .crumb a { color: var(--accent); }
+.picker .item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-top: 1px solid var(--border); font-size: 13px; }
+.picker .item.sel { background: var(--accent-soft); color: var(--accent-soft-text); font-weight: 600; }
+.picker .item .ico { width: 16px; text-align: center; }
+.picker .item .open { margin-left: auto; font-size: 12px; color: var(--accent); }
+.picker .foot { border-top: 1px solid var(--border); padding: 6px 10px; font-size: 12px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+.radio-opt { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; margin-bottom: 8px; }
+.radio-opt input { margin-top: 3px; }
+.trigger { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 6px; }
+.trigger .ico { width: 18px; text-align: center; color: var(--muted); }
+
+.consent { border: 1px solid var(--accent); background: var(--accent-soft); color: var(--accent-soft-text); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 12px; font-size: 14px; }
+.consent b { color: inherit; }
+details.endpoints { margin: 8px 0 12px; font-size: 13px; }
+details.endpoints summary { cursor: pointer; color: var(--text2); }
+.ep { font-family: var(--font-mono); font-size: 12px; display: grid; grid-template-columns: 52px 1fr auto; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); align-items: center; }
+.ep span:nth-child(2) { color: var(--muted); font-family: var(--font-body); }
+
+table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; font-size: 13px; }
+th { text-align: left; font-size: 12px; color: var(--text2); background: var(--sunken); padding: 7px 10px; font-weight: 600; }
+td { padding: 7px 10px; border-top: 1px solid var(--border); vertical-align: middle; }
+td .t { width: 28px; height: 28px; border-radius: 3px; background: var(--sunken); display: inline-block; vertical-align: middle; margin-right: 8px; }
+.toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+.panel { display: none; }
+.panel.on { display: block; }
+.note { font-size: 12px; color: var(--muted); }
+
+/* new-automation modal */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none; align-items: center; justify-content: center; padding: 16px; }
+.overlay.on { display: flex; }
+.modal { background: var(--surface); border-radius: 10px; width: 100%; max-width: 560px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+.modal h2 { margin: 0 0 14px; font-size: 18px; }
+.types { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.type { border: 1px solid var(--border-strong); border-radius: 8px; padding: 12px; cursor: pointer; }
+.type:hover, .type.on { border-color: var(--accent); background: var(--accent-soft); }
+.type b { display: block; margin-bottom: 2px; }
+.type span { font-size: 12px; color: var(--muted); }
+.providers { display: none; margin-top: 14px; }
+.providers.on { display: block; }
+.prov { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 6px; cursor: pointer; }
+.prov:hover { border-color: var(--accent); }
+.prov .avatar { width: 26px; height: 26px; font-size: 12px; }
+.prov small { color: var(--muted); margin-left: auto; }
+.modal footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+@media (max-width: 720px) {
+  .app { grid-template-columns: 1fr; }
+  .nav { border-right: 0; border-bottom: 1px solid var(--border); }
+  main { padding: 16px; }
+  .step .body { padding-left: 14px; }
+  .types { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="mock-bar">
+  <strong>Mockup:</strong>
+  <button data-variant="target" class="on">Send to Google Photos (running)</button>
+  <button data-variant="source">Import from OneDrive (backfilling)</button>
+  <button data-variant="setup">Send to… (mid-setup)</button>
+  <button data-variant="extend">Send to OneDrive (needs more access)</button>
+  <button id="open-new">New automation dialog</button>
+</div>
+
+<div class="app">
+  <nav class="nav">
+    <h4>Automations</h4>
+    <a href="#"><span><span class="ico">⚙</span> Index new photos</span><span class="chip ok">On</span></a>
+    <a href="#"><span><span class="ico">⚙</span> Classify labels</span><span class="chip ok">On</span></a>
+    <a href="#"><span><span class="ico">{}</span> Tag beach photos</span></a>
+    <a href="#" class="active" data-nav="target"><span><span class="ico">↑</span> For Mom → Google</span><span class="chip ok">On</span></a>
+    <a href="#" data-nav="source"><span><span class="ico">↓</span> OneDrive camera roll</span><span class="chip ok">On</span></a>
+    <a href="#" data-nav="setup"><span><span class="ico">↑</span> Portfolio → Flickr</span><span class="chip warn">Setup</span></a>
+    <a href="#" data-nav="extend"><span><span class="ico">↑</span> Backup → OneDrive</span><span class="chip warn">Setup</span></a>
+    <button class="btn new" id="open-new-2">+ New automation</button>
+  </nav>
+
+  <main>
+    <div class="crumbs">Utilities › Automations</div>
+
+    <!-- ============ TARGET: running ============ -->
+    <section class="variant" data-variant="target">
+      <div class="title-row">
+        <h1>For Mom → Google</h1>
+        <span class="chip info">Send to</span>
+        <span class="spacer"></span>
+        <button class="btn small">Test</button>
+        <button class="btn small">Run now</button>
+        <span class="toggle" title="On"></span>
+      </div>
+      <div class="route">Album <b>For Mom</b> → Google Photos › <b>For Mom</b> <span class="note">as jason@gmail.com</span></div>
+
+      <div class="status">
+        <span class="chip ok">Up to date</span>
+        <span><span class="big">412 photos sent</span> <span class="sub">· last run 4 min ago (album changed) · next check tonight 02:00</span></span>
+        <span class="spacer"></span>
+        <a href="#" data-goto="items-failed">3 failed ›</a>
+      </div>
+
+      <div class="tabs" data-tabs="t">
+        <button class="on" data-tab="t-setup">Setup</button>
+        <button data-tab="t-items">Items <span class="count">3</span></button>
+        <button data-tab="t-runs">Run history</button>
+      </div>
+
+      <div class="panel on" data-panel="t-setup">
+        <div class="step done">
+          <header><span class="num">✓</span><h3>Account</h3><span class="summary">Google Photos · jason@gmail.com · shared with 1 other sync</span><span class="spacer"></span><span class="caret">▸</span></header>
+          <div class="body">
+            <div class="account"><span class="avatar">J</span><div><b>jason@gmail.com</b><div class="note">Yaffo can: add photos it uploads, manage albums it creates</div></div><span class="spacer"></span><button class="btn small">Sign in again</button><button class="btn small">Use a different account</button></div>
+            <p class="note">Also used by <a href="#">Summer 2026 → Google</a>. Signing in again fixes both.</p>
+          </div>
+        </div>
+
+        <div class="step done">
+          <header><span class="num">✓</span><h3>Options</h3><span class="summary">Google album: same name as the Yaffo album · captions on</span><span class="spacer"></span><span class="caret">▸</span></header>
+          <div class="body">
+            <div class="field"><label>Google Photos album</label>
+              <label class="radio-opt"><input type="radio" name="galb" checked><span><b>Same name as the Yaffo album</b> (“For Mom”)<div class="note">Created in Google Photos on the first run.</div></span></label>
+              <label class="radio-opt"><input type="radio" name="galb"><span><b>An album Yaffo already created</b></span></label>
+              <div class="picker" style="margin-left:24px">
+                <div class="item"><span class="ico">🖼</span>Summer 2026 <span class="note" style="margin-left:6px">86 photos</span></div>
+                <div class="item"><span class="ico">🖼</span>Portfolio <span class="note" style="margin-left:6px">40 photos</span></div>
+                <div class="item"><span class="ico">＋</span>Create new album…</div>
+                <div class="foot">Only albums Yaffo created can be used. Google doesn't let apps add to your other albums.</div>
+              </div>
+            </div>
+            <div class="field"><label><input type="checkbox" checked> Send captions as descriptions</label></div>
+          </div>
+        </div>
+
+        <div class="step done open">
+          <header><span class="num">✓</span><h3>What to send</h3><span class="summary">Album “For Mom” · 415 photos</span><span class="spacer"></span><span class="caret">▾</span></header>
+          <div class="body">
+            <div class="seg" data-seg="t">
+              <button class="on" data-sel="album">An album</button>
+              <button data-sel="filter">Photos matching a filter</button>
+              <button data-sel="rule">Custom rule</button>
+            </div>
+            <div class="sel-pane on" data-pane="album">
+              <div class="field"><label>Album</label>
+                <select><option>For Mom</option><option>Portfolio</option><option>Summer 2026</option></select>
+                <div class="hint">Photos you add to or remove from this album are mirrored within about a minute.</div>
+              </div>
+              <div class="thumbs"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            </div>
+            <div class="sel-pane" data-pane="filter">
+              <div class="filter-pills"><span class="pill">People: Mom, Ava</span><span class="pill">Taken: last 30 days</span><span class="pill">Not: screenshot</span><span class="pill add">+ Add filter</span></div>
+              <div class="note">Currently matches 86 photos. Uses the same filters as the library.</div>
+            </div>
+            <div class="sel-pane" data-pane="rule">
+              <p class="note" style="margin-top:0">Describe the rule in chat — e.g. “recent photos of Mom and the kids, captioned with who's in them, one Google album per year.” The builder writes a selector script you can Test before publishing.</p>
+              <button class="btn">Open rule builder</button>
+            </div>
+            <p class="note">Changing what's selected asks for confirmation again before the next run.</p>
+          </div>
+        </div>
+
+        <div class="step done">
+          <header><span class="num">✓</span><h3>When</h3><span class="summary">When the album changes · nightly at 02:00</span><span class="spacer"></span><span class="caret">▸</span></header>
+          <div class="body">
+            <div class="trigger"><span class="ico">⚡</span> When <b>For Mom</b> changes <span class="note">(waits 60 s for more changes)</span><span class="spacer"></span><a href="#">Edit</a></div>
+            <div class="trigger"><span class="ico">⏱</span> Every day at 02:00 <span class="spacer"></span><a href="#">Edit</a></div>
+            <a href="#">+ Add trigger</a>
+          </div>
+        </div>
+
+        <div class="step done">
+          <header><span class="num">✓</span><h3>Turned on</h3><span class="summary">Confirmed Oct 8 · 17:02</span><span class="spacer"></span><span class="caret">▸</span></header>
+          <div class="body">
+            <div class="consent">Send the photos in the album <b>For Mom</b> to Google Photos › <b>For Mom</b> as <b>jason@gmail.com</b>. Photos removed from the album are removed from the Google album. Nothing in your library is changed.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" data-panel="t-items">
+        <div class="toolbar">
+          <select style="max-width:180px"><option>Failed (3)</option><option>All (415)</option><option>Sent (412)</option><option>Waiting (0)</option><option>Removed in Google (0)</option></select>
+          <span class="spacer"></span>
+          <button class="btn small">Retry failed</button>
+        </div>
+        <table>
+          <tr><th>Photo</th><th>Album</th><th>Status</th><th>Last tried</th></tr>
+          <tr><td><span class="t"></span>IMG_4410.HEIC</td><td>For Mom</td><td><span class="chip bad">Unsupported format</span></td><td>4 min ago</td></tr>
+          <tr><td><span class="t"></span>VID_0912.MOV</td><td>For Mom</td><td><span class="chip bad">Too large (2.4 GB)</span></td><td>4 min ago</td></tr>
+          <tr><td><span class="t"></span>IMG_3981.JPG</td><td>For Mom</td><td><span class="chip warn">Will retry</span></td><td>4 min ago · attempt 3</td></tr>
+        </table>
+      </div>
+
+      <div class="panel" data-panel="t-runs">
+        <table>
+          <tr><th>Started</th><th>Trigger</th><th>Result</th><th>Duration</th></tr>
+          <tr><td>Today 14:21</td><td>Album changed</td><td><span class="chip ok">Done</span> +6 sent, 1 removed</td><td>18 s</td></tr>
+          <tr><td>Today 02:00</td><td>Schedule</td><td><span class="chip ok">Done</span> nothing to do</td><td>2 s</td></tr>
+          <tr><td>Yesterday 19:40</td><td>Album changed</td><td><span class="chip warn">Partial</span> +40 sent, 2 failed</td><td>3 min</td></tr>
+          <tr><td>Oct 8 17:03</td><td>Turned on</td><td><span class="chip ok">Done</span> +366 sent</td><td>21 min</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ SOURCE: backfilling ============ -->
+    <section class="variant" data-variant="source" hidden>
+      <div class="title-row">
+        <h1>OneDrive camera roll</h1>
+        <span class="chip info">Import from</span>
+        <span class="spacer"></span>
+        <button class="btn small">Test</button>
+        <button class="btn small">Pause</button>
+        <span class="toggle"></span>
+      </div>
+      <div class="route">OneDrive › <b>Pictures › Camera Roll</b> → <b>Pictures/Imports/OneDrive</b> <span class="note">as jason@outlook.com</span></div>
+
+      <div class="status">
+        <span class="chip info">Importing</span>
+        <span><span class="big">Importing your existing photos: 8,200 so far</span> <span class="sub">· 1,140 already in your library (skipped) · continues automatically</span></span>
+        <div class="progress"><i></i></div>
+      </div>
+
+      <div class="tabs">
+        <button class="on">Setup</button>
+        <button>Items</button>
+        <button>Run history</button>
+      </div>
+
+      <div class="step done">
+        <header><span class="num">✓</span><h3>Account</h3><span class="summary">OneDrive · jason@outlook.com · shared with 1 other sync</span><span class="spacer"></span><span class="caret">▸</span></header>
+      </div>
+      <div class="step done open">
+        <header><span class="num">✓</span><h3>Options</h3><span class="summary">Folder: Pictures › Camera Roll</span><span class="spacer"></span><span class="caret">▾</span></header>
+        <div class="body">
+          <div class="field"><label>OneDrive folder</label>
+            <div class="picker">
+              <div class="crumb"><a href="#">OneDrive</a> › <a href="#">Pictures</a></div>
+              <div class="item sel"><span class="ico">📁</span>Camera Roll <span class="chip info" style="margin-left:6px">suggested</span><span class="open">Open ›</span></div>
+              <div class="item"><span class="ico">📁</span>Screenshots<span class="open">Open ›</span></div>
+              <div class="item"><span class="ico">📁</span>Saved Pictures<span class="open"></span></div>
+              <div class="item"><span class="ico">📁</span>Trips<span class="open">Open ›</span></div>
+              <div class="foot"><span>Chosen: <b>Pictures › Camera Roll</b></span><span class="spacer"></span><button class="btn small primary">Choose this folder</button></div>
+            </div>
+            <div class="hint">Listed live from jason@outlook.com. Renaming the folder in OneDrive won't break this sync.</div>
+          </div>
+          <div class="field"><label><input type="checkbox" checked> Include videos</label></div>
+        </div>
+      </div>
+      <div class="step done open">
+        <header><span class="num">✓</span><h3>Save to</h3><span class="summary">Pictures/Imports/OneDrive</span><span class="spacer"></span><span class="caret">▾</span></header>
+        <div class="body">
+          <div class="field"><label>Library folder</label>
+            <div class="row"><select style="max-width:200px"><option>Pictures (SD card)</option><option>Photos backup</option></select><input type="text" value="Imports/OneDrive" style="max-width:200px"></div>
+            <div class="hint">Saved as Imports/OneDrive/YYYY/MM/. Changing this asks for confirmation again.</div>
+          </div>
+          <div class="field"><label>When a photo is deleted in OneDrive</label>
+            <div class="note">It stays in your library and shows up under the <a href="#">Deleted at source</a> filter. Yaffo never deletes your files because of a sync.</div>
+          </div>
+        </div>
+      </div>
+      <div class="step done">
+        <header><span class="num">✓</span><h3>When</h3><span class="summary">Every day at 06:00</span><span class="spacer"></span><span class="caret">▸</span></header>
+      </div>
+      <div class="step done">
+        <header><span class="num">✓</span><h3>Turned on</h3><span class="summary">Confirmed Oct 8 · 09:15</span><span class="spacer"></span><span class="caret">▸</span></header>
+      </div>
+    </section>
+
+    <!-- ============ SETUP in progress ============ -->
+    <section class="variant" data-variant="setup" hidden>
+      <div class="title-row">
+        <h1>Portfolio → Flickr</h1>
+        <span class="chip info">Send to</span>
+        <span class="chip warn">Setup incomplete</span>
+        <span class="spacer"></span>
+        <span class="toggle off"></span>
+      </div>
+      <div class="route">Flickr</div>
+
+      <div class="status attn">
+        <span class="big">Finish setup to turn this on.</span>
+        <span class="sub">Next: choose what to send.</span>
+      </div>
+
+      <div class="step done open">
+        <header><span class="num">✓</span><h3>Account</h3><span class="summary">Flickr · jturan</span><span class="spacer"></span><span class="caret">▾</span></header>
+        <div class="body">
+          <div class="account"><span class="avatar" style="background:#ff0084">J</span><div><b>jturan</b><div class="note">Already signed in when you added this service · Yaffo can upload and edit sets</div></div><span class="spacer"></span><button class="btn small">Use a different account</button></div>
+        </div>
+      </div>
+      <div class="step done open">
+        <header><span class="num">✓</span><h3>Options</h3><span class="summary">Custom service “Flickr sets” · Public: off</span><span class="spacer"></span><span class="caret">▾</span></header>
+        <div class="body">
+          <div class="field"><label>Set title</label><input type="text" value="Portfolio"></div>
+          <div class="field"><label><input type="checkbox"> Make photos public</label></div>
+          <p class="note">This uses a service you added. <a href="#">Edit service</a></p>
+        </div>
+      </div>
+      <div class="step todo open">
+        <header><span class="num">3</span><h3>What to send</h3><span class="summary">Not chosen yet</span><span class="spacer"></span><span class="caret">▾</span></header>
+        <div class="body">
+          <div class="seg"><button class="on">An album</button><button>Photos matching a filter</button><button>Custom rule</button></div>
+          <div class="field"><label>Album</label><select><option>Choose an album…</option><option>Portfolio</option><option>For Mom</option></select></div>
+        </div>
+      </div>
+      <div class="step">
+        <header><span class="num">4</span><h3>When</h3><span class="summary">When the album changes · nightly (default)</span><span class="spacer"></span><span class="caret">▸</span></header>
+      </div>
+      <div class="step open">
+        <header><span class="num">5</span><h3>Turn on</h3><span class="summary"></span><span class="spacer"></span><span class="caret">▾</span></header>
+        <div class="body">
+          <div class="consent">Send the photos in the album <b>…</b> to Flickr › <b>Portfolio</b> as <b>jturan</b>, as private photos.</div>
+          <details class="endpoints" open>
+            <summary>This service will be allowed to call (4)</summary>
+            <div class="ep"><b>POST</b><span>Upload a photo</span><code>up.flickr.com/services/upload</code></div>
+            <div class="ep"><b>POST</b><span>Create a set</span><code>api.flickr.com/…photosets.create</code></div>
+            <div class="ep"><b>POST</b><span>Add a photo to a set</span><code>api.flickr.com/…photosets.addPhoto</code></div>
+            <div class="ep"><b>GET</b><span>List photos in a set</span><code>api.flickr.com/…photosets.getPhotos</code></div>
+          </details>
+          <div class="row"><button class="btn">Test</button><button class="btn primary" disabled>Turn on</button><span class="note">Choose what to send first.</span></div>
+        </div>
+      </div>
+    </section>
+    <!-- ============ EXTEND an existing account's access ============ -->
+    <section class="variant" data-variant="extend" hidden>
+      <div class="title-row">
+        <h1>Backup → OneDrive</h1>
+        <span class="chip info">Send to</span>
+        <span class="chip warn">Setup incomplete</span>
+        <span class="spacer"></span>
+        <span class="toggle off"></span>
+      </div>
+      <div class="route">OneDrive folder</div>
+
+      <div class="status attn">
+        <span class="big">Finish setup to turn this on.</span>
+        <span class="sub">Next: allow this account to receive uploads.</span>
+      </div>
+
+      <div class="step todo open">
+        <header><span class="num">1</span><h3>Account</h3><span class="summary">OneDrive · jason@outlook.com · needs more access</span><span class="spacer"></span><span class="caret">▾</span></header>
+        <div class="body">
+          <div class="field"><label>Account</label>
+            <select style="max-width:320px"><option>jason@outlook.com (used by OneDrive camera roll)</option><option>Sign in to another OneDrive account…</option></select>
+          </div>
+          <div class="consent" style="margin-bottom:10px">
+            <b>jason@outlook.com</b> is signed in for <b>reading</b> files (for <i>OneDrive camera roll</i>). This sync also needs to <b>upload</b> files.
+          </div>
+          <div class="row"><button class="btn primary">Also allow uploads</button><span class="note">Opens OneDrive's sign-in once more. <i>OneDrive camera roll</i> keeps working as before.</span></div>
+        </div>
+      </div>
+      <div class="step" style="opacity:.6"><header><span class="num">2</span><h3>Options</h3><span class="summary">🔒 Available after the Account step: the folder list comes from your OneDrive</span><span class="spacer"></span></header></div>
+      <div class="step"><header><span class="num">3</span><h3>What to send</h3><span class="summary">Not chosen yet</span><span class="spacer"></span><span class="caret">▸</span></header></div>
+      <div class="step"><header><span class="num">4</span><h3>When</h3><span class="summary">Nightly (default)</span><span class="spacer"></span><span class="caret">▸</span></header></div>
+      <div class="step"><header><span class="num">5</span><h3>Turn on</h3><span class="summary"></span><span class="spacer"></span><span class="caret">▸</span></header></div>
+    </section>
+  </main>
+</div>
+
+<!-- New automation dialog -->
+<div class="overlay" id="new-dialog">
+  <div class="modal">
+    <h2>New automation</h2>
+    <div class="types">
+      <div class="type" data-type="custom"><b>Custom</b><span>Describe what you want; the builder writes a script.</span></div>
+      <div class="type" data-type="import"><b>↓ Import from…</b><span>Bring photos in from a cloud account.</span></div>
+      <div class="type" data-type="send"><b>↑ Send to…</b><span>Keep an album or filter mirrored somewhere else.</span></div>
+      <div class="type" data-type="build"><b>Add a new service…</b><span>For a service Yaffo doesn't support yet; the builder writes it with you.</span></div>
+    </div>
+    <div class="providers" data-for="import">
+      <div class="note" style="margin-bottom:6px">Import from</div>
+      <div class="prov"><span class="avatar ms">O</span> OneDrive</div>
+      <div class="prov"><span class="avatar" style="background:#4250af">I</span> Immich <small>self-hosted</small></div>
+      <div class="prov"><span class="avatar" style="background:#666">S</span> SmugMug <small>custom</small></div>
+      <div class="prov"><span class="avatar" style="background:#6c757d">📁</span> Folder <small>SD card, Dropbox camera uploads…</small></div>
+    </div>
+    <div class="providers" data-for="send">
+      <div class="note" style="margin-bottom:6px">Send to</div>
+      <div class="prov"><span class="avatar">G</span> Google Photos</div>
+      <div class="prov"><span class="avatar ms">O</span> OneDrive folder</div>
+      <div class="prov"><span class="avatar" style="background:#6c757d">📁</span> Folder <small>Amazon Photos backup, Dropbox, SD card…</small></div>
+      <div class="prov"><span class="avatar" style="background:#ff0084">F</span> Flickr sets <small>custom</small></div>
+    </div>
+    <footer><button class="btn" id="close-new">Cancel</button><button class="btn primary">Continue</button></footer>
+  </div>
+</div>
+
+<script>
+const show = v => {
+  document.querySelectorAll('.variant').forEach(s => s.hidden = s.dataset.variant !== v);
+  document.querySelectorAll('.mock-bar [data-variant]').forEach(b => b.classList.toggle('on', b.dataset.variant === v));
+  document.querySelectorAll('.nav [data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === v));
+};
+document.querySelectorAll('[data-variant]').forEach(b => b.tagName === 'BUTTON' && b.addEventListener('click', () => show(b.dataset.variant)));
+document.querySelectorAll('.nav [data-nav]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); show(a.dataset.nav); }));
+
+document.querySelectorAll('.step > header').forEach(h => h.addEventListener('click', () => {
+  const s = h.parentElement; s.classList.toggle('open');
+  const c = h.querySelector('.caret'); if (c) c.textContent = s.classList.contains('open') ? '▾' : '▸';
+}));
+
+const tab = id => {
+  document.querySelectorAll('[data-tabs="t"] button').forEach(b => b.classList.toggle('on', b.dataset.tab === id));
+  document.querySelectorAll('[data-variant="target"] .panel').forEach(p => p.classList.toggle('on', p.dataset.panel === id));
+};
+document.querySelectorAll('[data-tabs="t"] button').forEach(b => b.addEventListener('click', () => tab(b.dataset.tab)));
+document.querySelector('[data-goto="items-failed"]').addEventListener('click', e => { e.preventDefault(); tab('t-items'); });
+
+document.querySelectorAll('[data-seg="t"] button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-seg="t"] button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('[data-variant="target"] .sel-pane').forEach(p => p.classList.toggle('on', p.dataset.pane === b.dataset.sel));
+}));
+
+const dlg = document.getElementById('new-dialog');
+['open-new', 'open-new-2'].forEach(id => document.getElementById(id).addEventListener('click', () => dlg.classList.add('on')));
+document.getElementById('close-new').addEventListener('click', () => dlg.classList.remove('on'));
+dlg.addEventListener('click', e => { if (e.target === dlg) dlg.classList.remove('on'); });
+document.querySelectorAll('.type').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('.type').forEach(x => x.classList.toggle('on', x === t));
+  document.querySelectorAll('.providers').forEach(p => p.classList.toggle('on', p.dataset.for === t.dataset.type));
+}));
+</script>
+</body>
+</html>
