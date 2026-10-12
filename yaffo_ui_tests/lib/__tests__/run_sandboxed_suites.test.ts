@@ -136,13 +136,46 @@ describe("runSandboxedSuites", () => {
         expect(starts).toHaveLength(3);
         expect(starts.map(({port}) => port).sort()).toEqual([6100, 6100, 6102]);
         expect(starts.map(({options}) => options)).toEqual(expect.arrayContaining([
-            {withPeer: false, preseeded: true, copyPreseeded: true},
-            {withPeer: true, preseeded: true, copyPreseeded: true},
+            {withPeer: false, preseeded: true, copyPreseeded: true, withFakeSyncServices: false},
+            {withPeer: true, preseeded: true, copyPreseeded: true, withFakeSyncServices: false},
         ]));
         expect(cleanups.sort()).toEqual([6100, 6100, 6102]);
         expect(runs.find(({specs}) => specs[0].includes("sharing"))?.options).toEqual(
             expect.objectContaining({environment: expect.objectContaining({PEER_URL: ""})}),
         );
+    });
+
+    it("starts the fake services for sync suites and hands their URLs and data dir to the specs", async () => {
+        const root = makeTestTree();
+        const spec = join(root, "generated_tests/sync_automations/sync_automations.spec.ts");
+        mkdirSync(join(spec, ".."), {recursive: true});
+        writeFileSync(spec, "test('placeholder', () => {});\n");
+        const starts: Array<{options: unknown}> = [];
+        const runs: Array<{specs: string[]; options: unknown}> = [];
+
+        await runSandboxedSuites(
+            {uiTestsDir: root, selectors: ["generated_tests/sync_automations"], basePort: 6200},
+            {
+                log: () => undefined,
+                startEnvironment: async (port, options) => {
+                    starts.push({options});
+                    return {...fakeEnvironment(port, async () => undefined), fakeImmichUrl: "http://127.0.0.1:7001",
+                        fakeOneDriveUrl: "http://127.0.0.1:7002", fakeFlickrUrl: "http://127.0.0.1:7003"};
+                },
+                runTests: async (_baseUrl, specs, options) => {
+                    runs.push({specs: specs ?? [], options});
+                    return passedResult();
+                },
+            },
+        );
+
+        expect(starts).toEqual([{options: expect.objectContaining({withFakeSyncServices: true})}]);
+        expect(runs[0].options).toEqual(expect.objectContaining({environment: expect.objectContaining({
+            FAKE_IMMICH_URL: "http://127.0.0.1:7001",
+            FAKE_ONEDRIVE_URL: "http://127.0.0.1:7002",
+            FAKE_FLICKR_URL: "http://127.0.0.1:7003",
+            YAFFO_DATA_DIR: "/tmp/suite-6200",
+        })}));
     });
 
     it("continues other directories after a failure and cleans failed runs", async () => {

@@ -21,6 +21,13 @@ async function openSettings(page: Page): Promise<void> {
   await expect(page.locator('.page-header')).toBeVisible();
 }
 
+// AI Generation shows a provider's model list and key form only once a provider is
+// chosen; the sandbox starts with none (it has no keychain and no key variables).
+async function chooseAiProvider(page: Page, label = 'Anthropic'): Promise<void> {
+  await pickSearchableOption(page, '#llm-provider', label);
+  await expect(page.locator('#llm-api-key-input')).toBeVisible();
+}
+
 function notification(page: Page): Locator {
   return page.locator('.notification.visible');
 }
@@ -507,6 +514,7 @@ test.describe('Settings', () => {
     test('settings_api_key_controls_stack_without_crowding_the_destructive_action - the key row is a real action row', async ({ page }) => {
       await page.setViewportSize(VIEWPORTS.desktop);
       await openSettings(page);
+      await chooseAiProvider(page);
       const actions = page.locator('.api-key-actions');
       await expect(actions).toBeVisible();
 
@@ -520,6 +528,7 @@ test.describe('Settings', () => {
 
       await page.setViewportSize(VIEWPORTS.minimum);
       await openSettings(page);
+      await chooseAiProvider(page);
       // An environment-provided key names its variable inline; the status line has
       // to wrap it rather than push the section wider.
       await page.locator('.api-key-status').evaluate((element) => {
@@ -544,6 +553,7 @@ test.describe('Settings', () => {
       await openSettings(page);
       await page.locator('#new-media-dir').fill(directory);
       await page.locator('#label-filter').fill('spec');
+      await chooseAiProvider(page);
       await page.locator('#llm-api-key-input').fill('sk-unsaved-spec-key');
 
       for (const viewport of [VIEWPORTS.desktop, VIEWPORTS.minimum, VIEWPORTS.narrowLandscape, VIEWPORTS.desktop]) {

@@ -5,7 +5,7 @@ import {parseArgs} from "node:util";
 
 import {seedCacheDir, startIsolatedEnvironment} from "../lib/services/isolated_runner";
 import {runPlaywrightTests, RunOptions} from "../lib/services/run_playwright_tests";
-import {discoverSandboxedSuites, SandboxedSuite} from "../lib/services/run_sandboxed_suites";
+import {discoverSandboxedSuites, needsFakeSyncServices, SandboxedSuite} from "../lib/services/run_sandboxed_suites";
 
 type Mode = NonNullable<RunOptions["mode"]>;
 const MODES: Mode[] = ["headed", "headless", "ui"];
@@ -28,7 +28,7 @@ export async function runLocalSuite(
         withPeer: suite.withPeer,
         preseeded: !options.fresh,
         copyPreseeded: !options.fresh,
-        withFakeSyncServices: suite.specs.some(spec => /generated_tests\/sync_(?:services|automations)\//.test(spec)),
+        withFakeSyncServices: needsFakeSyncServices(suite.specs),
         syncOriginOverrides: options.syncOriginOverrides,
     });
     try {

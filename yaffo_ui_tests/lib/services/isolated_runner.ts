@@ -191,7 +191,7 @@ const startFakeService = async (
     const port = await allocateLocalPort();
     const url = `http://127.0.0.1:${port}`;
     const child = spawn("python", ["-m", module, "--port", String(port), ...args], {
-        env: {...process.env}, cwd: YAFFO_DIR, stdio: ["ignore", "pipe", "pipe"],
+        env: environmentWithoutProviderKeys(), cwd: YAFFO_DIR, stdio: ["ignore", "pipe", "pipe"],
     });
     let output = "";
     child.stdout?.on("data", data => { output += data.toString(); });
@@ -260,14 +260,38 @@ export const SHARED_TRIP_PHOTOS = [
 // instance. Kept identical between build-seed and serve so a data dir seeded in
 // one job serves correctly in another (the seeded DB stores absolute
 // full_file_path values under YAFFO_DATA_DIR).
+/**
+ * The AI providers' API key variables (yaffo/site_agents/model_clients/providers.py).
+ * An environment key wins over the keychain, so one inherited from the developer's
+ * shell or .env would give the app under test a real, billed key: it would show
+ * Ask Yaffo, hide Settings' key controls, and could call the provider for real.
+ */
+export const PROVIDER_KEY_ENV_VARS = [
+    "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "XAI_API_KEY", "GEMINI_API_KEY", "MOONSHOT_API_KEY", "DEEPSEEK_API_KEY",
+];
+
+/** process.env without the provider API keys. */
+export const environmentWithoutProviderKeys = (env: NodeJS.ProcessEnv = process.env): Record<string, string> => {
+    const kept: Record<string, string> = {};
+    for (const [name, value] of Object.entries(env)) {
+        if (value !== undefined && !PROVIDER_KEY_ENV_VARS.includes(name)) kept[name] = value;
+    }
+    return kept;
+};
+
 const instanceEnv = (
     tempDir: string,
     seedProfile: "bennett" | "obama",
     assetDir?: string,
 ): Record<string, string> => ({
-    ...process.env,
+    ...environmentWithoutProviderKeys(),
     YAFFO_DATA_DIR: tempDir,
     YAFFO_SYNC_SECRETS_FILE: join(tempDir, "sync-secrets.json"),
+    // No OS keychain: the developer's real one holds their AI keys (an app that finds
+    // one shows Ask Yaffo and can call the provider) and would collect an entry per
+    // run. Sync secrets go to the file above; P2P identity lives in memory, as it does
+    // with YAFFO_P2P_EPHEMERAL_IDENTITY. The docs container does the same.
+    PYTHON_KEYRING_BACKEND: "keyring.backends.null.Keyring",
     YAFFO_SEED_PROFILE: seedProfile,
     FLASK_APP: "yaffo.app:create_app",
     FLASK_ENV: "testing",

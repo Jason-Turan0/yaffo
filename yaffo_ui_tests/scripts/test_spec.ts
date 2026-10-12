@@ -16,6 +16,7 @@ import {spawn} from "node:child_process";
 import {resolve} from "node:path";
 
 import {startIsolatedEnvironment} from "../lib/services/isolated_runner";
+import {needsFakeSyncServices} from "../lib/services/run_sandboxed_suites";
 import {toEntry} from "./list_specs";
 
 function parsePort(args: string[]): number {
@@ -75,7 +76,7 @@ async function main(): Promise<void> {
             withPeer,
             preseeded: !fresh,
             copyPreseeded: !fresh,
-            withFakeSyncServices: /generated_tests\/sync_(?:services|automations)\//.test(entry.spec),
+            withFakeSyncServices: needsFakeSyncServices([entry.spec]),
             syncOriginOverrides,
         });
     } catch (e) {
