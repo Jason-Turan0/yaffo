@@ -10,6 +10,7 @@ import {
     IsolatedEnvironment,
     IsolatedEnvironmentOptions,
     seedCacheDir,
+    needsFakeSyncServices,
     startIsolatedEnvironment,
 } from "@lib/services/isolated_runner";
 import {runPlaywrightTests, RunOptions} from "@lib/services/run_playwright_tests";
@@ -44,9 +45,7 @@ export interface SandboxedSuite {
     withPeer: boolean;
 }
 
-/** Specs that sign in to OneDrive, Immich or Flickr need the local fakes of those services. */
-export const needsFakeSyncServices = (specs: string[]): boolean =>
-    specs.some((spec) => /generated_tests[\\/]sync_(?:services|automations)[\\/]/.test(spec));
+export {needsFakeSyncServices} from "@lib/services/isolated_runner";
 
 export interface SuiteRunResult {
     suite: SandboxedSuite;

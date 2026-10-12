@@ -260,6 +260,22 @@ export const SHARED_TRIP_PHOTOS = [
 // instance. Kept identical between build-seed and serve so a data dir seeded in
 // one job serves correctly in another (the seeded DB stores absolute
 // full_file_path values under YAFFO_DATA_DIR).
+/** Specs that sign in to OneDrive, Immich or Flickr need the local fakes of those services. */
+export const needsFakeSyncServices = (specs: string[]): boolean =>
+    specs.some((spec) => /generated_tests[\\/]sync_(?:services|automations)[\\/]/.test(spec));
+
+/**
+ * What a spec run in another process needs to know about a started environment, as
+ * KEY=value lines a shell can source: the fake services' URLs and the data dir that
+ * fixture scripts must open (CI starts the environment and the tests separately).
+ */
+export const environmentFileContents = (environment: IsolatedEnvironment): string => [
+    `FAKE_FLICKR_URL=${environment.fakeFlickrUrl ?? ""}`,
+    `FAKE_ONEDRIVE_URL=${environment.fakeOneDriveUrl ?? ""}`,
+    `FAKE_IMMICH_URL=${environment.fakeImmichUrl ?? ""}`,
+    `YAFFO_DATA_DIR=${environment.tempDir}`,
+].join("\n") + "\n";
+
 /**
  * The AI providers' API key variables (yaffo/site_agents/model_clients/providers.py).
  * An environment key wins over the keychain, so one inherited from the developer's
@@ -800,6 +816,15 @@ async function main() {
     const demoMode = args.includes("--demo");
     const preseeded = args.includes("--preseeded");
     const docsFixture = args.includes("--docs");
+    // --for-spec <path>: start what that spec needs (the fake sync services).
+    // --write-env <path>: once ready, write environmentFileContents there.
+    const valueOf = (flag: string): string | undefined => {
+        const index = args.indexOf(flag);
+        return index !== -1 ? args[index + 1] : undefined;
+    };
+    const forSpec = valueOf("--for-spec");
+    const envFile = valueOf("--write-env");
+    const withFakeSyncServices = forSpec !== undefined && needsFakeSyncServices([forSpec]);
 
     // Build-seed mode: seed the canonical cache dir(s) and exit without serving.
     // Used by the CI seed-cache job so per-spec jobs can restore and skip seeding.
@@ -820,7 +845,10 @@ async function main() {
     process.on('SIGTERM', handleCleanup);
 
     try {
-        environment = await startIsolatedEnvironment(port, {withPeer, demoMode, preseeded, docsFixture});
+        environment = await startIsolatedEnvironment(port, {
+            withPeer, demoMode, preseeded, docsFixture, withFakeSyncServices,
+        });
+        if (envFile) writeFileSync(envFile, environmentFileContents(environment));
         if (environment.peer) {
             console.log(`\nRun the sharing tests with: BASE_URL=${environment.baseUrl} PEER_URL=${environment.peer.baseUrl} npx playwright test generated_tests/sharing/sharing.spec.ts`);
         }

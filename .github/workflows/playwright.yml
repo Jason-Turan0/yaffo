@@ -260,7 +260,13 @@ jobs:
             READY_URLS="$READY_URLS http://127.0.0.1:5003"
           fi
 
+          # --for-spec starts what this spec needs (the fake OneDrive, Immich and
+          # Flickr for sync specs); --write-env then records their URLs and the data
+          # dir, which fixture scripts must use, for the separate test process below.
+          ENV_FILE=reports/isolated-environment.env
+          rm -f "$ENV_FILE"
           npx tsx lib/services/isolated_runner.ts --port 5002 --preseeded $PEER_FLAG \
+            --for-spec "${{ matrix.spec }}" --write-env "$ENV_FILE" \
             > reports/isolated-environment.log 2>&1 &
           SERVER_PID=$!
 
@@ -284,6 +290,19 @@ jobs:
             done
             curl -fsS "$url" >/dev/null
           done
+          # Written right after the environment is ready.
+          for attempt in {1..30}; do
+            [ -s "$ENV_FILE" ] && break
+            sleep 1
+          done
+          if [ ! -s "$ENV_FILE" ]; then
+            echo "Isolated environment never wrote $ENV_FILE."
+            cat reports/isolated-environment.log
+            exit 1
+          fi
+          set -a
+          . "$ENV_FILE"
+          set +a
 
           # Via the runner, not `npx playwright test` directly: the runner is
           # what applies the OS sandbox and the env scrub. It derives the
