@@ -156,6 +156,12 @@ def problem_sentence(code: str | None, params: dict[str, Any]) -> str | None:
         count = _n(params, "count")
         return ngettext("%(num)d item didn't go through. See Items for why.",
                         "%(num)d items didn't go through. See Items for why.", count)
+    if code == codes.PROBLEM_SYNC_ITEMS_REFUSED:
+        count = _n(params, "count")
+        return ngettext("%(num)d item the service refused before wasn't sent again. Fix the service, "
+                        "or press Retry failed in Items.",
+                        "%(num)d items the service refused before weren't sent again. Fix the service, "
+                        "or press Retry failed in Items.", count)
     if code == codes.PROBLEM_SYNC_STOPPED:
         stop = params.get("code")
         if stop == ERROR_RATE_LIMITED:

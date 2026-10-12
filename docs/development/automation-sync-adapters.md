@@ -579,6 +579,14 @@ presets make that match exact: uploaded filenames carry a stable
 remote id and adapter state from the match. Without `reconcile`, the engine
 re-pushes and notes possible duplicates.
 
+**Refusals.** An item failed with a permanent code (`rejected`,
+`unsupported_format`, `conversion_failed`) isn't sent again on later runs. The run
+counts it (`refused_earlier`) and reports `sync_items_refused`, so the summary says
+why nothing happened. The refusal is tied to the adapter version that made it
+(`details.refused_by`: the published code hash, or the handler for a built-in), so
+publishing a fixed adapter or upgrading a preset makes those items eligible again
+automatically. *Retry failed* makes every failed item eligible at once.
+
 **Drift.** A reconcile pass every `RECONCILE_EVERY` (7 days) marks items the user
 deleted remotely `removed_remotely`; they aren't re-sent unless the user asks.
 

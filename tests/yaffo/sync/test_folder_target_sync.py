@@ -296,6 +296,32 @@ def test_a_failed_items_message_is_kept_and_logged_until_it_is_sent(session, add
     assert row.status == SYNC_ITEM_SENT and "error_message" not in (row.details or {})
 
 
+def test_a_refusal_holds_until_a_new_version_of_the_service_is_live(session, add_photo, album, make_target,
+                                                                    destination, run_context, monkeypatch):
+    from yaffo.sync import adapters
+    target = make_target(album("For Mom", [add_photo("a.jpg")]))
+    builtin = adapters.BUILTINS["folder_target"]
+    monkeypatch.setitem(adapters.BUILTINS, "folder_target",
+                        adapters.BuiltinAdapter(builtin.role, builtin.options, RejectingTarget))
+    run_sync(session, target.id, run_context)
+    row = sync_repository.rows(session, target.id)[0]
+    assert row.details["refused_by"] == "folder_target"
+
+    # The same version again: not resent, but counted and explained.
+    again = run_sync(session, target.id, run_context)
+    assert again.params["refused_earlier"] == 1 and again.params["failed"] == 0
+    assert again.problem == codes.PROBLEM_SYNC_ITEMS_REFUSED
+
+    # A different version is live (a republished fix): the item is sent again.
+    row.details = {**row.details, "refused_by": "an-older-version"}
+    session.commit()
+    monkeypatch.setitem(adapters.BUILTINS, "folder_target", builtin)
+    fixed = run_sync(session, target.id, run_context)
+
+    assert fixed.params["sent"] == 1 and fixed.problem is None
+    assert files_in(destination) == ["For Mom/a.jpg"]
+
+
 def test_the_builder_reads_real_failures_without_filenames(session, add_photo, album, make_target, run_context,
                                                           monkeypatch):
     from yaffo.site_agents.adapter.tool_providers.adapter_tool import AdapterToolProvider

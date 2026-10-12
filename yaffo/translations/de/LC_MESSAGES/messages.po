@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-11 12:52-0500\n"
+"POT-Creation-Date: 2026-10-11 20:37-0500\n"
 "PO-Revision-Date: 2026-06-24 18:49-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -465,7 +465,7 @@ msgstr "Konnte auf diesem Computer nicht geöffnet werden."
 
 #: yaffo/routes/assistant.py:92 yaffo/routes/pages.py:250
 #: yaffo/routes/themes_page.py:239 yaffo/routes/utilities/automations.py:614
-#: yaffo/routes/utilities/sync_services.py:281
+#: yaffo/routes/utilities/sync_services.py:273
 msgid "Message is required."
 msgstr "Nachricht ist erforderlich."
 
@@ -476,7 +476,7 @@ msgstr "Nachrichten dürfen höchstens %(count)s Zeichen lang sein."
 
 #: yaffo/routes/assistant.py:101 yaffo/routes/pages.py:254
 #: yaffo/routes/themes_page.py:243 yaffo/routes/utilities/automations.py:618
-#: yaffo/routes/utilities/sync_services.py:283
+#: yaffo/routes/utilities/sync_services.py:275
 #, python-format
 msgid ""
 "No API key configured. Add your %(provider)s API key in Settings → AI "
@@ -845,7 +845,7 @@ msgstr "Wählen Sie Domains aus der Berechtigungsanfrage."
 msgid "Configure your AI Generation key before continuing."
 msgstr "Richten Sie vor dem Fortfahren Ihren Schlüssel für die KI-Generierung ein."
 
-#: yaffo/routes/assistant.py:423 yaffo/routes/utilities/sync_services.py:379
+#: yaffo/routes/assistant.py:423 yaffo/routes/utilities/sync_services.py:371
 msgid "That request was already answered."
 msgstr "Diese Anfrage wurde bereits beantwortet."
 
@@ -1980,13 +1980,13 @@ msgid "Cancelled"
 msgstr "Abgebrochen"
 
 #: yaffo/routes/utilities/run_history.py:367
-#: yaffo/routes/utilities/sync_text.py:206
+#: yaffo/routes/utilities/sync_text.py:212
 #: yaffo/templates/sharing/_transfers_panel.html:31
 msgid "Failed"
 msgstr "Fehlgeschlagen"
 
 #: yaffo/routes/utilities/run_history.py:394
-#: yaffo/routes/utilities/sync_text.py:202
+#: yaffo/routes/utilities/sync_text.py:208
 msgid "Skipped"
 msgstr "Übersprungen"
 
@@ -2081,84 +2081,84 @@ msgstr "Dieser Ordner existiert nicht mehr."
 msgid "%(service)s didn't answer. Try again."
 msgstr "%(service)s hat nicht geantwortet. Versuche es erneut."
 
-#: yaffo/routes/utilities/sync_services.py:100
+#: yaffo/routes/utilities/sync_services.py:99
 msgid "Client ID"
 msgstr "Client-ID"
 
-#: yaffo/routes/utilities/sync_services.py:101
+#: yaffo/routes/utilities/sync_services.py:100
 msgid "Client secret"
 msgstr "Client-Geheimnis"
 
-#: yaffo/routes/utilities/sync_services.py:102
+#: yaffo/routes/utilities/sync_services.py:101
 msgid "redirect address"
 msgstr "Weiterleitungsadresse"
 
-#: yaffo/routes/utilities/sync_services.py:140
+#: yaffo/routes/utilities/sync_services.py:132
 msgid "The draft can't run yet."
 msgstr "Der Entwurf kann noch nicht ausgeführt werden."
 
-#: yaffo/routes/utilities/sync_services.py:143
+#: yaffo/routes/utilities/sync_services.py:135
 msgid "(a link the service returned)"
 msgstr "(ein vom Dienst zurückgegebener Link)"
 
-#: yaffo/routes/utilities/sync_services.py:166
+#: yaffo/routes/utilities/sync_services.py:158
 msgid "The draft doesn't pass its check yet, so its sign-in isn't known."
 msgstr ""
 "Der Entwurf besteht die Prüfung noch nicht, daher ist seine Anmeldung "
 "unbekannt."
 
-#: yaffo/routes/utilities/sync_services.py:167
+#: yaffo/routes/utilities/sync_services.py:159
 msgid "Save the app credentials first."
 msgstr "Speichere zuerst die App-Anmeldedaten."
 
-#: yaffo/routes/utilities/sync_services.py:168
+#: yaffo/routes/utilities/sync_services.py:160
 msgid "Enter the client ID."
 msgstr "Gib die Client-ID ein."
 
-#: yaffo/routes/utilities/sync_services.py:169
+#: yaffo/routes/utilities/sync_services.py:161
 msgid "There's no passing draft to publish."
 msgstr "Es gibt keinen geprüften Entwurf zum Veröffentlichen."
 
-#: yaffo/routes/utilities/sync_services.py:170
+#: yaffo/routes/utilities/sync_services.py:162
 msgid "A sync still uses this service. Delete that sync first."
 msgstr "Ein Sync verwendet diesen Dienst noch. Lösche zuerst diesen Sync."
 
-#: yaffo/routes/utilities/sync_services.py:171
+#: yaffo/routes/utilities/sync_services.py:163
 msgid "That didn't work. Try again."
 msgstr "Das hat nicht funktioniert. Versuche es erneut."
 
-#: yaffo/routes/utilities/sync_services.py:191
+#: yaffo/routes/utilities/sync_services.py:183
 #, python-format
 msgid "The builder asks to make read-only calls to %(account)s while building."
 msgstr ""
 "Der Builder möchte während der Erstellung schreibgeschützte Aufrufe für "
 "%(account)s ausführen."
 
-#: yaffo/routes/utilities/sync_services.py:193
+#: yaffo/routes/utilities/sync_services.py:185
 #, python-format
 msgid "Live read-only tests allowed for %(account)s."
 msgstr "Live-Tests mit schreibgeschütztem Zugriff für %(account)s erlaubt."
 
-#: yaffo/routes/utilities/sync_services.py:194
+#: yaffo/routes/utilities/sync_services.py:186
 msgid "Live read-only tests not allowed."
 msgstr "Live-Tests mit schreibgeschütztem Zugriff nicht erlaubt."
 
-#: yaffo/routes/utilities/sync_services.py:197
+#: yaffo/routes/utilities/sync_services.py:189
 #, python-format
 msgid "The builder asks to read pages from: %(domains)s"
 msgstr "Der Builder möchte Seiten von folgenden Domains lesen: %(domains)s"
 
-#: yaffo/routes/utilities/sync_services.py:198
+#: yaffo/routes/utilities/sync_services.py:190
 #, python-format
 msgid "Allowed: %(domains)s"
 msgstr "Erlaubt: %(domains)s"
 
-#: yaffo/routes/utilities/sync_services.py:200
+#: yaffo/routes/utilities/sync_services.py:192
 #, python-format
 msgid "Not allowed: %(domains)s"
 msgstr "Nicht erlaubt: %(domains)s"
 
-#: yaffo/routes/utilities/sync_services.py:278
+#: yaffo/routes/utilities/sync_services.py:270
 msgid "The builder is already working."
 msgstr "Der Builder arbeitet bereits."
 
@@ -2351,23 +2351,40 @@ msgstr[1] ""
 "%(num)d Elemente wurden nicht übertragen. Unter „Elemente“ erfahren Sie "
 "warum."
 
-#: yaffo/routes/utilities/sync_text.py:162
+#: yaffo/routes/utilities/sync_text.py:161
+#, python-format
+msgid ""
+"%(num)d item the service refused before wasn't sent again. Fix the "
+"service, or press Retry failed in Items."
+msgid_plural ""
+"%(num)d items the service refused before weren't sent again. Fix the "
+"service, or press Retry failed in Items."
+msgstr[0] ""
+"%(num)d Element, das der Dienst zuvor abgelehnt hat, wurde nicht erneut "
+"gesendet. Beheben Sie den Dienst, oder klicken Sie unter „Elemente“ auf "
+"„Fehlgeschlagene erneut versuchen“."
+msgstr[1] ""
+"%(num)d Elemente, die der Dienst zuvor abgelehnt hat, wurden nicht erneut"
+" gesendet. Beheben Sie den Dienst, oder klicken Sie unter „Elemente“ auf "
+"„Fehlgeschlagene erneut versuchen“."
+
+#: yaffo/routes/utilities/sync_text.py:168
 msgid "The service asked Yaffo to slow down. The next run carries on."
 msgstr ""
 "Der Dienst hat Yaffo gebeten, langsamer zu arbeiten. Beim nächsten "
 "Durchlauf geht es weiter."
 
-#: yaffo/routes/utilities/sync_text.py:164
+#: yaffo/routes/utilities/sync_text.py:170
 msgid "The account needs to sign in again."
 msgstr "Das Konto muss sich erneut anmelden."
 
-#: yaffo/routes/utilities/sync_text.py:166
+#: yaffo/routes/utilities/sync_text.py:172
 msgid "The run stopped because of an error in the service's code."
 msgstr ""
 "Der Durchlauf wurde aufgrund eines Fehlers im Code des Dienstes "
 "angehalten."
 
-#: yaffo/routes/utilities/sync_text.py:168
+#: yaffo/routes/utilities/sync_text.py:174
 msgid ""
 "Something the sync reads from is gone at the service. It tries again "
 "later."
@@ -2375,197 +2392,197 @@ msgstr ""
 "Etwas, von dem die Synchronisierung liest, ist beim Dienst nicht mehr "
 "vorhanden. Sie versucht es später erneut."
 
-#: yaffo/routes/utilities/sync_text.py:169
-#: yaffo/routes/utilities/sync_text.py:180
+#: yaffo/routes/utilities/sync_text.py:175
+#: yaffo/routes/utilities/sync_text.py:186
 msgid "The run stopped early. The next run carries on."
 msgstr ""
 "Der Durchlauf wurde vorzeitig angehalten. Beim nächsten Durchlauf geht es"
 " weiter."
 
-#: yaffo/routes/utilities/sync_text.py:172
+#: yaffo/routes/utilities/sync_text.py:178
 msgid "The account needs to allow more access. Open the sync and sign in again."
 msgstr ""
 "Das Konto muss weiteren Zugriff erlauben. Öffnen Sie die Synchronisierung"
 " und melden Sie sich erneut an."
 
-#: yaffo/routes/utilities/sync_text.py:174
+#: yaffo/routes/utilities/sync_text.py:180
 msgid "The sync has no account. Open it and sign in."
 msgstr ""
 "Die Synchronisierung hat kein Konto. Öffnen Sie sie und melden Sie sich "
 "an."
 
-#: yaffo/routes/utilities/sync_text.py:175
+#: yaffo/routes/utilities/sync_text.py:181
 msgid "The account needs to sign in again. Open the sync and sign in."
 msgstr ""
 "Das Konto muss sich erneut anmelden. Öffnen Sie die Synchronisierung und "
 "melden Sie sich an."
 
-#: yaffo/routes/utilities/sync_text.py:177
+#: yaffo/routes/utilities/sync_text.py:183
 msgid "There isn't enough free space left to keep copying."
 msgstr "Es ist nicht mehr genügend freier Speicherplatz zum Kopieren vorhanden."
 
-#: yaffo/routes/utilities/sync_text.py:186
+#: yaffo/routes/utilities/sync_text.py:192
 msgid "Finish the setup below, then turn it on."
 msgstr ""
 "Schließen Sie die Einrichtung unten ab und aktivieren Sie sie "
 "anschließend."
 
-#: yaffo/routes/utilities/sync_text.py:190
+#: yaffo/routes/utilities/sync_text.py:196
 msgid "This sync's setup can't be used. Check the folder and options."
 msgstr ""
 "Die Einrichtung dieser Synchronisierung kann nicht verwendet werden. "
 "Überprüfen Sie den Ordner und die Optionen."
 
-#: yaffo/routes/utilities/sync_text.py:192
+#: yaffo/routes/utilities/sync_text.py:198
 msgid "Sign in again to continue."
 msgstr "Melden Sie sich erneut an, um fortzufahren."
 
-#: yaffo/routes/utilities/sync_text.py:194
+#: yaffo/routes/utilities/sync_text.py:200
 msgid "Turned off."
 msgstr "Ausgeschaltet."
 
-#: yaffo/routes/utilities/sync_text.py:195
+#: yaffo/routes/utilities/sync_text.py:201
 msgid "On."
 msgstr "Ein."
 
-#: yaffo/routes/utilities/sync_text.py:200
+#: yaffo/routes/utilities/sync_text.py:206
 msgid "Imported"
 msgstr "Importiert"
 
-#: yaffo/routes/utilities/sync_text.py:201
+#: yaffo/routes/utilities/sync_text.py:207
 msgid "Already in library"
 msgstr "Bereits in der Bibliothek"
 
-#: yaffo/routes/utilities/sync_text.py:203
+#: yaffo/routes/utilities/sync_text.py:209
 msgid "Deleted at source"
 msgstr "Am Ursprungsort gelöscht"
 
-#: yaffo/routes/utilities/sync_text.py:204
+#: yaffo/routes/utilities/sync_text.py:210
 msgid "Sending"
 msgstr "Wird gesendet"
 
-#: yaffo/routes/utilities/sync_text.py:205
+#: yaffo/routes/utilities/sync_text.py:211
 msgid "Written to folder"
 msgstr "In den Ordner geschrieben"
 
-#: yaffo/routes/utilities/sync_text.py:205
+#: yaffo/routes/utilities/sync_text.py:211
 msgid "Sent"
 msgstr "Gesendet"
 
-#: yaffo/routes/utilities/sync_text.py:207
+#: yaffo/routes/utilities/sync_text.py:213
 msgid "Removing"
 msgstr "Wird entfernt"
 
-#: yaffo/routes/utilities/sync_text.py:208
+#: yaffo/routes/utilities/sync_text.py:214
 msgid "Removed"
 msgstr "Entfernt"
 
-#: yaffo/routes/utilities/sync_text.py:209
+#: yaffo/routes/utilities/sync_text.py:215
 msgid "Deleted there"
 msgstr "Dort gelöscht"
 
-#: yaffo/routes/utilities/sync_text.py:210
+#: yaffo/routes/utilities/sync_text.py:216
 msgid "Can't remove"
 msgstr "Kann nicht entfernt werden"
 
-#: yaffo/routes/utilities/sync_text.py:218
+#: yaffo/routes/utilities/sync_text.py:224
 msgid "Not attempted yet; tried again on the next run."
 msgstr "Noch nicht versucht; beim nächsten Durchlauf wird es erneut versucht."
 
-#: yaffo/routes/utilities/sync_text.py:219
+#: yaffo/routes/utilities/sync_text.py:225
 msgid "The photo's file is missing."
 msgstr "Die Fotodatei fehlt."
 
-#: yaffo/routes/utilities/sync_text.py:220
+#: yaffo/routes/utilities/sync_text.py:226
 msgid "This target doesn't take this kind of file."
 msgstr "Dieses Ziel unterstützt diesen Dateityp nicht."
 
-#: yaffo/routes/utilities/sync_text.py:221
+#: yaffo/routes/utilities/sync_text.py:227
 msgid "Couldn't convert it to JPEG."
 msgstr "Die Datei konnte nicht in JPEG umgewandelt werden."
 
-#: yaffo/routes/utilities/sync_text.py:222
+#: yaffo/routes/utilities/sync_text.py:228
 msgid "Couldn't copy the file."
 msgstr "Die Datei konnte nicht kopiert werden."
 
-#: yaffo/routes/utilities/sync_text.py:223
+#: yaffo/routes/utilities/sync_text.py:229
 msgid "The device no longer shares this file."
 msgstr "Das Gerät gibt diese Datei nicht mehr frei."
 
-#: yaffo/routes/utilities/sync_text.py:224
+#: yaffo/routes/utilities/sync_text.py:230
 msgid "The copy was changed after Yaffo wrote it, so Yaffo left it alone."
 msgstr ""
 "Die Kopie wurde geändert, nachdem Yaffo sie geschrieben hat. Deshalb hat "
 "Yaffo sie unverändert gelassen."
 
-#: yaffo/routes/utilities/sync_text.py:225
+#: yaffo/routes/utilities/sync_text.py:231
 msgid "The service refused it."
 msgstr "Der Dienst hat die Datei abgelehnt."
 
-#: yaffo/routes/utilities/sync_text.py:233
+#: yaffo/routes/utilities/sync_text.py:239
 msgid "That folder is inside your library. Choose one outside it."
 msgstr ""
 "Dieser Ordner befindet sich in deiner Bibliothek. Wähle einen außerhalb "
 "davon."
 
-#: yaffo/routes/utilities/sync_text.py:234
+#: yaffo/routes/utilities/sync_text.py:240
 msgid "That folder contains your library. Choose a smaller one."
 msgstr "Dieser Ordner enthält deine Bibliothek. Wähle einen kleineren."
 
-#: yaffo/routes/utilities/sync_text.py:235
+#: yaffo/routes/utilities/sync_text.py:241
 msgid "That folder is Yaffo's thumbnail folder. Choose another."
 msgstr "Dieser Ordner ist der Vorschaubilderordner von Yaffo. Wähle einen anderen."
 
-#: yaffo/routes/utilities/sync_text.py:236
+#: yaffo/routes/utilities/sync_text.py:242
 msgid "That folder is where a sync imports to. Choose another."
 msgstr ""
 "Dieser Ordner ist das Importziel einer Synchronisierung. Wähle einen "
 "anderen."
 
-#: yaffo/routes/utilities/sync_text.py:237
+#: yaffo/routes/utilities/sync_text.py:243
 msgid "The import folder must be inside the media folder."
 msgstr "Der Importordner muss sich innerhalb des Medienordners befinden."
 
-#: yaffo/routes/utilities/sync_text.py:238
+#: yaffo/routes/utilities/sync_text.py:244
 msgid "Choose one of your media folders."
 msgstr "Wähle einen deiner Medienordner aus."
 
-#: yaffo/routes/utilities/sync_text.py:239
+#: yaffo/routes/utilities/sync_text.py:245
 msgid "That media folder isn't connected."
 msgstr "Dieser Medienordner ist nicht verbunden."
 
-#: yaffo/routes/utilities/sync_text.py:246
+#: yaffo/routes/utilities/sync_text.py:252
 msgid "Keep the source's folders"
 msgstr "Die Ordner der Quelle beibehalten"
 
-#: yaffo/routes/utilities/sync_text.py:247
+#: yaffo/routes/utilities/sync_text.py:253
 msgid "By year and month taken"
 msgstr "Nach Aufnahmejahr und -monat"
 
-#: yaffo/routes/utilities/sync_text.py:248
+#: yaffo/routes/utilities/sync_text.py:254
 msgid "By year taken"
 msgstr "Nach Aufnahmejahr"
 
-#: yaffo/routes/utilities/sync_text.py:249
+#: yaffo/routes/utilities/sync_text.py:255
 msgid "All in one folder"
 msgstr "Alle in einem Ordner"
 
-#: yaffo/routes/utilities/sync_text.py:260
+#: yaffo/routes/utilities/sync_text.py:266
 #, python-format
 msgid "%(root)s, in the same folders as at the source"
 msgstr "%(root)s, in denselben Ordnern wie in der Quelle"
 
-#: yaffo/routes/utilities/sync_text.py:262
+#: yaffo/routes/utilities/sync_text.py:268
 #, python-format
 msgid "%(root)s, in a folder per year taken"
 msgstr "%(root)s, in einem Ordner pro Aufnahmejahr"
 
-#: yaffo/routes/utilities/sync_text.py:264
+#: yaffo/routes/utilities/sync_text.py:270
 #, python-format
 msgid "%(root)s, all in one folder"
 msgstr "%(root)s, alle in einem Ordner"
 
-#: yaffo/routes/utilities/sync_text.py:265
+#: yaffo/routes/utilities/sync_text.py:271
 #, python-format
 msgid "%(root)s, in a folder per year and month taken"
 msgstr "%(root)s, in einem Ordner pro Aufnahmejahr und -monat"
@@ -7037,7 +7054,7 @@ msgstr "Anzeigen"
 
 #: yaffo/templates/utilities/sync_items.html:20
 msgid "Retry failed"
-msgstr "Erneut versuchen fehlgeschlagen"
+msgstr "Fehlgeschlagene erneut versuchen"
 
 #: yaffo/templates/utilities/sync_items.html:29
 msgid "Photo"

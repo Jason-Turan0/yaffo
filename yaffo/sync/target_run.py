@@ -65,6 +65,9 @@ ITEM_SOURCE_MISSING = "source_missing"
 ITEM_UNSUPPORTED_FORMAT = "unsupported_format"
 ITEM_CONVERSION_FAILED = "conversion_failed"
 PERMANENT_ITEM_ERRORS = (ERROR_REJECTED, ITEM_UNSUPPORTED_FORMAT, ITEM_CONVERSION_FAILED)
+# Which version of the adapter refused an item (sync_items.details). A refusal is
+# permanent only while that version is live: publishing a fix makes it eligible again.
+REFUSED_BY_KEY = "refused_by"
 
 class StopRun(Exception):
     def __init__(self, code: str, message: str | None = None):
@@ -83,6 +86,7 @@ class Counters:
     converted: int = 0
     unchanged: int = 0
     removed_remotely: int = 0
+    refused_earlier: int = 0
 
     def params(self) -> dict[str, int]:
         return dict(self.__dict__)
@@ -236,6 +240,20 @@ class TargetRun:
         row.status, row.error_code, row.remote_id = SYNC_ITEM_REMOVED, None, None
         row.details = None
 
+    @property
+    def version(self) -> str | None:
+        return self.adapter.published_code_hash or self.adapter.handler_key
+
+    def mark_refused(self, row: SyncItem) -> None:
+        if row.error_code in PERMANENT_ITEM_ERRORS:
+            row.details = {**(row.details or {}), REFUSED_BY_KEY: self.version}
+
+    def refused_by_this_version(self, row: SyncItem) -> bool:
+        """A permanent refusal from the adapter that's live now: not sent again until
+        Retry failed, or until a different version of the adapter is published."""
+        return (row.status == SYNC_ITEM_FAILED and row.error_code in PERMANENT_ITEM_ERRORS
+                and (row.details or {}).get(REFUSED_BY_KEY) == self.version)
+
     def check(self, envelope: Any, keys: set[str], extra_fields: set[str]) -> list[dict]:
         allowed = extra_fields | {"details"}
         return check_or_fatal(envelope, keys, allowed)
@@ -262,11 +280,13 @@ class TargetRun:
         except UnsupportedFormat as e:
             row.status, row.error_code = SYNC_ITEM_FAILED, ITEM_UNSUPPORTED_FORMAT
             record_item_error(self.automation, row, ITEM_UNSUPPORTED_FORMAT, e, source.name)
+            self.mark_refused(row)
             self.counters.unsupported += 1
             return None
         except Exception as e:  # noqa: BLE001 - a photo Pillow can't decode is one failed item
             row.status, row.error_code = SYNC_ITEM_FAILED, ITEM_CONVERSION_FAILED
             record_item_error(self.automation, row, ITEM_CONVERSION_FAILED, f"could not convert: {e}", source.name)
+            self.mark_refused(row)
             self.counters.failed += 1
             return None
         if not self.adapter.is_builtin:
@@ -349,6 +369,7 @@ class TargetRun:
             if error is not None:
                 row.status, row.error_code = SYNC_ITEM_FAILED, error["code"]
                 record_item_error(self.automation, row, error["code"], error.get("message"), item["filename"])
+                self.mark_refused(row)
                 self.counters.failed += 1
                 continue
             if not isinstance(result.get("remote_id"), str):
@@ -424,8 +445,8 @@ class TargetRun:
                 elif row.status in (SYNC_ITEM_SENT, SYNC_ITEM_REMOVED_REMOTELY, SYNC_ITEM_CANT_REMOVE,
                                     SYNC_ITEM_REMOVING):
                     self.counters.unchanged += row.status == SYNC_ITEM_SENT
-                elif row.status == SYNC_ITEM_FAILED and row.error_code in PERMANENT_ITEM_ERRORS:
-                    continue
+                elif self.refused_by_this_version(row):
+                    self.counters.refused_earlier += 1
                 else:
                     row.target = desired_item.target
                     work.append((row, desired_item))
@@ -456,6 +477,9 @@ class TargetRun:
         failed = self.counters.failed + self.counters.unsupported
         if failed:
             return self.result(problem=codes.PROBLEM_SYNC_ITEMS_FAILED, problem_params={"count": failed})
+        if self.counters.refused_earlier:
+            return self.result(problem=codes.PROBLEM_SYNC_ITEMS_REFUSED,
+                               problem_params={"count": self.counters.refused_earlier})
         return self.result()
 
     def result(self, problem: str | None = None, problem_params: dict | None = None,

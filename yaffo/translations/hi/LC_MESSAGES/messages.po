@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-11 12:52-0500\n"
+"POT-Creation-Date: 2026-10-11 20:37-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: hi\n"
@@ -449,7 +449,7 @@ msgstr "इसे इस कंप्यूटर पर खोला नही�
 
 #: yaffo/routes/assistant.py:92 yaffo/routes/pages.py:250
 #: yaffo/routes/themes_page.py:239 yaffo/routes/utilities/automations.py:614
-#: yaffo/routes/utilities/sync_services.py:281
+#: yaffo/routes/utilities/sync_services.py:273
 msgid "Message is required."
 msgstr "संदेश आवश्यक है."
 
@@ -460,7 +460,7 @@ msgstr "संदेश अधिकतम %(count)s अक्षरों क�
 
 #: yaffo/routes/assistant.py:101 yaffo/routes/pages.py:254
 #: yaffo/routes/themes_page.py:243 yaffo/routes/utilities/automations.py:618
-#: yaffo/routes/utilities/sync_services.py:283
+#: yaffo/routes/utilities/sync_services.py:275
 #, python-format
 msgid ""
 "No API key configured. Add your %(provider)s API key in Settings → AI "
@@ -823,7 +823,7 @@ msgstr "अनुमति अनुरोध में दिए गए डो�
 msgid "Configure your AI Generation key before continuing."
 msgstr "आगे बढ़ने से पहले AI जनरेशन की कुंजी सेट करें।"
 
-#: yaffo/routes/assistant.py:423 yaffo/routes/utilities/sync_services.py:379
+#: yaffo/routes/assistant.py:423 yaffo/routes/utilities/sync_services.py:371
 msgid "That request was already answered."
 msgstr "इस अनुरोध का उत्तर पहले ही दिया जा चुका है।"
 
@@ -1933,13 +1933,13 @@ msgid "Cancelled"
 msgstr "रद्द कर दिया गया"
 
 #: yaffo/routes/utilities/run_history.py:367
-#: yaffo/routes/utilities/sync_text.py:206
+#: yaffo/routes/utilities/sync_text.py:212
 #: yaffo/templates/sharing/_transfers_panel.html:31
 msgid "Failed"
 msgstr "असफल"
 
 #: yaffo/routes/utilities/run_history.py:394
-#: yaffo/routes/utilities/sync_text.py:202
+#: yaffo/routes/utilities/sync_text.py:208
 msgid "Skipped"
 msgstr "छोड़ा गया"
 
@@ -2034,82 +2034,82 @@ msgstr "वह फ़ोल्डर अब मौजूद नहीं है�
 msgid "%(service)s didn't answer. Try again."
 msgstr "%(service)s ने जवाब नहीं दिया। फिर से कोशिश करें।"
 
-#: yaffo/routes/utilities/sync_services.py:100
+#: yaffo/routes/utilities/sync_services.py:99
 msgid "Client ID"
 msgstr "क्लाइंट ID"
 
-#: yaffo/routes/utilities/sync_services.py:101
+#: yaffo/routes/utilities/sync_services.py:100
 msgid "Client secret"
 msgstr "क्लाइंट सीक्रेट"
 
-#: yaffo/routes/utilities/sync_services.py:102
+#: yaffo/routes/utilities/sync_services.py:101
 msgid "redirect address"
 msgstr "रीडायरेक्ट पता"
 
-#: yaffo/routes/utilities/sync_services.py:140
+#: yaffo/routes/utilities/sync_services.py:132
 msgid "The draft can't run yet."
 msgstr "ड्राफ़्ट अभी चल नहीं सकता।"
 
-#: yaffo/routes/utilities/sync_services.py:143
+#: yaffo/routes/utilities/sync_services.py:135
 msgid "(a link the service returned)"
 msgstr "(सेवा द्वारा लौटाया गया एक लिंक)"
 
-#: yaffo/routes/utilities/sync_services.py:166
+#: yaffo/routes/utilities/sync_services.py:158
 msgid "The draft doesn't pass its check yet, so its sign-in isn't known."
 msgstr "ड्राफ़्ट अभी जाँच में पास नहीं हुआ है, इसलिए इसका साइन-इन ज्ञात नहीं है।"
 
-#: yaffo/routes/utilities/sync_services.py:167
+#: yaffo/routes/utilities/sync_services.py:159
 msgid "Save the app credentials first."
 msgstr "पहले ऐप के क्रेडेंशियल सहेजें।"
 
-#: yaffo/routes/utilities/sync_services.py:168
+#: yaffo/routes/utilities/sync_services.py:160
 msgid "Enter the client ID."
 msgstr "क्लाइंट ID दर्ज करें।"
 
-#: yaffo/routes/utilities/sync_services.py:169
+#: yaffo/routes/utilities/sync_services.py:161
 msgid "There's no passing draft to publish."
 msgstr "प्रकाशित करने के लिए कोई जाँच में पास हुआ ड्राफ़्ट नहीं है।"
 
-#: yaffo/routes/utilities/sync_services.py:170
+#: yaffo/routes/utilities/sync_services.py:162
 msgid "A sync still uses this service. Delete that sync first."
 msgstr "इस सेवा का इस्तेमाल अभी भी एक सिंक कर रहा है। पहले वह सिंक हटाएँ।"
 
-#: yaffo/routes/utilities/sync_services.py:171
+#: yaffo/routes/utilities/sync_services.py:163
 msgid "That didn't work. Try again."
 msgstr "यह काम नहीं हुआ। फिर से कोशिश करें।"
 
-#: yaffo/routes/utilities/sync_services.py:191
+#: yaffo/routes/utilities/sync_services.py:183
 #, python-format
 msgid "The builder asks to make read-only calls to %(account)s while building."
 msgstr ""
 "बिल्डर बनाते समय %(account)s के लिए केवल-पढ़ने वाले कॉल करने का अनुरोध "
 "करता है।"
 
-#: yaffo/routes/utilities/sync_services.py:193
+#: yaffo/routes/utilities/sync_services.py:185
 #, python-format
 msgid "Live read-only tests allowed for %(account)s."
 msgstr "%(account)s के लिए लाइव केवल-पढ़ने वाले परीक्षणों की अनुमति है।"
 
-#: yaffo/routes/utilities/sync_services.py:194
+#: yaffo/routes/utilities/sync_services.py:186
 msgid "Live read-only tests not allowed."
 msgstr "लाइव केवल-पढ़ने वाले परीक्षणों की अनुमति नहीं है।"
 
-#: yaffo/routes/utilities/sync_services.py:197
+#: yaffo/routes/utilities/sync_services.py:189
 #, python-format
 msgid "The builder asks to read pages from: %(domains)s"
 msgstr "बिल्डर इन डोमेन से पेज पढ़ने का अनुरोध करता है: %(domains)s"
 
-#: yaffo/routes/utilities/sync_services.py:198
+#: yaffo/routes/utilities/sync_services.py:190
 #, python-format
 msgid "Allowed: %(domains)s"
 msgstr "अनुमति है: %(domains)s"
 
-#: yaffo/routes/utilities/sync_services.py:200
+#: yaffo/routes/utilities/sync_services.py:192
 #, python-format
 msgid "Not allowed: %(domains)s"
 msgstr "अनुमति नहीं है: %(domains)s"
 
-#: yaffo/routes/utilities/sync_services.py:278
+#: yaffo/routes/utilities/sync_services.py:270
 msgid "The builder is already working."
 msgstr "बिल्डर पहले से काम कर रहा है।"
 
@@ -2293,19 +2293,34 @@ msgid_plural "%(num)d items didn't go through. See Items for why."
 msgstr[0] "%(num)d आइटम पूरा नहीं हो पाया। कारण जानने के लिए Items देखें।"
 msgstr[1] "%(num)d आइटम पूरे नहीं हो पाए। कारण जानने के लिए Items देखें।"
 
-#: yaffo/routes/utilities/sync_text.py:162
+#: yaffo/routes/utilities/sync_text.py:161
+#, python-format
+msgid ""
+"%(num)d item the service refused before wasn't sent again. Fix the "
+"service, or press Retry failed in Items."
+msgid_plural ""
+"%(num)d items the service refused before weren't sent again. Fix the "
+"service, or press Retry failed in Items."
+msgstr[0] ""
+"सेवा ने पहले जिस %(num)d आइटम को अस्वीकार किया था, उसे फिर से नहीं भेजा "
+"गया। सेवा ठीक करें, या Items में “विफल आइटम फिर से आज़माएँ” दबाएँ।"
+msgstr[1] ""
+"सेवा ने पहले जिन %(num)d आइटम को अस्वीकार किया था, उन्हें फिर से नहीं "
+"भेजा गया। सेवा ठीक करें, या Items में “विफल आइटम फिर से आज़माएँ” दबाएँ।"
+
+#: yaffo/routes/utilities/sync_text.py:168
 msgid "The service asked Yaffo to slow down. The next run carries on."
 msgstr "सेवा ने Yaffo से गति धीमी करने को कहा है। अगली बार प्रक्रिया जारी रहेगी।"
 
-#: yaffo/routes/utilities/sync_text.py:164
+#: yaffo/routes/utilities/sync_text.py:170
 msgid "The account needs to sign in again."
 msgstr "खाते में फिर से साइन इन करना ज़रूरी है।"
 
-#: yaffo/routes/utilities/sync_text.py:166
+#: yaffo/routes/utilities/sync_text.py:172
 msgid "The run stopped because of an error in the service's code."
 msgstr "सेवा के कोड में त्रुटि के कारण प्रक्रिया रुक गई।"
 
-#: yaffo/routes/utilities/sync_text.py:168
+#: yaffo/routes/utilities/sync_text.py:174
 msgid ""
 "Something the sync reads from is gone at the service. It tries again "
 "later."
@@ -2313,183 +2328,183 @@ msgstr ""
 "सिंक जिस चीज़ को सेवा से पढ़ता है, वह अब वहाँ मौजूद नहीं है। यह बाद में "
 "फिर कोशिश करेगा।"
 
-#: yaffo/routes/utilities/sync_text.py:169
-#: yaffo/routes/utilities/sync_text.py:180
+#: yaffo/routes/utilities/sync_text.py:175
+#: yaffo/routes/utilities/sync_text.py:186
 msgid "The run stopped early. The next run carries on."
 msgstr "प्रक्रिया समय से पहले रुक गई। अगली बार प्रक्रिया जारी रहेगी।"
 
-#: yaffo/routes/utilities/sync_text.py:172
+#: yaffo/routes/utilities/sync_text.py:178
 msgid "The account needs to allow more access. Open the sync and sign in again."
 msgstr ""
 "खाते को अधिक पहुँच की अनुमति देना ज़रूरी है। सिंक खोलें और फिर से साइन इन"
 " करें।"
 
-#: yaffo/routes/utilities/sync_text.py:174
+#: yaffo/routes/utilities/sync_text.py:180
 msgid "The sync has no account. Open it and sign in."
 msgstr "सिंक के साथ कोई खाता नहीं है। इसे खोलें और साइन इन करें।"
 
-#: yaffo/routes/utilities/sync_text.py:175
+#: yaffo/routes/utilities/sync_text.py:181
 msgid "The account needs to sign in again. Open the sync and sign in."
 msgstr "खाते में फिर से साइन इन करना ज़रूरी है। सिंक खोलें और साइन इन करें।"
 
-#: yaffo/routes/utilities/sync_text.py:177
+#: yaffo/routes/utilities/sync_text.py:183
 msgid "There isn't enough free space left to keep copying."
 msgstr "कॉपी जारी रखने के लिए पर्याप्त खाली जगह नहीं बची है।"
 
-#: yaffo/routes/utilities/sync_text.py:186
+#: yaffo/routes/utilities/sync_text.py:192
 msgid "Finish the setup below, then turn it on."
 msgstr "नीचे सेटअप पूरा करें, फिर इसे चालू करें।"
 
-#: yaffo/routes/utilities/sync_text.py:190
+#: yaffo/routes/utilities/sync_text.py:196
 msgid "This sync's setup can't be used. Check the folder and options."
 msgstr "इस सिंक का सेटअप इस्तेमाल नहीं किया जा सकता। फ़ोल्डर और विकल्प जाँचें।"
 
-#: yaffo/routes/utilities/sync_text.py:192
+#: yaffo/routes/utilities/sync_text.py:198
 msgid "Sign in again to continue."
 msgstr "जारी रखने के लिए फिर से साइन इन करें।"
 
-#: yaffo/routes/utilities/sync_text.py:194
+#: yaffo/routes/utilities/sync_text.py:200
 msgid "Turned off."
 msgstr "बंद है।"
 
-#: yaffo/routes/utilities/sync_text.py:195
+#: yaffo/routes/utilities/sync_text.py:201
 msgid "On."
 msgstr "चालू है।"
 
-#: yaffo/routes/utilities/sync_text.py:200
+#: yaffo/routes/utilities/sync_text.py:206
 msgid "Imported"
 msgstr "आयात किया गया"
 
-#: yaffo/routes/utilities/sync_text.py:201
+#: yaffo/routes/utilities/sync_text.py:207
 msgid "Already in library"
 msgstr "पहले से लाइब्रेरी में है"
 
-#: yaffo/routes/utilities/sync_text.py:203
+#: yaffo/routes/utilities/sync_text.py:209
 msgid "Deleted at source"
 msgstr "स्रोत पर मिटाया गया"
 
-#: yaffo/routes/utilities/sync_text.py:204
+#: yaffo/routes/utilities/sync_text.py:210
 msgid "Sending"
 msgstr "भेजा जा रहा है"
 
-#: yaffo/routes/utilities/sync_text.py:205
+#: yaffo/routes/utilities/sync_text.py:211
 msgid "Written to folder"
 msgstr "फ़ोल्डर में लिखा गया"
 
-#: yaffo/routes/utilities/sync_text.py:205
+#: yaffo/routes/utilities/sync_text.py:211
 msgid "Sent"
 msgstr "भेज दिया गया"
 
-#: yaffo/routes/utilities/sync_text.py:207
+#: yaffo/routes/utilities/sync_text.py:213
 msgid "Removing"
 msgstr "हटाया जा रहा है"
 
-#: yaffo/routes/utilities/sync_text.py:208
+#: yaffo/routes/utilities/sync_text.py:214
 msgid "Removed"
 msgstr "हटा दिया गया"
 
-#: yaffo/routes/utilities/sync_text.py:209
+#: yaffo/routes/utilities/sync_text.py:215
 msgid "Deleted there"
 msgstr "वहाँ से मिटा दिया गया"
 
-#: yaffo/routes/utilities/sync_text.py:210
+#: yaffo/routes/utilities/sync_text.py:216
 msgid "Can't remove"
 msgstr "हटा नहीं सकते"
 
-#: yaffo/routes/utilities/sync_text.py:218
+#: yaffo/routes/utilities/sync_text.py:224
 msgid "Not attempted yet; tried again on the next run."
 msgstr "अभी तक प्रयास नहीं किया गया; अगले रन में फिर से कोशिश की गई।"
 
-#: yaffo/routes/utilities/sync_text.py:219
+#: yaffo/routes/utilities/sync_text.py:225
 msgid "The photo's file is missing."
 msgstr "फ़ोटो की फ़ाइल मौजूद नहीं है।"
 
-#: yaffo/routes/utilities/sync_text.py:220
+#: yaffo/routes/utilities/sync_text.py:226
 msgid "This target doesn't take this kind of file."
 msgstr "यह लक्ष्य इस प्रकार की फ़ाइल स्वीकार नहीं करता।"
 
-#: yaffo/routes/utilities/sync_text.py:221
+#: yaffo/routes/utilities/sync_text.py:227
 msgid "Couldn't convert it to JPEG."
 msgstr "इसे JPEG में बदला नहीं जा सका।"
 
-#: yaffo/routes/utilities/sync_text.py:222
+#: yaffo/routes/utilities/sync_text.py:228
 msgid "Couldn't copy the file."
 msgstr "फ़ाइल कॉपी नहीं की जा सकी।"
 
-#: yaffo/routes/utilities/sync_text.py:223
+#: yaffo/routes/utilities/sync_text.py:229
 msgid "The device no longer shares this file."
 msgstr "डिवाइस अब यह फ़ाइल साझा नहीं करता।"
 
-#: yaffo/routes/utilities/sync_text.py:224
+#: yaffo/routes/utilities/sync_text.py:230
 msgid "The copy was changed after Yaffo wrote it, so Yaffo left it alone."
 msgstr ""
 "Yaffo के लिखने के बाद कॉपी में बदलाव किया गया, इसलिए Yaffo ने उसे वैसे ही"
 " छोड़ दिया।"
 
-#: yaffo/routes/utilities/sync_text.py:225
+#: yaffo/routes/utilities/sync_text.py:231
 msgid "The service refused it."
 msgstr "सेवा ने इसे अस्वीकार कर दिया।"
 
-#: yaffo/routes/utilities/sync_text.py:233
+#: yaffo/routes/utilities/sync_text.py:239
 msgid "That folder is inside your library. Choose one outside it."
 msgstr "वह फ़ोल्डर आपकी लाइब्रेरी के अंदर है। इसके बाहर का कोई फ़ोल्डर चुनें।"
 
-#: yaffo/routes/utilities/sync_text.py:234
+#: yaffo/routes/utilities/sync_text.py:240
 msgid "That folder contains your library. Choose a smaller one."
 msgstr "उस फ़ोल्डर में आपकी लाइब्रेरी है। इससे छोटा फ़ोल्डर चुनें।"
 
-#: yaffo/routes/utilities/sync_text.py:235
+#: yaffo/routes/utilities/sync_text.py:241
 msgid "That folder is Yaffo's thumbnail folder. Choose another."
 msgstr "वह फ़ोल्डर Yaffo का थंबनेल फ़ोल्डर है। कोई दूसरा चुनें।"
 
-#: yaffo/routes/utilities/sync_text.py:236
+#: yaffo/routes/utilities/sync_text.py:242
 msgid "That folder is where a sync imports to. Choose another."
 msgstr "उस फ़ोल्डर में सिंक आयात करता है। कोई दूसरा चुनें।"
 
-#: yaffo/routes/utilities/sync_text.py:237
+#: yaffo/routes/utilities/sync_text.py:243
 msgid "The import folder must be inside the media folder."
 msgstr "आयात फ़ोल्डर मीडिया फ़ोल्डर के अंदर होना चाहिए।"
 
-#: yaffo/routes/utilities/sync_text.py:238
+#: yaffo/routes/utilities/sync_text.py:244
 msgid "Choose one of your media folders."
 msgstr "अपने मीडिया फ़ोल्डरों में से एक चुनें।"
 
-#: yaffo/routes/utilities/sync_text.py:239
+#: yaffo/routes/utilities/sync_text.py:245
 msgid "That media folder isn't connected."
 msgstr "वह मीडिया फ़ोल्डर कनेक्ट नहीं है।"
 
-#: yaffo/routes/utilities/sync_text.py:246
+#: yaffo/routes/utilities/sync_text.py:252
 msgid "Keep the source's folders"
 msgstr "स्रोत के फ़ोल्डर बनाए रखें"
 
-#: yaffo/routes/utilities/sync_text.py:247
+#: yaffo/routes/utilities/sync_text.py:253
 msgid "By year and month taken"
 msgstr "लिए गए वर्ष और महीने के अनुसार"
 
-#: yaffo/routes/utilities/sync_text.py:248
+#: yaffo/routes/utilities/sync_text.py:254
 msgid "By year taken"
 msgstr "लिए गए वर्ष के अनुसार"
 
-#: yaffo/routes/utilities/sync_text.py:249
+#: yaffo/routes/utilities/sync_text.py:255
 msgid "All in one folder"
 msgstr "सब कुछ एक ही फ़ोल्डर में"
 
-#: yaffo/routes/utilities/sync_text.py:260
+#: yaffo/routes/utilities/sync_text.py:266
 #, python-format
 msgid "%(root)s, in the same folders as at the source"
 msgstr "%(root)s, स्रोत वाले ही फ़ोल्डरों में"
 
-#: yaffo/routes/utilities/sync_text.py:262
+#: yaffo/routes/utilities/sync_text.py:268
 #, python-format
 msgid "%(root)s, in a folder per year taken"
 msgstr "%(root)s, लिए गए हर वर्ष के लिए एक फ़ोल्डर में"
 
-#: yaffo/routes/utilities/sync_text.py:264
+#: yaffo/routes/utilities/sync_text.py:270
 #, python-format
 msgid "%(root)s, all in one folder"
 msgstr "%(root)s, सब कुछ एक ही फ़ोल्डर में"
 
-#: yaffo/routes/utilities/sync_text.py:265
+#: yaffo/routes/utilities/sync_text.py:271
 #, python-format
 msgid "%(root)s, in a folder per year and month taken"
 msgstr "%(root)s, लिए गए हर वर्ष और महीने के लिए एक फ़ोल्डर में"
@@ -6893,7 +6908,7 @@ msgstr "दिखाएँ"
 
 #: yaffo/templates/utilities/sync_items.html:20
 msgid "Retry failed"
-msgstr "फिर से प्रयास विफल हुआ"
+msgstr "विफल आइटम फिर से आज़माएँ"
 
 #: yaffo/templates/utilities/sync_items.html:29
 msgid "Photo"

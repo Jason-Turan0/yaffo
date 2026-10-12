@@ -45,6 +45,7 @@ PROBLEM_SYNC_NEEDS_CONSENT = "sync_needs_consent"  # the setup changed since it 
 PROBLEM_SYNC_INVALID_CONFIG = "sync_invalid_config"  # stored config or adapter can't be used
 PROBLEM_SYNC_PAUSED = "sync_paused"                # {pause_code}: selection/destination missing
 PROBLEM_SYNC_ITEMS_FAILED = "sync_items_failed"    # {count}: some items failed this run
+PROBLEM_SYNC_ITEMS_REFUSED = "sync_items_refused"  # {count}: items the service refused before weren't retried
 PROBLEM_SYNC_STOPPED = "sync_stopped"              # {code}: the service stopped the run (rate limit, ...)
 PROBLEM_SYNC_DISK_FULL = "sync_disk_full"          # not enough free space to keep copying
 PROBLEM_SYNC_INTERRUPTED = "sync_interrupted"      # {outcome, ...}: the source went away mid-run (a peer outcome)
