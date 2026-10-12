@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from yaffo.db.models import AlbumItem, SyncItem, SYNC_ITEM_CANT_REMOVE, SYNC_ITEM_REMOVED, SYNC_ITEM_REMOVED_REMOTELY, \
+from yaffo.db.models import AlbumItem, Job, SyncItem, SYNC_ITEM_CANT_REMOVE, SYNC_ITEM_REMOVED, SYNC_ITEM_REMOVED_REMOTELY, \
     SYNC_ITEM_FAILED, SYNC_ITEM_REMOVING, SYNC_ITEM_SENT, SYNC_ITEM_PENDING
 from yaffo.db.repositories import sync_repository
 from yaffo.sync import folder_target, setup
@@ -294,6 +294,36 @@ def test_a_failed_items_message_is_kept_and_logged_until_it_is_sent(session, add
 
     row = sync_repository.rows(session, target.id)[0]
     assert row.status == SYNC_ITEM_SENT and "error_message" not in (row.details or {})
+
+
+def test_the_builder_reads_real_failures_without_filenames(session, add_photo, album, make_target, run_context,
+                                                          monkeypatch):
+    from yaffo.site_agents.adapter.tool_providers.adapter_tool import AdapterToolProvider
+    from yaffo.sync import adapters
+    target = make_target(album("For Mom", [add_photo("Secret-Name.jpg"),
+                                           add_photo("undated.jpg", date_taken=None, color=(9, 9, 9))]))
+    builtin = adapters.BUILTINS["folder_target"]
+    monkeypatch.setitem(adapters.BUILTINS, "folder_target",
+                        adapters.BuiltinAdapter(builtin.role, builtin.options, RejectingTarget))
+    run_sync(session, target.id, run_context)
+    session.add(Job(id="run-1", name=target.name, status="COMPLETED", automation_id=target.id,
+                    job_data='{"outcome": "sync_sent", "sent": 0, "failed": 2}'))
+    session.commit()
+
+    result = AdapterToolProvider(2, session).call_tool("read_sync_failures", {})
+
+    text = result.model_text
+    assert "For Mom to folder" in text and '"status": "COMPLETED"' in text and '"outcome": "sync_sent"' in text
+    assert text.count("fileCreatedAt must be a date") == 2 and '"code": "rejected"' in text
+    assert '"taken_at": {"local": "2024-07-04T18:22:10"}' in text and '"taken_at": {}' in text
+    assert '"type": "image/jpeg"' in text
+    assert "Secret-Name" not in text and "undated.jpg" not in text and "__yaffo_" not in text
+
+
+def test_the_builder_is_told_when_no_sync_uses_the_service(session):
+    from yaffo.site_agents.adapter.tool_providers.adapter_tool import AdapterToolProvider
+    assert "No sync uses this service yet" in AdapterToolProvider(2, session).call_tool(
+        "read_sync_failures", {}).model_text
 
 
 def test_a_copy_deleted_in_the_folder_is_not_sent_again(session, add_photo, album, make_target, destination,

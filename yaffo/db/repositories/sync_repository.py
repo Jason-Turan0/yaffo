@@ -12,7 +12,7 @@ from yaffo.db.models import (
     Automation, MediaItem, SyncItem,
     SYNC_ITEM_FAILED, SYNC_ITEM_PENDING, SYNC_ITEM_REMOVING, SYNC_ITEM_SENT,
 )
-from yaffo.sync.schemas import SyncColumn, SyncConfig, SyncRuntime
+from yaffo.sync.schemas import SyncColumn, SyncConfig, SyncRuntime, SyncSchemaError
 
 _CHUNK = 500
 
@@ -42,6 +42,18 @@ def save_runtime(automation: Automation, runtime: SyncRuntime) -> None:
 
 def sync_automations(session: Session) -> list[Automation]:
     return session.query(Automation).filter(Automation.sync.isnot(None)).order_by(Automation.name).all()
+
+
+def syncs_using_adapter(session: Session, adapter_id: int) -> list[Automation]:
+    """The sync automations set up with this adapter; ones whose JSON doesn't load are skipped."""
+    found = []
+    for automation in sync_automations(session):
+        try:
+            if load_sync(automation).config.adapter_id == adapter_id:
+                found.append(automation)
+        except SyncSchemaError:
+            continue
+    return found
 
 
 def rows(session: Session, automation_id: int, statuses: Iterable[str] | None = None) -> list[SyncItem]:

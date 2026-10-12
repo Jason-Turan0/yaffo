@@ -957,6 +957,7 @@ version while building), not copied into the connection row.
 | `write_adapter_code` | saves the draft; returns static-check errors (metadata, hooks, connection block, endpoints) |
 | `test_adapter` | runs Test; returns records or the diff plus recorded calls, trimmed for the model |
 | `fetch_docs(urls)` | fetches a batch of pages or OpenAPI specs **from Yaffo** and returns readable, size-capped text per URL |
+| `read_sync_failures` | reads back the real runs of syncs using the service (`yaffo/sync/failures.py`): each sync's last run, its items by status, and its most recent failed items with the code, the service's message, attempts, file type, size, and the capture date as Yaffo passed it. Test never sends writes, so a target's refusals only show up here. Items are described without filenames or paths, so it needs no permission |
 
 These are ordinary builder tools that Yaffo executes, so they work with every LLM
 provider and every request goes through Yaffo's authorization. LLM providers'
@@ -1082,11 +1083,15 @@ log: written `pending` before `push`, resolved after.
 | `remote_id`, `target` | — | the provider's id (or the Folder target's relative path) and routing key |
 | `fingerprint` | the record's `updated_at` | a hash of the caption, for `update` |
 | `status` | `imported`, `linked_existing`, `skipped`, `failed`, `deleted_at_source` | `pending`, `sent`, `failed`, `removing`, `removed`, `removed_remotely`, `cant_remove` |
-| `details` (JSON, never queried) | relative path, sha1, the record for retries | album id, `sent_as`, the Folder copy's size and mtime |
+| `details` (JSON, never queried) | relative path, sha1, the record for retries, `error_message` | album id, `sent_as`, the Folder copy's size and mtime, `error_message` |
 
 Plus `error_code`, `attempts`, `run_id`, and `updated_at`, with indexes on
 `(automation_id, status)` and `media_item_id`. Statuses and error codes are stored
-as codes and translated at render time, like Job outcomes.
+as codes and translated at render time, like Job outcomes. When an item fails, is
+skipped, or can't be removed, `record_item_error` (`run_common.py`) also keeps the
+handler's own message in `details.error_message` (English, capped at 500
+characters) and logs a warning naming the sync, item, code, and message. A retry
+clears it, and a success replaces `details`.
 
 ### What JSON gives up, and how code covers it
 

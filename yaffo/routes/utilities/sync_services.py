@@ -44,7 +44,6 @@ from yaffo.sync.adapter_test import run_adapter_test
 from yaffo.sync.adapters import AdapterUnavailable, LoadedAdapter, load_adapter, load_working
 from yaffo.sync.options import OPTION_REMOTE_COLLECTION, OPTION_REMOTE_FOLDER
 from yaffo.sync.providers import AUTH_OAUTH1, AUTH_OAUTH2, InstanceUrlError, normalize_instance_url
-from yaffo.sync.schemas import SyncSchemaError
 
 logger = get_logger(__name__, 'webapp')
 
@@ -119,14 +118,7 @@ class ServicePage:
 
 
 def _uses(session: Session, adapter_id: int) -> int:
-    count = 0
-    for automation in sync_repository.sync_automations(session):
-        try:
-            if sync_repository.load_sync(automation).config.adapter_id == adapter_id:
-                count += 1
-        except SyncSchemaError:
-            continue
-    return count
+    return len(sync_repository.syncs_using_adapter(session, adapter_id))
 
 
 def build_service_page(session: Session, row: SyncAdapter, port: int | None = None) -> ServicePage:

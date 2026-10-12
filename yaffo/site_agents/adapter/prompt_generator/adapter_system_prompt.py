@@ -54,6 +54,9 @@ def _workflow() -> str:
         "   responses before you call a draft done.",
         "4. When the Test passes, tell the user they can publish. Publishing, and approving",
         "   the endpoint list, is the user's step, never yours.",
+        "5. When the user says a published service's sync failed, call read_sync_failures",
+        "   first: it shows the service's own error for each failed item. Fix the cause it",
+        "   names, test again, and tell the user to press Retry failed on the sync.",
         "Keep replies short: what you did, what the user should do next.",
     ])
 
@@ -172,6 +175,21 @@ def _contract() -> str:
     ])
 
 
+def _dates() -> str:
+    return block("dates", [
+        "Capture dates come as Yaffo knows them, which is often not what a service accepts:",
+        "- A target item's taken_at is {'local': 'YYYY-MM-DDTHH:MM:SS'} with no time zone,",
+        "  or {} when the photo has no capture date at all (common: scans, screenshots,",
+        "  downloads). A source record's taken_at may carry 'utc' or 'offset' as well.",
+        "- Most photo APIs want an ISO 8601 date-time WITH a zone ('...Z' or '+02:00') and",
+        "  reject one without. Append 'Z' to a zoneless time (services read the real date",
+        "  from the file's own metadata when it has one), or add the offset when known.",
+        "- When the service requires a date and there is none, send a fixed fallback",
+        "  ('1970-01-01T00:00:00.000Z') rather than rejecting the photo. Never fail an",
+        "  item only because it has no capture date.",
+    ])
+
+
 def _example() -> str:
     code = (PRESETS / "immich_source.star").read_text(encoding="utf-8")
     code = code.replace('"provider": "immich",\n', '"provider": "custom",\n    "connection": {"auth_kind": "api_key", '
@@ -191,4 +209,4 @@ def _target_example() -> str:
 
 def build_adapter_builder_system_prompt() -> str:
     return "\n\n".join([_role(), _workflow(), _language(), _host_api(), _urls(), _connection(), _contract(),
-                        _example(), _target_example(), response_language_block()])
+                        _dates(), _example(), _target_example(), response_language_block()])

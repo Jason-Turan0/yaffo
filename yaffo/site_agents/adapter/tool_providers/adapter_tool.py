@@ -1,4 +1,5 @@
-"""The service builder's tools: write_adapter_code, test_adapter and fetch_docs.
+"""The service builder's tools: write_adapter_code, test_adapter, fetch_docs and
+read_sync_failures.
 
 Scoped to one custom adapter at construction, so the model can only touch that one.
 
@@ -10,6 +11,10 @@ Scoped to one custom adapter at construction, so the model can only touch that o
 - fetch_docs reads documentation pages through Yaffo, from domains the user has
   allowed for this service (permission 1). A batch with new domains asks the user
   once, in one card, and the model ends its turn; the user's answer continues it.
+- read_sync_failures reads back the real runs of syncs using this service: their
+  last run, item counts, and recent failed items with the service's own message.
+  Test never sends writes, so this is where a target's refusals show up. Items are
+  described without filenames or paths, so it needs no permission.
 """
 from __future__ import annotations
 
@@ -25,6 +30,7 @@ from yaffo.site_agents.common.tool_providers.tool_provider_types import (
 from yaffo.db.models import SyncAdapter
 from yaffo.sync import connections
 from yaffo.sync.adapter_test import run_adapter_test
+from yaffo.sync.failures import failure_report
 from yaffo.sync.fetch_docs import (
     MAX_URLS_PER_BATCH, STATUS_DENIED, STATUS_ERROR, STATUS_NEEDS_APPROVAL, STATUS_OK, fetch_docs,
 )
@@ -36,6 +42,7 @@ class AdapterToolProvider(ToolProvider):
     WRITE = "write_adapter_code"
     TEST = "test_adapter"
     DOCS = "fetch_docs"
+    FAILURES = "read_sync_failures"
 
     def __init__(self, adapter_id: int, session: Session):
         self.adapter_id = adapter_id
@@ -76,6 +83,15 @@ class AdapterToolProvider(ToolProvider):
                     "description": "https URLs of API documentation pages or specs."}},
                     "required": ["urls"], "additionalProperties": False},
             ),
+            RawToolDefinition(
+                name=self.FAILURES,
+                description=("Read what went wrong when syncs using this service ran for real: each sync's last "
+                             "run, its items by status, and its most recent failed items with the code, the "
+                             "service's own error message, attempts, file type, size, and the capture date as "
+                             "Yaffo passed it. Use it when the user says a sync failed: Test never sends writes, "
+                             "so a service refusing an upload only shows up here."),
+                input_schema={"type": "object", "properties": {}, "additionalProperties": False},
+            ),
         ]
 
     def call_tool(self, name: str, args: dict) -> CallToolReturn:
@@ -85,6 +101,9 @@ class AdapterToolProvider(ToolProvider):
             return self._test(args or {})
         if name == self.DOCS:
             return self._docs(args or {})
+        if name == self.FAILURES:
+            report = failure_report(self.session, self.adapter_id)
+            return ToolResult(model_text=report.model_text(), host_data=report.to_dict())
         return f"Unknown tool: {name}"
 
     def _write(self, args: dict) -> CallToolReturn:
