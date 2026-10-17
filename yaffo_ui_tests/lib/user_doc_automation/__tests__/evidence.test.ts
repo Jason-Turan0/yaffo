@@ -153,6 +153,82 @@ describe("buildEvidence", () => {
         );
     });
 
+    it("describes a row-aligned comparison band by band", () => {
+        const evidence = buildEvidence(result(), shot({
+            diff: {
+                status: "changed",
+                change: "content-added",
+                diffPixels: 200448,
+                residualPixels: 0,
+                reason: "size",
+                baselineSize: [2784, 4206],
+                candidateSize: [2784, 4278],
+                hunks: [
+                    {op: "equal", baseline: [0, 4206], candidate: [0, 4206], offset: 0},
+                    {op: "insert", baseline: [4206, 4206], candidate: [4206, 4278], added: "content"},
+                ],
+            },
+        }), options());
+        expect(evidence.diffSummary).toBe(
+            "Rows were aligned before comparing, so content that only moved is not counted as changed. " +
+            "Result: content-added — every row of the committed shot is still present and unchanged; " +
+            "the new shot shows more. The shot went from 2784x4206 to 2784x4278.\n" +
+            "- inserted: 72 row(s) at y=4206–4277 of the new shot (content)\n" +
+            "0 pixel(s) differ across the matched rows."
+        );
+    });
+
+    it("describes moved and partly changed matched runs", () => {
+        const evidence = buildEvidence(result(), shot({
+            diff: {
+                status: "changed",
+                change: "changed",
+                diffPixels: 263,
+                residualPixels: 263,
+                hunks: [
+                    {op: "equal", baseline: [0, 200], candidate: [0, 200], offset: 0},
+                    {op: "delete", baseline: [200, 272], candidate: [200, 200], removed: "content"},
+                    {op: "equal", baseline: [272, 900], candidate: [200, 828], offset: -72, residualPixels: 263},
+                ],
+            },
+        }), options());
+        expect(evidence.diffSummary).toContain("Result: changed — content differs.");
+        expect(evidence.diffSummary).toContain("- removed: 72 row(s) at y=200–271 of the committed shot (content)");
+        expect(evidence.diffSummary).toContain(
+            "- matched: 628 row(s) at y=272–899 of the committed shot, moved up 72 px, 263 px differ within it");
+        expect(evidence.diffSummary).not.toContain("y=0–199");
+    });
+
+    it("describes bands found by aligning a strip along its columns", () => {
+        const evidence = buildEvidence(result(), shot({
+            diff: {
+                status: "changed",
+                change: "layout-only",
+                diffPixels: 18800,
+                residualPixels: 0,
+                hunks: [{op: "equal", baseline: [0, 470], candidate: [0, 470], offset: 0}],
+                blocks: [
+                    {axis: "columns", op: "insert", baseline: [363, 363], candidate: [363, 403],
+                     rows: [0, 470], baselineRows: [0, 470], added: "blank"},
+                    {axis: "columns", op: "equal", baseline: [363, 563], candidate: [403, 603], offset: 40,
+                     rows: [0, 470], baselineRows: [0, 470]},
+                    {axis: "rows", op: "insert", baseline: [36, 36], candidate: [36, 50],
+                     columns: [956, 1174], baselineColumns: [956, 1174], added: "moved", moved: true},
+                ],
+            },
+        }), options());
+        expect(evidence.diffSummary).toBe(
+            "Rows were aligned before comparing, and strips that still differed were aligned along " +
+            "their columns too, so content that only moved is not counted as changed. " +
+            "Result: layout-only — the content is identical; only blank space was added or removed.\n" +
+            "- inserted: 40 column(s) at x=363–402 of the new shot (within rows 0–469) (blank space)\n" +
+            "- moved: 200 column(s) at x=363–562 of the committed shot, right 40 px (within rows 0–469)\n" +
+            "- inserted: 14 row(s) at y=36–49 of the new shot (within columns 956–1173) " +
+            "(moved, same pixels as an edit elsewhere)\n" +
+            "0 pixel(s) differ across the matched rows."
+        );
+    });
+
     it("handles a missing comparison and missing Markdown page", () => {
         const evidence = buildEvidence(result(), shot({status: "unchanged", diff: undefined}), options({
             covers: undefined,

@@ -11,7 +11,7 @@ export {PAD, paddedBox, resolveClip, resolveIgnoreRegions, rowCut} from "./frami
 export type {Box} from "./framing";
 export {toWebp, WEBP_QUALITY} from "./encode";
 export {compareShots} from "./compare";
-export type {CompareResult, CompareStatus} from "./compare";
+export type {BandKind, BlockHunk, ChangeKind, CompareResult, CompareStatus, RowHunk} from "./compare";
 export {supportScript, VENV_PYTHON} from "./python";
 export {createObserver, PAGE_HEADER, RUN_HEADER, takeServerObservation} from "./observe";
 export type {Observation, Observer, ServerObservation} from "./observe";

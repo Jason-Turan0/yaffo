@@ -49,6 +49,7 @@ await jest.unstable_mockModule("../paths", () => ({
 
 const {
     acceptMinorEnvironmentVariation,
+    layoutOnlyVerdict,
     main,
     MINOR_VARIATION_MAX_RATIO,
     runCli,
@@ -200,6 +201,67 @@ describe("minor environment variation policy", () => {
             {...environmentInstability, recommendedAction: "report_regression"},
             diff() as never
         ).recommendedAction).toBe("report_regression");
+    });
+});
+
+const layoutOnly = (over: Record<string, unknown> = {}) => shot({
+    diff: {
+        status: "changed",
+        change: "layout-only",
+        diffPixels: 65664,
+        residualPixels: 0,
+        reason: "size",
+        baselineSize: [912, 1846],
+        candidateSize: [912, 1918],
+        hunks: [
+            {op: "equal", baseline: [0, 1445], candidate: [0, 1445], offset: 0},
+            {op: "insert", baseline: [1445, 1445], candidate: [1445, 1517], added: "blank"},
+            {op: "equal", baseline: [1445, 1846], candidate: [1517, 1918], offset: 72},
+        ],
+    },
+    stability: {status: "reproduced", diff: {status: "unchanged", diffPixels: 0}},
+    ...over,
+});
+
+describe("layout-only gate", () => {
+    it("promotes a reproduced layout-only shot with no prose impact", () => {
+        expect(layoutOnlyVerdict(layoutOnly() as never)).toMatchObject({
+            classification: "intended_change",
+            confidence: "high",
+            recommendedAction: "promote",
+            proseImpact: [],
+            summary: "Same content, re-laid out: 72 blank row(s) added at y=1445.",
+        });
+    });
+
+    it("leaves a layout-only shot that has not reproduced to triage", () => {
+        expect(layoutOnlyVerdict(layoutOnly({stability: undefined}) as never)).toBeNull();
+    });
+
+    it("summarizes bands found along columns, and moves once", () => {
+        const candidate = layoutOnly() as unknown as {diff: Record<string, unknown>};
+        const verdict = layoutOnlyVerdict({...candidate, diff: {
+            ...candidate.diff,
+            hunks: [{op: "equal", baseline: [0, 470], candidate: [0, 470], offset: 0}],
+            blocks: [
+                {axis: "columns", op: "insert", baseline: [363, 363], candidate: [363, 403], added: "blank"},
+                {axis: "columns", op: "delete", baseline: [999, 1089], candidate: [999, 999], removed: "blank"},
+                {axis: "rows", op: "delete", baseline: [10, 24], candidate: [10, 10], removed: "moved", moved: true},
+                {axis: "rows", op: "insert", baseline: [40, 40], candidate: [40, 54], added: "moved", moved: true},
+            ],
+        }} as never);
+        expect(verdict?.summary).toBe("Same content, re-laid out: 40 blank column(s) added at x=363; " +
+            "90 blank column(s) removed at x=999; content moved to y=40 (14 rows).");
+        expect(verdict?.reasoning).toContain("and the columns of strips that still differed");
+    });
+
+    it("leaves revealed or hidden content to triage", () => {
+        for (const change of ["content-added", "content-removed", "changed"]) {
+            const candidate = layoutOnly() as unknown as {diff: Record<string, unknown>};
+            expect(layoutOnlyVerdict(
+                {...candidate, diff: {...candidate.diff, change}} as never
+            )).toBeNull();
+        }
     });
 });
 
@@ -397,6 +459,33 @@ describe("heal CLI", () => {
             classification: "environment_instability",
             recommendedAction: "promote",
         });
+    });
+
+    it("promotes a layout-only shot under --apply without a model call", async () => {
+        const changed = layoutOnly();
+        write(changed.staged as string, "new image");
+        writeReport([result({shots: [changed]})]);
+
+        await expect(main(["--apply", "--model", "vision-model"])).resolves.toBe(0);
+
+        expect(triageShot).not.toHaveBeenCalled();
+        expect(buildEvidence).not.toHaveBeenCalled();
+        expect(applyFix).not.toHaveBeenCalled();
+        expect(readFileSync(join(GUIDE_DIR, changed.target as string), "utf8")).toBe("new image");
+        const saved = JSON.parse(readFileSync(join(STAGING_DIR, "triage.json"), "utf8"));
+        expect(saved.verdicts[0]).toMatchObject({
+            target: changed.target,
+            triage: {classification: "intended_change", recommendedAction: "promote"},
+        });
+    });
+
+    it("still triages a content-added shot", async () => {
+        const candidate = layoutOnly() as unknown as {diff: Record<string, unknown>};
+        writeReport([result({shots: [{...candidate, diff: {...candidate.diff, change: "content-added"}}]})]);
+
+        await expect(main([])).resolves.toBe(0);
+
+        expect(triageShot).toHaveBeenCalledTimes(1);
     });
 
     it("records an inconclusive verdict when a changed shot cannot be triaged", async () => {

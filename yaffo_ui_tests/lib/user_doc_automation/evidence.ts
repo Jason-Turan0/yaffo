@@ -1,6 +1,7 @@
 import {execFileSync} from "child_process";
 import {existsSync, readFileSync} from "fs";
 import {join, resolve} from "path";
+import type {BandKind, BlockHunk, ChangeKind, CompareResult, RowHunk} from "./compare";
 import type {ShotResult, WalkthroughResult} from "./runner";
 import type {StringChange} from "./strings";
 
@@ -106,10 +107,81 @@ const dependencyDiff = (
         truncate(git(["diff", range, "--", ...deps], repoDir), PATCH_BUDGET);
 };
 
+const CHANGE_MEANING: Record<Exclude<ChangeKind, "unchanged">, string> = {
+    "layout-only": "the content is identical; only blank space was added or removed",
+    "content-added": "every row of the committed shot is still present and unchanged; the new shot shows more",
+    "content-removed": "every row of the new shot was already in the committed one; some committed rows are gone",
+    changed: "content differs",
+};
+
+const rows = (span: [number, number]): string => `${span[1] - span[0]} row(s) at y=${span[0]}–${span[1] - 1}`;
+const columns = (span: [number, number]): string => `${span[1] - span[0]} column(s) at x=${span[0]}–${span[1] - 1}`;
+
+const what = (kind?: BandKind): string =>
+    kind === "blank" ? "blank space" : kind === "moved" ? "moved, same pixels as an edit elsewhere" : "content";
+
+const describeHunk = (hunk: RowHunk): string => {
+    if (hunk.op === "insert") return `- inserted: ${rows(hunk.candidate)} of the new shot (${what(hunk.added)})`;
+    if (hunk.op === "delete") return `- removed: ${rows(hunk.baseline)} of the committed shot (${what(hunk.removed)})`;
+    if (hunk.op === "replace") {
+        return `- replaced: ${rows(hunk.baseline)} of the committed shot (${what(hunk.removed)}) ` +
+            `became ${rows(hunk.candidate)} of the new shot (${what(hunk.added)})`;
+    }
+    const moved = hunk.offset ? `, moved ${hunk.offset > 0 ? "down" : "up"} ${Math.abs(hunk.offset)} px` : "";
+    const residual = hunk.residualPixels ? `, ${hunk.residualPixels} px differ within it` : "";
+    return `- matched: ${rows(hunk.baseline)} of the committed shot${moved}${residual}`;
+};
+
+/** A band found inside a strip: which lines, where the strip is, and what happened. */
+const describeBlock = (block: BlockHunk): string => {
+    const lines = block.axis === "columns" ? columns : rows;
+    const span = block.axis === "columns" ? block.rows : block.columns;
+    const within = span
+        ? ` (within ${block.axis === "columns" ? "rows" : "columns"} ${span[0]}–${span[1] - 1})`
+        : "";
+    if (block.op === "insert") return `- inserted: ${lines(block.candidate)} of the new shot${within} (${what(block.added)})`;
+    if (block.op === "delete") return `- removed: ${lines(block.baseline)} of the committed shot${within} (${what(block.removed)})`;
+    if (block.op === "replace") {
+        return `- replaced: ${lines(block.baseline)} of the committed shot (${what(block.removed)}) ` +
+            `became ${lines(block.candidate)} of the new shot${within} (${what(block.added)})`;
+    }
+    const offset = block.offset ?? 0;
+    const direction = block.axis === "columns"
+        ? (offset > 0 ? "right" : "left")
+        : (offset > 0 ? "down" : "up");
+    return `- moved: ${lines(block.baseline)} of the committed shot, ${direction} ${Math.abs(offset)} px${within}`;
+};
+
+/**
+ * The aligned comparison as the model should read it: what kind of change, then each
+ * band in physical pixels. Matched runs that neither moved nor differ are left out.
+ */
+const describeAlignment = (diff: CompareResult): string => {
+    const before = diff.baselineSize?.join("x");
+    const after = diff.candidateSize?.join("x");
+    const size = before && after ? ` The shot went from ${before} to ${after}.` : "";
+    const kind = diff.change && diff.change !== "unchanged" ? diff.change : "changed";
+    const bands = [
+        ...(diff.hunks ?? [])
+            .filter((hunk) => hunk.op !== "equal" || hunk.offset || hunk.residualPixels)
+            .map(describeHunk),
+        ...(diff.blocks ?? []).map(describeBlock),
+    ];
+    const axes = diff.blocks?.length
+        ? "Rows were aligned before comparing, and strips that still differed were aligned " +
+          "along their columns too"
+        : "Rows were aligned before comparing";
+    return `${axes}, so content that only moved is not counted as changed. ` +
+        `Result: ${kind} — ${CHANGE_MEANING[kind]}.${size}\n` +
+        `${bands.join("\n")}\n` +
+        `${diff.residualPixels ?? 0} pixel(s) differ across the matched rows.`;
+};
+
 const describeDiff = (shot: ShotResult): string => {
     if (shot.status === "new") return "No committed baseline: this shot is new.";
     const diff = shot.diff;
     if (!diff) return "No comparison was recorded.";
+    if (diff.hunks?.length) return describeAlignment(diff);
     if (diff.reason === "size") {
         const before = diff.baselineSize?.join("x") ?? "unknown";
         const after = diff.candidateSize?.join("x") ?? "unknown";

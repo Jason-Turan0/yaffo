@@ -206,6 +206,8 @@ export const main = async (
             const mark = {new: "+", changed: "~", unchanged: "=", unstable: "?"}[shot.status];
             const detail = shot.status === "unstable"
                 ? "  did not reproduce"
+                : shot.diff?.change && !["changed", "unchanged"].includes(shot.diff.change)
+                ? `  ${shot.diff.change}`
                 : shot.diff?.reason === "size"
                 ? "  reframed"
                 : shot.diff?.diffPixels

@@ -21,7 +21,7 @@ import {parse as parseYaml} from "yaml";
 import {applyFix, buildEvidence, openSession, triageShot} from "./index";
 import {changedStrings, changesQuotedBy} from "./strings";
 import type {StringChange} from "./strings";
-import type {Triage, WalkthroughResult} from "./index";
+import type {RowHunk, Triage, WalkthroughResult} from "./index";
 import {createFilesystemClient} from "@lib/tool_providers/mcp_filesystem_client";
 import {createPlaywrightClient} from "@lib/tool_providers/mcp_playwright_client";
 import {localFilesystemMemoryToolFactory} from "@lib/tool_providers/local_filesystem_memory_tool";
@@ -77,6 +77,56 @@ export const acceptMinorEnvironmentVariation = (
             `Accepted as a minor environment variation: ` +
             `${(diff.ratio * 100).toFixed(4)}% of pixels changed, within the 0.1% limit, ` +
             "with no reframing or prose impact.",
+    };
+};
+
+/**
+ * A verdict that needs no model: the differ aligned the shot's rows and found the
+ * same content with only blank space added or removed, and the change reproduced on
+ * an immediate recapture. Nothing the page can quote or describe changed, so the shot
+ * is promoted as the app's current rendering and the prose is left alone. Anything
+ * else, including content revealed or hidden by a reframe, still goes to triage.
+ */
+export const layoutOnlyVerdict = (shot: WalkthroughResult["shots"][number]): Triage | null => {
+    const diff = shot.diff;
+    if (
+        shot.status !== "changed" ||
+        diff?.change !== "layout-only" ||
+        shot.stability?.status !== "reproduced"
+    ) return null;
+
+    // Rows first, then bands found inside strips. Moves pair a removal with an insertion
+    // of the same pixels, so they are described once, from the insertion's side.
+    const band = (axis: "rows" | "columns", hunk: RowHunk): string | null => {
+        const [unit, coordinate] = axis === "rows" ? ["row", "y"] : ["column", "x"];
+        if (hunk.moved) {
+            return hunk.op === "insert"
+                ? `content moved to ${coordinate}=${hunk.candidate[0]} (${hunk.candidate[1] - hunk.candidate[0]} ${unit}s)`
+                : null;
+        }
+        return hunk.op === "insert"
+            ? `${hunk.candidate[1] - hunk.candidate[0]} blank ${unit}(s) added at ${coordinate}=${hunk.candidate[0]}`
+            : hunk.op === "delete"
+            ? `${hunk.baseline[1] - hunk.baseline[0]} blank ${unit}(s) removed at ${coordinate}=${hunk.baseline[0]}`
+            : `blank ${unit}s ${hunk.baseline[0]}–${hunk.baseline[1]} became ${hunk.candidate[0]}–${hunk.candidate[1]}`;
+    };
+    const bands = [
+        ...(diff.hunks ?? []).filter((hunk) => hunk.op !== "equal").map((hunk) => band("rows", hunk)),
+        ...(diff.blocks ?? []).filter((block) => block.op !== "equal").map((block) => band(block.axis, block)),
+    ].filter((text): text is string => text !== null);
+    const shown = bands.length > 4 ? [...bands.slice(0, 4), `${bands.length - 4} more`] : bands;
+    return {
+        classification: "intended_change",
+        confidence: "high",
+        summary: `Same content, re-laid out: ${shown.join("; ")}.`,
+        reasoning: "Decided without a model. The differ aligned rows before comparing" +
+            (diff.blocks?.length ? ", and the columns of strips that still differed" : "") +
+            ": every row of content in the committed shot is present and unchanged in the new one " +
+            `(${diff.residualPixels ?? 0} px residual), and only blank space was added or removed. ` +
+            "The change reproduced on an immediate recapture, so it is the app's current " +
+            "rendering. No visible text or control changed, so the page prose is unaffected.",
+        proseImpact: [],
+        recommendedAction: "promote",
     };
 };
 
@@ -365,6 +415,22 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
         }
 
         for (const {result, shot} of pending) {
+            const mechanical = layoutOnlyVerdict(shot);
+            if (mechanical) {
+                verdicts.push({page: result.page, target: shot.target, triage: mechanical});
+                console.log(`${MARK[mechanical.classification]} ${shot.target}`);
+                console.log(`   layout only — ${mechanical.summary}`);
+                if (apply) {
+                    const committed = join(GUIDE_DIR, shot.target);
+                    mkdirSync(dirname(committed), {recursive: true});
+                    copyFileSync(shot.staged, committed);
+                    console.log("   → promoted without a model call; prose unaffected\n");
+                } else {
+                    console.log("   → would promote without a model call (re-run with --apply)\n");
+                }
+                continue;
+            }
+
             const evidence = buildEvidence(result, shot, {
                 guideDir: GUIDE_DIR,
                 stagingDir: CAPTURE_DIR,

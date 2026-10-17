@@ -50,7 +50,56 @@ describe("Playwright-style screenshot comparison", () => {
         const {result, diff} = compare("text-base.webp", "text-label-change.webp");
 
         expect(result.status).toBe("changed");
+        expect(result.change).toBe("changed");
         expect(result.diffPixels).toBe(781);
         expect(existsSync(diff)).toBe(true);
+    });
+
+    it("reports nothing moved when only pixels changed in place", () => {
+        const {result} = compare("text-base.webp", "text-count-change.webp");
+
+        expect(result.change).toBe("changed");
+        expect(result.residualPixels).toBe(113);
+        expect(result.hunks).toEqual([]);
+    });
+});
+
+describe("row-aligned comparison", () => {
+    // PR 63: the navbar's pages strip became hidden by default, the Ask Yaffo panel's
+    // empty conversation area grew 36 CSS px, and the composer moved down. A top-left
+    // pixel diff saw a reframed shot; the model then called it environment noise.
+    it("reports PR 63's pushed-down composer as layout only", () => {
+        const {result, diff} = compare("pr63-context-base.webp", "pr63-context-candidate.webp");
+
+        expect(result).toMatchObject({
+            status: "changed",
+            change: "layout-only",
+            residualPixels: 0,
+            reason: "size",
+            baselineSize: [912, 1846],
+            candidateSize: [912, 1918],
+        });
+        const edits = (result.hunks ?? []).filter((hunk) => hunk.op !== "equal");
+        expect(edits).toEqual([expect.objectContaining({op: "insert", added: "blank"})]);
+        const [top, bottom] = edits[0].candidate;
+        expect(bottom - top).toBe(72);
+        // The band sits above the composer, not at the bottom of the frame: the rows
+        // below it are the composer, matched 72 px further down.
+        expect(result.hunks?.at(-1)).toMatchObject({op: "equal", offset: 72});
+        expect(existsSync(diff)).toBe(true);
+    });
+
+    // Synthetic: a table whose GENDER, BORN and FACES columns moved right by 40, 70
+    // and 90 px, cells pixel-identical. Every row matches in place yet repaints, so
+    // only aligning columns explains it.
+    it("reports widened table columns as layout only, band by band", () => {
+        const {result} = compare("columns-base.webp", "columns-candidate.webp");
+
+        expect(result).toMatchObject({status: "changed", change: "layout-only", residualPixels: 0});
+        const inserted = (result.blocks ?? []).filter((block) => block.axis === "columns" && block.op === "insert");
+        expect(inserted.map((block) => block.candidate[1] - block.candidate[0])).toEqual([40, 30, 20]);
+        expect(inserted.every((block) => block.added === "blank")).toBe(true);
+        const moved = (result.blocks ?? []).filter((block) => block.op === "equal").map((block) => block.offset);
+        expect(moved).toEqual([40, 70, 90]);
     });
 });
