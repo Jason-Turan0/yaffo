@@ -248,9 +248,34 @@
     },
     "shots": {
         "create-customize/assets/importing/new-import-sync.webp": {
-            "width": 532,
-            "height": 932,
-            "sha256": "6ad9b944b10a41a2e8cc3204bb8f8428db8b82bbf8d8d12ff666d27a9de12858"
+            "width": 500,
+            "height": 900,
+            "sha256": "25f8e5c2875bb7c0cb547e9b05fe056fbb59afc9dfa293c0ce8ae39f427238f4",
+            "layout": [
+                "heading \"New Automation\" 141×20",
+                "button \"Close\" 19×18",
+                "radiogroup \"What kind of automation? Custom Describe what it should do, and Yaffo writes it. Import from… Bring new photos into your library from a folder, an SD card, or OneDrive. Send to… Keep an album, or the photos matching a filter, copied to a folder. Add a new service… Connect another photo service. Describe it, and Yaffo writes and tests the connection.\" 411×332",
+                "label \"Custom Describe what it should do, and Yaffo writes it.\" 265×38",
+                "radio \"unchecked\" 13×13",
+                "label \"Import from… Bring new photos into your library from a folder, an SD card, or OneDrive.\" 360×58",
+                "radio \"checked\" 13×13",
+                "label \"Send to… Keep an album, or the photos matching a filter, copied to a folder.\" 375×38",
+                "radio \"unchecked\" 13×13",
+                "label \"Add a new service… Connect another photo service. Describe it, and Yaffo writes and tests the connection.\" 370×58",
+                "radio \"unchecked\" 13×13",
+                "radiogroup \"Service Folder A folder on this computer, a drive, or a card. Immich New photos and videos in an Immich album or library. Connect with an API key from your server. OneDrive New photos and videos in a OneDrive folder. Sign in with your Microsoft account.\" 396×259",
+                "label \"Folder A folder on this computer, a drive, or a card.\" 251×38",
+                "radio \"checked\" 13×13",
+                "label \"Immich New photos and videos in an Immich album or library. Connect with an API key from your server.\" 360×58",
+                "radio \"unchecked\" 13×13",
+                "label \"OneDrive New photos and videos in a OneDrive folder. Sign in with your Microsoft account.\" 356×58",
+                "radio \"unchecked\" 13×13",
+                "label \"Name\" 37×16",
+                "textbox \"Camera card\" 432×38",
+                "text \"e.g. Camera card. Next you choose the folder and where photos go.\" 421×16",
+                "button \"Cancel\" 84×36",
+                "button \"Create\" 82×36"
+            ]
         },
         "create-customize/assets/importing/import-folder-options.webp": {
             "width": 1122,

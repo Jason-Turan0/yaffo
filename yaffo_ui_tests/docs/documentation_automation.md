@@ -567,6 +567,11 @@ does — and writes one. When a walkthrough breaks, it heals it. Walkthroughs st
 human-editable: to show three gallery rows instead of two, edit the walkthrough. No spec
 field is needed for it.
 
+Clipped shots include 16 CSS pixels of padding by default. Set `clipPadding: 0`
+for a modal-only shot so the surrounding page does not enter the crop or cause
+repeatability failures when background content moves. The import and export
+creation-dialog shots use this setting.
+
 Three consequences:
 
 - **Adding a screenshot is never a markdown-only edit.** The reference has to exist

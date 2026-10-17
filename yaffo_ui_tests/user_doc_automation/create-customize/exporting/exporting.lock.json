@@ -253,9 +253,36 @@
     },
     "shots": {
         "create-customize/assets/exporting/new-export-sync.webp": {
-            "width": 532,
-            "height": 932,
-            "sha256": "c45bb0a014cb8b07ae26c1952aca7277226a78138d0eefefb3515606c1b4ebb8"
+            "width": 500,
+            "height": 900,
+            "sha256": "5e188734a03059e8fb9837642f2bf86e6018efd7d90074a8b3337735e58d8ce3",
+            "layout": [
+                "heading \"New Automation\" 141×20",
+                "button \"Close\" 19×18",
+                "radiogroup \"What kind of automation? Custom Describe what it should do, and Yaffo writes it. Import from… Bring new photos into your library from a folder, an SD card, or OneDrive. Send to… Keep an album, or the photos matching a filter, copied to a folder. Add a new service… Connect another photo service. Describe it, and Yaffo writes and tests the connection.\" 411×332",
+                "label \"Custom Describe what it should do, and Yaffo writes it.\" 265×38",
+                "radio \"unchecked\" 13×13",
+                "label \"Import from… Bring new photos into your library from a folder, an SD card, or OneDrive.\" 360×58",
+                "radio \"unchecked\" 13×13",
+                "label \"Send to… Keep an album, or the photos matching a filter, copied to a folder.\" 375×38",
+                "radio \"checked\" 13×13",
+                "label \"Add a new service… Connect another photo service. Describe it, and Yaffo writes and tests the connection.\" 370×58",
+                "radio \"unchecked\" 13×13",
+                "radiogroup \"Service Folder A folder a desktop app syncs, a drive, a network share, or a card for a photo frame. Google Photos Keep selected photos in a Yaffo-created Google Photos album. Immich Keep photos in an Immich album. Connect with an API key from your server. OneDrive Keep selected photos in folders under a OneDrive folder.\" 407×332",
+                "label \"Folder A folder a desktop app syncs, a drive, a network share, or a card for a photo frame.\" 371×58",
+                "radio \"checked\" 13×13",
+                "label \"Google Photos Keep selected photos in a Yaffo-created Google Photos album.\" 362×38",
+                "radio \"unchecked\" 13×13",
+                "label \"Immich Keep photos in an Immich album. Connect with an API key from your server.\" 367×58",
+                "radio \"unchecked\" 13×13",
+                "label \"OneDrive Keep selected photos in folders under a OneDrive folder.\" 327×38",
+                "radio \"unchecked\" 13×13",
+                "label \"Name\" 37×16",
+                "textbox \"e.g. Tag beach photos, Weekly cleanup\" 432×38",
+                "text \"e.g. For Mom. Next you choose the folder and what to send.\" 372×16",
+                "button \"Cancel\" 84×36",
+                "button \"Create\" 82×36"
+            ]
         },
         "create-customize/assets/exporting/export-account.webp": {
             "width": 1122,

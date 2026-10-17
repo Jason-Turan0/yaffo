@@ -111,6 +111,7 @@ export default defineWalkthrough({
             viewport: {width: 1400, height: 1000},
             goto: "/utilities/automations",
             clip: "#newAutomationModal .modal-content",
+            clipPadding: 0,
             setup: async (page) => withCleanup(page, async () => {
                 await page.locator("#new-automation-button").click();
                 const modal = page.locator("#newAutomationModal.active");

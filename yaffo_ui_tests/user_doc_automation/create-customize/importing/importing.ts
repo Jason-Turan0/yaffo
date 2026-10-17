@@ -116,6 +116,7 @@ export default defineWalkthrough({
             viewport: {width: 1400, height: 1000},
             goto: "/utilities/automations",
             clip: "#newAutomationModal .modal-content",
+            clipPadding: 0,
             setup: async (page) => {
                 await chooseFolderImport(page);
                 await page.locator("#newAutomationModal.active #new-automation-name").fill("Camera card");

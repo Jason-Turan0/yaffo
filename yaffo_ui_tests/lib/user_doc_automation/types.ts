@@ -60,6 +60,8 @@ export interface Shot {
     goto: string | ((context: GotoContext) => string | Promise<string>);
     /** Element whose box defines the crop. Omit for a plain viewport shot. */
     clip?: string;
+    /** Breathing room around the crop in CSS pixels. Defaults to 16; use 0 for a modal. */
+    clipPadding?: number;
     /** Trim the crop to N complete rows of a grid. */
     rows?: RowRule;
     /**

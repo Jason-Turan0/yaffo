@@ -12,20 +12,20 @@ export interface Box {
 export const PAD = 16;
 
 /** The element's box, padded and clamped to the page so the clip stays on canvas. */
-export const paddedBox = async (page: Page, selector: string): Promise<Box> => {
+export const paddedBox = async (page: Page, selector: string, padding = PAD): Promise<Box> => {
     const box = await page.locator(selector).first().boundingBox();
     if (!box) throw new Error(`No bounding box for ${selector}`);
     const pageSize = await page.evaluate(() => ({
         width: document.documentElement.scrollWidth,
         height: document.documentElement.scrollHeight,
     }));
-    const x = Math.max(0, box.x - PAD);
-    const y = Math.max(0, box.y - PAD);
+    const x = Math.max(0, box.x - padding);
+    const y = Math.max(0, box.y - padding);
     return {
         x,
         y,
-        width: Math.min(box.width + PAD * 2, pageSize.width - x),
-        height: Math.min(box.height + PAD * 2, pageSize.height - y),
+        width: Math.min(box.width + padding * 2, pageSize.width - x),
+        height: Math.min(box.height + padding * 2, pageSize.height - y),
     };
 };
 
@@ -70,7 +70,7 @@ export const rowCut = async (page: Page, rule: RowRule): Promise<number> => {
 /** The crop for a shot, or undefined for a plain viewport capture. */
 export const resolveClip = async (page: Page, shot: Shot): Promise<Box | undefined> => {
     if (!shot.clip) return undefined;
-    const clip = await paddedBox(page, shot.clip);
+    const clip = await paddedBox(page, shot.clip, shot.clipPadding);
     if (shot.rows) {
         clip.height = Math.max(0, (await rowCut(page, shot.rows)) - clip.y);
     }
