@@ -18,7 +18,6 @@
  * not comparable. Encoding and comparison stay on the host: they need Pillow and
  * NumPy from the project virtualenv.
  */
-import {createHash} from "crypto";
 import {scrubProcessEnv} from "./env";
 import {
     appContainerRunning,
@@ -34,6 +33,7 @@ import {join, resolve} from "path";
 import {pathToFileURL} from "url";
 import {parse as parseYaml} from "yaml";
 import {loadWalkthroughs} from "./load";
+import {lockShotEntry} from "./lockfile";
 import {currentHead, dependencyHashes} from "./dependency_changes";
 import {BASE_URL, CAPTURE_DIR, CONTENT_DIR, DOCS_DATA_DIR, GUIDE_DIR} from "./paths";
 import {
@@ -91,18 +91,7 @@ const writeLockfile = (result: WalkthroughResult): void => {
         observed: result.observation,
         dependencyHashes: dependencyHashes(
             result.observation, declaredDependencies(result.page), REPO),
-        shots: Object.fromEntries(result.shots.map((shot) => [
-            shot.target,
-            {
-                width: shot.width,
-                height: shot.height,
-                // Detects a committed screenshot being replaced outside this pipeline;
-                // the staleness comparison itself is per-pixel, not by hash.
-                sha256: existsSync(join(GUIDE_DIR, shot.target))
-                    ? createHash("sha256").update(readFileSync(join(GUIDE_DIR, shot.target))).digest("hex")
-                    : null,
-            },
-        ])),
+        shots: Object.fromEntries(result.shots.map((shot) => [shot.target, lockShotEntry(shot, GUIDE_DIR)])),
     };
     writeFileSync(join(dir, `${name}.lock.json`), JSON.stringify(lock, null, 4) + "\n");
 };

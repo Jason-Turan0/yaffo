@@ -42,11 +42,14 @@ const removeTemporaryService = async (page: Page): Promise<void> => {
 const pinPagesBar = async (page: Page, expanded: boolean): Promise<void> => {
     const toggle = page.locator("#nav-pages-toggle");
     if (((await toggle.getAttribute("aria-expanded")) === "true") === expanded) return;
-    const saved = page.waitForResponse((response) => (
-        response.url().includes(PAGES_BAR_ENDPOINT) && response.request().method() === "PUT"
-    ));
-    await toggle.click();
-    const response = await saved;
+    // Awaited together: if the click fails, nothing is left waiting on the
+    // response to reject later, unhandled, after the capture has moved on.
+    const [response] = await Promise.all([
+        page.waitForResponse((candidate) => (
+            candidate.url().includes(PAGES_BAR_ENDPOINT) && candidate.request().method() === "PUT"
+        )),
+        toggle.click(),
+    ]);
     if (!response.ok()) {
         throw new Error(`Could not save the Pages strip state: HTTP ${response.status()}`);
     }
@@ -59,10 +62,24 @@ const collapsePagesBar = async (page: Page): Promise<void> => {
     await pinPagesBar(page, false);
 };
 
+/**
+ * Cleanup, so a direct request rather than the toggle: the shot may leave a modal
+ * over the navbar, and the page closes straight after, so nothing needs the DOM to
+ * follow. The route takes the same CSRF token the toggle sends.
+ */
 const restorePagesBar = async (page: Page): Promise<void> => {
     if (!pagesBarWasExpanded) return;
     pagesBarWasExpanded = false;
-    await pinPagesBar(page, true);
+    const token = await page.evaluate(() => (
+        window as Window & {APP_CONFIG?: {csrfToken?: string}}
+    ).APP_CONFIG?.csrfToken).catch(() => undefined);
+    const response = await page.request.put(PAGES_BAR_ENDPOINT, {
+        data: {visible: true},
+        headers: token ? {"X-CSRF-Token": token} : {},
+    });
+    if (!response.ok()) {
+        throw new Error(`Could not restore the Pages strip state: HTTP ${response.status()}`);
+    }
 };
 
 const chooseNewService = async (page: Page): Promise<void> => {
@@ -141,6 +158,10 @@ export default defineWalkthrough({
                 await expect(page.getByText(message, {exact: true})).toBeVisible();
             }
 
+            // Each tab is a full page load. Delete asks for confirmation only once the
+            // page script has attached its handler; clicked before that, the form
+            // submits natively and the dialog never opens.
+            await page.locator("html[data-app-ready]").waitFor({state: "attached"});
             await page.getByRole("button", {name: "Delete", exact: true}).click();
             await page.locator("#global-confirm-dialog.active").waitFor();
             // /utilities/automations redirects to the first automation, so wait to

@@ -29,6 +29,9 @@ import type {ToolProvider} from "@lib/tool_providers/toolprovider.types";
 import type {ModelAlias} from "@lib/model_clients/model_client.interface";
 import {YAFFO_APP_ROOT} from "@lib/types";
 import {changedDependencies} from "./dependency_changes";
+import {compareLayouts} from "./layout";
+import {committedLockShot, recordPromotedShot} from "./lockfile";
+import type {LockShot} from "./lockfile";
 import type {DependencyChange, PageLock} from "./dependency_changes";
 
 // Authored spec, generated walkthroughs, and transient staging live in the
@@ -124,6 +127,46 @@ export const layoutOnlyVerdict = (shot: WalkthroughResult["shots"][number]): Tri
             ": every row of content in the committed shot is present and unchanged in the new one " +
             `(${diff.residualPixels ?? 0} px residual), and only blank space was added or removed. ` +
             "The change reproduced on an immediate recapture, so it is the app's current " +
+            "rendering. No visible text or control changed, so the page prose is unaffected.",
+        proseImpact: [],
+        recommendedAction: "promote",
+    };
+};
+
+/**
+ * A verdict that needs no model, from text and controls rather than pixels: the
+ * change reproduced, and every element the committed shot shows is still there, in
+ * order, with the same role, the same text, and the same size, and nothing was added.
+ * Whatever the pixels did (columns widened by a fraction of a pixel, glyphs drawn at
+ * a new offset, a control restyled), nothing a page could quote or a reader could
+ * act on changed, so the shot is promoted as the app's current rendering.
+ *
+ * Needs the committed shot's layout, recorded in the lockfile from the capture that
+ * produced it, and a lock entry whose hash still matches the committed image.
+ */
+export const layoutVerifiedVerdict = (
+    shot: WalkthroughResult["shots"][number],
+    committed: LockShot | null
+): Triage | null => {
+    if (
+        shot.status !== "changed" ||
+        shot.stability?.status !== "reproduced" ||
+        !shot.layout?.length ||
+        !committed?.layout?.length
+    ) return null;
+    const diff = compareLayouts(committed.layout, shot.layout);
+    if (!diff.same) return null;
+
+    const pixels = shot.diff?.change ? ` The pixel comparison called it ${shot.diff.change}` +
+        (shot.diff.residualPixels ? `, with ${shot.diff.residualPixels} px left after alignment.` : ".") : "";
+    return {
+        classification: "intended_change",
+        confidence: "high",
+        summary: `Same text and controls, re-rendered: all ${shot.layout.length} elements present ` +
+            "with the same roles, text, and sizes.",
+        reasoning: "Decided without a model. Every element the committed shot shows (role, text, and " +
+            "size, from the lockfile) is in the new capture in the same order, and none was added." +
+            `${pixels} The change reproduced on an immediate recapture, so it is the app's current ` +
             "rendering. No visible text or control changed, so the page prose is unaffected.",
         proseImpact: [],
         recommendedAction: "promote",
@@ -415,15 +458,19 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
         }
 
         for (const {result, shot} of pending) {
-            const mechanical = layoutOnlyVerdict(shot);
+            const committedShot = committedLockShot(CONTENT_DIR, GUIDE_DIR, result.page, shot.target);
+            const mechanical = layoutOnlyVerdict(shot) ?? layoutVerifiedVerdict(shot, committedShot);
             if (mechanical) {
                 verdicts.push({page: result.page, target: shot.target, triage: mechanical});
                 console.log(`${MARK[mechanical.classification]} ${shot.target}`);
-                console.log(`   layout only — ${mechanical.summary}`);
+                console.log(`   ${mechanical.summary}`);
                 if (apply) {
                     const committed = join(GUIDE_DIR, shot.target);
                     mkdirSync(dirname(committed), {recursive: true});
                     copyFileSync(shot.staged, committed);
+                    // No verification capture follows, so record the shot here, or the
+                    // lock would go on describing the image just replaced.
+                    recordPromotedShot(CONTENT_DIR, GUIDE_DIR, result.page, shot);
                     console.log("   → promoted without a model call; prose unaffected\n");
                 } else {
                     console.log("   → would promote without a model call (re-run with --apply)\n");
@@ -441,6 +488,7 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
                 // Without this the dependency diff spans only uncommitted work, which
                 // in CI is nothing at all.
                 lastVerifiedSha: pageLock(result.page)?.lastVerifiedSha,
+                committedLayout: committedShot?.layout,
             });
 
             // Memory is per page — the same scoping the generator uses for a feature.

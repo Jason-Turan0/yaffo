@@ -1,10 +1,11 @@
 {
     "page": "create-customize/photo-services",
-    "lastVerifiedSha": "038a029250218bce42cb9a98979c3068ba240b2e",
+    "lastVerifiedSha": "d21c959e6b027b41eb5bbb9fadf39a90de500bc8",
     "observed": {
         "page": "create-customize/photo-services",
         "urls": [
             "/assistant/conversations",
+            "/pages/bar-visibility",
             "/themes/classic/theme.css",
             "/utilities/automations",
             "/utilities/automations/assign_location_name",
@@ -119,6 +120,7 @@
         "routes": [
             "yaffo/routes/assistant.py",
             "yaffo/routes/base.py",
+            "yaffo/routes/pages.py",
             "yaffo/routes/utilities/automations.py",
             "yaffo/routes/utilities/sync_services.py"
         ],
@@ -128,10 +130,11 @@
         "yaffo/db/repositories/service_builder_repository.py": "186c60d0f6e05aaf0314023c4213101ee8d09a1dc80fc9f2e0983545f463cd3c",
         "yaffo/routes/assistant.py": "40e40a343a1f4831cf9def8f7198168058d27191a538e69d430a25a4cf6f4a5a",
         "yaffo/routes/base.py": "c70c934c848142618c41b366798fc4d4b86741298cc194fb2bffb324340e69df",
+        "yaffo/routes/pages.py": "2f89a021d85b1a2fbfbc0485ddfc576ea80b2de507b45153ae2663f1ef77e12d",
         "yaffo/routes/utilities/automations.py": "f787c053db5f209bbcf692ad7ad5c3c165c0105bd85aa7cd456567f296ad3602",
         "yaffo/routes/utilities/sync_services.py": "d4a71a8e3c1aa657bc07fdab94dc6b7f874b8987d0feef1f267db71920a43df6",
         "yaffo/static/action-links.css": "fb3fd8e47c18993d826f7d34f8ccb24dc1aeb18a9aacb45c3a4fc41a901a4300",
-        "yaffo/static/app.js": "7aa9b2b8c921352f3928e5735a3210f9b085911c03085269e3e33c260ac6511b",
+        "yaffo/static/app.js": "0528b79fdc7d6be60af1e15f34314204a2f553a897b33e59d99593b5d31c593b",
         "yaffo/static/assistant/assistant.css": "51af784b2881e1c3f119d97f2e88227a17e5fe28a88e67a63e9de83d711a46ca",
         "yaffo/static/assistant/assistant.js": "117173da2d7541ee51a23dcee1d19acd102bba8a1b66585a0e9bba687f38a112",
         "yaffo/static/assistant/plan_card.js": "22339c5d29df625ce95a94124b30fe474512d9a17b3d8420ee20f87c37daaf32",
@@ -201,7 +204,7 @@
         "yaffo/static/utilities/_base.css": "88ba38de1b2f83e13008efc45ef2ae143c4add99a4f05db4fb300fa85998f411",
         "yaffo/static/utilities/_base.js": "d1ddbb0f4fd52e01532391ea913a2151b2bb23467af8a3228bc8f97b394bdc17",
         "yaffo/static/utilities/automations.css": "6be7bb1f5f7fdb9c4b7b81e795dde05fad5d634286200ac3af85f35adcdf8a06",
-        "yaffo/static/utilities/automations.js": "ba3007e58a31c13805375cc3bd2db5a3896bbf00928752ce8a200ef9f7ad4af6",
+        "yaffo/static/utilities/automations.js": "bf186c1be36678ef1a48a51134a165c0731b1ef18012ac2008b8f49d097ca158",
         "yaffo/static/utilities/sync.css": "1348513232761e8acbffea8066381f7fadc96e9c9950e14c7d78121cf409cd3e",
         "yaffo/static/utilities/sync.js": "ef93b9ab8ef502d3cebe81c15184c78b980ac430d8acd992883abb62cf6c44d7",
         "yaffo/static/utils.js": "0d4990647fb99c0c611f38f9f140fdba555043ce3857dbe082c53fd193861c4a",
@@ -236,12 +239,46 @@
         "create-customize/assets/photo-services/new-photo-service.webp": {
             "width": 532,
             "height": 669,
-            "sha256": "da5166b86a584b4b2fc881ddb23daefe2bc014ce31c510a1420cd5d95f8f36c1"
+            "sha256": "da5166b86a584b4b2fc881ddb23daefe2bc014ce31c510a1420cd5d95f8f36c1",
+            "layout": [
+                "heading \"New Automation\" 141×20",
+                "button \"Close\" 19×18",
+                "radiogroup \"What kind of automation? Custom Describe what it should do, and Yaffo writes it. Import from… Bring new photos into your library from a folder, an SD card, or OneDrive. Send to… Keep an album, or the photos matching a filter, copied to a folder. Add a new service… Connect another photo service. Describe it, and Yaffo writes and tests the connection.\" 411×332",
+                "label \"Custom Describe what it should do, and Yaffo writes it.\" 265×38",
+                "radio \"unchecked\" 13×13",
+                "label \"Import from… Bring new photos into your library from a folder, an SD card, or OneDrive.\" 360×58",
+                "radio \"unchecked\" 13×13",
+                "label \"Send to… Keep an album, or the photos matching a filter, copied to a folder.\" 375×38",
+                "radio \"unchecked\" 13×13",
+                "label \"Add a new service… Connect another photo service. Describe it, and Yaffo writes and tests the connection.\" 370×58",
+                "radio \"checked\" 13×13",
+                "label \"Name\" 37×16",
+                "textbox \"Flickr exports\" 432×38",
+                "text \"e.g. Flickr sets. Next you describe the service in a chat.\" 342×16",
+                "button \"Cancel\" 84×36",
+                "button \"Create\" 82×36"
+            ]
         },
         "create-customize/assets/photo-services/service-builder.webp": {
             "width": 1122,
             "height": 972,
-            "sha256": "49097583912c93836354aaae1b60a9e4ef14abc622d464ac48b62b8bee084064"
+            "sha256": "49097583912c93836354aaae1b60a9e4ef14abc622d464ac48b62b8bee084064",
+            "layout": [
+                "heading \"Flickr exports\" 157×27",
+                "text \"A service Yaffo can import from or send to. Describe it in the chat; the builder writes and tests it, and you publish it.\" 710×16",
+                "text \"Draft\" 40×12",
+                "heading \"Service builder\" 100×16",
+                "text \"Say which service it is and whether photos go to it or come from it.\" 382×15",
+                "textbox \"Describe the service…\" 608×100",
+                "button \"Send\" 54×31",
+                "button \"Cancel\" 64×31",
+                "link \"Overview\" 54×15",
+                "link \"Account\" 47×15",
+                "link \"Access\" 42×15",
+                "link \"Code\" 31×15",
+                "link \"Test\" 24×15",
+                "text \"Nothing yet. The builder fills this in as it writes the service.\" 359×16"
+            ]
         }
     }
 }

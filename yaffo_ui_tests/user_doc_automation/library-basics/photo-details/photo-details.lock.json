@@ -1,6 +1,6 @@
 {
     "page": "library-basics/photo-details",
-    "lastVerifiedSha": "038a029250218bce42cb9a98979c3068ba240b2e",
+    "lastVerifiedSha": "d21c959e6b027b41eb5bbb9fadf39a90de500bc8",
     "observed": {
         "page": "library-basics/photo-details",
         "urls": [
@@ -141,7 +141,7 @@
         "yaffo/routes/home.py": "614675c2c7ac8701c279167fd45cd30495f026cd6bf33bac8e8a14791851e743",
         "yaffo/routes/media.py": "73160b91a3456da52c392affc978d1c950fd8859dced0ba9b8f2565b51ae4145",
         "yaffo/static/action-links.css": "fb3fd8e47c18993d826f7d34f8ccb24dc1aeb18a9aacb45c3a4fc41a901a4300",
-        "yaffo/static/app.js": "7aa9b2b8c921352f3928e5735a3210f9b085911c03085269e3e33c260ac6511b",
+        "yaffo/static/app.js": "0528b79fdc7d6be60af1e15f34314204a2f553a897b33e59d99593b5d31c593b",
         "yaffo/static/assistant/assistant.css": "51af784b2881e1c3f119d97f2e88227a17e5fe28a88e67a63e9de83d711a46ca",
         "yaffo/static/assistant/assistant.js": "117173da2d7541ee51a23dcee1d19acd102bba8a1b66585a0e9bba687f38a112",
         "yaffo/static/assistant/plan_card.js": "22339c5d29df625ce95a94124b30fe474512d9a17b3d8420ee20f87c37daaf32",
@@ -253,7 +253,46 @@
         "library-basics/assets/photo-details/media-detail.webp": {
             "width": 1392,
             "height": 1222,
-            "sha256": "a0dae72ea1e9911cae3e3a425caca4f833981146b45d483215f72cb4c36f6c0e"
+            "sha256": "a0dae72ea1e9911cae3e3a425caca4f833981146b45d483215f72cb4c36f6c0e",
+            "layout": [
+                "heading \"Photo Details\" 115×20",
+                "heading \"FILE INFORMATION\" 140×16",
+                "label \"NAME:\" 44×15",
+                "text \"2017-09-12_162200_blowing-candles.png\" 262×16",
+                "label \"FOLDER:\" 60×15",
+                "label \"DATE TAKEN:\" 89×15",
+                "text \"Sep 12, 2017, 4:22:00 PM\" 162×16",
+                "label \"DEVICE:\" 56×15",
+                "text \"Apple iPhone 8\" 95×16",
+                "button \"Open File\" 83×52",
+                "button \"Open Folder\" 83×52",
+                "button \"Reindex\" 83×52",
+                "heading \"LOCATION\" 76×16",
+                "label \"NAME:\" 44×15",
+                "text \"Lincoln Square, Chicago, Illinois, USA\" 236×16",
+                "label \"COORDINATES:\" 104×15",
+                "text \"41.9686°, -87.6887°\" 125×16",
+                "link \"View on Map\" 81×16",
+                "heading \"PEOPLE (3)\" 83×16",
+                "link \"Elena Bennett\" 82×15",
+                "link \"Marcus Bennett\" 91×15",
+                "link \"Maya Bennett\" 80×15",
+                "heading \"FACES (3)\" 72×16",
+                "img \"Face\" 56×56",
+                "text \"Maya Bennett\" 68×12",
+                "img \"Face\" 56×56",
+                "text \"Marcus Bennett\" 77×12",
+                "img \"Face\" 56×56",
+                "text \"Elena Bennett\" 69×12",
+                "heading \"LABELS (2)\" 82×16",
+                "text \"birthday party\" 87×15",
+                "text \"cake\" 29×15",
+                "heading \"TAGS (0)\" 63×16",
+                "text \"No tags\" 48×16",
+                "button \"Edit Tags\" 269×36",
+                "img \"2017-09-12_162200_blowing-candles.png\" 970×728",
+                "button \"Toggle favorite\" 40×40"
+            ]
         }
     }
 }

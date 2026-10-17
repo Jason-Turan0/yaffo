@@ -20,6 +20,7 @@ const renderReviewSheet = jest.fn<(
     out: string,
     name: string
 ) => boolean>();
+const captureLayout = jest.fn<(page: unknown, shot: {clip?: string}) => Promise<string[]>>();
 const resolveClip = jest.fn<(page: unknown, shot: unknown) => Promise<Box | undefined>>();
 const resolveIgnoreRegions = jest.fn<(
     page: unknown,
@@ -40,6 +41,7 @@ await jest.unstable_mockModule("@playwright/test", () => ({
     chromium: {launch},
 }));
 await jest.unstable_mockModule("../compare", () => ({compareShots, renderReviewSheet}));
+await jest.unstable_mockModule("../layout", () => ({captureLayout}));
 await jest.unstable_mockModule("../framing", () => ({resolveClip, resolveIgnoreRegions}));
 await jest.unstable_mockModule("../encode", () => ({toWebp}));
 await jest.unstable_mockModule("../observe", () => ({
@@ -107,7 +109,7 @@ beforeEach(() => {
     mkdirSync(guideDir, {recursive: true});
 
     for (const mock of [
-        launch, compareShots, renderReviewSheet, resolveClip, resolveIgnoreRegions, toWebp,
+        launch, compareShots, renderReviewSheet, captureLayout, resolveClip, resolveIgnoreRegions, toWebp,
         observerAttach, observerResult, createObserver, takeServerObservation,
         mediaIdByFilename, blockOsSideEffects, settle,
     ]) mock.mockReset();
@@ -124,6 +126,7 @@ beforeEach(() => {
     settle.mockResolvedValue(undefined);
     resolveClip.mockResolvedValue(undefined);
     resolveIgnoreRegions.mockResolvedValue([]);
+    captureLayout.mockImplementation(async (_page, shot) => [`text "${shot.clip ?? "viewport"}" 10×10`]);
     toWebp.mockImplementation((pngPath) => {
         const webpPath = pngPath.replace(/\.png$/, ".webp");
         mkdirSync(dirname(webpPath), {recursive: true});
@@ -236,12 +239,14 @@ describe("captureWalkthroughs", () => {
                     width: 500,
                     height: 241,
                     ignore: [{x: 3, y: 4, width: 20, height: 10}],
+                    layout: [`text "${walkthrough.shots["clipped.webp"].clip}" 10×10`],
                 },
                 {
                     target: "library/assets/browsing/detail.webp",
                     width: 1000,
                     height: 700,
                     ignore: [],
+                    layout: ['text "viewport" 10×10'],
                 },
             ],
             observation,
@@ -503,14 +508,16 @@ describe("stability recapture", () => {
             .mockReturnValueOnce({status: "changed", diffPixels: 220, diffImage});
 
         const [final] = finalizeStability(
-            [result(first, "changed")],
-            [result(second, "changed")],
+            [{...result(first, "changed"), shots: [{...result(first, "changed").shots[0], layout: ['text "first" 1×1']}]}],
+            [{...result(second, "changed"), shots: [{...result(second, "changed").shots[0], layout: ['text "second" 1×1']}]}],
             {guideDir, stagingDir, promote: true}
         );
 
         expect(final.shots[0]).toMatchObject({
             status: "changed",
             staged: first,
+            // The kept image is the second capture's, so its layout goes with it.
+            layout: ['text "second" 1×1'],
             stability: {status: "reproduced", diff: {status: "unchanged", diffPixels: 0}},
         });
         expect(readFileSync(first, "utf8")).toBe("second");

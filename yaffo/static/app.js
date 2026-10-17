@@ -85,6 +85,10 @@ app.initApp = () => {
                 PHOTO_ORGANIZER: app,
             },
         }));
+        // Page scripts initialize in that event's listeners, which run during the
+        // dispatch. Marking the document afterwards gives automation something to
+        // wait for that only exists once every page handler is attached.
+        document.documentElement.dataset.appReady = 'true';
 
         return app;
     });

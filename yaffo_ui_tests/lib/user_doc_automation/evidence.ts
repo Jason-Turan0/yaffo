@@ -2,6 +2,8 @@ import {execFileSync} from "child_process";
 import {existsSync, readFileSync} from "fs";
 import {join, resolve} from "path";
 import type {BandKind, BlockHunk, ChangeKind, CompareResult, RowHunk} from "./compare";
+import {compareLayouts, describeLayoutDiff} from "./layout";
+import type {LayoutLine} from "./layout";
 import type {ShotResult, WalkthroughResult} from "./runner";
 import type {StringChange} from "./strings";
 
@@ -177,6 +179,18 @@ const describeAlignment = (diff: CompareResult): string => {
         `${diff.residualPixels ?? 0} pixel(s) differ across the matched rows.`;
 };
 
+/**
+ * Text and controls that changed, by element, when both shots' layouts are known.
+ * This is what the pixel bands cannot say: which button was renamed, which label
+ * appeared. Empty when either layout is missing.
+ */
+const describeLayout = (shot: ShotResult, committed: LayoutLine[] | undefined): string => {
+    if (!committed?.length || !shot.layout?.length) return "";
+    const diff = compareLayouts(committed, shot.layout);
+    if (diff.same) return "\nText and controls: unchanged; every element has the same role, text, and size.";
+    return `\nText and controls that changed:\n${describeLayoutDiff(diff).join("\n")}`;
+};
+
 const describeDiff = (shot: ShotResult): string => {
     if (shot.status === "new") return "No committed baseline: this shot is new.";
     const diff = shot.diff;
@@ -199,6 +213,8 @@ const box_ = (b: {x: number; y: number; width: number; height: number}): string 
     `${b.width}x${b.height} at (${b.x}, ${b.y})`;
 
 export interface EvidenceOptions {
+    /** The committed shot's text and controls, from its lockfile entry, when it has one. */
+    committedLayout?: LayoutLine[];
     guideDir: string;
     stagingDir: string;
     walkthroughSource: string;
@@ -227,7 +243,7 @@ export const buildEvidence = (
         baselinePath: join(options.guideDir, shot.target),
         candidatePath: shot.staged,
         overlayPath: shot.diff?.diffImage ?? undefined,
-        diffSummary: describeDiff(shot),
+        diffSummary: describeDiff(shot) + describeLayout(shot, options.committedLayout),
         markdown: existsSync(markdownPath) ? readFileSync(markdownPath, "utf8") : "(page not found)",
         markdownPath,
         walkthroughPath: options.walkthroughPath,

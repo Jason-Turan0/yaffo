@@ -229,6 +229,22 @@ describe("buildEvidence", () => {
         );
     });
 
+    it("names the text and controls that changed when both layouts are known", () => {
+        const evidence = buildEvidence(result(), shot({
+            layout: ['heading "People" 92×31', 'button "Add someone" 150×44'],
+        }), options({committedLayout: ['heading "People" 92×31', 'button "Add Person" 150×44']}));
+        expect(evidence.diffSummary).toContain(
+            "Text and controls that changed:\n" +
+            '- removed: button "Add Person"\n' +
+            '- added: button "Add someone"');
+    });
+
+    it("says so when the text and controls are unchanged", () => {
+        const evidence = buildEvidence(result(), shot({layout: ['button "Add Person" 150×44']}),
+            options({committedLayout: ['button "Add Person" 150×44']}));
+        expect(evidence.diffSummary).toContain("Text and controls: unchanged");
+    });
+
     it("handles a missing comparison and missing Markdown page", () => {
         const evidence = buildEvidence(result(), shot({status: "unchanged", diff: undefined}), options({
             covers: undefined,

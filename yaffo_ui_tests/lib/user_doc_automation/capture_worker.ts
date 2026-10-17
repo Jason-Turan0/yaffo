@@ -60,7 +60,20 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
 const isDirectRun = process.argv[1] !== undefined &&
     import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
 
+/**
+ * A walkthrough can leave a promise behind when one of its actions fails: a
+ * response it was waiting for, started before a click that never landed. The
+ * failure itself is already recorded as that walkthrough's error. When the orphan
+ * rejects later (on timeout, or when its page closes) Node would end the process,
+ * taking every remaining walkthrough with it. Log it instead; it is an echo.
+ */
+export const reportLateRejection = (reason: unknown): void => {
+    const detail = reason instanceof Error ? reason.message.split("\n")[0] : String(reason);
+    console.warn(`  ! a walkthrough left an unawaited promise that rejected later: ${detail}`);
+};
+
 export const runCli = async (args: string[] = process.argv.slice(2)): Promise<void> => {
+    process.on("unhandledRejection", reportLateRejection);
     try {
         process.exitCode = await main(args);
     } catch (e) {

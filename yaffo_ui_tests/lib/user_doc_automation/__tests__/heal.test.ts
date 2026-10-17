@@ -1,4 +1,5 @@
 import {afterAll, afterEach, beforeEach, describe, expect, it, jest} from "@jest/globals";
+import {createHash} from "crypto";
 import {mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from "fs";
 import {tmpdir} from "os";
 import {dirname, join} from "path";
@@ -50,6 +51,7 @@ await jest.unstable_mockModule("../paths", () => ({
 const {
     acceptMinorEnvironmentVariation,
     layoutOnlyVerdict,
+    layoutVerifiedVerdict,
     main,
     MINOR_VARIATION_MAX_RATIO,
     runCli,
@@ -265,6 +267,48 @@ describe("layout-only gate", () => {
     });
 });
 
+const ELEMENTS = ['heading "People" 92×31', 'button "Add Person" 150×44', 'cell "Female" 53×18'];
+
+// A shot the pixel test calls changed (columns moved by a fraction of a pixel, so the
+// glyphs repaint) while its text and controls are exactly what is committed.
+const rerendered = (over: Record<string, unknown> = {}) => shot({
+    diff: {status: "changed", change: "changed", diffPixels: 13352, residualPixels: 13352, hunks: []},
+    stability: {status: "reproduced", diff: {status: "unchanged", diffPixels: 0}},
+    layout: ELEMENTS,
+    ...over,
+});
+
+describe("element-verified gate", () => {
+    const committed = {width: 100, height: 80, sha256: "x", layout: ELEMENTS};
+
+    it("promotes a reproduced change whose elements are all unchanged", () => {
+        expect(layoutVerifiedVerdict(rerendered() as never, committed)).toMatchObject({
+            classification: "intended_change",
+            confidence: "high",
+            recommendedAction: "promote",
+            proseImpact: [],
+            summary: "Same text and controls, re-rendered: all 3 elements present with the same roles, text, and sizes.",
+        });
+    });
+
+    it("leaves a renamed, added, or resized element to triage", () => {
+        for (const layout of [
+            ['heading "People" 92×31', 'button "Add someone" 150×44', 'cell "Female" 53×18'],
+            [...ELEMENTS, 'button "Import" 90×44'],
+            ['heading "People" 92×31', 'button "Add Person" 180×44', 'cell "Female" 53×18'],
+        ]) {
+            expect(layoutVerifiedVerdict(rerendered({layout}) as never, committed)).toBeNull();
+        }
+    });
+
+    it("needs a reproduced change and both layouts", () => {
+        expect(layoutVerifiedVerdict(rerendered({stability: undefined}) as never, committed)).toBeNull();
+        expect(layoutVerifiedVerdict(rerendered({layout: undefined}) as never, committed)).toBeNull();
+        expect(layoutVerifiedVerdict(rerendered() as never, null)).toBeNull();
+        expect(layoutVerifiedVerdict(rerendered() as never, {...committed, layout: undefined})).toBeNull();
+    });
+});
+
 describe("heal CLI", () => {
     it("reports a missing capture without terminating the test process", async () => {
         await expect(main([])).resolves.toBe(1);
@@ -477,6 +521,47 @@ describe("heal CLI", () => {
             target: changed.target,
             triage: {classification: "intended_change", recommendedAction: "promote"},
         });
+    });
+
+    const writeLock = (layout: string[]): string => {
+        const target = shot().target as string;
+        write(join(GUIDE_DIR, target), "committed image");
+        const lock = join(CONTENT_DIR, "area", "page", "page.lock.json");
+        write(lock, JSON.stringify({page: "area/page", lastVerifiedSha: "abc", shots: {
+            [target]: {width: 100, height: 80, layout,
+                       sha256: createHash("sha256").update("committed image").digest("hex")},
+        }}));
+        return lock;
+    };
+
+    it("promotes an element-verified shot under --apply and records it in the lock", async () => {
+        const lock = writeLock(ELEMENTS);
+        const changed = rerendered();
+        write(changed.staged as string, "new image");
+        writeReport([result({shots: [changed]})]);
+
+        await expect(main(["--apply", "--model", "vision-model"])).resolves.toBe(0);
+
+        expect(triageShot).not.toHaveBeenCalled();
+        expect(readFileSync(join(GUIDE_DIR, changed.target as string), "utf8")).toBe("new image");
+        const saved = JSON.parse(readFileSync(lock, "utf8"));
+        expect(saved.lastVerifiedSha).toBe("abc");
+        expect(saved.shots[changed.target as string]).toMatchObject({
+            layout: ELEMENTS,
+            sha256: createHash("sha256").update("new image").digest("hex"),
+        });
+    });
+
+    it("sends a renamed control to triage with the committed elements as evidence", async () => {
+        writeLock(ELEMENTS);
+        const renamed = ['heading "People" 92×31', 'button "Add someone" 150×44', 'cell "Female" 53×18'];
+        writeReport([result({shots: [rerendered({layout: renamed})]})]);
+
+        await expect(main([])).resolves.toBe(0);
+
+        expect(triageShot).toHaveBeenCalledTimes(1);
+        expect(buildEvidence).toHaveBeenCalledWith(expect.anything(), expect.anything(),
+            expect.objectContaining({committedLayout: ELEMENTS}));
     });
 
     it("still triages a content-added shot", async () => {

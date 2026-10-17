@@ -1,6 +1,6 @@
 {
     "page": "organize-review/duplicates",
-    "lastVerifiedSha": "038a029250218bce42cb9a98979c3068ba240b2e",
+    "lastVerifiedSha": "d21c959e6b027b41eb5bbb9fadf39a90de500bc8",
     "observed": {
         "page": "organize-review/duplicates",
         "urls": [
@@ -130,7 +130,7 @@
         "yaffo/routes/media.py": "73160b91a3456da52c392affc978d1c950fd8859dced0ba9b8f2565b51ae4145",
         "yaffo/routes/utilities/remove_duplicates.py": "53bd7f5d2eccc5b7fd7e6954ecfb6d017c56bd9d27611ecdcd20e9afea79666f",
         "yaffo/static/action-links.css": "fb3fd8e47c18993d826f7d34f8ccb24dc1aeb18a9aacb45c3a4fc41a901a4300",
-        "yaffo/static/app.js": "7aa9b2b8c921352f3928e5735a3210f9b085911c03085269e3e33c260ac6511b",
+        "yaffo/static/app.js": "0528b79fdc7d6be60af1e15f34314204a2f553a897b33e59d99593b5d31c593b",
         "yaffo/static/assistant/assistant.css": "51af784b2881e1c3f119d97f2e88227a17e5fe28a88e67a63e9de83d711a46ca",
         "yaffo/static/assistant/assistant.js": "117173da2d7541ee51a23dcee1d19acd102bba8a1b66585a0e9bba687f38a112",
         "yaffo/static/assistant/plan_card.js": "22339c5d29df625ce95a94124b30fe474512d9a17b3d8420ee20f87c37daaf32",
@@ -227,12 +227,54 @@
         "organize-review/assets/duplicates/utilities-remove-duplicates.webp": {
             "width": 1122,
             "height": 385,
-            "sha256": "9165a029e0e6bbaea432389609b4a5617b49d93f8a0c3fd78191c03ab1415f09"
+            "sha256": "9165a029e0e6bbaea432389609b4a5617b49d93f8a0c3fd78191c03ab1415f09",
+            "layout": [
+                "text \"Total Media\" 91×15",
+                "text \"4\" 18×36",
+                "text \"Directories\" 94×15",
+                "text \"1\" 18×36",
+                "heading \"Configuration\" 118×20",
+                "text \"Select one or more directories to scan for duplicate photos and videos.\" 437×16",
+                "label \"Directory\" 64×17",
+                "button \"Browse\" 110×36",
+                "button \"Delete\" 80×36",
+                "button \"Rescan Directories\" 158×36",
+                "button \"+ Add Another Directory\" 188×36",
+                "button \"Find Duplicates\" 137×36"
+            ]
         },
         "organize-review/assets/duplicates/duplicate-results.webp": {
             "width": 1122,
             "height": 1225,
-            "sha256": "a13f13588f5f54d471f670f7b4a0be74bbb1a971661a210ad627949cc753f23f"
+            "sha256": "a13f13588f5f54d471f670f7b4a0be74bbb1a971661a210ad627949cc753f23f",
+            "layout": [
+                "heading \"Duplicate Media Found\" 263×27",
+                "text \"Review and manage duplicate photos and videos\" 305×16",
+                "text \"Total Media Processed\" 180×15",
+                "text \"4\" 18×36",
+                "text \"Duplicate Groups Found\" 193×15",
+                "text \"2\" 18×36",
+                "text \"Duplicates Selected\" 162×15",
+                "text \"2\" 18×36",
+                "label \"Action:\" 43×16",
+                "button \"Move to Trash ▼\" 1040×34",
+                "button \"Remove Selected Duplicates\" 220×36",
+                "heading \"Duplicate Groups\" 150×20",
+                "heading \"Group 1\" 72×21",
+                "img \"Duplicate photo\" 331×250",
+                "img \"Duplicate photo\" 331×250",
+                "heading \"Group 2\" 72×21",
+                "img \"Duplicate photo\" 331×250",
+                "img \"Duplicate photo\" 331×250",
+                "text \"Showing 1–2 of 2 results\" 153×16",
+                "label \"Items per page:\" 97×16",
+                "button \"10 ▼\" 90×34",
+                "button \"First\" 65×30",
+                "button \"Previous\" 89×30",
+                "text \"Page 1 of 1\" 72×16",
+                "button \"Next\" 63×30",
+                "button \"Last\" 64×30"
+            ]
         }
     }
 }

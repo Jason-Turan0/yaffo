@@ -1,6 +1,6 @@
 {
     "page": "create-customize/custom-pages",
-    "lastVerifiedSha": "038a029250218bce42cb9a98979c3068ba240b2e",
+    "lastVerifiedSha": "d21c959e6b027b41eb5bbb9fadf39a90de500bc8",
     "observed": {
         "page": "create-customize/custom-pages",
         "urls": [
@@ -177,7 +177,7 @@
         "yaffo/site_agents/llm_config.py": "76ea083f0cf08a3773488b8108bd2d977a181fc679c4e3bac85d4920ec4f2e20",
         "yaffo/site_agents/widget_templates.py": "973683e1086221d3003a24de10ccfc6efa41e258c61b7b811633525703dc3a78",
         "yaffo/static/action-links.css": "fb3fd8e47c18993d826f7d34f8ccb24dc1aeb18a9aacb45c3a4fc41a901a4300",
-        "yaffo/static/app.js": "7aa9b2b8c921352f3928e5735a3210f9b085911c03085269e3e33c260ac6511b",
+        "yaffo/static/app.js": "0528b79fdc7d6be60af1e15f34314204a2f553a897b33e59d99593b5d31c593b",
         "yaffo/static/assistant/assistant.css": "51af784b2881e1c3f119d97f2e88227a17e5fe28a88e67a63e9de83d711a46ca",
         "yaffo/static/assistant/assistant.js": "117173da2d7541ee51a23dcee1d19acd102bba8a1b66585a0e9bba687f38a112",
         "yaffo/static/assistant/plan_card.js": "22339c5d29df625ce95a94124b30fe474512d9a17b3d8420ee20f87c37daaf32",
@@ -308,12 +308,41 @@
         "create-customize/assets/custom-pages/custom-page-view.webp": {
             "width": 1392,
             "height": 912,
-            "sha256": "46c6ee82a3f82c29a38f85bb05ff0c76d0035bfe29cd9b2d7b6f0aaee45fde27"
+            "sha256": "46c6ee82a3f82c29a38f85bb05ff0c76d0035bfe29cd9b2d7b6f0aaee45fde27",
+            "layout": []
         },
         "create-customize/assets/custom-pages/custom-page-design.webp": {
             "width": 1392,
             "height": 1014,
-            "sha256": "31c6fd226304303d33659d687e94e26c84cf37e28fc3d3a1447a067fbfd0fab8"
+            "sha256": "31c6fd226304303d33659d687e94e26c84cf37e28fc3d3a1447a067fbfd0fab8",
+            "layout": [
+                "label \"Title\" 26×16",
+                "textbox \"Florida Trip\" 320×38",
+                "label \"Subtitle\" 47×16",
+                "textbox \"Siesta Key, Florida · July 2021\" 320×100",
+                "label \"Tab order\" 59×16",
+                "textbox \"1\" 320×38",
+                "label \"Display title?\" 79×16",
+                "checkbox \"unchecked\" 18×18",
+                "button \"Add widget\" 111×31",
+                "button \"Save\" 54×31",
+                "button \"Delete Page\" 119×31",
+                "heading \"Assistant\" 63×16",
+                "text \"Collaborate to build your page.\" 177×15",
+                "text \"Build a page for our July 2021 Florida trip with one big photo at the top and the rest in a gallery below.\" 272×48",
+                "text \"I added a full-width hero and a gallery using the 2021 Siesta Key photos.\" 275×32",
+                "text \"The page title and hero feel repetitive. Let the hero be the heading, and make sure the gallery only includes this trip.\" 262×48",
+                "text \"Done. I hid the separate page heading, kept the hero full-width, and scoped both widgets to the Florida trip photos.\" 256×48",
+                "textbox \"Describe what you want…\" 328×100",
+                "button \"Send\" 54×31",
+                "button \"Cancel\" 64×31",
+                "text \"Hero banner\" 72×15",
+                "button \"Edit title\" 20×13",
+                "button \"Delete widget\" 19×18",
+                "text \"Photo gallery\" 76×15",
+                "button \"Edit title\" 20×13",
+                "button \"Delete widget\" 19×18"
+            ]
         }
     }
 }

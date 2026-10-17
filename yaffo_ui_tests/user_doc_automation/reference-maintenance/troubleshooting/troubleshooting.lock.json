@@ -1,6 +1,6 @@
 {
     "page": "reference-maintenance/troubleshooting",
-    "lastVerifiedSha": "038a029250218bce42cb9a98979c3068ba240b2e",
+    "lastVerifiedSha": "d21c959e6b027b41eb5bbb9fadf39a90de500bc8",
     "observed": {
         "page": "reference-maintenance/troubleshooting",
         "urls": [
@@ -178,7 +178,7 @@
         "yaffo/routes/utilities/index_photos.py": "e061783d1e7e8a7b079f2fe8babdc649aca07f249c267e8b1793904cc6a746e2",
         "yaffo/routes/utilities/remove_duplicates.py": "53bd7f5d2eccc5b7fd7e6954ecfb6d017c56bd9d27611ecdcd20e9afea79666f",
         "yaffo/static/action-links.css": "fb3fd8e47c18993d826f7d34f8ccb24dc1aeb18a9aacb45c3a4fc41a901a4300",
-        "yaffo/static/app.js": "7aa9b2b8c921352f3928e5735a3210f9b085911c03085269e3e33c260ac6511b",
+        "yaffo/static/app.js": "0528b79fdc7d6be60af1e15f34314204a2f553a897b33e59d99593b5d31c593b",
         "yaffo/static/assistant/assistant.css": "51af784b2881e1c3f119d97f2e88227a17e5fe28a88e67a63e9de83d711a46ca",
         "yaffo/static/assistant/assistant.js": "117173da2d7541ee51a23dcee1d19acd102bba8a1b66585a0e9bba687f38a112",
         "yaffo/static/assistant/plan_card.js": "22339c5d29df625ce95a94124b30fe474512d9a17b3d8420ee20f87c37daaf32",
@@ -318,12 +318,48 @@
         "reference-maintenance/assets/troubleshooting/library-health-status.webp": {
             "width": 1122,
             "height": 560,
-            "sha256": "77500e73dff19361893225f99d56abe7d79b4763c8ac3665e753604ee6f0626f"
+            "sha256": "77500e73dff19361893225f99d56abe7d79b4763c8ac3665e753604ee6f0626f",
+            "layout": [
+                "heading \"Library Health\" 161×27",
+                "text \"Compare photos on the file system with the database\" 330×16",
+                "button \"Reindex Library\" 161×36",
+                "text \"Total on Filesystem\" 157×15",
+                "text \"32\" 36×36",
+                "text \"Imported in Database\" 91×30",
+                "text \"32\" 36×36",
+                "text \"Indexed in Database\" 155×15",
+                "text \"32\" 36×36",
+                "text \"Not Indexed\" 94×15",
+                "text \"0\" 18×36",
+                "text \"Orphaned in DB\" 119×15",
+                "text \"0\" 18×36",
+                "text \"Missing Thumbnails\" 151×15",
+                "text \"0\" 18×36",
+                "heading \"Library status\" 119×20",
+                "heading \"Everything is in sync\" 160×17",
+                "text \"Every photo on the filesystem is indexed, every database entry has its file, and every thumbnail is in place.\" 612×15"
+            ]
         },
         "reference-maintenance/assets/troubleshooting/ai-generation-status.webp": {
             "width": 1392,
             "height": 456,
-            "sha256": "496bd30af4d17f6b357930e8762a33ab69b914adc4a3d61bd4fd9665df6d6722"
+            "sha256": "496bd30af4d17f6b357930e8762a33ab69b914adc4a3d61bd4fd9665df6d6722",
+            "layout": [
+                "heading \"AI Generation\" 118×20",
+                "text \"Powers AI customization features. The API key for the selected model's provider is stored securely in the operating system's credential store.\" 870×16",
+                "text \"Anthropic · Claude Sonnet 4.6 — balanced\" 308×17",
+                "text \"Active model:\" 105×17",
+                "label \"Provider\" 52×16",
+                "button \"Anthropic ▼\" 1320×34",
+                "label \"Model\" 38×16",
+                "button \"Models are looked up using your saved provider keys. The last saved list is available offline.\" 15×15",
+                "button \"Claude Sonnet 4.6 — balanced ▼\" 1320×34",
+                "text \"Not set\" 55×17",
+                "text \"Anthropic API key:\" 143×17",
+                "label \"Set key\" 47×16",
+                "textbox \"API key\" 1320×38",
+                "button \"Save\" 72×36"
+            ]
         }
     }
 }

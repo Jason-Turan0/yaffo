@@ -14,6 +14,8 @@ import type {Observation} from "./observe";
 import {mediaIdByFilename} from "./media_lookup";
 import {blockOsSideEffects} from "./side_effects";
 import {settle} from "./settle";
+import {captureLayout} from "./layout";
+import type {LayoutLine} from "./layout";
 import type {Walkthrough} from "./types";
 
 /**
@@ -43,6 +45,11 @@ export interface RawShot {
     width: number;
     height: number;
     ignore: Box[];
+    /**
+     * The shot's text and controls, one `role "name" WxH` line each; see layout.ts.
+     * Absent when the page could not be read, which leaves the decision to pixels.
+     */
+    layout?: LayoutLine[];
 }
 
 export interface RawResult {
@@ -165,6 +172,12 @@ const captureOne = async (
 
                 const clip = await resolveClip(page, shot);
                 const ignore = await resolveIgnoreRegions(page, shot, clip, DEVICE_SCALE_FACTOR);
+                // Read in the same settled state the screenshot is taken in. A failure
+                // here costs only the element check, never the capture.
+                const layout = await captureLayout(page, shot).catch((e: unknown) => {
+                    console.warn(`      layout not read for ${filename}: ${e instanceof Error ? e.message : String(e)}`);
+                    return undefined;
+                });
 
                 const target = targetFor(walkthrough.page, filename);
                 const stagedPng = stagedPngFor(stagingDir, target);
@@ -176,6 +189,7 @@ const captureOne = async (
                     width: Math.round(clip?.width ?? shot.viewport.width),
                     height: Math.round(clip?.height ?? shot.viewport.height),
                     ignore,
+                    ...(layout ? {layout} : {}),
                 });
                 console.log(`      captured ${filename}`);
             } finally {
@@ -392,6 +406,8 @@ export const finalizeStability = (
             }
             return {
                 ...shot,
+                // The second capture's image is the one kept, so its layout goes with it.
+                ...(second.layout ? {layout: second.layout} : {}),
                 status,
                 diff,
                 stability: {status: "reproduced", diff: stabilityDiff},
