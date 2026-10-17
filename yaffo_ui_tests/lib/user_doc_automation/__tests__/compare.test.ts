@@ -1,9 +1,9 @@
-import {afterEach, describe, expect, it} from "@jest/globals";
-import {existsSync, mkdtempSync, rmSync} from "fs";
+import {afterEach, describe, expect, it, jest} from "@jest/globals";
+import {existsSync, mkdtempSync, readFileSync, rmSync} from "fs";
 import {tmpdir} from "os";
 import {join} from "path";
 import {fileURLToPath} from "url";
-import {compareShots} from "../compare";
+import {compareShots, renderReviewSheet} from "../compare";
 
 const FIXTURES = join(fileURLToPath(new URL(".", import.meta.url)), "fixtures", "imagediff");
 const temporaryDirectories: string[] = [];
@@ -101,5 +101,34 @@ describe("row-aligned comparison", () => {
         expect(inserted.every((block) => block.added === "blank")).toBe(true);
         const moved = (result.blocks ?? []).filter((block) => block.op === "equal").map((block) => block.offset);
         expect(moved).toEqual([40, 70, 90]);
+    });
+});
+
+describe("review sheet", () => {
+    it("writes a WebP sheet for a changed shot", () => {
+        const directory = mkdtempSync(join(tmpdir(), "yaffo-review-"));
+        temporaryDirectories.push(directory);
+        const out = join(directory, "gallery.review.webp");
+
+        expect(renderReviewSheet(fixture("columns-base.webp"), fixture("columns-candidate.webp"), [],
+            out, "area/assets/page/gallery.webp")).toBe(true);
+
+        expect(existsSync(out)).toBe(true);
+        // RIFF....WEBP: a real WebP, not a renamed PNG.
+        const header = readFileSync(out).subarray(0, 12).toString("latin1");
+        expect(header.startsWith("RIFF") && header.endsWith("WEBP")).toBe(true);
+    });
+
+    it("reports and skips a sheet it cannot draw instead of failing the capture", () => {
+        const directory = mkdtempSync(join(tmpdir(), "yaffo-review-"));
+        temporaryDirectories.push(directory);
+        const warn = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+        try {
+            expect(renderReviewSheet(join(directory, "missing.webp"), fixture("columns-candidate.webp"), [],
+                join(directory, "out.webp"), "area/assets/page/missing.webp")).toBe(false);
+            expect(warn).toHaveBeenCalledWith(expect.stringContaining("review sheet not written"));
+        } finally {
+            warn.mockRestore();
+        }
     });
 });

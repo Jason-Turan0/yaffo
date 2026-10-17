@@ -112,3 +112,31 @@ export const compareShots = (
     const stdout = execFileSync(VENV_PYTHON, args, {encoding: "utf8"});
     return JSON.parse(stdout) as CompareResult;
 };
+
+/**
+ * Write the review sheet for a changed shot: verdict, overview, close-ups of each
+ * change, the pixel test before and after alignment, and the alignment itself. It
+ * ships in the capture artifacts for people to read; nothing downstream parses it.
+ *
+ * A sheet that cannot be drawn is reported and skipped. It is a reading aid, and
+ * must never fail the capture whose evidence it illustrates.
+ */
+export const renderReviewSheet = (
+    baseline: string,
+    candidate: string,
+    ignore: Box[],
+    out: string,
+    name: string
+): boolean => {
+    try {
+        execFileSync(VENV_PYTHON, [
+            supportScript("review_sheet.py"), baseline, candidate, out,
+            "--ignore", JSON.stringify(ignore), "--name", name,
+        ], {encoding: "utf8", stdio: ["ignore", "pipe", "pipe"]});
+        return true;
+    } catch (e) {
+        const detail = e instanceof Error ? e.message.split("\n")[0] : String(e);
+        console.warn(`      review sheet not written for ${name}: ${detail}`);
+        return false;
+    }
+};

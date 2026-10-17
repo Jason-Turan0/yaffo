@@ -3,7 +3,7 @@ import type {Browser} from "@playwright/test";
 import {randomUUID} from "crypto";
 import {copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync} from "fs";
 import {dirname, join} from "path";
-import {compareShots} from "./compare";
+import {compareShots, renderReviewSheet} from "./compare";
 import type {CompareResult} from "./compare";
 import type {Box} from "./framing";
 import {resolveClip, resolveIgnoreRegions} from "./framing";
@@ -352,6 +352,15 @@ export const finalizeStability = (
             if (repeatedResult?.error || stabilityDiff.status !== "unchanged" || !sameBaselineOutcome) {
                 const repeatedPath = shot.staged.replace(/\.webp$/, ".repeat.webp");
                 copyFileSync(second.staged, repeatedPath);
+                // Two sheets: what was flagged against the committed image, and what
+                // differed between the two captures, which is where nondeterminism shows.
+                const committed = join(options.guideDir, shot.target);
+                if (existsSync(committed)) {
+                    renderReviewSheet(committed, shot.staged, shot.ignore,
+                        shot.staged.replace(/\.webp$/, ".review.webp"), shot.target);
+                }
+                renderReviewSheet(shot.staged, repeatedPath, shot.ignore,
+                    shot.staged.replace(/\.webp$/, ".repeat.review.webp"), `${shot.target} (first vs second capture)`);
                 return {
                     ...shot,
                     status: "unstable",
@@ -376,6 +385,9 @@ export const finalizeStability = (
                 status = diff.status;
                 if (diff.diffImage && existsSync(diff.diffImage)) {
                     copyFileSync(committed, shot.staged.replace(/\.webp$/, ".baseline.webp"));
+                    // Drawn from the capture that may ship, so the sheet describes it.
+                    renderReviewSheet(committed, shot.staged, shot.ignore,
+                        shot.staged.replace(/\.webp$/, ".review.webp"), shot.target);
                 }
             }
             return {
