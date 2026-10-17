@@ -1,6 +1,6 @@
 {
     "page": "create-customize/importing",
-    "lastVerifiedSha": "038a029250218bce42cb9a98979c3068ba240b2e",
+    "lastVerifiedSha": "8b89ad1d95e42ae7f78540960da9fa3c9786e654",
     "observed": {
         "page": "create-customize/importing",
         "urls": [
@@ -137,7 +137,7 @@
         "yaffo/routes/utilities/automations.py": "f787c053db5f209bbcf692ad7ad5c3c165c0105bd85aa7cd456567f296ad3602",
         "yaffo/routes/utilities/sync_views.py": "1ecae1b9128102b97e6b177bc638ee9629b7775388b3dc823ce98852366c2cf0",
         "yaffo/static/action-links.css": "fb3fd8e47c18993d826f7d34f8ccb24dc1aeb18a9aacb45c3a4fc41a901a4300",
-        "yaffo/static/app.js": "7aa9b2b8c921352f3928e5735a3210f9b085911c03085269e3e33c260ac6511b",
+        "yaffo/static/app.js": "0528b79fdc7d6be60af1e15f34314204a2f553a897b33e59d99593b5d31c593b",
         "yaffo/static/assistant/assistant.css": "51af784b2881e1c3f119d97f2e88227a17e5fe28a88e67a63e9de83d711a46ca",
         "yaffo/static/assistant/assistant.js": "117173da2d7541ee51a23dcee1d19acd102bba8a1b66585a0e9bba687f38a112",
         "yaffo/static/assistant/plan_card.js": "22339c5d29df625ce95a94124b30fe474512d9a17b3d8420ee20f87c37daaf32",
@@ -210,7 +210,7 @@
         "yaffo/static/utilities/_base.css": "88ba38de1b2f83e13008efc45ef2ae143c4add99a4f05db4fb300fa85998f411",
         "yaffo/static/utilities/_base.js": "d1ddbb0f4fd52e01532391ea913a2151b2bb23467af8a3228bc8f97b394bdc17",
         "yaffo/static/utilities/automations.css": "6be7bb1f5f7fdb9c4b7b81e795dde05fad5d634286200ac3af85f35adcdf8a06",
-        "yaffo/static/utilities/automations.js": "ba3007e58a31c13805375cc3bd2db5a3896bbf00928752ce8a200ef9f7ad4af6",
+        "yaffo/static/utilities/automations.js": "bf186c1be36678ef1a48a51134a165c0731b1ef18012ac2008b8f49d097ca158",
         "yaffo/static/utilities/sync.css": "1348513232761e8acbffea8066381f7fadc96e9c9950e14c7d78121cf409cd3e",
         "yaffo/static/utilities/sync.js": "ef93b9ab8ef502d3cebe81c15184c78b980ac430d8acd992883abb62cf6c44d7",
         "yaffo/static/utils.js": "0d4990647fb99c0c611f38f9f140fdba555043ce3857dbe082c53fd193861c4a",
@@ -280,17 +280,64 @@
         "create-customize/assets/importing/import-folder-options.webp": {
             "width": 1122,
             "height": 325,
-            "sha256": "109f998299cd5c3349cb056a307f1719de82cd629a822c58ceacf772a64bd71a"
+            "sha256": "109f998299cd5c3349cb056a307f1719de82cd629a822c58ceacf772a64bd71a",
+            "layout": [
+                "button \"Folder and options TO DO\" 1050×21",
+                "heading \"Folder and options\" 162×20",
+                "label \"Folder\" 40×16",
+                "button \"Want to keep these photos where they are? Add the folder as a media folder in Settings instead. New photos are copied from here. Nothing in it is changed or deleted.\" 15×15",
+                "textbox \"/tmp/yaffo-docs/Duplicate Scan Samples\" 588×38",
+                "button \"Browse…\" 124×38",
+                "label \"Include subfolders\" 114×16",
+                "checkbox \"checked\" 18×18",
+                "label \"Copy\" 33×16",
+                "button \"Photos and videos ▼\" 720×34",
+                "button \"Save\" 72×36"
+            ]
         },
         "create-customize/assets/importing/import-destination.webp": {
             "width": 1122,
             "height": 362,
-            "sha256": "2974b8fef0c56c027514069b7907a3186682ae8eebe81b96540e7ba950df5b1d"
+            "sha256": "2974b8fef0c56c027514069b7907a3186682ae8eebe81b96540e7ba950df5b1d",
+            "layout": [
+                "button \"Where to put them DONE\" 1050×21",
+                "heading \"Where to put them\" 158×20",
+                "label \"Media folder\" 77×16",
+                "button \"/tmp/yaffo-docs/Family Photos ▼\" 720×34",
+                "label \"Subfolder\" 60×16",
+                "button \"New photos go into this folder of your library.\" 15×15",
+                "textbox \"Imported\" 720×38",
+                "label \"Arrange by\" 68×16",
+                "button \"How new photos are arranged in that folder. Keep the source's folders mirrors the folders inside the one you import from; the others go by each photo's capture date. Photos already imported stay where they are.\" 15×15",
+                "button \"By year and month taken ▼\" 720×34",
+                "button \"Save\" 72×36"
+            ]
         },
         "create-customize/assets/importing/import-preview.webp": {
             "width": 1122,
             "height": 552,
-            "sha256": "cffeba93ee14413323cd702fff96c1dff17aa6a5304dfeae8917d17a2d5c8a74"
+            "sha256": "cffeba93ee14413323cd702fff96c1dff17aa6a5304dfeae8917d17a2d5c8a74",
+            "layout": [
+                "heading \"What a run would do now\" 218×20",
+                "button \"Close\" 57×27",
+                "text \"New\" 26×15",
+                "text \"4\" 10×20",
+                "columnheader \"FILE\" 30×15",
+                "columnheader \"SIZE\" 31×15",
+                "columnheader \"WHAT HAPPENS\" 110×15",
+                "cell \"01-birthday-a.png\" 110×16",
+                "cell \"2.2 MB\" 44×16",
+                "cell \"NEW\" 27×12",
+                "cell \"01-birthday-b.png\" 110×16",
+                "cell \"2.2 MB\" 44×16",
+                "cell \"NEW\" 27×12",
+                "cell \"02-beach-a.png\" 98×16",
+                "cell \"2.3 MB\" 44×16",
+                "cell \"NEW\" 27×12",
+                "cell \"02-beach-b.png\" 98×16",
+                "cell \"2.3 MB\" 44×16",
+                "cell \"NEW\" 27×12"
+            ]
         }
     }
 }
