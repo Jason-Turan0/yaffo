@@ -18,6 +18,7 @@ from __future__ import annotations
 import atexit
 import multiprocessing
 import os
+import socket
 import subprocess
 import sys
 import threading
@@ -58,6 +59,32 @@ WORKERS = max(2, (os.cpu_count() or 4) - 1)
 RECYCLE = 100
 
 logger = get_logger(__name__, "webapp")
+
+
+def _bind_listen_socket() -> socket.socket | None:
+    """Bind the web port before anything else, as the single-instance guard.
+
+    A second launch (shortcut clicked while Yaffo is running) must not migrate the
+    database or start a second task host + watcher. Owning the port is the lock: if
+    the bind fails, another instance has it, and None is returned. Listening right
+    away means a browser opened during a slow startup queues in the backlog and is
+    answered once waitress starts, instead of being refused.
+    """
+    family, socktype, proto, _, sockaddr = socket.getaddrinfo(HOST, PORT, type=socket.SOCK_STREAM)[0]
+    sock = socket.socket(family, socktype, proto)
+    if sys.platform == "win32":
+        # Windows SO_REUSEADDR would let a second process bind the same port.
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+    else:
+        # POSIX SO_REUSEADDR only allows rebinding past TIME_WAIT after a restart.
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        sock.bind(sockaddr)
+        sock.listen(1024)
+    except OSError:
+        sock.close()
+        return None
+    return sock
 
 
 def _start_asset_downloads() -> None:
@@ -148,6 +175,14 @@ def _run_web() -> None:
     from yaffo.app import create_app
     from yaffo.scripts.db.migrate import run_migrations
 
+    url = f"http://{HOST}:{PORT}"
+    sock = _bind_listen_socket()
+    if sock is None:
+        logger.info(f"{HOST}:{PORT} is already in use; assuming Yaffo is running and opening {url}")
+        if os.environ.get("YAFFO_DEMO_MODE") != "1":
+            webbrowser.open(url)
+        return
+
     # A failed migration used to kill the process with a traceback and no UI at all.
     # Serve the error screen instead — and start nothing else: background workers and
     # p2p would only pile more failures onto a database whose shape we can't trust.
@@ -160,21 +195,19 @@ def _run_web() -> None:
 
     if startup_error is not None:
         app = create_app(startup_error=startup_error)
-        url = f"http://{HOST}:{PORT}"
         threading.Timer(1.5, lambda: webbrowser.open(url)).start()
         logger.error(f"serving the database error page at {url}")
-        serve(app, host=HOST, port=PORT, threads=WEB_THREADS)
+        serve(app, sockets=[sock], threads=WEB_THREADS)
         return
 
     from yaffo.p2p.service import start_p2p_service
 
     app = create_app()
     start_p2p_service(app)
-    url = f"http://{HOST}:{PORT}"
 
     if app.config["DEMO_MODE"]:
         logger.info(f"serving Yaffo demo at {url} without task host, watcher, or asset downloads")
-        serve(app, host=HOST, port=PORT, threads=WEB_THREADS)
+        serve(app, sockets=[sock], threads=WEB_THREADS)
         return
 
     _start_asset_downloads()
@@ -186,13 +219,13 @@ def _run_web() -> None:
         tray_icon = _create_tray_icon(procs, url)
     except Exception:
         logger.info(f"serving Yaffo at {url} (no system tray)")
-        serve(app, host=HOST, port=PORT, threads=WEB_THREADS)
+        serve(app, sockets=[sock], threads=WEB_THREADS)
         return
 
     logger.info(f"serving Yaffo at {url} (system tray)")
     threading.Thread(
         target=serve, args=(app,),
-        kwargs={"host": HOST, "port": PORT, "threads": WEB_THREADS},
+        kwargs={"sockets": [sock], "threads": WEB_THREADS},
         daemon=True,
     ).start()
     tray_icon.run()
