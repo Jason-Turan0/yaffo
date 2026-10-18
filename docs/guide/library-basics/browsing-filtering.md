@@ -3,7 +3,45 @@
 The **Home** page is the main photo library view. It shows indexed photos and
 videos as a grid, with filters on the left.
 
+## Explore the Page
+
+<div class="annotated-screenshot" markdown="1">
+
 ![Photo library](assets/browsing-filtering/gallery-home.webp)
+
+<div class="screenshot-annotation" data-x="10" data-y="5.8" data-region="1.5 3 18.5 96" markdown="1">
+
+### Filter Sidebar
+
+Narrows the gallery to matching media. [Read about filters](#use-the-filter-sidebar).
+
+</div>
+
+<div class="screenshot-annotation" data-x="37" data-y="10.5" data-region="24 9.3 11.5 2.5" markdown="1">
+
+### Photo Count
+
+How many photos match out of your whole library.
+
+</div>
+
+<div class="screenshot-annotation" data-x="86" data-y="8" data-region="88 6.3 9.6 3.7" markdown="1">
+
+### Grid and Timeline
+
+Switch between the photo grid and the timeline view.
+
+</div>
+
+<div class="screenshot-annotation" data-x="39.5" data-y="18.5" data-region="22.7 16.5 18.3 39" markdown="1">
+
+### Media Card
+
+Shows the date and any people assigned to the photo. Videos show a play badge and their duration. Click a card to open its detail page.
+
+</div>
+
+</div>
 
 ## Browse the Gallery
 
@@ -24,7 +62,51 @@ Click a card to open the media detail page.
 
 The filter sidebar narrows the gallery to matching media.
 
+<div class="annotated-screenshot annotated-screenshot--narrow" markdown="1">
+
 ![Gallery filter sidebar](assets/browsing-filtering/gallery-filter-sidebar.webp)
+
+<div class="screenshot-annotation" data-x="92" data-y="4.2" data-region="81 3.2 7 2.2" markdown="1">
+
+### Sidebar Settings
+
+Choose which filter groups are visible. [Read about configuring the sidebar](#configure-the-sidebar).
+
+</div>
+
+<div class="screenshot-annotation" data-x="92" data-y="8" data-region="11.5 5.5 77 10" markdown="1">
+
+### Year and Month
+
+Find media from a time period.
+
+</div>
+
+<div class="screenshot-annotation" data-x="92" data-y="52" data-region="11.5 50.5 77 8" markdown="1">
+
+### Location Filters
+
+Filter by assigned location names, or find photos that still need one.
+
+</div>
+
+<div class="screenshot-annotation" data-x="92" data-y="61.5" data-region="11.5 60 77 7.5" markdown="1">
+
+### Proximity Search
+
+Find photos within a distance of a place.
+
+</div>
+
+<div class="screenshot-annotation" data-x="92" data-y="93" data-region="11.5 91.3 77 6.2" markdown="1">
+
+### Apply or Clear
+
+**Apply Filters** updates the gallery. **Clear Filters** returns to the unfiltered gallery.
+
+</div>
+
+</div>
 
 Common filters include:
 
@@ -87,10 +169,6 @@ Try these common patterns:
 
 ## When Results Look Wrong
 
-If expected photos are missing:
-
-- confirm the files have been indexed;
-- clear filters and try again;
-- check whether the filter is set to **all** instead of **any**;
-- make sure the relevant people, labels, tags, or locations have been assigned;
-- open **Library** → **Library Health** if files were recently added or moved.
+If expected photos are missing, follow
+[Photos Do Not Appear](../reference-maintenance/troubleshooting.md#photos-do-not-appear)
+in Troubleshooting. It checks filters, media folders, drives, and indexing in turn.

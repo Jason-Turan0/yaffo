@@ -61,11 +61,11 @@ def test_bundled_knowledge_loads_and_answers():
     assert top.path == "guide/organize-review/assigning-faces.md"
 
 
-@pytest.mark.parametrize("question, page", [
-    ("photos show the wrong year", "photos-wrong-year.md"),
-    ("external drive not showing", "external-drive-not-showing.md"),
-    ("faces stuck after assigning", "faces-stuck-after-assigning.md"),
+@pytest.mark.parametrize("question, anchor", [
+    ("photos show the wrong year", "photos-show-the-wrong-year"),
+    ("external drive not showing", "external-drive-not-showing"),
+    ("faces stuck after assigning", "faces-stuck-after-assigning"),
 ])
-def test_bundled_troubleshooting_runbooks_rank_first(question, page):
+def test_bundled_troubleshooting_runbooks_rank_first(question, anchor):
     top = knowledge_base().search(question, scope="guide")[0].section
-    assert top.path == f"guide/reference-maintenance/troubleshooting/{page}"
+    assert (top.path, top.anchor) == ("guide/reference-maintenance/troubleshooting.md", anchor)

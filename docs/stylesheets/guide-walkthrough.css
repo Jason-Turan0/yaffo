@@ -1,0 +1,111 @@
+.md-typeset .guide-walkthrough[data-enhanced] {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 1.2rem;
+  align-items: start;
+  margin: 1.2rem 0 2rem;
+}
+.guide-walkthrough__steps,
+.guide-walkthrough__viewer { min-width: 0; }
+.md-typeset .guide-walkthrough__step h3 {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  scroll-margin-top: 5rem;
+}
+.guide-walkthrough__select {
+  display: flex;
+  width: 100%;
+  gap: 0.6rem;
+  padding: 0.7rem 0.6rem;
+  border-left: 2px solid var(--yaffo-border);
+  text-align: left;
+  font: inherit;
+  color: var(--md-default-fg-color);
+  cursor: pointer;
+}
+.guide-walkthrough__select:hover,
+.guide-walkthrough__step.is-active {
+  background: var(--md-accent-fg-color--transparent);
+}
+.guide-walkthrough__step.is-active .guide-walkthrough__select {
+  border-left-color: var(--md-typeset-a-color);
+}
+.guide-walkthrough__number {
+  color: var(--md-typeset-a-color);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.65rem;
+  padding-top: 0.08rem;
+}
+.md-typeset .guide-walkthrough__body {
+  border-left: 2px solid var(--md-typeset-a-color);
+  padding: 0 0.7rem 0.7rem 2rem;
+  font-size: 0.7rem;
+  line-height: 1.7;
+}
+.md-typeset .guide-walkthrough__body p { margin: 0 0 0.6rem; }
+.guide-walkthrough__viewer {
+  position: sticky;
+  top: 4rem;
+}
+.md-typeset .guide-walkthrough__status {
+  margin: 0 0 0.6rem;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.6rem;
+}
+.md-typeset .guide-walkthrough__viewer figure { margin: 0; max-width: none; }
+.md-typeset .guide-walkthrough__viewer figure > p {
+  display: flex;
+  justify-content: center;
+  margin: 0;
+}
+.md-typeset .guide-walkthrough__viewer img {
+  display: block;
+  width: auto;
+  max-height: min(65vh, 30rem);
+  object-fit: contain;
+}
+.md-typeset .guide-walkthrough__viewer figcaption {
+  margin: 0.5rem 0 0;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.6rem;
+  font-style: normal;
+}
+.guide-walkthrough__navigation {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+}
+.guide-walkthrough__navigation button {
+  border: 1px solid var(--yaffo-border);
+  border-radius: var(--yaffo-radius-sm);
+  padding: 0.4rem 0.6rem;
+  font: inherit;
+  font-size: 0.65rem;
+  color: var(--md-default-fg-color);
+  cursor: pointer;
+}
+.guide-walkthrough__navigation button:hover:not(:disabled) {
+  background: var(--md-accent-fg-color--transparent);
+}
+.guide-walkthrough__navigation button:disabled { opacity: 0.45; cursor: default; }
+.guide-walkthrough button:focus-visible {
+  outline: 2px solid var(--md-typeset-a-color);
+  outline-offset: 2px;
+}
+.guide-walkthrough [hidden] { display: none !important; }
+@media screen and (max-width: 700px) {
+  .md-typeset .guide-walkthrough[data-enhanced] { display: block; }
+  .guide-walkthrough__viewer { position: static; padding: 0.8rem; }
+  .guide-walkthrough__select,
+  .guide-walkthrough__navigation button { min-height: 44px; }
+}
+@media print {
+  .md-typeset .guide-walkthrough[data-enhanced] { display: block; }
+  .guide-walkthrough__viewer { position: static; }
+  .guide-walkthrough [hidden] { display: block !important; }
+  .guide-walkthrough__navigation,
+  .guide-walkthrough__status { display: none; }
+}

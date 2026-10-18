@@ -11,22 +11,57 @@ below the main navigation.
 Click **+ New page** on the Pages strip. Yaffo creates an **Untitled Page**
 immediately and opens its design view.
 
+## Explore the Design View
+
+<div class="annotated-screenshot" markdown="1">
+
 ![The Florida Trip design view with page settings, assistant conversation, and two widgets](assets/custom-pages/custom-page-design.webp)
 
-The left editor contains:
+<div class="screenshot-annotation" data-x="26" data-y="4" data-region="1.2 1.5 25.8 40.7" markdown="1">
+
+### Page Settings
 
 - **Title** and optional **Subtitle** fields;
 - **Tab order**, which sets the page's position among other custom-page tabs;
 - **Display title?**, which controls whether presentation mode adds a separate
   page heading above the widgets;
-- **Add widget**, **Save**, and **Delete Page** actions;
-- the **Assistant** conversation.
+- **Add widget**, **Save**, and **Delete Page** actions.
 
-The canvas on the right is a responsive grid laid out on 12 columns. It
-reflows to six columns and then to a single full-width column as the canvas
-narrows, but **Save** always commits the 12-column layout. Click **Save** to
-commit page settings and manual layout changes. A page with no saved widgets
+Click **Save** to commit page settings and manual layout changes.
+
+</div>
+
+<div class="screenshot-annotation" data-x="26" data-y="46" data-region="1.2 44.3 25.8 54.1" markdown="1">
+
+### Assistant
+
+Describe the page or widget you want, and the Assistant builds or changes it.
+[Read about generating a page](#generate-and-refine-a-page).
+
+</div>
+
+<div class="screenshot-annotation" data-x="85" data-y="3.8" data-region="28.4 1.5 70.5 4.5" markdown="1">
+
+### Widget Controls
+
+Each widget's header has its title, a pencil to rename it, and **×** to remove
+it. Drag the header to move the widget.
+[Read about widgets](#work-with-widgets).
+
+</div>
+
+<div class="screenshot-annotation" data-x="96" data-y="10" data-region="28.4 6 70.5 80.8" markdown="1">
+
+### Canvas
+
+The canvas is a responsive grid laid out on 12 columns. It reflows to six
+columns and then to a single full-width column as the canvas narrows, but
+**Save** always commits the 12-column layout. A page with no saved widgets
 keeps opening in design mode; a page with widgets opens in presentation mode.
+
+</div>
+
+</div>
 
 ## Work with Widgets
 

@@ -250,7 +250,8 @@ def docs(c, host="127.0.0.1", port=8000):
     """
     address = f"{host}:{port}"
     print(f"Serving docs at http://{address}")
-    c.run(f"mkdocs serve -a {address}", pty=True)
+    # Explicit --livereload: mkdocs 1.6.1 with click>=8.2.2 otherwise defaults it off.
+    c.run(f"mkdocs serve -a {address} --livereload", pty=True)
 
 
 @task

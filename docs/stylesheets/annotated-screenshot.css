@@ -1,0 +1,132 @@
+.md-typeset .annotated-screenshot[data-enhanced] {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 1.2rem;
+  margin: 1.2rem 0 2rem;
+}
+.md-typeset .annotated-screenshot__figure {
+  margin: 0;
+  min-width: 0;
+  max-width: none;
+}
+.annotated-screenshot__canvas { position: relative; }
+.md-typeset .annotated-screenshot__canvas > p { margin: 0; }
+.md-typeset .annotated-screenshot__canvas img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.annotated-screenshot__highlight {
+  position: absolute;
+  border: 2px solid var(--md-typeset-a-color);
+  border-radius: var(--yaffo-radius-sm);
+  background: var(--md-accent-fg-color--transparent);
+  pointer-events: none;
+}
+.annotated-screenshot__marker {
+  position: absolute;
+  left: clamp(0.9rem, var(--marker-x), calc(100% - 0.9rem));
+  top: clamp(0.9rem, var(--marker-y), calc(100% - 0.9rem));
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  border: 2px solid var(--yaffo-surface);
+  border-radius: 50%;
+  background: var(--md-default-fg-color);
+  color: var(--yaffo-surface);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.annotated-screenshot__marker[aria-pressed="true"] {
+  background: var(--md-typeset-a-color);
+  color: var(--yaffo-surface);
+  box-shadow: 0 0 0 0.2rem var(--md-accent-fg-color--transparent);
+}
+.md-typeset .annotated-screenshot__figure figcaption {
+  font-size: 0.6rem;
+  font-style: normal;
+  color: var(--md-default-fg-color--light);
+  margin: 0.6rem 0 0;
+}
+.annotated-screenshot__explanations { min-width: 0; }
+.annotated-screenshot[data-enhanced] .screenshot-annotation {
+  border-left: 2px solid var(--yaffo-border);
+}
+.annotated-screenshot[data-enhanced] .screenshot-annotation.is-active {
+  border-left-color: var(--md-typeset-a-color);
+  background: var(--md-accent-fg-color--transparent);
+}
+.md-typeset .annotated-screenshot[data-enhanced] .screenshot-annotation > :is(h3, h4) {
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin: 0;
+  scroll-margin-top: 4rem;
+}
+.annotated-screenshot__select {
+  display: flex;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.65rem 0.6rem;
+  text-align: left;
+  color: var(--md-default-fg-color);
+  font: inherit;
+  cursor: pointer;
+}
+.annotated-screenshot__select:hover { background: var(--md-accent-fg-color--transparent); }
+.annotated-screenshot__number {
+  color: var(--md-typeset-a-color);
+  font-size: 0.65rem;
+  font-variant-numeric: tabular-nums;
+}
+.md-typeset .annotated-screenshot__body {
+  padding: 0 0.7rem 0.7rem 2rem;
+  font-size: 0.7rem;
+  line-height: 1.7;
+}
+.md-typeset .annotated-screenshot__body > :first-child { margin-top: 0; }
+.md-typeset .annotated-screenshot__body > :last-child { margin-bottom: 0; }
+.md-typeset .annotated-screenshot__status {
+  font-size: 0.6rem;
+  color: var(--md-default-fg-color--light);
+  margin: 0.7rem 0;
+}
+.annotated-screenshot button:focus-visible {
+  outline: 2px solid var(--md-typeset-a-color);
+  outline-offset: 3px;
+}
+.annotated-screenshot [hidden] { display: none !important; }
+@media screen and (max-width: 700px) {
+  .md-typeset .annotated-screenshot[data-enhanced] { grid-template-columns: minmax(0, 1fr); }
+}
+@media screen and (max-width: 700px), (pointer: coarse) {
+  .annotated-screenshot__marker {
+    width: 44px;
+    height: 44px;
+    left: clamp(22px, var(--marker-x), calc(100% - 22px));
+    top: clamp(22px, var(--marker-y), calc(100% - 22px));
+  }
+  .annotated-screenshot__select { min-height: 44px; }
+}
+@media print {
+  .md-typeset .annotated-screenshot[data-enhanced] { display: block; }
+  .annotated-screenshot [hidden] { display: block !important; }
+  .annotated-screenshot__markers,
+  .annotated-screenshot__highlight,
+  .annotated-screenshot__status,
+  .annotated-screenshot__figure figcaption { display: none; }
+}
+/* Portrait screenshots, such as side panels, take a narrower column. */
+.md-typeset .annotated-screenshot--narrow[data-enhanced] {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+}
+.md-typeset .annotated-screenshot--narrow .annotated-screenshot__figure { max-width: 22rem; }
+@media screen and (max-width: 700px) {
+  .md-typeset .annotated-screenshot--narrow[data-enhanced] { grid-template-columns: minmax(0, 1fr); }
+  .md-typeset .annotated-screenshot--narrow .annotated-screenshot__figure { margin: 0 auto; }
+}

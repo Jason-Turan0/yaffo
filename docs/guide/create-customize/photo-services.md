@@ -16,7 +16,35 @@ The builder uses this model to write the connection from your description.
 Open **Library** → **Automations**, click **New automation**, choose
 **Add a new service…**, and name it, for example **Flickr exports**.
 
+<div class="annotated-screenshot annotated-screenshot--narrow" markdown="1">
+
 ![The new automation dialog with Add a new service selected](assets/photo-services/new-photo-service.webp)
+
+<div class="screenshot-annotation" data-x="93" data-y="54" data-region="9 52.5 81 12" markdown="1">
+
+### Add a New Service
+
+Choose this to build a reusable connection instead of a sync.
+
+</div>
+
+<div class="screenshot-annotation" data-x="93" data-y="70" data-region="9 68.5 81 9" markdown="1">
+
+### Name
+
+A name for the service, such as **Flickr exports**.
+
+</div>
+
+<div class="screenshot-annotation" data-x="93" data-y="90" data-region="76 87.5 15 5" markdown="1">
+
+### Create
+
+Opens the service builder.
+
+</div>
+
+</div>
 
 ## 2. Describe the Connection
 
@@ -28,7 +56,43 @@ Include any options you need, such as choosing an album or keeping captions.
 Review **Overview** as the draft develops: it shows the direction, sign-in method,
 options, and supported actions.
 
+<div class="annotated-screenshot" markdown="1">
+
 ![A new service in the builder, with its conversation and the Overview, Account, Access, Code, and Test tabs](assets/photo-services/service-builder.webp)
+
+<div class="screenshot-annotation" data-x="10" data-y="8.6" data-region="2.8 7.6 5.8 2" markdown="1">
+
+### Draft Badge
+
+The service stays a draft until you publish it.
+
+</div>
+
+<div class="screenshot-annotation" data-x="57" data-y="17" data-region="1.2 15 57.3 29.5" markdown="1">
+
+### Service Builder
+
+Describe the service and the direction photos travel. The builder writes the connection from your description.
+
+</div>
+
+<div class="screenshot-annotation" data-x="98" data-y="17" data-region="61.5 15.5 35.5 3" markdown="1">
+
+### Builder Tabs
+
+**Overview** summarizes the draft. **Account**, **Access**, **Code**, and **Test** cover the next steps. [Read about connecting an account](#3-connect-a-test-account) and [testing](#4-review-and-test-the-draft).
+
+</div>
+
+<div class="screenshot-annotation" data-x="85.5" data-y="5.4" data-region="87.5 3.6 9.5 3.6" markdown="1">
+
+### Delete
+
+Removes the service. It is unavailable while a sync uses it.
+
+</div>
+
+</div>
 
 The builder asks before reading documentation on new domains. Review the domains
 and approve those you want it to read, or deny the request.

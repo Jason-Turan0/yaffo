@@ -33,8 +33,8 @@
 > detection, routing, and repair. Python tests cover image comparison, review sheets,
 > the server observer, and artifact summaries. See *Tests* below.
 >
-> **Coverage:** five reference pages have `walkthrough: false`: comparison,
-> uninstalling, and the three troubleshooting subpages. Every other declared page
+> **Coverage:** two reference pages have `walkthrough: false`: comparison and
+> uninstalling. Every other declared page
 > has a walkthrough and lockfile.
 >
 > Last updated: 2026-10-17
@@ -487,8 +487,8 @@ Determinism comes from the walkthrough being the committed artifact. The same wa
 same container, and the same seeded fixture produce the same images *and* the same
 dependency set. Nothing about either output is inferred from a heuristic.
 
-The reference comparison page, uninstalling page, and three troubleshooting
-subpages have `walkthrough: false`. The other 20 pages have walkthroughs.
+The reference comparison and uninstalling pages have `walkthrough: false`. The
+other 20 pages have walkthroughs.
 `start-here/concepts` and `library-basics/organizing-photos` capture no images and
 exist for dependency observation; the remaining 18 walkthroughs own 52 screenshots.
 
@@ -526,6 +526,96 @@ Three consequences:
   drives three of a page's five described flows records dependencies for three. This
   is the practical limit on scoping, and it argues for walkthroughs that walk the page's
   whole surface even where they capture nothing.
+
+### Guided walkthrough layout
+
+Guide pages can wrap Markdown steps in `<div class="guide-walkthrough" markdown="1">`.
+Each step begins with a level-three heading and contains prose and one Markdown image.
+`docs/javascripts/guide-walkthrough.js` enhances the rendered sections into selectable
+steps and a screenshot viewer. The content and image references remain in Markdown,
+so capture and image-reference validation use the same inputs.
+
+The component supports keyboard selection, Previous/Next controls, heading links,
+Material instant navigation, and the existing screenshot lightbox. On narrow screens,
+the viewer follows the selected step. Without JavaScript, all sections and images
+remain readable; print styles expose all instructions and screenshots.
+Shared styling lives in `docs/stylesheets/guide-walkthrough.css`. Exporting Photos
+uses separate setup and schedule/history walkthroughs. Getting Started, Importing
+Photos, and Assigning Faces each use one walkthrough for their main flow.
+
+### Action choosers and troubleshooting navigators
+
+`docs/javascripts/guide-decisions.js` and `docs/stylesheets/guide-decisions.css`
+enhance two Markdown patterns. Register both assets in `mkdocs.yml`.
+
+An action chooser uses a `<div class="action-chooser" markdown="1">` wrapper.
+Each direct child `<div class="action-choice" data-choice="New photos" markdown="1">`
+contains an H3 and ordinary Markdown explaining the action. `data-choice` supplies
+the selection button label. Only the selected explanation is shown. Arrow keys,
+Home, and End switch choices and move focus. Indexing & Library Management uses
+this pattern for all its sections: folders, scans, new photos, thumbnails, metadata,
+missing originals, jobs, indexing errors, and supported files. Organizing Photos
+uses one for picking the right organizing tool. Heading links to a subsection open
+the choice containing it.
+
+Add `data-initial="none"` to the wrapper to start with every choice hidden. Clicking
+the selected button again hides it. `data-status` adds a line under the buttons;
+`{choice}` is replaced by the selected label. Without it, no status line is shown. Troubleshooting uses this for its symptom list,
+with a navigator nested inside the "Photos are missing" choice; nested navigator
+questions use H4 so they sit under the choice's H3.
+
+A navigator uses a `<div class="troubleshooting-navigator" markdown="1">` wrapper
+with direct `<div class="navigator-step" markdown="1">` children. Question steps
+start with an H3. Outcome steps start with a bold paragraph carrying an ID and the
+`navigator-outcome` class, so they stay out of the table of contents:
+
+```markdown
+**Index the Waiting Files**
+{: #index-the-waiting-files .navigator-outcome }
+```
+
+Markdown answer links target another step's ID, such as
+`[Yes, the photos are there](#are-photos-waiting-to-be-indexed)`. These links become
+buttons that show the destination and focus its heading. Links to other pages
+remain links. The first step is the starting question; Back retraces answers and
+Start over returns to that question. The Troubleshooting page uses this pattern
+to diagnose missing photos.
+
+Keep heading IDs unique and internal answer targets within the navigator. Invalid
+structures remain static. Both patterns support heading links, independent
+instances, and Material instant navigation. Without JavaScript all explanations
+remain readable, and print styles show every step. The prose stays in the Markdown
+source; neither component runs actions in Yaffo or requires additional screenshots.
+
+### Annotated screenshots
+
+Wrap one Markdown image and its explanation blocks in
+`<div class="annotated-screenshot" markdown="1">`. Each explanation uses
+`<div class="screenshot-annotation" data-x="25" data-y="12" data-region="2.8 9 23 26" markdown="1">`,
+a level-three heading, and ordinary Markdown prose and links. `data-x` and `data-y`
+place a numbered marker; `data-region` gives the highlighted rectangle as
+`left top width height`. All coordinates are percentages of the screenshot.
+
+`docs/javascripts/annotated-screenshot.js` enhances valid blocks into an image with
+markers and selectable explanations. Marker and heading buttons support keyboard
+navigation; the image retains its existing lightbox link. The component initializes
+on Material instant navigation and supports heading links. Invalid metadata or
+unavailable JavaScript leaves the image and all explanations readable. Narrow screens
+stack the explanations under the image; print styles expose every explanation.
+Shared styles are in `docs/stylesheets/annotated-screenshot.css`.
+Annotated screenshots are the standard for guide screenshots. Every screenshot
+uses one except walkthrough steps, which already explain their single image, the
+published Custom Pages example, which shows page content rather than controls, and
+the two-chip label crop on Labels, which is too small to mark. Use H4 annotation
+headings when the screenshot sits inside an H3 section, such as a chooser panel.
+Add `annotated-screenshot--narrow` to the wrapper for a portrait screenshot, such
+as a side panel, so it gets a narrower column. Recheck the
+coordinates whenever one of those screenshots is recaptured with a different layout.
+
+The screenshot remains a single Markdown image reference, so capture and validation
+remain unchanged. Marker positions are authored metadata: when a screenshot is
+reframed or its controls move, review and update its coordinates and explanation links.
+The annotations are HTML overlays and are never burned into the captured image.
 
 ### Non-reproducible regions
 

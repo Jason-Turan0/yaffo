@@ -59,34 +59,36 @@ or quit the background app:
   Linux desktops hide or disable tray icons by default; in that case, keep the
   browser tab open or relaunch Yaffo from the terminal when needed.
 
-## Choose Your Photo Folders
+## Your First Library
+
+<div class="guide-walkthrough" markdown="1">
+
+### Choose Your Photo Folders
 
 Open **Settings** and add one or more media directories. These are the folders
 Yaffo scans for photos and videos.
 
-![The Settings page showing Language, Units, and Media Directories](assets/getting-started/settings-overview.webp)
-
 Yaffo stores its own database, thumbnails, logs, and temporary files separately
 from your photo folders. Your original photo folders remain where they are.
 
-## Index Your First Photos
+![The Settings page showing Language, Units, and Media Directories](assets/getting-started/settings-overview.webp)
 
-Go to **Library** → **Library Health**.
+### Index Your First Photos
 
-![The Library Health page, showing library counts after a scan](assets/getting-started/library-health.webp)
-
-Yaffo compares the files on disk with what is already in the database and
-reports its counts: total on the filesystem, imported, indexed, not yet indexed,
-orphaned (rows whose file has gone), and missing thumbnails. When nothing needs
-attention, the page says everything is in sync. Otherwise it shows a card for
-each problem with its own fix: for a new library, select **Index them** to import
-your photos.
+Go to **Library** → **Library Health**. Yaffo compares the files on disk with
+what is already in the database and reports its counts: total on the filesystem,
+imported, indexed, not yet indexed, orphaned (rows whose file has gone), and
+missing thumbnails. When nothing needs attention, the page says everything is in
+sync. Otherwise it shows a card for each problem with its own fix: for a new
+library, select **Index them** to import your photos.
 
 Indexing may take a while for large libraries. During indexing, Yaffo creates
 thumbnails, reads metadata, detects faces, prepares labels, and records location
 data when GPS metadata is available.
 
-## Browse Your Library
+![The Library Health page, showing library counts after a scan](assets/getting-started/library-health.webp)
+
+### Browse Your Library
 
 After indexing, go to **Home**. Your library appears as a grid of photos and
 videos, newest first. Videos show a play badge and their duration on the card;
@@ -94,20 +96,23 @@ photos show any people Yaffo has recognized.
 
 ![The Home photo library: filter sidebar beside a grid of indexed photos and videos](assets/getting-started/gallery-home.webp)
 
+### Filter the Library
+
 Use the filter sidebar to narrow the library by date, people, labels, tags,
 location, favorites, media type, device, and file path.
 
 ![The filter sidebar with Year, Month, People, Label, and Location filters](assets/getting-started/gallery-filter-sidebar.webp)
 
-## Open a Photo
+### Open a Photo
 
-Click a photo to open its detail page.
+Click a photo to open its detail page. It shows the preview alongside file
+information, capture date and device, the resolved location, the people assigned
+to it, each detected face, and any automatic labels. This is where you review and
+correct what Yaffo found.
 
 ![A photo's detail page with its preview, file and location metadata, assigned people, detected faces, and labels](assets/getting-started/media-detail.webp)
 
-The detail page shows the preview alongside file information, capture date and
-device, the resolved location, the people assigned to it, each detected face, and
-any automatic labels. This is where you review and correct what Yaffo found.
+</div>
 
 ## What Yaffo Adds
 

@@ -3,7 +3,61 @@
 This page lists the options on the **Settings** screen. Open **Settings** from
 the top navigation.
 
+## Explore the Page
+
+<div class="annotated-screenshot annotated-screenshot--narrow" markdown="1">
+
 ![The Settings page showing Language, Units, and Media Directories](assets/settings/settings-overview.webp)
+
+<div class="screenshot-annotation" data-x="97" data-y="7" data-region="1.5 6 96.5 11" markdown="1">
+
+### Media Directories Section
+
+The folders Yaffo scans. [Read more](#media-directories).
+
+</div>
+
+<div class="screenshot-annotation" data-x="97" data-y="19" data-region="1.5 18 96.5 14" markdown="1">
+
+### Thumbnail Directory Section
+
+Where face thumbnails are stored, with their count and size. [Read more](#thumbnail-directory).
+
+</div>
+
+<div class="screenshot-annotation" data-x="97" data-y="35" data-region="1.5 34 96.5 9" markdown="1">
+
+### Language Section
+
+The interface language. [Read more](#language).
+
+</div>
+
+<div class="screenshot-annotation" data-x="97" data-y="46" data-region="1.5 45 96.5 9" markdown="1">
+
+### Units Section
+
+Miles or kilometers. [Read more](#units).
+
+</div>
+
+<div class="screenshot-annotation" data-x="97" data-y="57.5" data-region="1.5 56.5 96.5 8.5" markdown="1">
+
+### AI Generation Section
+
+The provider, model, and API key for AI features. [Read more](#ai-generation).
+
+</div>
+
+<div class="screenshot-annotation" data-x="97" data-y="74" data-region="1.5 68.5 96.5 31" markdown="1">
+
+### Assistant Section
+
+What Ask Yaffo may look at and change. [Read more](#assistant).
+
+</div>
+
+</div>
 
 Most sections have their own **Save** button — changes take effect when you save
 that section.

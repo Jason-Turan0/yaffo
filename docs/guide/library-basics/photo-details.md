@@ -1,9 +1,78 @@
+---
+hide:
+  - toc
+---
+
 # Photo Details
 
 The photo detail page is where you review one photo or video closely. Open it by
 clicking a card in the gallery.
 
+## Explore the Page
+
+<div class="annotated-screenshot" markdown="1">
+
 ![A photo detail page with file information, location, people, detected faces, and labels](assets/photo-details/media-detail.webp)
+
+<div class="screenshot-annotation" data-x="25" data-y="12" data-region="2.8 9 23 26" markdown="1">
+
+### File Information and Actions
+
+Check which original file you are viewing, its capture date, and its device.
+**Open File** and **Open Folder** use your operating system. **Reindex** rebuilds
+this item's derived data and removes its face-to-person assignments.
+
+[Read about file information](#read-file-information) and
+[reindexing one item](#reindex-one-item).
+
+</div>
+
+<div class="screenshot-annotation" data-x="25" data-y="39" data-region="2.8 36 23 16" markdown="1">
+
+### Location
+
+Review the assigned location name and GPS coordinates. **View on Map** opens the
+location view. A location name and GPS coordinates are separate pieces of data.
+
+[Read about location information](#review-location-information).
+
+</div>
+
+<div class="screenshot-annotation" data-x="25" data-y="58" data-region="2.8 52 23 22" markdown="1">
+
+### People and Faces
+
+People are linked through assigned faces. Hover over a face thumbnail to
+highlight it in the photo, or click the thumbnail to reassign it.
+
+[Read about people and faces](#review-people-and-faces).
+
+</div>
+
+<div class="screenshot-annotation" data-x="25" data-y="80" data-region="2.8 74 23 17" markdown="1">
+
+### Labels and Tags
+
+Labels are automatic search hints managed through the vocabulary in Settings.
+Tags are your editable name/value pairs; use **Edit Tags** to change them.
+
+[Read about labels](#review-labels) and [editing tags](#edit-tags).
+
+</div>
+
+<div class="screenshot-annotation" data-x="95" data-y="4" data-region="92 1.8 5.5 5.5" markdown="1">
+
+### Favorite
+
+Use the heart to mark a photo for quick retrieval with the Favorites filter.
+Favorite status is stored in Yaffo and can also be exported to the file when
+that automation option is enabled.
+
+[Read about favorites](#mark-a-favorite).
+
+</div>
+
+</div>
 
 ## Review the Preview
 

@@ -19,10 +19,10 @@ LEVELS = (OK, WARNING, PROBLEM)
 
 DOC_MEDIA_DIRS = "guide/reference-maintenance/settings.md#media-directories"
 DOC_THUMBNAILS = "guide/reference-maintenance/settings.md#thumbnail-directory"
-DOC_EXTERNAL_DRIVE = "guide/reference-maintenance/troubleshooting/external-drive-not-showing.md"
+DOC_EXTERNAL_DRIVE = "guide/reference-maintenance/troubleshooting.md#external-drive-not-showing"
 DOC_JOBS = "guide/reference-maintenance/troubleshooting.md#jobs-are-stuck-or-slow"
-DOC_FACES = "guide/reference-maintenance/troubleshooting/faces-stuck-after-assigning.md"
-DOC_DATES = "guide/reference-maintenance/troubleshooting/photos-wrong-year.md"
+DOC_FACES = "guide/reference-maintenance/troubleshooting.md#faces-stuck-after-assigning"
+DOC_DATES = "guide/reference-maintenance/troubleshooting.md#photos-show-the-wrong-year"
 DOC_SYSTEM = "guide/reference-maintenance/settings.md#system-information"
 DOC_AUTOMATIONS = "guide/create-customize/automations.md"
 DOC_INDEXING = "guide/library-basics/indexing-library.md"

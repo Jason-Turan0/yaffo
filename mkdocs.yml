@@ -50,6 +50,14 @@ plugins:
 
 extra_css:
   - stylesheets/extra.css
+  - stylesheets/guide-walkthrough.css
+  - stylesheets/annotated-screenshot.css
+  - stylesheets/guide-decisions.css
+
+extra_javascript:
+  - javascripts/guide-walkthrough.js
+  - javascripts/annotated-screenshot.js
+  - javascripts/guide-decisions.js
 
 markdown_extensions:
   - admonition
@@ -90,8 +98,5 @@ nav:
           - Settings Reference: guide/reference-maintenance/settings.md
           - Comparison: guide/reference-maintenance/comparison.md
           - Troubleshooting: guide/reference-maintenance/troubleshooting.md
-          - Photos Show the Wrong Year: guide/reference-maintenance/troubleshooting/photos-wrong-year.md
-          - External Drive Not Showing: guide/reference-maintenance/troubleshooting/external-drive-not-showing.md
-          - Faces Stuck After Assigning: guide/reference-maintenance/troubleshooting/faces-stuck-after-assigning.md
           - Uninstalling Yaffo: guide/reference-maintenance/uninstalling.md
   - Privacy: privacy.md

@@ -1,0 +1,55 @@
+.md-typeset :is(.action-chooser, .troubleshooting-navigator)[data-enhanced] {
+  padding: 1.1rem;
+  margin: 1rem 0 1.8rem;
+  border: 1px solid var(--yaffo-border);
+  border-radius: var(--yaffo-radius-sm);
+  background: var(--yaffo-surface);
+  min-width: 0;
+}
+.guide-decisions__controls { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.md-typeset .guide-decisions__button {
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--yaffo-border);
+  border-radius: var(--yaffo-radius-sm);
+  color: var(--md-default-fg-color);
+  font: inherit;
+  font-size: 0.7rem;
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+}
+.guide-decisions__button:hover,
+.guide-decisions__button[aria-pressed="true"] {
+  border-color: var(--md-typeset-a-color);
+  background: var(--md-accent-fg-color--transparent);
+}
+.guide-decisions__button[aria-pressed="true"] { color: var(--md-typeset-a-color); }
+.guide-decisions__button:disabled { opacity: 0.5; cursor: default; }
+.guide-decisions__button:focus-visible,
+:is(.action-chooser, .troubleshooting-navigator) :is(h3, h4, .navigator-outcome):focus-visible {
+  outline: 2px solid var(--md-typeset-a-color);
+  outline-offset: 3px;
+}
+.md-typeset .guide-decisions__status {
+  color: var(--md-default-fg-color--light);
+  font-size: 0.65rem;
+  margin: 0.8rem 0;
+}
+.md-typeset :is(.action-choice, .navigator-step) > :is(h3, h4, .navigator-outcome) { scroll-margin-top: 4rem; }
+.md-typeset [data-enhanced] > :is(.action-choice, .navigator-step) > :is(h3, h4, .navigator-outcome) { margin-top: 0.5rem; }
+.troubleshooting-navigator[data-enhanced] .navigator-step > ul:has(.guide-decisions__button) {
+  padding: 0;
+  list-style: none;
+}
+.troubleshooting-navigator[data-enhanced] .navigator-step > ul > li:has(.guide-decisions__button) { margin-left: 0; }
+.troubleshooting-navigator .navigator-step li > .guide-decisions__button { width: 100%; }
+:is(.action-chooser, .troubleshooting-navigator) [hidden] { display: none !important; }
+@media screen and (max-width: 700px) {
+  .action-chooser > .guide-decisions__controls { flex-direction: column; }
+}
+@media print {
+  :is(.action-chooser, .troubleshooting-navigator) [hidden] { display: block !important; }
+  .guide-decisions__controls, .guide-decisions__status { display: none; }
+  .md-typeset .guide-decisions__button { border: 0; padding: 0; min-height: 0; }
+}

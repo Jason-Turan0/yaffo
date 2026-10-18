@@ -297,27 +297,10 @@ pages:
   reference-maintenance/troubleshooting:
     covers: >-
       The common failure modes and how to narrow them down: photos not appearing,
-      stuck or slow jobs, wrong faces or labels or duplicates, map and location
-      lookups failing, and AI features failing.
+      an unavailable external drive, photos in the wrong year, stuck or slow jobs,
+      faces stuck after assigning, wrong faces or labels or duplicates, map and
+      location lookups failing, and AI features failing.
     walkthrough: true
-
-  reference-maintenance/troubleshooting/external-drive-not-showing:
-    covers: >-
-      Diagnose an unavailable external media drive, verify its configured path,
-      and scan safely after reconnecting it.
-    walkthrough: false
-
-  reference-maintenance/troubleshooting/faces-stuck-after-assigning:
-    covers: >-
-      Diagnose faces that remain in review or processing after assignment, check
-      job status, and review the assistant's repair proposal.
-    walkthrough: false
-
-  reference-maintenance/troubleshooting/photos-wrong-year:
-    covers: >-
-      Diagnose incorrect capture dates and gallery year filters, then choose
-      between correcting source metadata, reindexing, or an assistant change.
-    walkthrough: false
 
   reference-maintenance/uninstalling:
     covers: >-

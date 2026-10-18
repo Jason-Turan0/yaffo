@@ -3,10 +3,64 @@
 Yaffo detects faces during indexing and lets you assign those faces to people.
 After that, you can browse a person's faces or filter the library by people.
 
-![The Faces page showing a cluster of unassigned faces with assignment controls](assets/faces-and-people/faces-review.webp)
-
 This page explains the concepts. For the hands-on, step-by-step workflow of
 clearing the unassigned pile, see [Assigning Faces](assigning-faces.md).
+
+## Explore the Face Review Page
+
+<div class="annotated-screenshot" markdown="1">
+
+![The Faces page showing a cluster of unassigned faces with assignment controls](assets/faces-and-people/faces-review.webp)
+
+<div class="screenshot-annotation" data-x="97" data-y="4" data-region="24.5 2.5 73 6.5" markdown="1">
+
+### Unassigned Count
+
+How many unassigned faces are left to review.
+
+</div>
+
+<div class="screenshot-annotation" data-x="21" data-y="6.5" data-region="2.5 5.5 17.5 10.3" markdown="1">
+
+### Assign or Ignore
+
+Choose a person, then **Assign Selected**, or **Ignore Selected** for faces you don't want to track.
+
+</div>
+
+<div class="screenshot-annotation" data-x="21" data-y="21.5" data-region="2.5 17.5 17.5 5.5" markdown="1">
+
+### Create Person
+
+Create a person on the fly while assigning faces. [Read about people](#create-people).
+
+</div>
+
+<div class="screenshot-annotation" data-x="21" data-y="25" data-region="2.5 24.5 17.5 17" markdown="1">
+
+### Keyboard Shortcuts
+
+Number keys assign selected faces to the listed people; the gear chooses them.
+
+</div>
+
+<div class="screenshot-annotation" data-x="21" data-y="63" data-region="2.5 62.5 17.5 8.5" markdown="1">
+
+### Grouping
+
+**Group by** and **Similarity Threshold** control how faces are clustered. [Read about grouping](#understand-the-face-review-page).
+
+</div>
+
+<div class="screenshot-annotation" data-x="97" data-y="19" data-region="25.5 11.5 71 22" markdown="1">
+
+### Cluster
+
+A group of similar faces. Every face starts selected; click one to leave it out.
+
+</div>
+
+</div>
 
 ## Understand the Face Review Page
 
@@ -37,7 +91,43 @@ this in practice.
 
 Open **People** to create and manage people.
 
+<div class="annotated-screenshot" markdown="1">
+
 ![The People page showing each person's details and assigned-face counts](assets/faces-and-people/people-list.webp)
+
+<div class="screenshot-annotation" data-x="85.5" data-y="14" data-region="87.5 9.3 9.8 9.6" markdown="1">
+
+### Add Person
+
+Create a person with a name and optional gender and birthdate.
+
+</div>
+
+<div class="screenshot-annotation" data-x="12" data-y="48.5" data-region="2.3 46 7.8 5" markdown="1">
+
+### Person
+
+Click a name to review that person's faces. [Read about reviewing faces](#review-a-persons-faces).
+
+</div>
+
+<div class="screenshot-annotation" data-x="72" data-y="33" data-region="56 30 15.5 68" markdown="1">
+
+### Face and Photo Counts
+
+How many faces are assigned to each person, and how many photos they appear in.
+
+</div>
+
+<div class="screenshot-annotation" data-x="90.5" data-y="48.5" data-region="82.3 46.5 6.8 4.5" markdown="1">
+
+### Edit and Delete
+
+Change a person's details, or delete the person.
+
+</div>
+
+</div>
 
 Each person can have:
 
