@@ -13,7 +13,6 @@ from typing import Annotated, Any
 from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_sandbox.labels import person_label, media_item_label
-from yaffo.db.models import FACE_STATUS_IGNORED
 from yaffo.db.repositories import person_repository, media_repository
 from yaffo.domain.compare_utils import (
     calculate_face_similarity,
@@ -75,6 +74,65 @@ def summarize_match_people(args: list[Any], session: Session) -> str:
     return f"Match faces in {media_item_label(session, media_item_id)} to known people"
 
 
+# Face x person comparisons per match_faces call (the match_people bound).
+MAX_FACE_COMPARISONS = 5000
+
+
+def _id_list(value: Any, name: str) -> list[int]:
+    if not isinstance(value, list) or any(type(item) is not int for item in value):
+        raise ValueError(f"{name} must be a list of integer ids")
+    return value
+
+
+def match_faces(
+    session: Session, face_ids: list[int], person_ids: list[int] | None = None,
+) -> Annotated[list[dict], "A list of {face_id, media_item_id, matches: [{person_id, person_name, score (0.0–1.0)}]}, "
+                           "in face_ids order, each face's matches most similar first."]:
+    """Score the given faces (any status) against people: every person with an
+    assigned face, or only `person_ids`. Each face is scored against the person's
+    faces from the same stage of life, as find_similar_faces does. Unknown face ids
+    and people with no assigned faces yet are skipped. At most 5,000 face x person
+    comparisons per call: page through faces (data_query sort_by + offset) for more."""
+    face_ids = _id_list(face_ids, "face_ids")
+    if person_ids is not None:
+        person_ids = _id_list(person_ids, "person_ids")
+    people = person_repository.get_people_with_embeddings(session)
+    if person_ids is not None:
+        wanted = set(person_ids)
+        people = [person for person in people if person.id in wanted]
+    unique_face_ids = list(dict.fromkeys(face_ids))
+    if len(unique_face_ids) * max(1, len(people)) > MAX_FACE_COMPARISONS:
+        raise ValueError(
+            f"match_faces compares at most {MAX_FACE_COMPARISONS} face x person pairs per call "
+            f"({len(unique_face_ids)} faces x {len(people)} people); pass fewer face_ids or person_ids"
+        )
+    if not unique_face_ids or not people:
+        return []
+    face_by_id = {face.id: face for face in media_repository.get_faces_by_ids(session, unique_face_ids)
+                  if face.embedding is not None}
+    faces = [face_by_id[face_id] for face_id in unique_face_ids if face_id in face_by_id]
+    matches: dict[int, list[dict]] = {face.id: [] for face in faces}
+    for person in people:
+        for face_id, score in calculate_similarity(person, faces).items():
+            matches[face_id].append({"person_id": person.id, "person_name": person.name, "score": round(score, 4)})
+    return [
+        {"face_id": face.id, "media_item_id": face.media_item_id,
+         "matches": sorted(matches[face.id], key=lambda match: match["score"], reverse=True)}
+        for face in faces
+    ]
+
+
+def summarize_match_faces(args: list[Any], session: Session) -> str:
+    face_ids = args[0] if args and isinstance(args[0], list) else []
+    person_ids = args[1] if len(args) > 1 and isinstance(args[1], list) else None
+    faces = f"{len(face_ids)} face{'' if len(face_ids) == 1 else 's'}"
+    if person_ids is None:
+        return f"Match {faces} to known people"
+    if len(person_ids) == 1:
+        return f"Match {faces} to {person_label(session, person_ids[0])}"
+    return f"Match {faces} to {len(person_ids)} people"
+
+
 def _min_similarity(session: Session, threshold: Any) -> float:
     """The Faces page's 0-100 similarity scale as a cosine similarity, calibrated to
     this library's band."""
@@ -89,72 +147,51 @@ def _bounded_limit(limit: Any, maximum: int) -> int:
     return min(limit, maximum)
 
 
-def _checked_include_ignored(include_ignored: Any) -> bool:
-    if type(include_ignored) is not bool:
-        raise ValueError("include_ignored must be True or False")
-    return include_ignored
-
-
-def _candidate_faces(session: Session, include_ignored: bool) -> list:
-    """The faces to compare: the oldest unassigned ones, plus ignored ones when
-    `include_ignored` (sharing the same MAX_UNASSIGNED_FACES cap)."""
-    return person_repository.unassigned_faces(session, MAX_UNASSIGNED_FACES, include_ignored=include_ignored)
-
-
 def suggest_face_clusters(
-    session: Session, threshold: int = 50, limit: int = 20, include_ignored: bool = False,
-) -> Annotated[list[dict], "Clusters, largest first: {size, face_ids, media_item_ids, ignored_face_ids}."]:
+    session: Session, threshold: int = 50, limit: int = 20,
+) -> Annotated[list[dict], "Clusters, largest first: {size, face_ids, media_item_ids}."]:
     """Group unassigned faces that look alike, as the Faces page does (Group by:
     Similarity), over the oldest 2,000 unassigned faces. `threshold` is the page's
-    0-100 similarity scale: higher gives tighter, smaller clusters. `include_ignored`
-    clusters ignored faces too; `ignored_face_ids` lists the ones in each cluster."""
+    0-100 similarity scale: higher gives tighter, smaller clusters."""
     min_similarity = _min_similarity(session, threshold)
     limit = _bounded_limit(limit, 200)
-    faces = _candidate_faces(session, _checked_include_ignored(include_ignored))
+    faces = person_repository.unassigned_faces(session, MAX_UNASSIGNED_FACES)
     photo_of_face = {face.id: face.media_item_id for face in faces}
-    ignored = {face.id for face in faces if face.status == FACE_STATUS_IGNORED}
     clusters = cluster_faces([face.id for face in faces], [load_embedding(face.embedding) for face in faces],
                              min_similarity)
     clusters.sort(key=lambda cluster: len(cluster[1]), reverse=True)
     return [
         {"size": len(face_ids), "face_ids": face_ids,
-         "media_item_ids": list(dict.fromkeys(photo_of_face[face_id] for face_id in face_ids)),
-         "ignored_face_ids": [face_id for face_id in face_ids if face_id in ignored]}
+         "media_item_ids": list(dict.fromkeys(photo_of_face[face_id] for face_id in face_ids))}
         for _, face_ids in clusters[:limit]
     ]
 
 
 def summarize_suggest_face_clusters(args: list[Any], session: Session) -> str:
-    if len(args) > 2 and args[2] is True:
-        return "Group unassigned and ignored faces that look alike"
     return "Group unassigned faces that look alike"
 
 
 def find_similar_faces(
-    session: Session, person_id: int, threshold: int = 50, limit: int = 200, include_ignored: bool = False,
-) -> Annotated[list[dict], "Unassigned faces, most similar first: {face_id, media_item_id, score (0.0–1.0), ignored}."]:
+    session: Session, person_id: int, threshold: int = 50, limit: int = 200,
+) -> Annotated[list[dict], "Unassigned faces, most similar first: {face_id, media_item_id, score (0.0–1.0)}."]:
     """Unassigned faces that look like a person, over the oldest 2,000 unassigned
     faces, scored against the person's faces from the same stage of life.
-    `threshold` is the Faces page's 0-100 similarity scale. `include_ignored` scores
-    ignored faces too (each row's `ignored` flag marks them). Empty when the person
+    `threshold` is the Faces page's 0-100 similarity scale. Empty when the person
     is unknown or has no assigned faces yet."""
     min_similarity = _min_similarity(session, threshold)
     limit = _bounded_limit(limit, MAX_UNASSIGNED_FACES)
-    include_ignored = _checked_include_ignored(include_ignored)
     person = person_repository.get_person_by_id(session, person_id)
     if person is None:
         return []
-    faces = _candidate_faces(session, include_ignored)
-    face_by_id = {face.id: face for face in faces}
+    faces = person_repository.unassigned_faces(session, MAX_UNASSIGNED_FACES)
+    photo_of_face = {face.id: face.media_item_id for face in faces}
     scores = [(face_id, score) for face_id, score in calculate_similarity(person, faces).items()
               if score >= min_similarity]
     scores.sort(key=lambda pair: pair[1], reverse=True)
-    return [{"face_id": face_id, "media_item_id": face_by_id[face_id].media_item_id, "score": round(score, 4),
-             "ignored": face_by_id[face_id].status == FACE_STATUS_IGNORED}
+    return [{"face_id": face_id, "media_item_id": photo_of_face[face_id], "score": round(score, 4)}
             for face_id, score in scores[:limit]]
 
 
 def summarize_find_similar_faces(args: list[Any], session: Session) -> str:
     person_id = args[0] if args else None
-    faces = "unassigned and ignored faces" if len(args) > 3 and args[3] is True else "unassigned faces"
-    return f"Find {faces} that look like {person_label(session, person_id)}"
+    return f"Find unassigned faces that look like {person_label(session, person_id)}"

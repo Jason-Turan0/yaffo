@@ -373,6 +373,22 @@ HOST_API: tuple[HostFunction, ...] = (
     ),
     HostFunction(
         description=(
+            "Score any faces (by face id, whatever their status: unassigned, ignored or "
+            "assigned) against people -- every person with assigned faces, or just "
+            "person_ids. Scores use the person's faces from the same stage of life, the "
+            "same 0.0-1.0 scale as find_similar_faces. Unknown face ids and people with no "
+            "assigned faces are skipped. At most 5,000 face x person comparisons per call "
+            "(e.g. 5,000 faces against one person): page through faces with data_query "
+            "(sort_by id + offset + limit) and call it once per page."
+        ),
+        example='scored = match_faces([f["id"] for f in page], [person_id])',
+        impl=compare.match_faces,
+        profiles=frozenset({"automation", "assistant"}),
+        summarize=compare.summarize_match_faces,
+        mutating=False,
+    ),
+    HostFunction(
+        description=(
             "The groups a finished duplicate scan found, by its job id (automation_runs or "
             "recent_jobs finds it; the duplicate_scan automation runs a scan). Each copy comes "
             "with its size, date, faces, tags and albums, to choose which one to keep."
@@ -388,8 +404,7 @@ HOST_API: tuple[HostFunction, ...] = (
             "Group unassigned faces that look alike, as the Faces page's Similarity grouping "
             "does (the oldest 2,000 unassigned faces). threshold is the page's 0-100 scale; "
             "higher means tighter clusters. Use it to find someone who appears often but isn't "
-            "a person yet. Pass include_ignored=True to cluster ignored faces too; each "
-            "cluster's ignored_face_ids lists the ignored ones."
+            "a person yet."
         ),
         example="clusters = suggest_face_clusters(60, 10)",
         impl=compare.suggest_face_clusters,
@@ -402,8 +417,7 @@ HOST_API: tuple[HostFunction, ...] = (
             "Unassigned faces that look like a person (the oldest 2,000 unassigned faces), "
             "most similar first, scored against the person's faces from the same stage of "
             "life. threshold is the Faces page's 0-100 scale. Review the scores before "
-            "assigning. Pass include_ignored=True to also score ignored faces (each row's "
-            "`ignored` is True for those)."
+            "assigning."
         ),
         example="faces = find_similar_faces(person_id, 70, 100)",
         impl=compare.find_similar_faces,

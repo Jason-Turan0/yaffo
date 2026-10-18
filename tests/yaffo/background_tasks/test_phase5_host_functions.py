@@ -41,12 +41,11 @@ def session(tmp_path, monkeypatch):
     engine.dispose()
 
 
-def _faces(session, vectors, ignored=()):
-    """One face per photo, ids 1.. in order; unassigned unless its id is in `ignored`."""
+def _faces(session, vectors):
+    """One unassigned face per photo, ids 1.. in order."""
     rng = np.random.default_rng(seed=3)
     for i, vector in enumerate(vectors, start=1):
-        status = FACE_STATUS_IGNORED if i in ignored else FACE_STATUS_UNASSIGNED
-        session.add(Face(id=i, media_item_id=i, status=status,
+        session.add(Face(id=i, media_item_id=i, status=FACE_STATUS_UNASSIGNED,
                          embedding=_unit(np.array(vector) + rng.normal(0, 0.003, 3))))
     session.commit()
 
@@ -78,40 +77,69 @@ def test_find_similar_faces_scores_unassigned_faces_against_a_person(session):
     assert compare.find_similar_faces(session, 99) == []
 
 
-def test_suggest_face_clusters_skips_ignored_faces_unless_asked(session):
-    _faces(session, [[1, 0, 0]] * 5 + [[0, 1, 0]] * 3, ignored={4, 5, 7, 8})
-
-    default = compare.suggest_face_clusters(session, 80, 10)
-    with_ignored = compare.suggest_face_clusters(session, 80, 10, True)
-
-    assert [c["face_ids"] for c in default] == [[1, 2, 3]]  # 6 is noise once 7 and 8 are hidden
-    assert default[0]["ignored_face_ids"] == []
-    assert [c["face_ids"] for c in with_ignored] == [[1, 2, 3, 4, 5], [6, 7, 8]]
-    assert [c["ignored_face_ids"] for c in with_ignored] == [[4, 5], [7, 8]]
-    with pytest.raises(ValueError):
-        compare.suggest_face_clusters(session, 80, 10, "yes")
-
-
-def test_find_similar_faces_scores_ignored_faces_only_when_asked(session):
-    _faces(session, [[1, 0, 0], [0.95, 0.05, 0], [0, 1, 0]], ignored={2})
-    session.add(Person(id=1, name="Billy", avg_embedding=_unit([1, 0, 0])))
-    session.add(PersonEmbedding(person_id=1, life_stage="unknown", avg_embedding=_unit([1, 0, 0])))
+def _people(session):
+    """Billy looks like [1, 0, 0], Sally like [0, 1, 0]; Nobody has no gallery yet."""
+    for person_id, name, vector in [(1, "Billy", [1, 0, 0]), (2, "Sally", [0, 1, 0])]:
+        session.add(Person(id=person_id, name=name, avg_embedding=_unit(vector)))
+        session.add(PersonEmbedding(person_id=person_id, life_stage="unknown", avg_embedding=_unit(vector)))
+    session.add(Person(id=3, name="Nobody"))
     session.commit()
 
-    default = compare.find_similar_faces(session, 1, 50, 10)
-    with_ignored = compare.find_similar_faces(session, 1, 50, 10, True)
 
-    assert [(f["face_id"], f["ignored"]) for f in default] == [(1, False)]
-    assert [(f["face_id"], f["ignored"]) for f in with_ignored] == [(1, False), (2, True)]
-    with pytest.raises(ValueError):
-        compare.find_similar_faces(session, 1, 50, 10, 1)
+def test_match_faces_scores_faces_of_any_status_against_every_person(session):
+    _faces(session, [[1, 0, 0], [0, 1, 0]])
+    session.query(Face).filter(Face.id == 2).update({Face.status: FACE_STATUS_IGNORED})
+    _people(session)
+
+    result = compare.match_faces(session, [2, 1, 999])
+
+    assert [r["face_id"] for r in result] == [2, 1]  # face_ids order; unknown id skipped
+    assert result[0]["media_item_id"] == 2
+    assert [m["person_name"] for m in result[0]["matches"]] == ["Sally", "Billy"]  # best first
+    assert [m["person_name"] for m in result[1]["matches"]] == ["Billy", "Sally"]  # Nobody has no gallery
+    assert result[1]["matches"][0]["score"] > 0.99
 
 
-def test_summaries_mention_ignored_faces_when_included(session):
-    assert compare.summarize_suggest_face_clusters([60, 10, True], session) == (
-        "Group unassigned and ignored faces that look alike")
-    assert compare.summarize_suggest_face_clusters([60, 10], session) == "Group unassigned faces that look alike"
-    assert "unassigned and ignored faces" in compare.summarize_find_similar_faces([1, 50, 10, True], session)
+def test_match_faces_scores_the_same_as_find_similar_faces(session):
+    _faces(session, [[1, 0, 0], [0.95, 0.05, 0]])
+    _people(session)
+
+    similar = {f["face_id"]: f["score"] for f in compare.find_similar_faces(session, 1, 0, 10)}
+    matched = {r["face_id"]: r["matches"][0]["score"] for r in compare.match_faces(session, [1, 2], [1])}
+
+    assert matched == similar
+
+
+def test_match_faces_narrows_to_person_ids(session):
+    _faces(session, [[1, 0, 0]])
+    _people(session)
+
+    result = compare.match_faces(session, [1], [2])
+
+    assert [m["person_id"] for m in result[0]["matches"]] == [2]
+    assert compare.match_faces(session, [1], [3]) == []  # no gallery: nothing to score against
+    assert compare.match_faces(session, []) == []
+
+
+def test_match_faces_bounds_comparisons_and_checks_args(session, monkeypatch):
+    _faces(session, [[1, 0, 0]] * 3)
+    _people(session)
+    monkeypatch.setattr(compare, "MAX_FACE_COMPARISONS", 4)
+
+    assert len(compare.match_faces(session, [1, 2, 3], [1])) == 3  # 3 faces x 1 person
+    with pytest.raises(ValueError, match="3 faces x 2 people"):
+        compare.match_faces(session, [1, 2, 3])
+    with pytest.raises(ValueError, match="face_ids"):
+        compare.match_faces(session, 1)
+    with pytest.raises(ValueError, match="person_ids"):
+        compare.match_faces(session, [1], ["Billy"])
+
+
+def test_match_faces_summary_names_the_person(session):
+    _people(session)
+
+    assert compare.summarize_match_faces([[1, 2], [1]], session) == "Match 2 faces to Billy"
+    assert compare.summarize_match_faces([[1]], session) == "Match 1 face to known people"
 
 
 def test_set_person_birthdate_and_undo_respects_a_later_change(session):
