@@ -53,7 +53,7 @@ window.PHOTO_ORGANIZER.people.initFaces = (i18n, _config) => {
                 : Number(card.dataset.similarity);
             const date = window.PHOTO_ORGANIZER.utils?.date?.format(card.dataset.date) || '';
             const similarityText = Number.isFinite(similarity)
-                ? i18n.percent(similarity / 100)
+                ? i18n.percent(similarity / 100, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
                 : i18n.t('common:notAvailable');
             tooltip.replaceChildren(
                 document.createTextNode(i18n.t('common:dateValue', { value: date })),

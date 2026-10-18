@@ -362,8 +362,8 @@ AUTOMATION_HANDLER_CLASSIFY_LABELS = "classify_labels"
 # Default match threshold for the auto-assign-faces automation, on the SAME 0-100
 # UI similarity scale as the face screens (0 = least similar, 100 = most similar;
 # overridable via Automation.config["threshold"]). The task scales it to a cosine
-# cutoff against the live similarity band (compare_utils.ui_threshold_to_similarity).
-# 50 is the neutral midpoint, matching the assignment screen's default.
+# cutoff on the face model's fixed similarity band (compare_utils.SIMILARITY_BANDS):
+# 80 = cosine 0.66 for buffalo_l, above where family look-alikes score (0.45-0.55).
 AUTO_ASSIGN_FACES_DEFAULT_THRESHOLD = 80
 
 # Default window (minutes) within which the geotag-from-neighbors automation borrows

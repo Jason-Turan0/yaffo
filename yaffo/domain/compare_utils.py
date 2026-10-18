@@ -3,6 +3,7 @@ from yaffo.db.models import Face, Person
 from sklearn.metrics.pairwise import cosine_similarity
 
 from yaffo.domain.life_stages import effective_birthdate, life_stage
+from yaffo.utils.face_analysis import MODEL_NAME as FACE_MODEL_NAME
 
 def load_embedding(blob: bytes) -> np.ndarray:
     """Deserialize a stored face embedding. ArcFace embeddings are 512-d float32
@@ -17,21 +18,44 @@ def serialize_embedding(arr: np.ndarray) -> bytes:
     return np.asarray(arr, dtype=np.float32).tobytes()
 
 
-# Stored face<->person cosine similarities don't usefully span [0, 1]: real matches
-# crowd into a band well above 0 (measured on the live gallery 2026-06-19: p5=0.31,
-# median=0.66, p95=0.85). So the 0-100 UI scale is calibrated onto that band, not
-# raw cosine -- otherwise the bottom third of every slider is dead and every score
-# reads "low". The band is data-driven (get_similarity_bounds queries the actual
-# people_face.similarity percentiles); these constants are only the cold-start
-# fallback for when there aren't enough assignments yet to measure it.
-DEFAULT_SIMILARITY_FLOOR = 0.35
-DEFAULT_SIMILARITY_CEIL = 0.90
+# The 0-100 UI similarity scale, as a cosine band per face model. Raw cosine doesn't
+# usefully span [0, 1] -- unrelated faces sit near 0 and strong matches top out
+# around 0.8 -- so every slider, displayed percent and automation threshold maps onto
+# [floor, ceil] instead. 0% = no more alike than two unrelated relatives; 100% = a
+# strong match. The band is a property of the model, not stored in it: it's measured
+# (benchmarks/face/ run.py prints a calibration table) and changes between models, so
+# a new MODEL_NAME needs its own entry -- and a reseed anyway, since embeddings from
+# different models aren't comparable.
+#
+# Fixed, not derived from the library: a band measured from people_face scores fed
+# back into itself (wrong assignments lowered the floor, which loosened every
+# threshold, which let more in) and silently changed what saved thresholds meant.
+# buffalo_l (2026-10-18): the floor is low on purpose, so a person's weakest faces
+# still read as a gradient rather than a wall of 0% (at 0.35, 12% of a child's faces
+# clamped); 0.10 is about where unrelated family members score in the benchmark
+# (median 0.11). Strong matches peak at 0.75-0.82. Family look-alikes (siblings) sit
+# around 0.45-0.55, i.e. roughly 50-65% on this scale -- so automation thresholds
+# belong above that (auto-assign at 55 = 0.485).
+SIMILARITY_BANDS: dict[str, tuple[float, float]] = {
+    "buffalo_l": (0.10, 0.80),
+}
+SIMILARITY_FLOOR, SIMILARITY_CEIL = SIMILARITY_BANDS[FACE_MODEL_NAME]
+
+# The lowest score that counts as any resemblance at all, per model: below it a score
+# is noise, not evidence. The review lists use it -- a face is "likely misassigned"
+# only when someone else scores at least this (0.13 vs 0.14 is noise, not "closer to
+# Nathan"), and "looks like nobody" when no one, its own person included, reaches it.
+# buffalo_l: below 0.35 even good-quality genuine pairs are rare (3% in the benchmark).
+PLAUSIBLE_MATCH_SIMILARITIES: dict[str, float] = {
+    "buffalo_l": 0.35,
+}
+PLAUSIBLE_MATCH_SIMILARITY = PLAUSIBLE_MATCH_SIMILARITIES[FACE_MODEL_NAME]
 
 
 def ui_threshold_to_similarity(
     ui_value: float,
-    floor: float = DEFAULT_SIMILARITY_FLOOR,
-    ceil: float = DEFAULT_SIMILARITY_CEIL,
+    floor: float = SIMILARITY_FLOOR,
+    ceil: float = SIMILARITY_CEIL,
 ) -> float:
     """Map a 0-100 UI similarity slider value (0 = least similar, 100 = most
     similar) onto the cosine scale, calibrated to the useful band [floor, ceil].
@@ -43,8 +67,8 @@ def ui_threshold_to_similarity(
 
 def similarity_to_ui_fraction(
     similarity: float,
-    floor: float = DEFAULT_SIMILARITY_FLOOR,
-    ceil: float = DEFAULT_SIMILARITY_CEIL,
+    floor: float = SIMILARITY_FLOOR,
+    ceil: float = SIMILARITY_CEIL,
 ) -> float:
     """Inverse of ui_threshold_to_similarity as an unrounded 0.0-1.0 fraction of the
     band, for a client that formats it as a percent itself. Clamped to [0, 1]."""
@@ -54,8 +78,8 @@ def similarity_to_ui_fraction(
 
 def similarity_to_ui_percent(
     similarity: float,
-    floor: float = DEFAULT_SIMILARITY_FLOOR,
-    ceil: float = DEFAULT_SIMILARITY_CEIL,
+    floor: float = SIMILARITY_FLOOR,
+    ceil: float = SIMILARITY_CEIL,
 ) -> int:
     """Inverse of ui_threshold_to_similarity: map a raw cosine similarity onto the
     0-100 UI percent over the same band, so a displayed score and the slider share

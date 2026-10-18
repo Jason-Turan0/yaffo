@@ -18,51 +18,14 @@ from yaffo.db.models import (
     PersonFace,
 )
 from yaffo.domain.compare_utils import (
+    PLAUSIBLE_MATCH_SIMILARITY,
     load_embedding,
     serialize_embedding,
-    DEFAULT_SIMILARITY_FLOOR,
-    DEFAULT_SIMILARITY_CEIL,
 )
 from yaffo.domain.life_stages import STAGE_BEFORE_BIRTH, life_stage, effective_birthdate
 from yaffo.logging_config import get_logger
 
 logger = get_logger(__name__)
-
-# Below this many assignments the percentiles are too noisy to calibrate a band.
-_SIMILARITY_BOUNDS_MIN_SAMPLES = 50
-
-# Nearest-rank low/high percentiles of stored similarities (SQLite has no
-# percentile aggregate). Percentiles, not min/max, so a few mis-assignments at the
-# tails don't stretch the band. COUNT(*) lets the caller fall back when sparse.
-_SIMILARITY_BOUNDS_SQL = text("""
-    SELECT
-        (SELECT similarity FROM people_face WHERE similarity IS NOT NULL
-         ORDER BY similarity
-         LIMIT 1 OFFSET (SELECT CAST(:low * (COUNT(*) - 1) AS INT)
-                         FROM people_face WHERE similarity IS NOT NULL)),
-        (SELECT similarity FROM people_face WHERE similarity IS NOT NULL
-         ORDER BY similarity
-         LIMIT 1 OFFSET (SELECT CAST(:high * (COUNT(*) - 1) AS INT)
-                         FROM people_face WHERE similarity IS NOT NULL)),
-        (SELECT COUNT(*) FROM people_face WHERE similarity IS NOT NULL)
-""")
-
-
-def get_similarity_bounds(
-    session: Session, low_pct: float = 0.05, high_pct: float = 0.95
-) -> tuple[float, float]:
-    """The (floor, ceil) cosine band the 0-100 UI similarity scale is calibrated
-    against, read from the live distribution of assigned-face similarities. Falls
-    back to the documented defaults until there are enough assignments to measure a
-    stable band (or if the data is degenerate). Cheap enough to call once per
-    request; the band drifts slowly as the gallery grows."""
-    floor, ceil, n = session.execute(
-        _SIMILARITY_BOUNDS_SQL, {"low": low_pct, "high": high_pct}
-    ).one()
-    if n < _SIMILARITY_BOUNDS_MIN_SAMPLES or floor is None or ceil is None or ceil <= floor:
-        return DEFAULT_SIMILARITY_FLOOR, DEFAULT_SIMILARITY_CEIL
-    return float(floor), float(ceil)
-
 
 def _medoid(embeddings: list[np.ndarray]) -> np.ndarray:
     """The most representative real embedding of a group: the one closest (cosine)
@@ -425,11 +388,6 @@ def recompute_person_similarities(session: Session, person_id: int, only_missing
     score written before it. This recomputes them, so a stored score always means the
     same thing as a freshly computed one.
 
-    That matters beyond the number on the screen: the 0-100 scale the UI displays is
-    calibrated against the *percentiles of these stored values* (get_similarity_bounds),
-    so stale scores drag the band and mis-render even the faces that were scored
-    correctly.
-
     Scoring matches domain.compare_utils.calculate_similarity, and must: the assignment
     screen and the auto-assign automation score with that one, and this cache is what
     the review screen sorts, filters and calibrates its scale from. Each face is scored
@@ -467,31 +425,28 @@ def recompute_person_similarities(session: Session, person_id: int, only_missing
     return len(updates)
 
 @dataclass(frozen=True)
-class LikelyMisassignedFace:
-    """A face assigned to one person that looks more like another."""
+class FaceMatch:
+    """How one of a person's assigned faces scores against them and against the best
+    other person (None when nobody else has a gallery, or the photo predates them all)."""
     face_id: int
     similarity: float  # to the person it's assigned to
-    other_person_id: int
-    other_person_name: str
-    other_similarity: float
+    other_person_id: int | None
+    other_person_name: str | None
+    other_similarity: float | None
 
     @property
     def gap(self) -> float:
-        return self.other_similarity - self.similarity
+        return (self.other_similarity or 0.0) - self.similarity
 
 
-def likely_misassigned_faces(
-    session: Session, person_id: int, face_ids: list[int] | None = None,
-) -> list[LikelyMisassignedFace]:
-    """The person's assigned faces that score higher against someone else, biggest gap
-    first -- likely wrong assignments (a sibling, say) worth reviewing.
-
-    Every face is scored the way PersonFace.similarity is (_score_faces: own life
-    stage), against its own person and against each other person with a gallery, so
-    the comparison is like for like. A photo from before another person was born never
-    counts as looking like them. `face_ids` narrows the check to faces already matching
-    the screen's other filters. Scores are computed fresh, not read from the cache, so
-    a stale stored score can't hide or invent a match."""
+def _face_matches(session: Session, person_id: int, face_ids: list[int] | None) -> list[FaceMatch]:
+    """Score the person's assigned faces against them and against every other person
+    with a gallery, the way PersonFace.similarity is scored (_score_faces: own life
+    stage), so the comparison is like for like. A photo from before another person was
+    born never counts as looking like them. `face_ids` narrows the check to faces
+    already matching the screen's other filters. Scores are computed fresh, not read
+    from the cache, so a stale stored score can't hide or invent a match. Faces with
+    nothing to score against their own person are left out."""
     person = session.get(Person, person_id)
     if person is None:
         return []
@@ -516,14 +471,45 @@ def likely_misassigned_faces(
             if score is not None and (best[index] is None or score > best[index][1]):
                 best[index] = (other, score)
 
-    matches = [
-        LikelyMisassignedFace(row.face_id, own, other.id, other.name, other_score)
+    return [
+        FaceMatch(row.face_id, own,
+                  match[0].id if match else None, match[0].name if match else None, match[1] if match else None)
         for row, own, match in zip(rows, own_scores, best)
-        if own is not None and match is not None
-        for other, other_score in [match]
-        if other_score > own
+        if own is not None
+    ]
+
+
+def likely_misassigned_faces(
+    session: Session, person_id: int, face_ids: list[int] | None = None,
+) -> list[FaceMatch]:
+    """The person's assigned faces that look more like someone else, biggest gap first
+    -- likely wrong assignments (a sibling, say) worth reviewing.
+
+    "More like" means the other person scores higher AND at least a plausible match
+    (PLAUSIBLE_MATCH_SIMILARITY). Without that, a face that matches nobody (0.13 to its
+    person, 0.14 to a sibling) was flagged on noise; those belong to unmatched_faces."""
+    matches = [
+        match for match in _face_matches(session, person_id, face_ids)
+        if match.other_similarity is not None
+        and match.other_similarity > match.similarity
+        and match.other_similarity >= PLAUSIBLE_MATCH_SIMILARITY
     ]
     matches.sort(key=lambda match: (-match.gap, match.face_id))
+    return matches
+
+
+def unmatched_faces(
+    session: Session, person_id: int, face_ids: list[int] | None = None,
+) -> list[FaceMatch]:
+    """The person's assigned faces that look like nobody, weakest first: below a
+    plausible match (PLAUSIBLE_MATCH_SIMILARITY) for this person AND for everyone else. Often a stranger or another child filed under the wrong person, sometimes
+    just a poor detection -- either way not a face this person's gallery should rest on."""
+    matches = [
+        match for match in _face_matches(session, person_id, face_ids)
+        if match.similarity < PLAUSIBLE_MATCH_SIMILARITY
+        and (match.other_similarity is None or match.other_similarity < PLAUSIBLE_MATCH_SIMILARITY)
+    ]
+    matches.sort(key=lambda match: (match.similarity, match.face_id))
     return matches
 
 

@@ -133,12 +133,12 @@ def summarize_match_faces(args: list[Any], session: Session) -> str:
     return f"Match {faces} to {len(person_ids)} people"
 
 
-def _min_similarity(session: Session, threshold: Any) -> float:
-    """The Faces page's 0-100 similarity scale as a cosine similarity, calibrated to
-    this library's band."""
+def _min_similarity(threshold: Any) -> float:
+    """The Faces page's 0-100 similarity scale as a cosine similarity, on the face
+    model's fixed similarity band."""
     if not isinstance(threshold, (int, float)) or isinstance(threshold, bool) or not 0 <= threshold <= 100:
         raise ValueError("threshold must be a number from 0 to 100")
-    return ui_threshold_to_similarity(threshold, *person_repository.get_similarity_bounds(session))
+    return ui_threshold_to_similarity(threshold)
 
 
 def _bounded_limit(limit: Any, maximum: int) -> int:
@@ -153,7 +153,7 @@ def suggest_face_clusters(
     """Group unassigned faces that look alike, as the Faces page does (Group by:
     Similarity), over the oldest 2,000 unassigned faces. `threshold` is the page's
     0-100 similarity scale: higher gives tighter, smaller clusters."""
-    min_similarity = _min_similarity(session, threshold)
+    min_similarity = _min_similarity(threshold)
     limit = _bounded_limit(limit, 200)
     faces = person_repository.unassigned_faces(session, MAX_UNASSIGNED_FACES)
     photo_of_face = {face.id: face.media_item_id for face in faces}
@@ -178,7 +178,7 @@ def find_similar_faces(
     faces, scored against the person's faces from the same stage of life.
     `threshold` is the Faces page's 0-100 similarity scale. Empty when the person
     is unknown or has no assigned faces yet."""
-    min_similarity = _min_similarity(session, threshold)
+    min_similarity = _min_similarity(threshold)
     limit = _bounded_limit(limit, MAX_UNASSIGNED_FACES)
     person = person_repository.get_person_by_id(session, person_id)
     if person is None:

@@ -238,6 +238,9 @@
                     <a href="{{ next_batch_url }}" class="action-link" id="faces-next-batch">{{ _("Next batch") }}</a>
                 {% endif %}
             {% endset %}
+            {# No subtitle for an empty batch ("Showing 0–0 of 0"): the empty-state panel
+               below says why -- nothing left, or past the end of the pool. #}
+            {% if faces %}
             {% call page_header(_("Unassigned Faces"), actions=header_actions) %}
                 {% set first = (batch_start + 1 if faces else batch_start) | format_integer %}
                 {% set last = batch_end | format_integer %}
@@ -247,6 +250,9 @@
                     {% trans count=unassigned_face_count, total=unassigned_face_count|format_integer %}Showing {{ first }}–{{ last }} of {{ total }} unassigned face{% pluralize %}Showing {{ first }}–{{ last }} of {{ total }} unassigned faces{% endtrans %}
                 {% endif %}
             {% endcall %}
+            {% else %}
+            {{ page_header(_("Unassigned Faces"), actions=header_actions) }}
+            {% endif %}
             <div id="clusters">
                 {% if face_suggestions | length > 0 %}
                     {% for faceSuggestion in face_suggestions %}

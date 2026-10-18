@@ -121,16 +121,16 @@ scenarios:
     verify:
       - A success message is displayed and the face leaves the first person's view (the move is synchronous, no taskq wait)
       - The face is shown on the second person's faces view
-  - name: people_can_filter_faces_to_likely_misassigned
-    goal: The "Only likely misassigned" filter shows only faces that look more like someone else
+  - name: people_can_show_likely_misassigned_or_unmatched_faces
+    goal: The "Show" choice lists all faces, only likely misassigned ones, or only ones that look like nobody
     priority: medium
     steps:
-      - Open a person's faces view with ?misassigned=1
-      - Open it again without the filter
+      - Open a person's faces view (Show = All faces), then with ?show=misassigned, then ?show=nobody
     verify:
-      - With the filter, the checkbox (input[name="misassigned"]) is checked and has an info tip (.help-tip[data-tooltip]) beside it
-      - Every face shown carries a .face-closer-to line naming who it looks more like; with none, the empty state shows
-      - Without the filter the checkbox is unchecked and no .face-closer-to line appears
+      - The matching radio (input[name="show"]) is checked each time; each of the three options has an info tip (.help-tip[data-tooltip])
+      - All faces shows no .face-closer-to line
+      - Likely misassigned shows a .face-closer-to line on every face (or the empty state when none)
+      - Looks like nobody shows no .face-closer-to line (or the empty state when none)
   # ---------------------------------------------------------------------------
   # Responsive coverage (P3 — people). The shared shell contract itself is verified
   # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen
@@ -188,6 +188,14 @@ scenarios:
       - The typed name is still there
       - The dialog still fits inside the viewport
 
+  - name: the_actions_panel_stays_in_view_while_the_faces_grid_scrolls
+    goal: On desktop the sidebar column (Actions + Filters) sticks and scrolls as one
+    priority: medium
+    steps:
+      - At 1440x700 open a person's faces view with page-size=1000 and scroll to the bottom
+    verify:
+      - The Actions panel and its Move Selected button are still within the viewport
+      - (Skipped when the fixture has too few faces to scroll the page)
   - name: person_faces_route_renders_without_horizontal_overflow_at_every_contract_width
     goal: The per-person face gallery is contained at every supported width
     priority: high

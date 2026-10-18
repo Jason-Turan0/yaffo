@@ -121,7 +121,6 @@ def test_task_scales_ui_threshold_to_cosine_against_the_band(monkeypatch, progre
         "config_value",
         lambda automation, field: 50 if field.key == "threshold" else True,
     )  # UI midpoint + assign multiple matches enabled
-    monkeypatch.setattr(mod, "get_similarity_bounds", lambda session: (0.40, 0.80))
     monkeypatch.setattr(mod, "record_run", lambda session, automation, work, media_item_ids, job_id: work(progress_reporter))
 
     def _capture(session, reporter, media_item_ids, threshold, assign_multiple_matches=False, on_committed=None):
@@ -135,8 +134,8 @@ def test_task_scales_ui_threshold_to_cosine_against_the_band(monkeypatch, progre
     # .fn is the undecorated function -- run it inline instead of enqueueing.
     mod.auto_assign_faces_automation_task.fn(automation_id=1, media_item_ids=[1])
 
-    # ui_threshold_to_similarity(50, 0.40, 0.80) == midpoint == 0.60
-    assert captured["threshold"] == pytest.approx(0.60)
+    # 50 is the midpoint of the face model's fixed band: (0.10 + 0.80) / 2
+    assert captured["threshold"] == pytest.approx(0.45)
     # record_run hands work the ProgressReporter, which is threaded through to _assign_faces.
     assert captured["reporter"] is progress_reporter
     assert captured["assign_multiple_matches"] is True

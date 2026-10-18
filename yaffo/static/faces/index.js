@@ -17,6 +17,13 @@
  * @property {string} [media_type]
  * @property {FaceRegion | null} [region]
  * @property {boolean} [ignored]
+ * @property {FaceMatch[]} [matches]
+ *
+ * A person a face matched above the threshold (Group by People), best first.
+ * @typedef {Object} FaceMatch
+ * @property {number} person_id
+ * @property {string} name
+ * @property {number} similarity
  *
  * A person offered as a keyboard/shortcut assignment target.
  * @typedef {Object} PersonShortcut
@@ -443,7 +450,19 @@ facesNamespace.initAssignment = (
             note.textContent = i18n.t('faces:assignment.videoPreviewUnavailable');
             previewParts.push(note);
         }
-        if (hasSimilarity) {
+        // A face that matched several people lists each of them, best first, rather
+        // than only the most likely one.
+        const record = faces.find((face) => String(face.id) === faceEl.dataset.faceId);
+        const matches = record?.matches ?? [];
+        if (matches.length > 1) {
+            matches.forEach((match) => {
+                previewParts.push(document.createTextNode(i18n.t('faces:assignment.personSimilarity', {
+                    name: match.name,
+                    value: i18n.percent(match.similarity, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                })));
+                previewParts.push(document.createElement('br'));
+            });
+        } else if (hasSimilarity) {
             previewParts.push(document.createTextNode(
                 i18n.t('common:similarityValue', { value: similarityText })
             ));

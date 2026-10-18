@@ -12,18 +12,24 @@ from yaffo.db.repositories.person_repository import (
     clear_faces,
     delete_person,
     get_media_item_ids_for_person,
-    get_similarity_bounds,
     likely_misassigned_faces,
+    unmatched_faces,
     update_person_embedding,
 )
 from yaffo.db.repositories.media_repository import get_distinct_months, get_distinct_years
-from yaffo.domain.compare_utils import ui_threshold_to_similarity, similarity_to_ui_percent
+from yaffo.domain.compare_utils import ui_threshold_to_similarity, similarity_to_ui_fraction
 from yaffo.background_tasks.events import emit_event
 from yaffo.background_tasks.tasks.assign_faces_to_person import assign_faces_to_person_now
 from yaffo.utils.context import context
 
 DEFAULT_THRESHOLD = 0.95  # configurable similarity threshold
 FACE_LOAD_LIMIT = 250
+
+# The person faces page's "Show" choice: every face, or one of the two review lists.
+SHOW_ALL = "all"
+SHOW_MISASSIGNED = "misassigned"
+SHOW_UNMATCHED = "nobody"
+SHOW_FINDERS = {SHOW_MISASSIGNED: likely_misassigned_faces, SHOW_UNMATCHED: unmatched_faces}
 
 
 def _parse_optional_gender(raw_gender: str | None) -> int | None:
@@ -175,7 +181,10 @@ def init_people_routes(app: Flask):
         page = request.args.get("page", default=1, type=int)
         page_size = request.args.get("page-size", type=int)
         filter_face_page_size = page_size if page_size else FACE_LOAD_LIMIT
-        misassigned = request.args.get("misassigned") == "1"
+        # "Show": every face, only those that look more like someone else, or only
+        # those that look like nobody (the two can't overlap, hence one choice).
+        show = request.args.get("show")
+        show = show if show in SHOW_FINDERS else SHOW_ALL
 
         if not person:
             flash(gettext("Person not found"), "error")
@@ -199,21 +208,19 @@ def init_people_routes(app: Flask):
             query = query.filter(photo_alias.year == year)
         if month:
             query = query.filter(photo_alias.month == month)
-        # Sliders are 0-100 UI values; PersonFace.similarity is stored cosine. The
-        # band the 0-100 scale maps onto is read from the live data, not hardcoded.
-        bounds = get_similarity_bounds(db.session)
+        # Sliders are 0-100 UI values; PersonFace.similarity is stored cosine, mapped
+        # through the face model's fixed band (compare_utils.SIMILARITY_BANDS).
         if min_similarity and min_similarity > 0:
-            query = query.filter(PersonFace.similarity > ui_threshold_to_similarity(min_similarity, *bounds))
+            query = query.filter(PersonFace.similarity > ui_threshold_to_similarity(min_similarity))
         if max_similarity and max_similarity > 0:
-            query = query.filter(PersonFace.similarity < ui_threshold_to_similarity(max_similarity, *bounds))
+            query = query.filter(PersonFace.similarity < ui_threshold_to_similarity(max_similarity))
 
         offset = (page - 1) * filter_face_page_size
         matches_by_face_id = {}
-        if misassigned:
-            # Faces that look more like someone else, biggest gap first. The check
-            # scores every matching face, so it runs over the filtered ids and the
-            # page is cut from its ordered result.
-            matches = likely_misassigned_faces(
+        if show in SHOW_FINDERS:
+            # The check scores every matching face, so it runs over the filtered ids
+            # and the page is cut from its ordered result.
+            matches = SHOW_FINDERS[show](
                 db.session, person_id, [face_id for (face_id,) in query.with_entities(Face.id).all()])
             total_faces = len(matches)
             page_matches = matches[offset:offset + filter_face_page_size]
@@ -222,7 +229,8 @@ def init_people_routes(app: Flask):
             faces = [faces_by_id[match.face_id] for match in page_matches if match.face_id in faces_by_id]
             # Offer the person most of these look like as the move target.
             suggested_person_id = (
-                Counter(match.other_person_id for match in matches).most_common(1)[0][0] if matches else None)
+                Counter(match.other_person_id for match in matches).most_common(1)[0][0]
+                if matches and show == SHOW_MISASSIGNED else None)
         else:
             total_faces = query.count()
             faces = (
@@ -243,23 +251,27 @@ def init_people_routes(app: Flask):
             "page_size": filter_face_page_size,
             "min_similarity": min_similarity,
             "max_similarity": max_similarity,
-            "misassigned": misassigned,
+            "show": show,
         }
 
         def face_entry(face: Face) -> dict:
             match = matches_by_face_id.get(face.id)
-            # In the misassigned view the score is the freshly computed one the
-            # comparison used, so the two numbers on the card agree.
+            # In a filtered view the score is the freshly computed one the check
+            # used, so the numbers on the card agree with why it's listed.
             similarity = match.similarity if match else face.person_face.similarity
+            # Percent on the slider's 0-100 scale, unrounded: the card shows one decimal.
+            def ui_percent(score: float) -> float:
+                return similarity_to_ui_fraction(score) * 100
+
             return {
                 "face": face,
                 "similarity": similarity,
-                "similarity_pct": similarity_to_ui_percent(similarity, *bounds) if similarity is not None else None,
+                "similarity_pct": ui_percent(similarity) if similarity is not None else None,
                 "closer_to": {
                     "person_id": match.other_person_id,
                     "name": match.other_person_name,
-                    "similarity_pct": similarity_to_ui_percent(match.other_similarity, *bounds),
-                } if match else None,
+                    "similarity_pct": ui_percent(match.other_similarity),
+                } if match and show == SHOW_MISASSIGNED else None,
             }
 
         face_data = [face_entry(face) for face in faces]

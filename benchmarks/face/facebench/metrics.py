@@ -13,6 +13,13 @@ group photos for genuine, against *other* people's solo photos for impostor):
   - FAR@thr   : fraction of impostor pairs that falsely match
   - AUC / EER : threshold-free separation of genuine vs impostor scores, so models
                 with differently-calibrated thresholds compare fairly
+
+Score calibration (where the model's score scale sits, for an app's 0-100 similarity
+range -- not stored in a model, and it shifts between models):
+  - the score at the EER, and the score letting only 1% of impostor pairs through
+  - impostor p99 / max and genuine p5 / p50 / p95
+  - a suggested band: 0% = the 1%-FAR score, 100% = genuine p95
+  The raw genuine/impostor score lists are kept for further analysis (--json).
 """
 from __future__ import annotations
 
@@ -45,6 +52,20 @@ class RecognitionResult:
     impostor_pairs: int
     ms_per_photo: float
     ms_per_face: float
+    eer_threshold: float
+    threshold_far_1pct: float
+    impostor_p99: float
+    impostor_max: float
+    genuine_p5: float
+    genuine_p50: float
+    genuine_p95: float
+    genuine_scores: list[float]
+    impostor_scores: list[float]
+
+    @property
+    def suggested_band(self) -> tuple[float, float]:
+        """0% = the score only 1% of impostor pairs reach; 100% = a strong genuine match."""
+        return self.threshold_far_1pct, self.genuine_p95
 
 
 def detection_result(backend_name: str, counts: list[tuple[int, int]], total_ms: float) -> DetectionResult:
@@ -74,16 +95,27 @@ def _auc(genuine: np.ndarray, impostor: np.ndarray) -> float:
     return wins / (len(genuine) * len(impostor))
 
 
-def _eer(genuine: np.ndarray, impostor: np.ndarray) -> float:
+def _eer(genuine: np.ndarray, impostor: np.ndarray) -> tuple[float, float]:
+    """(equal error rate, the score threshold where it occurs)."""
     if not len(genuine) or not len(impostor):
-        return float("nan")
+        return float("nan"), float("nan")
     thresholds = np.unique(np.concatenate([genuine, impostor]))
-    best = 1.0
+    best, best_thr = 1.0, float("nan")
     for thr in thresholds:
         frr = float((genuine < thr).mean())   # genuine rejected
         far = float((impostor >= thr).mean())  # impostor accepted
-        best = min(best, max(frr, far))
-    return best
+        if max(frr, far) < best:
+            best, best_thr = max(frr, far), float(thr)
+    return best, best_thr
+
+
+def _threshold_at_far(impostor: np.ndarray, far: float) -> float:
+    """The lowest score that at most `far` of impostor pairs reach or exceed."""
+    if not len(impostor):
+        return float("nan")
+    ordered = np.sort(impostor)[::-1]
+    allowed = int(np.floor(far * len(ordered)))  # impostors allowed at or above
+    return float(np.nextafter(ordered[allowed], np.inf)) if allowed < len(ordered) else float(ordered[-1])
 
 
 def recognition_result(
@@ -146,15 +178,25 @@ def recognition_result(
     i = np.array(impostor or [0.0])
     recall = (matched / genuine_photos) if genuine_photos else 0.0
     far = float((i >= backend.threshold).mean()) if impostor else float("nan")
+    eer, eer_threshold = _eer(g, i)
 
     return RecognitionResult(
         backend=backend.name,
         recall_at_threshold=recall,
         far_at_threshold=far,
         auc=_auc(g, i),
-        eer=_eer(g, i),
+        eer=eer,
         genuine_pairs=genuine_photos,
         impostor_pairs=len(impostor),
         ms_per_photo=(analyze_ms / photos_seen) if photos_seen else 0.0,
         ms_per_face=(analyze_ms / faces_seen) if faces_seen else 0.0,
+        eer_threshold=eer_threshold,
+        threshold_far_1pct=_threshold_at_far(i, 0.01),
+        impostor_p99=float(np.percentile(i, 99)),
+        impostor_max=float(i.max()),
+        genuine_p5=float(np.percentile(g, 5)),
+        genuine_p50=float(np.percentile(g, 50)),
+        genuine_p95=float(np.percentile(g, 95)),
+        genuine_scores=[float(x) for x in g],
+        impostor_scores=[float(x) for x in i],
     )

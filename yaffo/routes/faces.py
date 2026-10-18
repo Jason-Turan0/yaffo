@@ -1,5 +1,5 @@
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import NamedTuple, Optional, List
 import numpy as np
 from flask import Flask, jsonify, render_template, request, url_for
@@ -16,7 +16,6 @@ from yaffo.db.models import (
 
 from sklearn.metrics.pairwise import cosine_similarity
 
-from yaffo.db.repositories.person_repository import get_similarity_bounds
 from yaffo.db.repositories.media_repository import get_distinct_years, get_distinct_months
 from yaffo.domain.compare_utils import load_embedding, similarity_to_ui_fraction, ui_threshold_to_similarity
 from yaffo.domain.face_clusters import cluster_faces
@@ -51,6 +50,10 @@ class FaceViewModel:
     region: Optional[dict]
     # Shown only when the "Include ignored faces" filter is on; the grid marks them.
     ignored: bool = False
+    # Group by People: every person the face matched above the threshold, best first,
+    # as {person_id, name, cosine_similarity, similarity}. The preview lists them all,
+    # not just the best one; `similarity` (slider scale) is filled in by the route.
+    matches: list[dict] = field(default_factory=list)
 
 
 @dataclass
@@ -261,7 +264,12 @@ def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Perso
             face_suggestions.append(best_suggestion)
 
         if best_suggestion is not None:
-            best_suggestion.faces.append(_face_view_model(face, matching_people[0].similarity))
+            face_view = _face_view_model(face, matching_people[0].similarity)
+            face_view.matches = [
+                {"person_id": match.person.id, "name": match.person.name, "cosine_similarity": match.similarity}
+                for match in matching_people
+            ]
+            best_suggestion.faces.append(face_view)
         else:
             default_suggestion.faces.append(_face_view_model(face, None))
 
@@ -362,9 +370,8 @@ def init_faces_routes(app: Flask):
         )
         all_people_shortcuts = [_person_shortcut(person) for person in people]
 
-        # Scale the 0-100 slider to a cosine similarity against the live data band.
-        bounds = get_similarity_bounds(db.session)
-        min_cosign_similarity = ui_threshold_to_similarity(threshold, *bounds)
+        # Scale the 0-100 slider to a cosine similarity on the face model's band.
+        min_cosign_similarity = ui_threshold_to_similarity(threshold)
         face_suggestions = (
             make_suggestions_by_similarity(unassigned_faces, min_cosign_similarity)) \
             if (group_by == 'similarity') else \
@@ -378,7 +385,9 @@ def init_faces_routes(app: Flask):
             for face_view in suggestion.faces:
                 if face_view.cosine_similarity is not None:
                     face_view.similarity = (face_view.cosine_similarity if group_by == 'similarity'
-                                            else similarity_to_ui_fraction(face_view.cosine_similarity, *bounds))
+                                            else similarity_to_ui_fraction(face_view.cosine_similarity))
+                for match in face_view.matches:
+                    match["similarity"] = similarity_to_ui_fraction(match["cosine_similarity"])
             # Ascending: the weakest matches lead, so the faces most likely to be
             # wrong are the ones you see first and can deselect before assigning.
             # Sorted on the raw cosine, which the slider scale clamps into ties.

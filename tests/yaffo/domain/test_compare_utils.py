@@ -6,8 +6,11 @@ from yaffo.domain.compare_utils import (
     ui_threshold_to_similarity,
     similarity_to_ui_fraction,
     similarity_to_ui_percent,
-    DEFAULT_SIMILARITY_FLOOR,
-    DEFAULT_SIMILARITY_CEIL,
+    PLAUSIBLE_MATCH_SIMILARITIES,
+    PLAUSIBLE_MATCH_SIMILARITY,
+    SIMILARITY_BANDS,
+    SIMILARITY_FLOOR,
+    SIMILARITY_CEIL,
 )
 
 pytestmark = pytest.mark.unit
@@ -23,8 +26,8 @@ def test_maps_ui_value_onto_the_given_band(ui_value, expected):
 
 
 def test_defaults_to_the_documented_band():
-    assert ui_threshold_to_similarity(0) == pytest.approx(DEFAULT_SIMILARITY_FLOOR)
-    assert ui_threshold_to_similarity(100) == pytest.approx(DEFAULT_SIMILARITY_CEIL)
+    assert ui_threshold_to_similarity(0) == pytest.approx(SIMILARITY_FLOOR)
+    assert ui_threshold_to_similarity(100) == pytest.approx(SIMILARITY_CEIL)
 
 
 @pytest.mark.parametrize("ui_value", [-5, 150])
@@ -143,3 +146,21 @@ def test_uses_the_predicted_age_when_the_birthdate_or_photo_year_is_missing():
 
 def test_a_person_with_no_gallery_scores_nothing():
     assert calculate_similarity(_person(None, {}), [_face(1, _vec(1, 0), year=2001)]) == {}
+
+
+def test_the_band_is_fixed_per_face_model():
+    """Measured per model (benchmarks/face), not derived from the library: a band read
+    from people_face scores fed back into itself and drifted saved thresholds."""
+    from yaffo.utils.face_analysis import MODEL_NAME
+
+    assert SIMILARITY_BANDS[MODEL_NAME] == (SIMILARITY_FLOOR, SIMILARITY_CEIL) == (0.10, 0.80)
+    assert ui_threshold_to_similarity(55) == pytest.approx(0.485)
+
+
+def test_a_plausible_match_sits_well_above_the_displayed_zero():
+    """The 0% floor is low so weak faces still read as a gradient; deciding whether a
+    score means anything uses its own, stricter cut."""
+    from yaffo.utils.face_analysis import MODEL_NAME
+
+    assert PLAUSIBLE_MATCH_SIMILARITIES[MODEL_NAME] == PLAUSIBLE_MATCH_SIMILARITY == 0.35
+    assert PLAUSIBLE_MATCH_SIMILARITY > SIMILARITY_FLOOR

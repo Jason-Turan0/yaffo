@@ -218,11 +218,10 @@ def test_people_grouping_reports_each_persons_best_life_stage(app, client):
     assert faces[0]["cosine_similarity"] == pytest.approx(adult_similarity, abs=1e-4)
 
 
-def test_shown_similarity_is_on_the_threshold_sliders_scale(app, client, monkeypatch):
+def test_shown_similarity_is_on_the_threshold_sliders_scale(app, client):
     """The tooltip shows `similarity` as a percent. It used to be the raw cosine, so a
     face filtered out at a 30% threshold could read "52%". It is now the fraction of
-    the calibrated band, the same scale the slider filters on."""
-    monkeypatch.setattr("yaffo.routes.faces.get_similarity_bounds", lambda session: (0.4453, 0.8297))
+    the face model's band (0.10-0.80), the same scale the slider filters on."""
     media_item = MediaItem(full_file_path="/photos/u.jpg", media_type="photo", date_taken="2020-03-01 10:00:00")
     db.session.add(media_item)
     db.session.flush()
@@ -236,14 +235,14 @@ def test_shown_similarity_is_on_the_threshold_sliders_scale(app, client, monkeyp
     db.session.add(PersonEmbedding(person_id=person.id, life_stage="child", avg_embedding=_unit(person_vector)))
     db.session.commit()
 
-    at_10 = _cluster_payloads(client.get("/faces?group_by=people&threshold=10").get_data(as_text=True))
-    at_30 = _cluster_payloads(client.get("/faces?group_by=people&threshold=30").get_data(as_text=True))
+    at_60 = _cluster_payloads(client.get("/faces?group_by=people&threshold=60").get_data(as_text=True))
+    at_61 = _cluster_payloads(client.get("/faces?group_by=people&threshold=61").get_data(as_text=True))
 
-    [[face]] = at_10
+    [[face]] = at_60
     assert face["cosine_similarity"] == pytest.approx(0.5229, abs=1e-4)
-    assert face["similarity"] == pytest.approx((0.5229 - 0.4453) / (0.8297 - 0.4453), abs=1e-3)  # ~20%
-    # At 30% it falls to the Unknown group, which shows no score -- consistent with ~20%.
-    [[unknown]] = at_30
+    assert face["similarity"] == pytest.approx((0.5229 - 0.10) / (0.80 - 0.10), abs=1e-3)  # ~60.4%
+    # At 61% it falls to the Unknown group, which shows no score -- consistent with ~60.4%.
+    [[unknown]] = at_61
     assert unknown["similarity"] is None and unknown["cosine_similarity"] is None
 
 
@@ -398,3 +397,33 @@ def test_an_unknown_cursor_starts_from_the_beginning(app, client):
 
     assert faces == [ids[0]]
     assert 'id="faces-start-over"' not in html
+
+
+def test_no_subtitle_when_the_batch_is_empty(app, client):
+    """'Showing 0–0 of 0 unassigned faces' said nothing the empty-state panel doesn't."""
+    empty = client.get("/faces").get_data(as_text=True)
+    assert "Showing" not in empty and 'class="subtitle"' not in empty
+    assert "All Faces Assigned!" in empty
+
+    ids = _pool(["2020-01-01 10:00:00"])
+    past_the_end = client.get(f"/faces?group_by=people&threshold=0&after={ids[0]}").get_data(as_text=True)
+    assert 'class="subtitle"' not in past_the_end
+    assert 'id="faces-end-of-pool"' in past_the_end
+    assert 'class="subtitle"' in client.get("/faces?group_by=people&threshold=0").get_data(as_text=True)
+
+
+def test_people_grouping_lists_every_matched_person_per_face(app, client):
+    """The preview shows each person a face matched, not only the most likely: every
+    face carries its matches, best first, on the slider's scale."""
+    ada = _add_person("Ada", [1.0, 0.0, 0.0])
+    bea = _add_person("Bea", [0.6, 0.8, 0.0])
+    _add_unassigned_face(0, [0.7, 0.1, 0.71])  # cosine ~0.70 to Ada, ~0.50 to Bea
+    db.session.commit()
+
+    [[face]] = _cluster_payloads(client.get("/faces?group_by=people&threshold=0").get_data(as_text=True))
+
+    assert [m["name"] for m in face["matches"]] == ["Ada", "Bea"]
+    assert [m["person_id"] for m in face["matches"]] == [ada.id, bea.id]
+    assert face["matches"][0]["similarity"] == pytest.approx(face["similarity"])
+    assert face["matches"][0]["similarity"] > face["matches"][1]["similarity"] > 0
+    assert all(0.0 <= m["similarity"] <= 1.0 for m in face["matches"])

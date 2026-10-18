@@ -157,12 +157,9 @@
     color: var(--color-text-secondary);
 }
 
-/* Every .sidebar scrolls and is only as tall as its content, so the "Move Selected
-   to" picker -- the last thing in this short Actions panel -- had its dropdown
-   clipped, with a scrollbar on the panel. In the desktop sidebar the panel is never
-   tall enough to need scrolling, so let the dropdown overflow it. The selector stops
-   matching below the breakpoint, where nav.js moves the panel into the navbar and it
-   keeps its own scrolling. */
-.sidebar-container > #person-faces-actions {
-    overflow: visible;
+/* "Show": three stacked options, each with an info tip beside its label (outside
+   it, so tapping the tip doesn't pick the option). */
+.show-filter .radio-group {
+    flex-direction: column;
+    gap: 6px;
 }

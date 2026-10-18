@@ -1,6 +1,6 @@
-"""A person's faces page: the "Only likely misassigned" filter (faces that look more
-like someone else) and "Move Selected to" (reassign them, rebuilding both people's
-galleries)."""
+"""A person's faces page: the "Show" choice (all faces, likely misassigned -- faces
+that look more like someone else -- or looks like nobody) and "Move Selected to"
+(reassign them, rebuilding both people's galleries)."""
 import json
 import re
 from datetime import date
@@ -62,11 +62,11 @@ def test_misassigned_filter_shows_only_faces_closer_to_someone_else(app, client)
     chase, nathan, face_ids = _seed()
     lookalikes = face_ids[chase.id][3:]
 
-    html = client.get(f"/people/{chase.id}/faces?misassigned=1").get_data(as_text=True)
+    html = client.get(f"/people/{chase.id}/faces?show=misassigned").get_data(as_text=True)
 
     assert _card_ids(html) == lookalikes  # biggest gap first: [0.2, 1] before [0.5, 1]
     assert html.count("Closer to Nathan:") == 2
-    assert re.search(r'name="misassigned" value="1"\s+checked', html)
+    assert re.search(r'name="show" value="misassigned"\s+checked', html)
     # The person most of them look like is preselected as the move target.
     assert re.search(rf'<option value="{nathan.id}" selected>Nathan</option>', html)
 
@@ -78,13 +78,13 @@ def test_without_the_filter_every_face_shows_and_none_is_flagged(app, client):
 
     assert sorted(_card_ids(html)) == face_ids[chase.id]
     assert "Closer to" not in html
-    assert not re.search(r'name="misassigned" value="1"\s+checked', html)
+    assert re.search(r'name="show" value="all"\s+checked', html)
 
 
 def test_misassigned_filter_says_so_when_nothing_is_flagged(app, client):
     _chase, nathan, _face_ids = _seed()
 
-    html = client.get(f"/people/{nathan.id}/faces?misassigned=1").get_data(as_text=True)
+    html = client.get(f"/people/{nathan.id}/faces?show=misassigned").get_data(as_text=True)
 
     assert _card_ids(html) == []
     assert "None of Nathan's faces look more like someone else." in html
@@ -108,7 +108,7 @@ def test_move_reassigns_the_faces_and_rebuilds_both_galleries(app, client):
     assert all((chase.id, face_id) not in included for face_id in lookalikes)
     assert all((nathan.id, face_id) in included for face_id in lookalikes)
     # And Chase no longer has faces that look like someone else.
-    html = client.get(f"/people/{chase.id}/faces?misassigned=1").get_data(as_text=True)
+    html = client.get(f"/people/{chase.id}/faces?show=misassigned").get_data(as_text=True)
     assert _card_ids(html) == []
 
 
@@ -135,3 +135,51 @@ def test_move_needs_another_existing_person(app, client, target):
 
     db.session.expire_all()
     assert db.session.query(PersonFace.person_id).filter_by(face_id=face_ids[chase.id][3]).scalar() == chase.id
+
+
+def test_looks_like_nobody_lists_faces_that_match_no_one(app, client):
+    chase, _nathan, face_ids = _seed()
+    stray = Face(media_item_id=db.session.get(Face, face_ids[chase.id][0]).media_item_id, status=FACE_STATUS_ASSIGNED,
+                 embedding=serialize_embedding(_unit(0.13, 0.15, float(np.sqrt(1 - 0.13 ** 2 - 0.15 ** 2)))),
+                 full_file_path="/thumbs/stray.jpg", estimated_age=5)
+    db.session.add(stray)
+    db.session.flush()
+    db.session.add(PersonFace(person_id=chase.id, face_id=stray.id))
+    db.session.commit()
+
+    nobody = client.get(f"/people/{chase.id}/faces?show=nobody").get_data(as_text=True)
+    misassigned = client.get(f"/people/{chase.id}/faces?show=misassigned").get_data(as_text=True)
+
+    assert _card_ids(nobody) == [stray.id]
+    assert "Closer to" not in nobody
+    assert re.search(r'name="show" value="nobody"\s+checked', nobody)
+    assert stray.id not in _card_ids(misassigned)
+
+
+def test_looks_like_nobody_says_so_when_every_face_matches(app, client):
+    _chase, nathan, _face_ids = _seed()
+
+    html = client.get(f"/people/{nathan.id}/faces?show=nobody").get_data(as_text=True)
+
+    assert _card_ids(html) == []
+    assert "All of Nathan's faces clearly match someone." in html
+
+
+def test_an_unknown_show_value_means_all_faces(app, client):
+    chase, _nathan, face_ids = _seed()
+
+    html = client.get(f"/people/{chase.id}/faces?show=bogus").get_data(as_text=True)
+
+    assert sorted(_card_ids(html)) == face_ids[chase.id]
+    assert re.search(r'name="show" value="all"\s+checked', html)
+
+
+def test_card_percentages_show_one_decimal(app, client):
+    chase, _nathan, _face_ids = _seed()
+
+    html = client.get(f"/people/{chase.id}/faces?show=misassigned").get_data(as_text=True)
+
+    similarity = re.findall(r'class="similarity-(?:high|medium|low)">\s*([^<]+?)\s*</span>', html)
+    closer_to = re.findall(r'Closer to Nathan:\s*([^<]+?)\s*</div>', html)
+    assert similarity and all(re.fullmatch(r"\d+\.\d%", value) for value in similarity), similarity
+    assert closer_to and all(re.fullmatch(r"\d+\.\d%", value) for value in closer_to), closer_to

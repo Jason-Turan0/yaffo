@@ -23,7 +23,6 @@ from yaffo.background_tasks.utils import SessionFactory
 from yaffo.db.repositories.job_repository import run_job_id
 from yaffo.db.models import Automation, AUTOMATION_HANDLER_AUTO_ASSIGN_FACES
 from yaffo.db.repositories import person_repository, media_repository
-from yaffo.db.repositories.person_repository import get_similarity_bounds
 from yaffo.domain.compare_utils import calculate_face_similarity, ui_threshold_to_similarity
 
 # The handler's config fields (see automation_config.AUTOMATION_CONFIG), by key.
@@ -106,10 +105,10 @@ def auto_assign_faces_automation_task(automation_id: int, media_item_ids: list[i
         automation = session.get(Automation, automation_id)
         if automation is None:
             return
-        # The stored threshold is a 0-100 UI value; scale it to a cosine cutoff
-        # against the live similarity band, exactly as the face screens do.
+        # The stored threshold is a 0-100 UI value; scale it to a cosine cutoff on the
+        # face model's similarity band, exactly as the face screens do.
         ui_threshold = config_value(automation, _THRESHOLD_FIELD)
-        threshold = ui_threshold_to_similarity(ui_threshold, *get_similarity_bounds(session))
+        threshold = ui_threshold_to_similarity(ui_threshold)
         assign_multiple_matches = bool(config_value(automation, _ASSIGN_MULTIPLE_MATCHES_FIELD))
         assigned = 0
 

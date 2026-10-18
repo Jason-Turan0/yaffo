@@ -23,12 +23,11 @@ from yaffo.domain.compare_utils import serialize_embedding, load_embedding
 from yaffo.db.repositories.person_repository import (
     bulk_link_faces_to_people,
     update_person_embedding,
-    get_similarity_bounds,
     likely_misassigned_faces,
+    unmatched_faces,
     recompute_person_similarities,
     MAX_REPRESENTATIVE_FACES,
 )
-from yaffo.domain.compare_utils import DEFAULT_SIMILARITY_FLOOR, DEFAULT_SIMILARITY_CEIL
 
 pytestmark = pytest.mark.unit
 
@@ -299,36 +298,6 @@ def test_caps_at_max_representative_faces_by_score(session):
     assert included == kept_ids
 
 
-def test_similarity_bounds_falls_back_when_too_few_samples(session):
-    """Below the sample floor the percentiles are noisy, so the documented defaults
-    are used instead."""
-    person = Person(name="Sparse")
-    media_item = MediaItem(year=2010)
-    session.add_all([person, media_item])
-    session.flush()
-    _add_face(session, person, media_item, _unit(1.0), age=20, similarity=0.5)
-    session.commit()
-
-    assert get_similarity_bounds(session) == (DEFAULT_SIMILARITY_FLOOR, DEFAULT_SIMILARITY_CEIL)
-
-
-def test_similarity_bounds_reads_percentiles_from_data(session):
-    """With enough assignments the band is the low/high percentiles of the actual
-    stored similarities, not the hardcoded defaults."""
-    person = Person(name="Busy")
-    media_item = MediaItem(year=2010)
-    session.add_all([person, media_item])
-    session.flush()
-    # similarities 0.00, 0.01, ... 0.99 -> p5 ~= 0.05, p95 ~= 0.95.
-    for i in range(100):
-        _add_face(session, person, media_item, _unit(1.0, i), age=20, similarity=i / 100.0)
-    session.commit()
-
-    floor, ceil = get_similarity_bounds(session)
-    assert floor == pytest.approx(0.05, abs=0.02)
-    assert ceil == pytest.approx(0.95, abs=0.02)
-
-
 # PersonFace.similarity is a *cache* of how much a face looks like its person, and the
 # person it's measured against moves every time the gallery is rebuilt. These pin the
 # rescore that keeps it meaning the same thing as a freshly computed score.
@@ -581,3 +550,42 @@ def test_a_photo_from_before_someone_was_born_never_looks_like_them(session):
     update_person_embedding(chase.id, session)
 
     assert lookalike_2016.id not in {m.face_id for m in likely_misassigned_faces(session, chase.id)}
+
+
+def _three_d(x, y):
+    """A unit vector with cosine x to [1,0,...] and y to [0,1,...]: the rest of its
+    length goes into a third axis neither gallery uses."""
+    return _unit(x, y, float(np.sqrt(1 - x * x - y * y)))
+
+
+def _two_people_and(session, extra_vectors):
+    """Chase looks like [1,0], Nathan like [0,1]; `extra_vectors` are more of Chase's
+    faces. (The plausible-match score is 0.35 for buffalo_l.)"""
+    photo = MediaItem(year=2022)
+    session.add(photo)
+    session.flush()
+    _person_with_faces(session, "Nathan", date(2017, 1, 1), photo, [_unit(0.01 * i, 1.0) for i in range(3)])
+    chase, faces = _person_with_faces(session, "Chase", date(2016, 1, 1), photo,
+                                      [_unit(1.0, 0.01 * i) for i in range(3)] + list(extra_vectors))
+    return chase, faces[3:]
+
+
+def test_a_face_that_matches_nobody_is_not_flagged_as_misassigned(session):
+    """0.13 to Chase, 0.15 to Nathan: Nathan is 'higher' only on noise, below the
+    band's floor -- the card used to read "0% vs 0%"."""
+    chase, [stray] = _two_people_and(session, [_three_d(0.13, 0.15)])
+
+    assert stray.id not in {m.face_id for m in likely_misassigned_faces(session, chase.id)}
+    assert [m.face_id for m in unmatched_faces(session, chase.id)] == [stray.id]
+
+
+def test_unmatched_faces_are_weakest_first_and_skip_faces_that_match_someone(session):
+    chase, [weakest, weak, looks_like_nathan] = _two_people_and(
+        session, [_three_d(0.05, 0.10), _three_d(0.20, 0.10), _three_d(0.10, 0.80)])
+
+    unmatched = unmatched_faces(session, chase.id)
+
+    assert [m.face_id for m in unmatched] == [weakest.id, weak.id]
+    assert [m.face_id for m in likely_misassigned_faces(session, chase.id)] == [looks_like_nathan.id]
+    # Narrowed to the screen's filtered faces, like the misassigned check.
+    assert [m.face_id for m in unmatched_faces(session, chase.id, [weak.id])] == [weak.id]

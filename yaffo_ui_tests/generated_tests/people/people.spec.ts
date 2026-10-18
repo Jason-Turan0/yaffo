@@ -365,26 +365,32 @@ test.describe('People', () => {
     await waitForFaceBackInPool(page, faceId);
   });
 
-  test('people_can_filter_faces_to_likely_misassigned', async ({ page }) => {
-    // Read-only: whatever the fixture's people look like, the filter must render
-    // checked, explain itself through its info tip, and flag every face it shows.
+  test('people_can_show_likely_misassigned_or_unmatched_faces', async ({ page }) => {
+    // Read-only: whatever the fixture's people look like, each "Show" option must
+    // render checked, explain itself through an info tip, and list only its faces.
     const personId = await firstPersonId(page);
-    await page.goto(`/people/${personId}/faces?misassigned=1`);
-
-    const checkbox = page.locator('input[name="misassigned"]');
-    await expect(checkbox).toBeChecked();
-    await expect(page.locator('.filter-checkbox-row:has(input[name="misassigned"]) .help-tip[data-tooltip]'))
-      .toHaveCount(1);
-    const cards = page.locator('.face-card');
-    if (await cards.count() === 0) {
-      await expect(page.locator('.empty-state')).toBeVisible();
-    } else {
-      await expect(cards.locator('.face-closer-to')).toHaveCount(await cards.count());
-    }
+    const option = (value: string) => page.locator(`input[name="show"][value="${value}"]`);
 
     await page.goto(`/people/${personId}/faces`);
-    await expect(checkbox).not.toBeChecked();
+    await expect(option('all')).toBeChecked();
+    await expect(page.locator('.show-filter .filter-option-row .help-tip[data-tooltip]')).toHaveCount(3);
     await expect(page.locator('.face-closer-to')).toHaveCount(0);
+
+    await page.goto(`/people/${personId}/faces?show=misassigned`);
+    await expect(option('misassigned')).toBeChecked();
+    const flagged = page.locator('.face-card');
+    if (await flagged.count() === 0) {
+      await expect(page.locator('.empty-state')).toBeVisible();
+    } else {
+      await expect(flagged.locator('.face-closer-to')).toHaveCount(await flagged.count());
+    }
+
+    await page.goto(`/people/${personId}/faces?show=nobody`);
+    await expect(option('nobody')).toBeChecked();
+    await expect(page.locator('.face-closer-to')).toHaveCount(0);
+    if (await page.locator('.face-card').count() === 0) {
+      await expect(page.locator('.empty-state')).toBeVisible();
+    }
   });
 });
 
@@ -527,6 +533,23 @@ test.describe('People — responsive', () => {
     await expectFitsViewport(page, '#addModal .modal-content');
 
     await modal.locator('.modal-actions [name="cancel"]').click();
+  });
+
+  test('the Actions panel stays in view while the faces grid scrolls', async ({ page }) => {
+    // The sidebar column sticks and scrolls as one; Actions used to scroll away while
+    // only Filters stuck.
+    await page.setViewportSize({ width: 1440, height: 420 });  // short, so a few faces scroll
+    const personId = await firstPersonId(page);
+    await page.goto(`/people/${personId}/faces?page-size=1000`);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const scrolled = await page.evaluate(() => window.scrollY);
+    test.skip(scrolled < 200, 'not enough faces in the fixture to scroll the page');
+
+    const actions = await page.locator('#person-faces-actions').boundingBox();
+    expect(actions).not.toBeNull();
+    expect(actions!.y).toBeGreaterThanOrEqual(0);
+    expect(actions!.y).toBeLessThan(420);
+    await expect(page.locator('#move-selected-faces')).toBeInViewport();
   });
 
   test('the person faces route renders without page-level overflow at every contract width', async ({ page }) => {

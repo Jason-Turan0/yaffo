@@ -21,15 +21,28 @@
         {% macro render_filters() %}
             {{ similarity_filter('min_similarity', _("Min Similarity"), filters) }}
             {{ similarity_filter('max_similarity', _("Max Similarity"), filters) }}
-            {% set misassigned_help = _("Faces that look more like someone else than like %(person)s.", person=person.name) %}
-            <div class="filter-group filter-checkbox-row">
-                <label class="filter-checkbox">
-                    <input type="checkbox" name="misassigned" value="1"
-                           {% if filters.misassigned %}checked{% endif %}>
-                    <span>{{ _("Only likely misassigned") }}</span>
-                </label>
-                <button type="button" class="help-tip" data-icon="info"
-                        aria-label="{{ misassigned_help }}" data-tooltip="{{ misassigned_help }}"></button>
+            {# One choice, not checkboxes: a face can't both look like someone else and
+               look like nobody, so the review lists never combine. #}
+            {% set show_options = [
+                ("all", _("All faces"), _("Every face assigned to %(person)s, weakest match first.", person=person.name)),
+                ("misassigned", _("Likely misassigned"), _("Faces that look more like someone else than like %(person)s.", person=person.name)),
+                ("nobody", _("Looks like nobody"), _("Faces that don't clearly match %(person)s or anyone else — often a stranger, sometimes a poor detection.", person=person.name)),
+            ] %}
+            <div class="filter-group show-filter">
+                <label>{{ _("Show") }}</label>
+                <div class="radio-group">
+                    {% for value, label, help in show_options %}
+                        <div class="filter-option-row">
+                            <label class="radio-label">
+                                <input type="radio" name="show" value="{{ value }}"
+                                       {% if filters.show == value %}checked{% endif %}>
+                                <span>{{ label }}</span>
+                            </label>
+                            <button type="button" class="help-tip" data-icon="info"
+                                    aria-label="{{ help }}" data-tooltip="{{ help }}"></button>
+                        </div>
+                    {% endfor %}
+                </div>
             </div>
         {% endmacro %}
         {% macro render_actions() %}
@@ -70,7 +83,7 @@
                     {% pluralize %}
                         Showing {{ total }} faces
                     {% endtrans %}
-                    {% if filters.selected_year or filters.selected_month or filters.min_similarity or filters.max_similarity or filters.misassigned %}
+                    {% if filters.selected_year or filters.selected_month or filters.min_similarity or filters.max_similarity or filters.show != 'all' %}
                         {{ _("(filtered)") }}
                     {% endif %}
                 {% else %}
@@ -102,7 +115,7 @@
                                     {% if face_data.similarity_pct is not none %}
                                         {% set sim_pct = face_data.similarity_pct %}
                                         <span class="{% if sim_pct >= 80 %}similarity-high{% elif sim_pct >= 50 %}similarity-medium{% else %}similarity-low{% endif %}">
-                                {{ (sim_pct / 100) | format_percent }}
+                                {{ (sim_pct / 100) | format_percent(1) }}
                             </span>
                                     {% else %}
                                         <span>{{ _("N/A") }}</span>
@@ -111,7 +124,7 @@
                                 {% if face_data.closer_to %}
                                     <div class="face-closer-to" data-person-id="{{ face_data.closer_to.person_id }}">
                                         {{ _("Closer to %(person)s:", person=face_data.closer_to.name) }}
-                                        {{ (face_data.closer_to.similarity_pct / 100) | format_percent }}
+                                        {{ (face_data.closer_to.similarity_pct / 100) | format_percent(1) }}
                                     </div>
                                 {% endif %}
                             </div>
@@ -131,14 +144,16 @@
                 'month': filters.selected_month,
                 'min_similarity': filters.min_similarity,
                 'max_similarity': filters.max_similarity,
-                'misassigned': 1 if filters.misassigned else None
+                'show': filters.show if filters.show != 'all' else None
             }
         ) }}
             {% else %}
                 <div class="empty-state">
                     <h2>{{ _("No faces found") }}</h2>
-                    <p>{% if filters.misassigned %}
+                    <p>{% if filters.show == 'misassigned' %}
                         {{ _("None of %(person)s's faces look more like someone else.", person=person.name) }}
+                    {% elif filters.show == 'nobody' %}
+                        {{ _("All of %(person)s's faces clearly match someone.", person=person.name) }}
                     {% elif filters.selected_year or filters.selected_month or filters.min_similarity or filters.max_similarity %}
                         {{ _("Try adjusting your filters.") }}
                     {% else %}

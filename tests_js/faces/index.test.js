@@ -334,6 +334,39 @@ describe('faces initAssignment — phone source preview modal', () => {
     expect(openPreview(1)).toContain('similarityValue');
   });
 
+  it('lists every person a face matched, not only the most likely', async () => {
+    fixture(group([{
+      id: 1, similarity: 0.62, photo_date: '2020-01-01',
+      matches: [
+        { person_id: 7, name: 'Nathan', similarity: 0.62 },
+        { person_id: 3, name: 'Chase', similarity: 0.55 },
+      ],
+    }]));
+    const t = vi.spyOn(window.testI18n, 't');
+    await init();
+
+    const text = openPreview(1);
+    // testI18n renders the key; both people appear, best first, instead of one line.
+    expect(text).not.toContain('similarityValue');
+    expect(text.match(/faces:assignment\.personSimilarity/g)).toHaveLength(2);
+    const named = t.mock.calls
+      .filter(([key]) => key === 'faces:assignment.personSimilarity')
+      .map(([, values]) => values.name);
+    expect(named).toEqual(['Nathan', 'Chase']);
+  });
+
+  it('keeps the single similarity line when a face matched one person', async () => {
+    fixture(group([{
+      id: 1, similarity: 0.62, photo_date: '2020-01-01',
+      matches: [{ person_id: 7, name: 'Nathan', similarity: 0.62 }],
+    }]));
+    await init();
+
+    const text = openPreview(1);
+    expect(text).toContain('similarityValue');
+    expect(text).not.toContain('personSimilarity');
+  });
+
   it('omits the similarity line for a face with no score', async () => {
     // Similarity-grouped clusters carry no per-face score. The empty data-attribute
     // must not read as 0 — that painted every face as "0%".
