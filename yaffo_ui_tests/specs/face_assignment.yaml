@@ -109,6 +109,16 @@ scenarios:
       - By default the checkbox is unchecked, the subtitle counts "unassigned faces", and the ignored face is in no cluster's data-faces payload
       - With the filter on, the checkbox is checked, the subtitle counts "unassigned and ignored faces", and exactly that face appears with ignored=true
       - Painted ignored faces carry a .face-ignored class and a .face-ignored-badge label (not asserted here — which cluster is active varies)
+  - name: skipping_every_cluster_moves_on_to_the_next_batch
+    goal: Faces left in the pool (skipped, or ignored when included) don't bring the same batch back
+    priority: medium
+    steps:
+      - Load /faces?group_by=people&threshold=2&batch_size=25 and note the batch's face ids (data-faces)
+      - Click Skip cluster on the visible cluster until the page navigates
+    verify:
+      - The subtitle reads "Showing 1–25 of N" first, then "26–…" after navigating
+      - The URL now carries after=<face id> and none of the first batch's faces come back
+      - A Start over link (#faces-start-over) is shown once paged
   - name: face_page_navigation_works
     goal: Verify that the page navigation works
     priority: high

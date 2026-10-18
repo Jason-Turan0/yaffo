@@ -14,7 +14,8 @@ import pytest
 
 from yaffo.db import db
 from yaffo.db.models import (
-    ApplicationSettings, Face, MediaItem, Person, PersonEmbedding, FACE_STATUS_IGNORED, FACE_STATUS_UNASSIGNED,
+    ApplicationSettings, Face, MediaItem, Person, PersonEmbedding,
+    FACE_STATUS_ASSIGNED, FACE_STATUS_IGNORED, FACE_STATUS_UNASSIGNED,
 )
 
 
@@ -296,3 +297,104 @@ def test_people_filter_is_hidden_and_disabled_when_grouping_by_similarity(app, c
     assert re.search(rf'name="person"\s+value="{ada.id}"[^>]*disabled', similarity)
     assert 'id="people-filter-group">' in people  # shown, not hidden
     assert not re.search(r'name="person"[^>]*disabled', people)
+
+
+# --- paging the pool with the `after` cursor ----------------------------------------
+
+def _pool(dates: list) -> list[int]:
+    """One unassigned face per date (None = undated photo); ids in insertion order."""
+    ids = []
+    for index, date_taken in enumerate(dates):
+        media_item = MediaItem(full_file_path=f"/photos/pool{index}.jpg", media_type="photo", date_taken=date_taken)
+        db.session.add(media_item)
+        db.session.flush()
+        face = Face(media_item_id=media_item.id, full_file_path=f"/thumbs/pool{index}.jpg",
+                    status=FACE_STATUS_UNASSIGNED, embedding=_unit([1.0, 0.01 * index, 0.0]))
+        db.session.add(face)
+        db.session.flush()
+        ids.append(face.id)
+    db.session.commit()
+    return ids
+
+
+def _batch(client, query: str) -> tuple[list[int], str]:
+    """The face ids in a People-grouped batch (no people: all land in Unknown) and the html."""
+    html = client.get(f"/faces?group_by=people&threshold=0&{query}").get_data(as_text=True)
+    return sorted(face["id"] for cluster in _cluster_payloads(html) for face in cluster), html
+
+
+def _next_after(html: str):
+    match = re.search(r'data-next-after="(\d+)"', html)
+    return int(match.group(1)) if match else None
+
+
+def test_batches_follow_photo_date_then_face_id(app, client):
+    # Two faces share a date: the face id breaks the tie, so the order is stable.
+    late, early, tie_b, tie_a = _pool(["2021-01-01 10:00:00", "2019-01-01 10:00:00",
+                                       "2020-01-01 10:00:00", "2020-01-01 10:00:00"])
+
+    first, html = _batch(client, "batch_size=2")
+    assert first == sorted([early, tie_b])
+    assert _next_after(html) == tie_b
+
+    second, html = _batch(client, f"batch_size=2&after={tie_b}")
+    assert second == sorted([tie_a, late])
+    assert "Showing 3–4 of 4 unassigned faces" in html
+
+
+def test_the_cursor_does_not_skip_faces_when_earlier_ones_are_assigned(app, client):
+    """An offset would: assigning batch 1 shifts every later face forward."""
+    ids = _pool([f"2020-01-0{day} 10:00:00" for day in range(1, 7)])
+    first, html = _batch(client, "batch_size=2")
+    assert first == ids[:2]
+    for face_id in first:
+        db.session.get(Face, face_id).status = FACE_STATUS_ASSIGNED
+    db.session.commit()
+
+    second, _html = _batch(client, f"batch_size=2&after={_next_after(html)}")
+
+    assert second == ids[2:4]
+
+
+def test_undated_photos_come_first_and_page_like_the_rest(app, client):
+    dated, undated_a, undated_b = _pool(["2020-01-01 10:00:00", None, None])
+
+    first, html = _batch(client, "batch_size=1")
+    assert first == [undated_a]
+    second, html = _batch(client, f"batch_size=1&after={_next_after(html)}")
+    assert second == [undated_b]
+    third, _html = _batch(client, f"batch_size=1&after={_next_after(html)}")
+    assert third == [dated]
+
+
+def test_paging_past_the_last_face_offers_to_start_over(app, client):
+    ids = _pool(["2020-01-01 10:00:00", "2020-01-02 10:00:00"])
+
+    faces, html = _batch(client, f"batch_size=2&after={ids[-1]}")
+
+    assert faces == []
+    assert 'id="faces-end-of-pool"' in html
+    assert "All Faces Assigned!" not in html  # faces remain, just before the cursor
+    assert 'id="faces-next-batch"' not in html
+    start_over = re.search(r'id="faces-end-of-pool".*?href="([^"]+)"', html, re.S).group(1)
+    assert "after=" not in start_over and "batch_size=2" in start_over
+
+
+def test_paging_links_keep_the_other_filters(app, client):
+    ids = _pool([f"2020-01-0{day} 10:00:00" for day in range(1, 5)])
+
+    _faces, html = _batch(client, f"batch_size=2&include_ignored=1&after={ids[0]}")
+
+    link = re.search(r'<a href="([^"]+)" class="action-link" id="faces-next-batch"', html).group(1).replace("&amp;", "&")
+    assert f"after={ids[2]}" in link
+    assert "include_ignored=1" in link and "batch_size=2" in link and "group_by=people" in link
+    assert 'id="faces-start-over"' in html
+
+
+def test_an_unknown_cursor_starts_from_the_beginning(app, client):
+    ids = _pool(["2020-01-01 10:00:00", "2020-01-02 10:00:00"])
+
+    faces, html = _batch(client, "batch_size=1&after=99999")
+
+    assert faces == [ids[0]]
+    assert 'id="faces-start-over"' not in html

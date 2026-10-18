@@ -216,12 +216,17 @@ facesNamespace.initAssignment = (
         return preview;
     };
 
-    // Re-load /faces with the current filters, resetting to page 1: assignments
-    // shrink the unassigned set, so page 1 always holds the next batch and the
-    // server renders the "All Faces Assigned!" panel once it's empty.
+    // Re-load /faces with the current filters, continuing after this batch's last
+    // face. Faces that stay in the pool (skipped clusters, or ignored faces when
+    // they're included) would otherwise bring the same batch back forever. The
+    // server renders "You've reached the end" (with Start over) past the last face,
+    // and "All Faces Assigned!" once the pool is empty.
     const loadNextBatch = () => {
         const url = new URL(window.location.href);
         url.searchParams.delete('page');
+        const nextAfter = /** @type {HTMLElement | null} */ (
+            document.querySelector('.main-content'))?.dataset.nextAfter;
+        if (nextAfter) url.searchParams.set('after', nextAfter);
         window.location.assign(url.toString());
     };
 

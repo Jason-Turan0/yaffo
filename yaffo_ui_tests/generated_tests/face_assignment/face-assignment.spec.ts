@@ -306,6 +306,34 @@ test.describe('Face Assignment', () => {
     }
   });
 
+  test('skipping every cluster moves on to the next batch instead of reloading the same one', async ({ page }) => {
+    // Read-only: skipping changes nothing, so the shared pool is untouched. Before the
+    // `after` cursor, skipped faces stayed in the pool and the same batch came back.
+    await page.goto('/faces?group_by=people&threshold=2&batch_size=25');
+    const subtitle = page.locator('.subtitle');
+    await expect(subtitle).toContainText(/1–25 of/);
+    const firstBatchIds = new Set<number>();
+    for (const group of await page.locator('.suggestion-group').all()) {
+      for (const face of JSON.parse(await group.getAttribute('data-faces') ?? '[]')) firstBatchIds.add(face.id);
+    }
+
+    // Skip clusters until the page navigates to the next batch.
+    await expect(async () => {
+      if (!page.url().includes('after=')) {
+        await page.locator('.suggestion-group:not([hidden]) .skip-cluster-btn').click({ timeout: 1000 });
+      }
+      expect(page.url()).toContain('after=');
+    }).toPass({ timeout: 20_000 });
+
+    await expect(subtitle).toContainText(/26–/);
+    for (const group of await page.locator('.suggestion-group').all()) {
+      for (const face of JSON.parse(await group.getAttribute('data-faces') ?? '[]')) {
+        expect(firstBatchIds.has(face.id), `face ${face.id} came back in the next batch`).toBe(false);
+      }
+    }
+    await expect(page.locator('#faces-start-over')).toBeVisible();
+  });
+
   test('keyboard shortcuts enable quick face assignment', async ({ page }) => {
     const person = await createPersonViaApi(page, 'TestKeyboardPerson');
     await page.goto('/faces?group_by=similarity&threshold=2');
@@ -345,8 +373,8 @@ test.describe('Face Assignment', () => {
   test('face page navigation works', async ({ page }) => {
     await page.goto('/faces?group_by=similarity&threshold=2');
 
-    // The header reports the size of the unassigned pile
-    await expect(page.locator('.subtitle')).toContainText(/Showing [\d,.]+ of [\d,.]+ unassigned/);
+    // The header reports which slice of the unassigned pile this batch is
+    await expect(page.locator('.subtitle')).toContainText(/Showing [\d,.]+–[\d,.]+ of [\d,.]+ unassigned/);
 
     const firstGroup = page.locator('.suggestion-group').first();
     await expect(firstGroup).toBeVisible();

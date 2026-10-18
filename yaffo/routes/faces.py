@@ -2,9 +2,9 @@ import json
 from dataclasses import dataclass
 from typing import NamedTuple, Optional, List
 import numpy as np
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, url_for
 from flask_babel import gettext
-from sqlalchemy import func
+from sqlalchemy import and_, func, or_
 
 from yaffo.logging_config import get_logger
 
@@ -272,6 +272,35 @@ def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Perso
     return face_suggestions
 
 
+def _pool_position(after_face_id: Optional[int]) -> Optional[tuple[Optional[str], int]]:
+    """The (photo date, face id) the pool cursor points at, or None to start from the
+    beginning: no cursor, or the cursor face no longer exists."""
+    if after_face_id is None:
+        return None
+    row = (db.session.query(MediaItem.date_taken, Face.id)
+           .join(Face.media_item).filter(Face.id == after_face_id).first())
+    return (row[0], row[1]) if row else None
+
+
+def _after(position: tuple[Optional[str], int]):
+    """Faces strictly after `position` in pool order (photo date, then face id; SQLite
+    sorts undated photos first). A keyset condition rather than an OFFSET: assigning
+    faces removes them from the pool, which would shift an offset past unseen faces."""
+    date_taken, face_id = position
+    if date_taken is None:
+        return or_(MediaItem.date_taken.isnot(None), and_(MediaItem.date_taken.is_(None), Face.id > face_id))
+    return or_(MediaItem.date_taken > date_taken, and_(MediaItem.date_taken == date_taken, Face.id > face_id))
+
+
+def _at_or_before(position: tuple[Optional[str], int]):
+    """The complement of _after, spelled out: NULL dates make NOT(...) unreliable."""
+    date_taken, face_id = position
+    if date_taken is None:
+        return and_(MediaItem.date_taken.is_(None), Face.id <= face_id)
+    return or_(MediaItem.date_taken.is_(None), MediaItem.date_taken < date_taken,
+               and_(MediaItem.date_taken == date_taken, Face.id <= face_id))
+
+
 @context("yaffo-face_assignment")
 def init_faces_routes(app: Flask):
     @app.route("/faces", methods=["GET"])
@@ -290,6 +319,7 @@ def init_faces_routes(app: Flask):
         assign_person_id = request.args.get("assign_person", type=int)
         group_by = request.args.get("group_by", type=str, default=DEFAULT_GROUP_BY)
         include_ignored = request.args.get("include_ignored") == "1"
+        position = _pool_position(request.args.get("after", type=int))
 
         if year:
             query = query.filter(MediaItem.year == year)
@@ -297,12 +327,20 @@ def init_faces_routes(app: Flask):
             query = query.filter(MediaItem.month == month)
         # Ignored faces join the pile only on request, so a past "ignore" can be revisited.
         statuses = [FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED] if include_ignored else [FACE_STATUS_UNASSIGNED]
-        query = query.filter(Face.status.in_(statuses)).order_by(MediaItem.date_taken)
+        query = query.filter(Face.status.in_(statuses))
 
         unassigned_face_count = query.count()
-        # Each pass pulls and clusters up to batch_size unassigned faces. The UI
-        # works through the resulting clusters then reloads for the next pass.
-        unassigned_faces: List[Face] = query.limit(batch_size).all()
+        # Each pass pulls and clusters up to batch_size faces, oldest photo first with
+        # the face id breaking ties so the order is stable. When the UI runs out of
+        # clusters it reloads with `after` = this batch's last face, so faces that stay
+        # in the pool -- skipped ones, or ignored ones when they're included -- don't
+        # bring the same batch back forever.
+        batch_query = query.order_by(MediaItem.date_taken, Face.id)
+        batch_start = 0
+        if position is not None:
+            batch_start = query.filter(_at_or_before(position)).count()
+            batch_query = batch_query.filter(_after(position))
+        unassigned_faces: List[Face] = batch_query.limit(batch_size).all()
 
         people = (db.session.query(Person)
                   .outerjoin(PersonFace)
@@ -367,12 +405,23 @@ def init_faces_routes(app: Flask):
             "selected_group_by": group_by,
             "selected_batch_size": batch_size,
             "selected_include_ignored": include_ignored,
+            "after": position[1] if position else None,
             "batch_sizes": [25, 50, 100, 250, 500, 1000, 2000, 5000, 10000, 20000, 50000],
         }
 
+        # Paging links keep every other filter and only move the cursor.
+        def pool_url(after: Optional[int]) -> str:
+            args = {key: request.args.getlist(key) for key in request.args if key != "after"}
+            return url_for("faces_index", **args, **({"after": after} if after is not None else {}))
+
+        batch_end = batch_start + len(unassigned_faces)
         return render_template(
             "faces/index.html", faces=unassigned_faces, people=people, face_suggestions=face_suggestions,
             filters=filters, unassigned_face_count=unassigned_face_count,
+            batch_start=batch_start, batch_end=batch_end,
+            next_after=unassigned_faces[-1].id if unassigned_faces else None,
+            next_batch_url=pool_url(unassigned_faces[-1].id) if batch_end < unassigned_face_count else None,
+            start_over_url=pool_url(None) if position is not None else None,
             sample_size=SAMPLE_SIZE, shortcut_people=shortcut_people,
             default_shortcut_people=default_shortcut_people,
             all_people_shortcuts=all_people_shortcuts,
