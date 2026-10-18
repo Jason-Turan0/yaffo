@@ -70,6 +70,10 @@ def _data_query() -> str:
         "- prefix            path columns (e.g. relative_path); matches a leading prefix / subtree",
         "- in                value is an array; matches any of them",
         '"limit": N caps the number of rows.',
+        '"sort_by": [{ "field": "COLUMN", "direction": "asc"|"desc" }, ...] orders rows (direction',
+        'defaults to asc); "offset": N skips N rows. Page with sort_by + offset + limit, e.g.',
+        '{ "source": "media_items", "sort_by": [{ "field": "id", "direction": "desc" }], "offset": 24, "limit": 24 }.',
+        "sort_by / offset / limit apply to row queries only, not aggregates.",
     ])
     aggregates = block("aggregates", [
         'For a summary instead of rows, add "op" (and "field", except for count):',

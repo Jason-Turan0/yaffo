@@ -200,6 +200,60 @@ class TestValidateQuery:
         assert dq.validate_query("media_items") == ["query must be an object"]
 
 
+class TestSortAndOffset:
+    """Row queries take `sort_by` and `offset`; both fail closed."""
+
+    def test_sort_by_and_offset_allowed_on_every_table_source(self):
+        for source, fields in dq.FIELDS_BY_SOURCE.items():
+            field = next(iter(fields))
+            query = {"source": source, "sort_by": [{"field": field, "direction": "desc"}], "offset": 10}
+            assert dq.validate_query(query) == []
+
+    def test_direction_is_optional(self):
+        assert dq.validate_query({"source": "people", "sort_by": [{"field": "name"}]}) == []
+
+    def test_multiple_sort_keys(self):
+        query = {"source": "media_items", "sort_by": [{"field": "year", "direction": "desc"}, {"field": "id"}]}
+        assert dq.validate_query(query) == []
+
+    def test_unknown_sort_field_rejected(self):
+        errors = dq.validate_query({"source": "people", "sort_by": [{"field": "colour"}]})
+        assert errors and "sort_by/0/field" in errors[0]
+
+    def test_calculated_column_cannot_be_sorted_on(self):
+        errors = dq.validate_query({"source": "media_items", "sort_by": [{"field": "relative_path"}]})
+        assert errors and "sort_by/0/field" in errors[0]
+
+    def test_unknown_direction_rejected(self):
+        errors = dq.validate_query({"source": "people", "sort_by": [{"field": "name", "direction": "up"}]})
+        assert errors and "sort_by/0/direction" in errors[0]
+
+    def test_bare_string_sort_by_rejected(self):
+        assert dq.validate_query({"source": "people", "sort_by": "name"})
+
+    def test_empty_sort_by_rejected(self):
+        assert dq.validate_query({"source": "people", "sort_by": []})
+
+    def test_extra_sort_key_property_rejected(self):
+        assert dq.validate_query({"source": "people", "sort_by": [{"field": "name", "nulls": "last"}]})
+
+    def test_negative_offset_rejected(self):
+        errors = dq.validate_query({"source": "people", "offset": -1})
+        assert errors and "offset" in errors[0]
+
+    def test_zero_offset_allowed(self):
+        assert dq.validate_query({"source": "people", "offset": 0}) == []
+
+    def test_aggregates_reject_sort_by_and_offset(self):
+        assert dq.validate_query({"source": "media_items", "op": "count", "offset": 5})
+        assert dq.validate_query({"source": "media_items", "op": "facet", "field": "year",
+                                  "sort_by": [{"field": "year"}]})
+
+    def test_virtual_sources_reject_sort_by_and_offset(self):
+        assert dq.validate_query({"source": "media_dirs", "offset": 1})
+        assert dq.validate_query({"source": "media_dirs", "sort_by": [{"field": "name"}]})
+
+
 class TestColumnFilters:
     """Per-column operator filters, typed and fail-closed."""
 
@@ -359,6 +413,30 @@ class TestGeneratedSql:
         sql = _sql({"source": "tags"})
         assert sql == "SELECT tags.id, tags.media_item_id, tags.tag_name, tags.tag_value FROM tags"
 
+    def test_unpaged_query_has_no_order_by(self):
+        assert "ORDER BY" not in _sql({"source": "people", "limit": 5})
+
+    def test_sort_by_orders_with_primary_key_tiebreak(self):
+        sql = _sql({"source": "media_items", "sort_by": [{"field": "year", "direction": "desc"}]})
+        assert sql.endswith("ORDER BY media_items.year DESC, media_items.id ASC")
+
+    def test_sorting_on_the_primary_key_does_not_repeat_it(self):
+        sql = _sql({"source": "people", "sort_by": [{"field": "id", "direction": "desc"}]})
+        assert sql.endswith("ORDER BY people.id DESC")
+
+    def test_offset_alone_orders_by_primary_key(self):
+        sql = _sql({"source": "people", "offset": 10, "limit": 5})
+        assert "ORDER BY people.id ASC LIMIT 5 OFFSET 10" in sql
+
+    def test_composite_primary_key_tiebreak(self):
+        sql = _sql({"source": "album_items", "offset": 2})
+        assert "ORDER BY album_items.album_id ASC, album_items.media_item_id ASC" in sql
+        assert "OFFSET 2" in sql
+
+    def test_sort_follows_the_where_clause(self):
+        sql = _sql({"source": "media_items", "year": {"eq": 2023}, "sort_by": [{"field": "location_name"}]})
+        assert "WHERE media_items.year = 2023 ORDER BY media_items.location_name ASC, media_items.id ASC" in sql
+
 
 class TestResolve:
     """Resolution runs the generated SQL against a real (temp) database."""
@@ -388,6 +466,32 @@ class TestResolve:
     def test_limit_is_applied(self, session):
         rows = dq.resolve_query(session, {"source": "media_items", "limit": 2})
         assert len(rows) == 2
+
+    def test_sort_by_orders_rows(self, session):
+        rows = dq.resolve_query(session, {"source": "media_items", "sort_by": [{"field": "location_name", "direction": "desc"}]})
+        assert [row["location_name"] for row in rows] == ["Camden", "Bar Harbor", "Acadia NP"]
+
+    def test_ties_break_on_primary_key(self, session):
+        rows = dq.resolve_query(session, {"source": "media_items", "sort_by": [{"field": "year", "direction": "desc"}]})
+        assert [row["id"] for row in rows] == [12, 13, 11]
+
+    def test_offset_and_limit_page_through_rows(self, session):
+        query = {"source": "media_items", "sort_by": [{"field": "id"}], "limit": 2}
+        first = dq.resolve_query(session, query)
+        second = dq.resolve_query(session, {**query, "offset": 2})
+        assert [row["id"] for row in first] == [11, 12]
+        assert [row["id"] for row in second] == [13]
+
+    def test_offset_without_limit(self, session):
+        rows = dq.resolve_query(session, {"source": "people", "offset": 1})
+        assert [row["id"] for row in rows] == [2]
+
+    def test_offset_respects_the_row_limit_cap(self, session):
+        rows = dq.resolve_query(session, {"source": "media_items", "offset": 1}, row_limit=1)
+        assert [row["id"] for row in rows] == [12]
+
+    def test_offset_past_the_end_is_empty(self, session):
+        assert dq.resolve_query(session, {"source": "people", "offset": 50}) == []
 
     def test_resolve_data_query_returns_named_results(self, session):
         result = dq.resolve_data_query(session, {

@@ -165,11 +165,13 @@ def get_person_by_name(session: Session, name: str) -> Person | None:
     return session.query(Person).filter(Person.name == name).first()
 
 
-def unassigned_faces(session: Session, limit: int) -> list[Face]:
+def unassigned_faces(session: Session, limit: int, include_ignored: bool = False) -> list[Face]:
     """Up to `limit` unassigned faces with their photos, oldest photo first (the
-    Faces page's order)."""
+    Faces page's order). `include_ignored` also reads ignored faces, in the same
+    order and under the same limit."""
+    statuses = (FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED) if include_ignored else (FACE_STATUS_UNASSIGNED,)
     return (session.query(Face).join(Face.media_item).options(joinedload(Face.media_item))
-            .filter(Face.status == FACE_STATUS_UNASSIGNED).order_by(MediaItem.date_taken, Face.id)
+            .filter(Face.status.in_(statuses)).order_by(MediaItem.date_taken, Face.id)
             .limit(limit).all())
 
 

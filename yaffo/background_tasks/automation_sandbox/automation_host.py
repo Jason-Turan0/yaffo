@@ -135,7 +135,9 @@ HOST_API: tuple[HostFunction, ...] = (
             "`query` is a dict naming a source, with optional per-column "
             'operator filters and a limit, e.g. {"source": "media_items", "year": '
             '{"eq": 2024}, "id": {"in": [1, 2, 3]}, "limit": 24}. Operators: eq, ne, '
-            "lt, lte, gt, gte, contains, in. You never touch the database directly "
+            "lt, lte, gt, gte, contains, in. Row queries also take `sort_by` "
+            '([{"field": "id", "direction": "desc"}]) and `offset` for paging. '
+            "You never touch the database directly "
             "-- declare what you want and the server resolves it. Photo rows also "
             "carry `media_dir_id` and `relative_path` (the file's location, never an "
             "absolute path) -- pass media_dir_id to move_media_items."
@@ -386,7 +388,8 @@ HOST_API: tuple[HostFunction, ...] = (
             "Group unassigned faces that look alike, as the Faces page's Similarity grouping "
             "does (the oldest 2,000 unassigned faces). threshold is the page's 0-100 scale; "
             "higher means tighter clusters. Use it to find someone who appears often but isn't "
-            "a person yet."
+            "a person yet. Pass include_ignored=True to cluster ignored faces too; each "
+            "cluster's ignored_face_ids lists the ignored ones."
         ),
         example="clusters = suggest_face_clusters(60, 10)",
         impl=compare.suggest_face_clusters,
@@ -399,7 +402,8 @@ HOST_API: tuple[HostFunction, ...] = (
             "Unassigned faces that look like a person (the oldest 2,000 unassigned faces), "
             "most similar first, scored against the person's faces from the same stage of "
             "life. threshold is the Faces page's 0-100 scale. Review the scores before "
-            "assigning."
+            "assigning. Pass include_ignored=True to also score ignored faces (each row's "
+            "`ignored` is True for those)."
         ),
         example="faces = find_similar_faces(person_id, 70, 100)",
         impl=compare.find_similar_faces,

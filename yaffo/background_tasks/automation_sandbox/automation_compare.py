@@ -13,6 +13,7 @@ from typing import Annotated, Any
 from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_sandbox.labels import person_label, media_item_label
+from yaffo.db.models import FACE_STATUS_IGNORED
 from yaffo.db.repositories import person_repository, media_repository
 from yaffo.domain.compare_utils import (
     calculate_face_similarity,
@@ -88,51 +89,72 @@ def _bounded_limit(limit: Any, maximum: int) -> int:
     return min(limit, maximum)
 
 
+def _checked_include_ignored(include_ignored: Any) -> bool:
+    if type(include_ignored) is not bool:
+        raise ValueError("include_ignored must be True or False")
+    return include_ignored
+
+
+def _candidate_faces(session: Session, include_ignored: bool) -> list:
+    """The faces to compare: the oldest unassigned ones, plus ignored ones when
+    `include_ignored` (sharing the same MAX_UNASSIGNED_FACES cap)."""
+    return person_repository.unassigned_faces(session, MAX_UNASSIGNED_FACES, include_ignored=include_ignored)
+
+
 def suggest_face_clusters(
-    session: Session, threshold: int = 50, limit: int = 20,
-) -> Annotated[list[dict], "Clusters, largest first: {size, face_ids, media_item_ids}."]:
+    session: Session, threshold: int = 50, limit: int = 20, include_ignored: bool = False,
+) -> Annotated[list[dict], "Clusters, largest first: {size, face_ids, media_item_ids, ignored_face_ids}."]:
     """Group unassigned faces that look alike, as the Faces page does (Group by:
     Similarity), over the oldest 2,000 unassigned faces. `threshold` is the page's
-    0-100 similarity scale: higher gives tighter, smaller clusters."""
+    0-100 similarity scale: higher gives tighter, smaller clusters. `include_ignored`
+    clusters ignored faces too; `ignored_face_ids` lists the ones in each cluster."""
     min_similarity = _min_similarity(session, threshold)
     limit = _bounded_limit(limit, 200)
-    faces = person_repository.unassigned_faces(session, MAX_UNASSIGNED_FACES)
+    faces = _candidate_faces(session, _checked_include_ignored(include_ignored))
     photo_of_face = {face.id: face.media_item_id for face in faces}
+    ignored = {face.id for face in faces if face.status == FACE_STATUS_IGNORED}
     clusters = cluster_faces([face.id for face in faces], [load_embedding(face.embedding) for face in faces],
                              min_similarity)
     clusters.sort(key=lambda cluster: len(cluster[1]), reverse=True)
     return [
         {"size": len(face_ids), "face_ids": face_ids,
-         "media_item_ids": list(dict.fromkeys(photo_of_face[face_id] for face_id in face_ids))}
+         "media_item_ids": list(dict.fromkeys(photo_of_face[face_id] for face_id in face_ids)),
+         "ignored_face_ids": [face_id for face_id in face_ids if face_id in ignored]}
         for _, face_ids in clusters[:limit]
     ]
 
 
 def summarize_suggest_face_clusters(args: list[Any], session: Session) -> str:
+    if len(args) > 2 and args[2] is True:
+        return "Group unassigned and ignored faces that look alike"
     return "Group unassigned faces that look alike"
 
 
 def find_similar_faces(
-    session: Session, person_id: int, threshold: int = 50, limit: int = 200,
-) -> Annotated[list[dict], "Unassigned faces, most similar first: {face_id, media_item_id, score (0.0–1.0)}."]:
+    session: Session, person_id: int, threshold: int = 50, limit: int = 200, include_ignored: bool = False,
+) -> Annotated[list[dict], "Unassigned faces, most similar first: {face_id, media_item_id, score (0.0–1.0), ignored}."]:
     """Unassigned faces that look like a person, over the oldest 2,000 unassigned
     faces, scored against the person's faces from the same stage of life.
-    `threshold` is the Faces page's 0-100 similarity scale. Empty when the person
+    `threshold` is the Faces page's 0-100 similarity scale. `include_ignored` scores
+    ignored faces too (each row's `ignored` flag marks them). Empty when the person
     is unknown or has no assigned faces yet."""
     min_similarity = _min_similarity(session, threshold)
     limit = _bounded_limit(limit, MAX_UNASSIGNED_FACES)
+    include_ignored = _checked_include_ignored(include_ignored)
     person = person_repository.get_person_by_id(session, person_id)
     if person is None:
         return []
-    faces = person_repository.unassigned_faces(session, MAX_UNASSIGNED_FACES)
-    photo_of_face = {face.id: face.media_item_id for face in faces}
+    faces = _candidate_faces(session, include_ignored)
+    face_by_id = {face.id: face for face in faces}
     scores = [(face_id, score) for face_id, score in calculate_similarity(person, faces).items()
               if score >= min_similarity]
     scores.sort(key=lambda pair: pair[1], reverse=True)
-    return [{"face_id": face_id, "media_item_id": photo_of_face[face_id], "score": round(score, 4)}
+    return [{"face_id": face_id, "media_item_id": face_by_id[face_id].media_item_id, "score": round(score, 4),
+             "ignored": face_by_id[face_id].status == FACE_STATUS_IGNORED}
             for face_id, score in scores[:limit]]
 
 
 def summarize_find_similar_faces(args: list[Any], session: Session) -> str:
     person_id = args[0] if args else None
-    return f"Find unassigned faces that look like {person_label(session, person_id)}"
+    faces = "unassigned and ignored faces" if len(args) > 3 and args[3] is True else "unassigned faces"
+    return f"Find {faces} that look like {person_label(session, person_id)}"

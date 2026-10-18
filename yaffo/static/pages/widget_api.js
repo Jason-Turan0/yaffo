@@ -91,8 +91,9 @@ window.PHOTO_ORGANIZER.pages.initWidgetApi = function (data, state, locale) {
 
         /**
          * Run one server query on demand; resolves to its rows (or null on error).
-         * `query` is a single { source, ...filters, limit } — the same shape as a
-         * value in data_query. Use it to filter or drill down after first render.
+         * `query` is a single { source, ...filters, sort_by, offset, limit } — the
+         * same shape as a value in data_query. Use it to filter, drill down, or page
+         * (sort_by + offset + limit) after first render.
          */
         query: function (/** @type {WidgetQuery} */ query) {
             return request('yaffo:query', { query: query });

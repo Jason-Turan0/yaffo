@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from yaffo.background_tasks.automation_sandbox.media_dirs import enrich_media_rows
 from yaffo.db.repositories.data_query_repository import (
     AGGREGATE_OPS,
+    SORT_DIRECTIONS,
     SOURCES,
     resolve_query,
     source_schema,
@@ -30,7 +31,7 @@ from yaffo.site_agents.common.tool_providers.utils import truncate_tool_result
 
 # Anthropic forbids oneOf/allOf/anyOf at a tool input_schema's top level, so this
 # preview tool advertises a single permissive object: the source, the aggregate
-# directives, and limit. Per-column filters ({ "column": { "op": value } }) ride
+# directives, and the paging directives (sort_by / offset / limit). Per-column filters ({ "column": { "op": value } }) ride
 # along as extra properties and are validated server-side by resolve_query, which
 # returns a precise error the model can correct from. (The strict, per-source
 # contract lives in the system prompt and data_query_repository.)
@@ -40,6 +41,19 @@ _INPUT_SCHEMA = {
         "source": {"type": "string", "enum": list(SOURCES), "description": "Which table to query."},
         "op": {"enum": list(AGGREGATE_OPS), "description": "Aggregate op; omit to return rows."},
         "field": {"type": "string", "description": "Column the aggregate operates on (omit for count)."},
+        "sort_by": {
+            "type": "array",
+            "description": "Sort keys, most significant first (rows queries only).",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "field": {"type": "string", "description": "Column to sort on."},
+                    "direction": {"enum": list(SORT_DIRECTIONS), "description": "Defaults to asc."},
+                },
+                "required": ["field"],
+            },
+        },
+        "offset": {"type": "integer", "description": "Rows to skip before returning (rows queries only)."},
         "limit": {"type": "integer", "description": "Max rows to return (rows queries only)."},
     },
     "required": ["source"],
@@ -75,7 +89,8 @@ class DataQueryToolProvider(ToolProvider):
                     "Run a data query against the photo library to preview real results before "
                     "writing a widget. Provide a single query: a `source` plus filters. Returns a "
                     "row count and a small sample in that source's shape. Use it to confirm a "
-                    "filter returns data and to see the exact fields available."
+                    "filter returns data and to see the exact fields available. Add `sort_by` / "
+                    "`offset` / `limit` to preview a specific page of rows."
                 ),
                 input_schema=_INPUT_SCHEMA,
             ),

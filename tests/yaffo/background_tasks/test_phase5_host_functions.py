@@ -15,7 +15,7 @@ from yaffo.db import db
 from yaffo.distance_units import get_saved_distance_unit
 from yaffo.i18n import get_saved_locale
 from yaffo.db.models import (
-    FACE_STATUS_UNASSIGNED, JOB_STATUS_COMPLETED, JOB_STATUS_RUNNING, ClassificationLabel, Face, Job, JobResult,
+    FACE_STATUS_IGNORED, FACE_STATUS_UNASSIGNED, JOB_STATUS_COMPLETED, JOB_STATUS_RUNNING, ClassificationLabel, Face, Job, JobResult,
     MediaItem, MediaLabel, Person, PersonEmbedding, Tag,
 )
 
@@ -41,11 +41,12 @@ def session(tmp_path, monkeypatch):
     engine.dispose()
 
 
-def _faces(session, vectors):
-    """One unassigned face per photo, ids 1.. in order."""
+def _faces(session, vectors, ignored=()):
+    """One face per photo, ids 1.. in order; unassigned unless its id is in `ignored`."""
     rng = np.random.default_rng(seed=3)
     for i, vector in enumerate(vectors, start=1):
-        session.add(Face(id=i, media_item_id=i, status=FACE_STATUS_UNASSIGNED,
+        status = FACE_STATUS_IGNORED if i in ignored else FACE_STATUS_UNASSIGNED
+        session.add(Face(id=i, media_item_id=i, status=status,
                          embedding=_unit(np.array(vector) + rng.normal(0, 0.003, 3))))
     session.commit()
 
@@ -75,6 +76,42 @@ def test_find_similar_faces_scores_unassigned_faces_against_a_person(session):
     assert [f["face_id"] for f in faces] == [1, 2]  # the other-looking face is below the threshold
     assert faces[0]["media_item_id"] == 1 and faces[0]["score"] >= faces[1]["score"]
     assert compare.find_similar_faces(session, 99) == []
+
+
+def test_suggest_face_clusters_skips_ignored_faces_unless_asked(session):
+    _faces(session, [[1, 0, 0]] * 5 + [[0, 1, 0]] * 3, ignored={4, 5, 7, 8})
+
+    default = compare.suggest_face_clusters(session, 80, 10)
+    with_ignored = compare.suggest_face_clusters(session, 80, 10, True)
+
+    assert [c["face_ids"] for c in default] == [[1, 2, 3]]  # 6 is noise once 7 and 8 are hidden
+    assert default[0]["ignored_face_ids"] == []
+    assert [c["face_ids"] for c in with_ignored] == [[1, 2, 3, 4, 5], [6, 7, 8]]
+    assert [c["ignored_face_ids"] for c in with_ignored] == [[4, 5], [7, 8]]
+    with pytest.raises(ValueError):
+        compare.suggest_face_clusters(session, 80, 10, "yes")
+
+
+def test_find_similar_faces_scores_ignored_faces_only_when_asked(session):
+    _faces(session, [[1, 0, 0], [0.95, 0.05, 0], [0, 1, 0]], ignored={2})
+    session.add(Person(id=1, name="Billy", avg_embedding=_unit([1, 0, 0])))
+    session.add(PersonEmbedding(person_id=1, life_stage="unknown", avg_embedding=_unit([1, 0, 0])))
+    session.commit()
+
+    default = compare.find_similar_faces(session, 1, 50, 10)
+    with_ignored = compare.find_similar_faces(session, 1, 50, 10, True)
+
+    assert [(f["face_id"], f["ignored"]) for f in default] == [(1, False)]
+    assert [(f["face_id"], f["ignored"]) for f in with_ignored] == [(1, False), (2, True)]
+    with pytest.raises(ValueError):
+        compare.find_similar_faces(session, 1, 50, 10, 1)
+
+
+def test_summaries_mention_ignored_faces_when_included(session):
+    assert compare.summarize_suggest_face_clusters([60, 10, True], session) == (
+        "Group unassigned and ignored faces that look alike")
+    assert compare.summarize_suggest_face_clusters([60, 10], session) == "Group unassigned faces that look alike"
+    assert "unassigned and ignored faces" in compare.summarize_find_similar_faces([1, 50, 10, True], session)
 
 
 def test_set_person_birthdate_and_undo_respects_a_later_change(session):
