@@ -94,12 +94,22 @@ export default defineWalkthrough({
             await navigate(page, `${path}?edit=1&select_id=${first}`);
             await page.locator('#remove-from-album-button').click();
             await page.locator('#confirm-dialog-confirm').click();
+            // "Remove from album" is a form POST that navigates back to the album in
+            // edit mode. The modal buttons only answer once that document's app
+            // bootstrap has run (it sets html[data-app-ready] after attaching them),
+            // so re-enter through navigate() instead of clicking into a page whose
+            // listeners are not attached yet — that left the Edit details modal
+            // rendered but never opened.
+            await page.waitForURL(/\/albums\/\d+\?edit=1$/);
             await expect(page.locator('#album-grid .photo-card')).toHaveCount(1);
+            await navigate(page, `${path}?edit=1`);
             await page.locator('#edit-album-details-button').click();
+            await expect(page.locator('#editAlbumModal')).toHaveClass(/active/);
             await page.locator('#edit-album-description').fill('A hand-picked collection');
             await page.locator('#editAlbumModal button[type=submit]').click();
+            // Same reason: wait out the details POST rather than racing the reload.
             await page.waitForURL(/\/albums\/\d+$/);
-            await page.locator('html[data-app-ready]').waitFor({state: 'attached'});
+            await navigate(page, path);
             await page.locator('#delete-album-button').click();
             await page.locator('#confirm-dialog-confirm').click();
             await page.waitForURL(/\/albums$/);
