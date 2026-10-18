@@ -713,6 +713,7 @@ type FacesAssignmentApi = {
 };
 
 type FacesNamespace = {
+    initFilters?: () => void;
     initAssignment?: (
         sampleSize: number,
         shortcutPeople: PersonShortcut[],

@@ -109,6 +109,28 @@ scenarios:
       - After removing, the face count for that person decreases
       - A success message is displayed
       - The removed face becomes available again on the face assignment page
+  - name: people_can_move_faces_to_another_person
+    goal: The user can move faces from one person to another from the person's faces view
+    priority: medium
+    steps:
+      - Create two people and assign one pool face to the first (setup via API, then wait for the background assignment)
+      - Open the first person's faces view and select the face
+      - Choose the second person in the "Move Selected to" picker (#move-target-person, a searchable-select) and click Move Selected (#move-selected-faces)
+      - Confirm the global confirm dialog
+      - Cleanup — delete both people, which unassigns the face back to the pool
+    verify:
+      - A success message is displayed and the face leaves the first person's view (the move is synchronous, no taskq wait)
+      - The face is shown on the second person's faces view
+  - name: people_can_filter_faces_to_likely_misassigned
+    goal: The "Only likely misassigned" filter shows only faces that look more like someone else
+    priority: medium
+    steps:
+      - Open a person's faces view with ?misassigned=1
+      - Open it again without the filter
+    verify:
+      - With the filter, the checkbox (input[name="misassigned"]) is checked and has an info tip (.help-tip[data-tooltip]) beside it
+      - Every face shown carries a .face-closer-to line naming who it looks more like; with none, the empty state shows
+      - Without the filter the checkbox is unchecked and no .face-closer-to line appears
   # ---------------------------------------------------------------------------
   # Responsive coverage (P3 — people). The shared shell contract itself is verified
   # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen

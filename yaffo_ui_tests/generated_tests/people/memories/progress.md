@@ -53,6 +53,17 @@
   empty) `.empty-state` "No faces found".
 - Deleting a person unassigns their faces (status back to unassigned) — verified by
   polling the pool for the face id.
+- Move (2026-10-18): the Actions panel has a second form `#move-form` → POST
+  `/people/<id>/faces/move` with `faces` + `target_person`. The picker
+  `#move-target-person` is ALWAYS a searchable-select (native select hidden: use
+  `pickSearchableOption(page.locator('#move-form'), '#move-target-person', name)`,
+  not `selectOption`); `#move-selected-faces` → global confirm → submit. The move
+  is SYNCHRONOUS (no taskq wait): the face is on the target's view after redirect.
+- "Only likely misassigned" filter (2026-10-18): `input[name="misassigned"]` in a
+  `.filter-checkbox-row` with a `.help-tip[data-tooltip]` info icon beside it;
+  drive by URL (`?misassigned=1`). Each card then has a `.face-closer-to` line
+  ("Closer to NAME: N%"); with none flagged, `.empty-state`. Fixture people rarely
+  look alike, so assert structure, not specific faces.
 
 ## 2026-08-30 — responsive rollout (P3: faces and people)
 

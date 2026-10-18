@@ -41,6 +41,17 @@ def ui_threshold_to_similarity(
     return floor + frac * (ceil - floor)
 
 
+def similarity_to_ui_fraction(
+    similarity: float,
+    floor: float = DEFAULT_SIMILARITY_FLOOR,
+    ceil: float = DEFAULT_SIMILARITY_CEIL,
+) -> float:
+    """Inverse of ui_threshold_to_similarity as an unrounded 0.0-1.0 fraction of the
+    band, for a client that formats it as a percent itself. Clamped to [0, 1]."""
+    frac = (similarity - floor) / (ceil - floor) if ceil > floor else 0.0
+    return max(0.0, min(1.0, frac))
+
+
 def similarity_to_ui_percent(
     similarity: float,
     floor: float = DEFAULT_SIMILARITY_FLOOR,
@@ -49,8 +60,7 @@ def similarity_to_ui_percent(
     """Inverse of ui_threshold_to_similarity: map a raw cosine similarity onto the
     0-100 UI percent over the same band, so a displayed score and the slider share
     one scale. Clamped to [0, 100]."""
-    frac = (similarity - floor) / (ceil - floor) if ceil > floor else 0.0
-    return round(max(0.0, min(1.0, frac)) * 100)
+    return round(similarity_to_ui_fraction(similarity, floor, ceil) * 100)
 
 
 def reference_embedding_for_face(

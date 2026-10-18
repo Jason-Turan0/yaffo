@@ -4,6 +4,7 @@ import pytest
 
 from yaffo.domain.compare_utils import (
     ui_threshold_to_similarity,
+    similarity_to_ui_fraction,
     similarity_to_ui_percent,
     DEFAULT_SIMILARITY_FLOOR,
     DEFAULT_SIMILARITY_CEIL,
@@ -51,6 +52,18 @@ def test_roundtrips_ui_to_similarity_and_back():
 
 def test_degenerate_band_does_not_divide_by_zero():
     assert similarity_to_ui_percent(0.5, 0.5, 0.5) == 0
+    assert similarity_to_ui_fraction(0.5, 0.5, 0.5) == 0.0
+
+
+@pytest.mark.parametrize("similarity, expected", [
+    (0.40, 0.0),
+    (0.4603, 0.201),  # unrounded, unlike similarity_to_ui_percent
+    (0.70, 1.0),
+    (0.20, 0.0),      # clamps below
+    (0.95, 1.0),      # clamps above
+])
+def test_similarity_to_fraction_is_the_unrounded_inverse(similarity, expected):
+    assert similarity_to_ui_fraction(similarity, 0.40, 0.70) == pytest.approx(expected)
 
 
 def test_higher_slider_demands_more_similarity():

@@ -21,6 +21,16 @@
         {% macro render_filters() %}
             {{ similarity_filter('min_similarity', _("Min Similarity"), filters) }}
             {{ similarity_filter('max_similarity', _("Max Similarity"), filters) }}
+            {% set misassigned_help = _("Faces that look more like someone else than like %(person)s.", person=person.name) %}
+            <div class="filter-group filter-checkbox-row">
+                <label class="filter-checkbox">
+                    <input type="checkbox" name="misassigned" value="1"
+                           {% if filters.misassigned %}checked{% endif %}>
+                    <span>{{ _("Only likely misassigned") }}</span>
+                </label>
+                <button type="button" class="help-tip" data-icon="info"
+                        aria-label="{{ misassigned_help }}" data-tooltip="{{ misassigned_help }}"></button>
+            </div>
         {% endmacro %}
         {% macro render_actions() %}
             <form method="POST" action="{{ url_for('person_faces_remove', person_id=person.id) }}" id="remove-form">
@@ -28,6 +38,21 @@
                 <div id="selected-faces-container"></div>
                 <button type="button" class="btn btn-danger btn-block" data-icon="delete" id="remove-selected-faces">
                     {{ _("Remove Selected") }}
+                </button>
+            </form>
+            <form method="POST" action="{{ url_for('person_faces_move', person_id=person.id) }}" id="move-form"
+                  class="move-faces-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div id="move-faces-container"></div>
+                <label for="move-target-person">{{ _("Move Selected to") }}</label>
+                <select name="target_person" id="move-target-person" class="searchable-select">
+                    <option value="">-- {{ _("Select person") }} --</option>
+                    {% for other in other_people %}
+                        <option value="{{ other.id }}" {% if suggested_person_id == other.id %}selected{% endif %}>{{ other.name }}</option>
+                    {% endfor %}
+                </select>
+                <button type="button" class="btn btn-primary btn-block" id="move-selected-faces">
+                    {{ _("Move Selected") }}
                 </button>
             </form>
         {% endmacro %}
@@ -45,7 +70,7 @@
                     {% pluralize %}
                         Showing {{ total }} faces
                     {% endtrans %}
-                    {% if filters.selected_year or filters.selected_month or filters.min_similarity or filters.max_similarity %}
+                    {% if filters.selected_year or filters.selected_month or filters.min_similarity or filters.max_similarity or filters.misassigned %}
                         {{ _("(filtered)") }}
                     {% endif %}
                 {% else %}
@@ -83,6 +108,12 @@
                                         <span>{{ _("N/A") }}</span>
                                     {% endif %}
                                 </div>
+                                {% if face_data.closer_to %}
+                                    <div class="face-closer-to" data-person-id="{{ face_data.closer_to.person_id }}">
+                                        {{ _("Closer to %(person)s:", person=face_data.closer_to.name) }}
+                                        {{ (face_data.closer_to.similarity_pct / 100) | format_percent }}
+                                    </div>
+                                {% endif %}
                             </div>
                             <input type="checkbox" name="faces" value="{{ face_data.face.id }}" style="display:none;">
                         </div>
@@ -99,13 +130,16 @@
                 'year': filters.selected_year,
                 'month': filters.selected_month,
                 'min_similarity': filters.min_similarity,
-                'max_similarity': filters.max_similarity
+                'max_similarity': filters.max_similarity,
+                'misassigned': 1 if filters.misassigned else None
             }
         ) }}
             {% else %}
                 <div class="empty-state">
                     <h2>{{ _("No faces found") }}</h2>
-                    <p>{% if filters.selected_year or filters.selected_month or filters.min_similarity or filters.max_similarity %}
+                    <p>{% if filters.misassigned %}
+                        {{ _("None of %(person)s's faces look more like someone else.", person=person.name) }}
+                    {% elif filters.selected_year or filters.selected_month or filters.min_similarity or filters.max_similarity %}
                         {{ _("Try adjusting your filters.") }}
                     {% else %}
                         {{ _("No faces have been assigned to %(person)s yet.", person=person.name) }}

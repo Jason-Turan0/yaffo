@@ -97,6 +97,18 @@ scenarios:
     cleanup:
       - Navigate to the people page
       - Delete the person 'TestKeyboardPerson'
+  - name: ignored_faces_join_the_pool_only_when_the_filter_asks_for_them
+    goal: The "Include ignored faces" filter (default off) adds ignored faces to the pool and marks them
+    priority: medium
+    steps:
+      - Setup only — the face_assignment fixture has NO ignored faces, so ignore one pool face via PATCH /api/faces {ids, status IGNORED}
+      - Load /faces?group_by=people&threshold=2
+      - Load it again with include_ignored=1 (the checkbox's URL param)
+      - Cleanup (in a finally) — un-ignore it via PATCH /api/faces {ids, person_id null} so the shared pool is restored
+    verify:
+      - By default the checkbox is unchecked, the subtitle counts "unassigned faces", and the ignored face is in no cluster's data-faces payload
+      - With the filter on, the checkbox is checked, the subtitle counts "unassigned and ignored faces", and exactly that face appears with ignored=true
+      - Painted ignored faces carry a .face-ignored class and a .face-ignored-badge label (not asserted here — which cluster is active varies)
   - name: face_page_navigation_works
     goal: Verify that the page navigation works
     priority: high

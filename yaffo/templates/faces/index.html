@@ -110,7 +110,21 @@
         {% macro render_filters() %}
             {% include "filters/_year.html" %}
             {% include "filters/_month.html" %}
-            {% include "filters/_person.html" %}
+            {# People only narrows "Group by People"; similarity clusters have no person.
+               faces/index.js toggles it as the Group by radio changes. #}
+            {% set people_without_match_type = true %}
+            {% set people_filter_hidden = filters.selected_group_by == 'similarity' %}
+            {% include "filters/_people.html" %}
+            {% set include_ignored_help = _("Faces you ignored earlier join the groups, marked Ignored.") %}
+            <div class="filter-group filter-checkbox-row">
+                <label class="filter-checkbox">
+                    <input type="checkbox" name="include_ignored" value="1"
+                           {% if filters.selected_include_ignored %}checked{% endif %}>
+                    <span>{{ _("Include ignored faces") }}</span>
+                </label>
+                <button type="button" class="help-tip" data-icon="info"
+                        aria-label="{{ include_ignored_help }}" data-tooltip="{{ include_ignored_help }}"></button>
+            </div>
             <div class="filter-group">
                 <label for="group-by-people">{{ _("Group by") }}</label>
                 <div class="radio-group">
@@ -214,7 +228,11 @@
                         panel_prefix='faces') }}
         <div class="main-content" data-unassigned-count="{{ unassigned_face_count }}">
             {% call page_header(_("Unassigned Faces")) %}
-                {% trans count=faces|length, shown=faces|length|format_integer, total=unassigned_face_count|format_integer %}Showing {{ shown }} of {{ total }} unassigned face{% pluralize %}Showing {{ shown }} of {{ total }} unassigned faces{% endtrans %}
+                {% if filters.selected_include_ignored %}
+                    {% trans count=faces|length, shown=faces|length|format_integer, total=unassigned_face_count|format_integer %}Showing {{ shown }} of {{ total }} unassigned and ignored face{% pluralize %}Showing {{ shown }} of {{ total }} unassigned and ignored faces{% endtrans %}
+                {% else %}
+                    {% trans count=faces|length, shown=faces|length|format_integer, total=unassigned_face_count|format_integer %}Showing {{ shown }} of {{ total }} unassigned face{% pluralize %}Showing {{ shown }} of {{ total }} unassigned faces{% endtrans %}
+                {% endif %}
             {% endcall %}
             <div id="clusters">
                 {% if face_suggestions | length > 0 %}
@@ -304,6 +322,7 @@
     <script>
         document.addEventListener('yaffo:app-init-complete', (event) => {
             const app = event.detail.app;
+            app.faces.initFilters();
             app.faces.assignment = app.faces.initAssignment(
                 {{ sample_size | tojson }},
                 {{ shortcut_people | tojson }},

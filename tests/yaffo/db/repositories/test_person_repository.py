@@ -24,6 +24,7 @@ from yaffo.db.repositories.person_repository import (
     bulk_link_faces_to_people,
     update_person_embedding,
     get_similarity_bounds,
+    likely_misassigned_faces,
     recompute_person_similarities,
     MAX_REPRESENTATIVE_FACES,
 )
@@ -113,6 +114,96 @@ def test_falls_back_to_estimated_age_when_no_birthdate(session):
 
     assert person.estimated_birthdate is None
     assert {e.life_stage for e in person.stage_embeddings} == {"baby"}
+
+
+def _stage_faces(session, person) -> dict[str, list[int]]:
+    return {e.life_stage: json.loads(e.included_face_ids) for e in session.get(Person, person.id).stage_embeddings}
+
+
+def test_faces_from_before_the_birth_year_stay_out_of_the_gallery(session):
+    """A 2016 photo assigned to someone born in 2019 is someone else. It used to fall
+    back to its predicted age (17) and become the person's entire "teen" medoid."""
+    person = Person(name="Nathan", birthdate=date(2019, 9, 6))
+    p2016, p2021 = MediaItem(year=2016), MediaItem(year=2021)
+    session.add_all([person, p2016, p2021])
+    session.flush()
+    stray = _add_face(session, person, p2016, _unit(0.0, 1.0), age=17)
+    kids = [_add_face(session, person, p2021, _unit(1.0, 0.01 * i), age=2) for i in range(3)]
+    session.commit()
+
+    update_person_embedding(person.id, session)
+    session.expire_all()
+
+    assert _stage_faces(session, person) == {"baby": [face.id for face in kids]}
+    # The overall medoid is built without it too (here: one of the baby faces).
+    assert load_embedding(session.get(Person, person.id).avg_embedding)[1] < 0.5
+    # It is still scored (against the overall medoid), so it shows up as a poor fit.
+    assert _similarities(session, person)[stray.id] < 0.1
+
+
+def test_a_birthdate_that_predates_nothing_builds_from_every_face(session):
+    """Every face before the birth year means the birthdate is the likelier error:
+    bucket by predicted age rather than leave the person with no gallery."""
+    person = Person(name="Typo", birthdate=date(2030, 1, 1))
+    p2020 = MediaItem(year=2020)
+    session.add_all([person, p2020])
+    session.flush()
+    faces = [_add_face(session, person, p2020, _unit(1.0, 0.01 * i), age=1) for i in range(2)]
+    session.commit()
+
+    update_person_embedding(person.id, session)
+    session.expire_all()
+
+    assert _stage_faces(session, person) == {"baby": [face.id for face in faces]}
+
+
+def test_a_stage_needs_three_faces_once_another_stage_has_them(session):
+    person = Person(name="Pat", birthdate=date(1990, 1, 28))
+    p1991, p2020 = MediaItem(year=1991), MediaItem(year=2020)
+    session.add_all([person, p1991, p2020])
+    session.flush()
+    babies = [_add_face(session, person, p1991, _unit(1.0, 0.01 * i), age=1) for i in range(3)]
+    _add_face(session, person, p2020, _unit(0.0, 1.0), age=30)  # a lone "adult" face
+    session.commit()
+
+    update_person_embedding(person.id, session)
+    session.expire_all()
+
+    assert _stage_faces(session, person) == {"baby": [face.id for face in babies]}
+
+
+def test_a_person_with_only_a_few_faces_keeps_small_stages(session):
+    """No stage reaches the minimum, so dropping small ones would leave no gallery at
+    all -- and best-over-stages matching has nothing to take the max of."""
+    person = Person(name="New", birthdate=date(1990, 1, 28))
+    p1991, p2020 = MediaItem(year=1991), MediaItem(year=2020)
+    session.add_all([person, p1991, p2020])
+    session.flush()
+    _add_face(session, person, p1991, _unit(1.0), age=1)
+    _add_face(session, person, p2020, _unit(0.0, 1.0), age=30)
+    session.commit()
+
+    update_person_embedding(person.id, session)
+    session.expire_all()
+
+    assert set(_stage_faces(session, person)) == {"baby", "adult"}
+
+
+def test_a_child_gets_no_stage_older_than_their_current_age(session):
+    """A 10-year-old: undated photos whose predicted age is adult are filed under the
+    child stage, so no adult medoid is ever built. (Birthdate relative to today, since
+    the cap is the person's current age.)"""
+    person = Person(name="Chase", birthdate=date(date.today().year - 10, 1, 28))
+    undated = MediaItem(year=None)
+    session.add_all([person, undated])
+    session.flush()
+    faces = [_add_face(session, person, undated, _unit(1.0, 0.01 * i), age=24) for i in range(3)]
+    session.commit()
+
+    update_person_embedding(person.id, session)
+    session.expire_all()
+
+    assert _stage_faces(session, person) == {"child": [face.id for face in faces]}
 
 
 def test_medoid_is_a_real_stored_embedding(session):
@@ -440,3 +531,53 @@ def test_bulk_link_first_match_wins_for_a_repeated_face(session):
 
     assert bulk_link_faces_to_people(session, [(ada.id, face.id), (bob.id, face.id)]) == 1
     assert [(pf.person_id, pf.face_id) for pf in session.query(PersonFace)] == [(ada.id, face.id)]
+
+
+# --- likely_misassigned_faces -------------------------------------------------------
+
+def _person_with_faces(sess, name, birthdate, photo, vectors):
+    person = Person(name=name, birthdate=birthdate)
+    sess.add(person)
+    sess.flush()
+    faces = [_add_face(sess, person, photo, vec, age=5) for vec in vectors]
+    sess.commit()
+    update_person_embedding(person.id, sess)
+    return person, faces
+
+
+def test_flags_faces_that_look_more_like_someone_else_biggest_gap_first(session):
+    photo = MediaItem(year=2022)
+    session.add(photo)
+    session.flush()
+    nathan, _ = _person_with_faces(session, "Nathan", date(2017, 1, 1), photo,
+                                   [_unit(0.0, 1.0, 0.01 * i) for i in range(3)])
+    chase, chase_faces = _person_with_faces(
+        session, "Chase", date(2016, 1, 1), photo,
+        [_unit(1.0, 0.01 * i) for i in range(3)] + [_unit(0.3, 1.0), _unit(0.6, 1.0)])
+    really_nathan, leaning_nathan = chase_faces[3], chase_faces[4]
+
+    matches = likely_misassigned_faces(session, chase.id)
+
+    assert [m.face_id for m in matches] == [really_nathan.id, leaning_nathan.id]  # biggest gap first
+    assert {m.other_person_name for m in matches} == {"Nathan"}
+    assert all(m.other_similarity > m.similarity for m in matches)
+    assert likely_misassigned_faces(session, nathan.id) == []
+    # Narrowed to the screen's filtered faces.
+    assert [m.face_id for m in likely_misassigned_faces(session, chase.id, [leaning_nathan.id])] == [leaning_nathan.id]
+
+
+def test_a_photo_from_before_someone_was_born_never_looks_like_them(session):
+    old, new = MediaItem(year=2016), MediaItem(year=2022)
+    session.add_all([old, new])
+    session.flush()
+    _person_with_faces(session, "Nathan", date(2019, 9, 6), new, [_unit(0.0, 1.0, 0.01 * i) for i in range(3)])
+    chase = Person(name="Chase", birthdate=date(2016, 1, 28))
+    session.add(chase)
+    session.flush()
+    for i in range(3):
+        _add_face(session, chase, new, _unit(1.0, 0.01 * i), age=5)
+    lookalike_2016 = _add_face(session, chase, old, _unit(0.0, 1.0), age=0)  # resembles Nathan, but 2016
+    session.commit()
+    update_person_embedding(chase.id, session)
+
+    assert lookalike_2016.id not in {m.face_id for m in likely_misassigned_faces(session, chase.id)}

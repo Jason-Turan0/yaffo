@@ -82,6 +82,30 @@
     color: var(--color-text);
 }
 
+/* A boolean filter with an info tip explaining it. The tip sits beside the label,
+   not inside it, so tapping it doesn't toggle the checkbox. */
+.filter-group.filter-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.filter-checkbox-row .help-tip[data-icon]::before {
+    display: block;
+}
+
+@media (hover: none), (pointer: coarse) {
+    .filter-checkbox-row .help-tip {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .filter-checkbox-row .help-tip[data-tooltip]:focus::after,
+    .filter-checkbox-row .help-tip[data-tooltip]:active::after {
+        opacity: 1;
+    }
+}
+
 .filter-group input[type="range"] {
     width: 100%;
     padding: 0;

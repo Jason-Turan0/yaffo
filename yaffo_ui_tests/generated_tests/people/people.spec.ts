@@ -16,10 +16,12 @@ const EDIT_NAME = `SpecTestEdit-${UNIQ}`;
 const RENAMED_NAME = `SpecTestRenamed-${UNIQ}`;
 const DELETE_NAME = `SpecTestDelete-${UNIQ}`;
 const FACES_NAME = `SpecTestFaces-${UNIQ}`;
+const MOVE_FROM_NAME = `SpecTestMoveFrom-${UNIQ}`;
+const MOVE_TO_NAME = `SpecTestMoveTo-${UNIQ}`;
 // One unbroken run of characters — the long-content case a person's name can
 // actually produce, and the one that widens a table if nothing breaks it.
 const LONG_NAME = `SpecTestUnbrokenPersonName${'x'.repeat(60)}-${UNIQ}`;
-const ALL_TEST_NAMES = [LIST_NAME, ADD_NAME, EDIT_NAME, RENAMED_NAME, DELETE_NAME, FACES_NAME, LONG_NAME];
+const ALL_TEST_NAMES = [LIST_NAME, ADD_NAME, EDIT_NAME, RENAMED_NAME, DELETE_NAME, FACES_NAME, MOVE_FROM_NAME, MOVE_TO_NAME, LONG_NAME];
 
 // Generous per-test budget: the face-assignment waits can sit behind minutes of
 // queued model work when the whole suite runs in parallel.
@@ -320,6 +322,69 @@ test.describe('People', () => {
     await waitForFaceBackInPool(page, faceId);
 
     await deletePersonViaApi(page, personId);
+  });
+
+  test('people_can_move_faces_to_another_person', async ({ page }) => {
+    const fromId = await createPersonViaApi(page, MOVE_FROM_NAME);
+    const toId = await createPersonViaApi(page, MOVE_TO_NAME);
+    const faceId = await pickPoolFaceId(page);
+    await assignFaceToPersonViaApi(page, faceId, fromId);
+    await waitForFaceAssigned(page, fromId, faceId);
+
+    // Select the face, pick the other person in the searchable picker, move it.
+    const card = page.locator(`.face-card[data-face-id="${faceId}"]`);
+    await card.click();
+    await expect(card).toHaveClass(/selected/);
+    // The open picker must not be clipped by the short Actions panel (it once was,
+    // with a scrollbar on the panel): its last option is really drawn on top.
+    const picker = page.locator('#move-form .searchable-select-wrapper');
+    await picker.locator('.searchable-select-display').click();
+    const lastOption = picker.locator('.searchable-select-option').last();
+    await expect(lastOption).toBeVisible();
+    expect(await lastOption.evaluate((option) => {
+      const box = option.getBoundingClientRect();
+      const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+      return option === hit || option.contains(hit);
+    })).toBe(true);
+    await picker.locator('.searchable-select-display').click();  // close; the helper reopens it
+    await pickSearchableOption(page.locator('#move-form'), '#move-target-person', MOVE_TO_NAME);
+    await expect(page.locator('#move-target-person')).toHaveValue(String(toId));
+    await page.locator('#move-selected-faces').click();
+    await expect(page.locator('#global-confirm-dialog')).toHaveClass(/active/);
+    await page.locator('#confirm-dialog-confirm').click();
+
+    // The move is synchronous: the face leaves this person and is the other's now.
+    await expect(flashSuccess(page)).toBeVisible();
+    await expect(page.locator('.face-card')).toHaveCount(0);
+    await page.goto(`/people/${toId}/faces`);
+    await expect(page.locator(`.face-card[data-face-id="${faceId}"]`)).toBeVisible();
+
+    // Deleting the person unassigns the face, restoring the shared pool.
+    await deletePersonViaApi(page, toId);
+    await deletePersonViaApi(page, fromId);
+    await waitForFaceBackInPool(page, faceId);
+  });
+
+  test('people_can_filter_faces_to_likely_misassigned', async ({ page }) => {
+    // Read-only: whatever the fixture's people look like, the filter must render
+    // checked, explain itself through its info tip, and flag every face it shows.
+    const personId = await firstPersonId(page);
+    await page.goto(`/people/${personId}/faces?misassigned=1`);
+
+    const checkbox = page.locator('input[name="misassigned"]');
+    await expect(checkbox).toBeChecked();
+    await expect(page.locator('.filter-checkbox-row:has(input[name="misassigned"]) .help-tip[data-tooltip]'))
+      .toHaveCount(1);
+    const cards = page.locator('.face-card');
+    if (await cards.count() === 0) {
+      await expect(page.locator('.empty-state')).toBeVisible();
+    } else {
+      await expect(cards.locator('.face-closer-to')).toHaveCount(await cards.count());
+    }
+
+    await page.goto(`/people/${personId}/faces`);
+    await expect(checkbox).not.toBeChecked();
+    await expect(page.locator('.face-closer-to')).toHaveCount(0);
   });
 });
 

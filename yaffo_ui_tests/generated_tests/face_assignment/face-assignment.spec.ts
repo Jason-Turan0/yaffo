@@ -258,6 +258,54 @@ test.describe('Face Assignment', () => {
     }
   });
 
+  test('ignored faces join the pool only when the filter asks for them', async ({ page }) => {
+    const subtitle = page.locator('.subtitle');
+    const checkbox = page.locator('input[name="include_ignored"]');
+    /** @returns every face across all clusters (only the active one is painted). */
+    const payloadFaces = async (): Promise<Array<{ id: number; ignored: boolean }>> => {
+      const faces = [];
+      for (const group of await page.locator('.suggestion-group').all()) {
+        faces.push(...JSON.parse(await group.getAttribute('data-faces') ?? '[]'));
+      }
+      return faces;
+    };
+    /** Setup/cleanup only: the fixture has no ignored faces, so ignore one and restore it. */
+    const patchFace = async (body: object) => {
+      const status = await page.evaluate(async (payload) => {
+        const response = await fetch('/api/faces', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        return response.status;
+      }, body);
+      expect(status).toBe(200);
+    };
+
+    await page.goto('/faces?group_by=people&threshold=2');
+    const [target] = await payloadFaces();
+    expect(target, 'the fixture should leave unassigned faces').toBeDefined();
+    await patchFace({ ids: [target.id], status: 'IGNORED' });
+    try {
+      await page.goto('/faces?group_by=people&threshold=2');
+      await expect(checkbox).not.toBeChecked();
+      await expect(subtitle).toContainText(/unassigned faces/);
+      await expect(subtitle).not.toContainText(/ignored/);
+      const hidden = await payloadFaces();
+      expect(hidden.map(face => face.id)).not.toContain(target.id);
+      expect(hidden.some(face => face.ignored)).toBe(false);
+
+      await page.goto('/faces?group_by=people&threshold=2&include_ignored=1');
+      await expect(checkbox).toBeChecked();
+      await expect(subtitle).toContainText(/unassigned and ignored faces/);
+      const shown = await payloadFaces();
+      expect(shown.filter(face => face.ignored).map(face => face.id)).toEqual([target.id]);
+      expect(shown.length).toBe(hidden.length + 1);
+    } finally {
+      await patchFace({ ids: [target.id], person_id: null });  // un-ignore: back to unassigned
+    }
+  });
+
   test('keyboard shortcuts enable quick face assignment', async ({ page }) => {
     const person = await createPersonViaApi(page, 'TestKeyboardPerson');
     await page.goto('/faces?group_by=similarity&threshold=2');

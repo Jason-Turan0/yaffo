@@ -23,7 +23,7 @@ from yaffo.domain.compare_utils import (
     DEFAULT_SIMILARITY_FLOOR,
     DEFAULT_SIMILARITY_CEIL,
 )
-from yaffo.domain.life_stages import life_stage, effective_birthdate
+from yaffo.domain.life_stages import STAGE_BEFORE_BIRTH, life_stage, effective_birthdate
 from yaffo.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -88,6 +88,11 @@ def _medoid(embeddings: list[np.ndarray]) -> np.ndarray:
 
 
 MAX_REPRESENTATIVE_FACES = 200
+# Representative faces a life stage needs before it gets its own medoid. A one- or
+# two-face stage is too easily a single wrong assignment, and a medoid of one face IS
+# that face. Under-filled stages are dropped only when some stage meets the bar, so a
+# person with just a few faces still has a gallery.
+MIN_STAGE_FACES = 3
 
 # One representative face per capture-day -- the highest-confidence detection -- so
 # a burst of near-identical frames from a single day can't drag the medoid toward
@@ -353,6 +358,64 @@ _ASSIGNED_FACES_SQL = text("""
 """)
 
 
+_OVERALL_MEDOID = "__overall__"
+
+
+def _score_faces(
+    rows, embeddings: dict[int, np.ndarray], person: Person, *, skip_before_birth: bool = False,
+) -> list[float | None]:
+    """Score faces against `person`'s gallery: each against the medoid of *its own*
+    life stage (by the person's birthdate), falling back to their overall medoid for a
+    stage they have no faces in. None where there's nothing to compare: no embedding
+    on the face, or no gallery at all. Mirrors compare_utils.reference_embedding_for_face
+    -- same rule, off SQL columns rather than ORM objects.
+
+    `rows` carry face_id / year / estimated_age; `embeddings` maps face_id to its loaded
+    vector, so a caller scoring the same faces against several people loads them once.
+    `skip_before_birth` leaves faces from before the person was born unscored (None):
+    they can't be that person, so a score against them would mean nothing.
+    """
+    stage_medoids = {
+        stage.life_stage: load_embedding(stage.avg_embedding)
+        for stage in person.stage_embeddings
+        if stage.avg_embedding
+    }
+    overall_medoid = load_embedding(person.avg_embedding) if person.avg_embedding else None
+    birthdate = effective_birthdate(person)
+
+    # Group the faces by the medoid they land on, so each group is one matmul rather
+    # than a dot product per face.
+    scores: list[float | None] = [None] * len(rows)
+    indexes_by_reference: dict[str, list[int]] = {}
+    for index, row in enumerate(rows):
+        if row.face_id not in embeddings:
+            continue
+        stage = life_stage(birthdate, row.year, row.estimated_age)
+        if skip_before_birth and stage == STAGE_BEFORE_BIRTH:
+            continue
+        reference_key = stage if stage in stage_medoids else _OVERALL_MEDOID
+        if reference_key == _OVERALL_MEDOID and overall_medoid is None:
+            continue
+        indexes_by_reference.setdefault(reference_key, []).append(index)
+
+    for reference_key, indexes in indexes_by_reference.items():
+        reference = overall_medoid if reference_key == _OVERALL_MEDOID else stage_medoids[reference_key]
+        for start in range(0, len(indexes), _SIMILARITY_CHUNK):
+            chunk = indexes[start:start + _SIMILARITY_CHUNK]
+            matrix = np.stack([embeddings[rows[index].face_id] for index in chunk])
+            # Embeddings are L2-normalized, so the dot product IS the cosine.
+            #
+            # errstate: numpy's Accelerate BLAS backend (macOS) raises spurious
+            # divide-by-zero/overflow flags on float32 matmul -- sklearn's own
+            # cosine_similarity trips them on this same data, and the results agree to
+            # 3e-07 and stay finite. Nothing here can legitimately divide or overflow.
+            with np.errstate(all="ignore"):
+                chunk_scores = matrix @ reference
+            for index, score in zip(chunk, chunk_scores):
+                scores[index] = float(score)
+    return scores
+
+
 def recompute_person_similarities(session: Session, person_id: int, only_missing: bool = False) -> int:
     """Rescore a person's assigned faces against their *current* stage gallery.
 
@@ -381,14 +444,6 @@ def recompute_person_similarities(session: Session, person_id: int, only_missing
     if person is None:
         return 0
 
-    stage_medoids = {
-        stage.life_stage: load_embedding(stage.avg_embedding)
-        for stage in person.stage_embeddings
-        if stage.avg_embedding
-    }
-    overall_medoid = load_embedding(person.avg_embedding) if person.avg_embedding else None
-    birthdate = effective_birthdate(person)
-
     rows = session.execute(
         _ASSIGNED_FACES_SQL,
         {"person_id": person_id, "only_missing": 1 if only_missing else 0},
@@ -396,40 +451,9 @@ def recompute_person_similarities(session: Session, person_id: int, only_missing
     if not rows:
         return 0
 
-    # A face is scored against the medoid of its own life stage; a stage the person has
-    # no faces in falls back to their overall medoid. Group the faces by the medoid they
-    # land on, so each group is one matmul rather than a dot product per face. Mirrors
-    # compare_utils.reference_embedding_for_face -- same rule, off SQL columns rather
-    # than ORM objects.
-    _OVERALL = "__overall__"
-    updates: list[dict] = []
-    rows_by_reference: dict[str, list] = {}
-    for row in rows:
-        stage = life_stage(birthdate, row.year, row.estimated_age) if row.embedding else None
-        reference_key = stage if stage in stage_medoids else _OVERALL
-        if not row.embedding or (reference_key == _OVERALL and overall_medoid is None):
-            # Nothing to compare against: no embedding on the face, or no gallery at all.
-            updates.append({"face_id": row.face_id, "similarity": None})
-            continue
-        rows_by_reference.setdefault(reference_key, []).append(row)
-
-    for reference_key, scored_rows in rows_by_reference.items():
-        reference = overall_medoid if reference_key == _OVERALL else stage_medoids[reference_key]
-        for start in range(0, len(scored_rows), _SIMILARITY_CHUNK):
-            chunk = scored_rows[start:start + _SIMILARITY_CHUNK]
-            embeddings = np.stack([load_embedding(row.embedding) for row in chunk])
-            # Embeddings are L2-normalized, so the dot product IS the cosine.
-            #
-            # errstate: numpy's Accelerate BLAS backend (macOS) raises spurious
-            # divide-by-zero/overflow flags on float32 matmul -- sklearn's own
-            # cosine_similarity trips them on this same data, and the results agree to
-            # 3e-07 and stay finite. Nothing here can legitimately divide or overflow.
-            with np.errstate(all="ignore"):
-                scores = embeddings @ reference
-            updates.extend(
-                {"face_id": row.face_id, "similarity": float(score)}
-                for row, score in zip(chunk, scores)
-            )
+    embeddings = {row.face_id: load_embedding(row.embedding) for row in rows if row.embedding}
+    scores = _score_faces(rows, embeddings, person)
+    updates = [{"face_id": row.face_id, "similarity": score} for row, score in zip(rows, scores)]
 
     # Compute first, write second: the scoring above holds no write lock, and the
     # flush below takes one only in short chunks (see the SQLite concurrency notes
@@ -441,6 +465,67 @@ def recompute_person_similarities(session: Session, person_id: int, only_missing
         )
         session.commit()
     return len(updates)
+
+@dataclass(frozen=True)
+class LikelyMisassignedFace:
+    """A face assigned to one person that looks more like another."""
+    face_id: int
+    similarity: float  # to the person it's assigned to
+    other_person_id: int
+    other_person_name: str
+    other_similarity: float
+
+    @property
+    def gap(self) -> float:
+        return self.other_similarity - self.similarity
+
+
+def likely_misassigned_faces(
+    session: Session, person_id: int, face_ids: list[int] | None = None,
+) -> list[LikelyMisassignedFace]:
+    """The person's assigned faces that score higher against someone else, biggest gap
+    first -- likely wrong assignments (a sibling, say) worth reviewing.
+
+    Every face is scored the way PersonFace.similarity is (_score_faces: own life
+    stage), against its own person and against each other person with a gallery, so
+    the comparison is like for like. A photo from before another person was born never
+    counts as looking like them. `face_ids` narrows the check to faces already matching
+    the screen's other filters. Scores are computed fresh, not read from the cache, so
+    a stale stored score can't hide or invent a match."""
+    person = session.get(Person, person_id)
+    if person is None:
+        return []
+    rows = session.execute(_ASSIGNED_FACES_SQL, {"person_id": person_id, "only_missing": 0}).all()
+    if face_ids is not None:
+        wanted = set(face_ids)
+        rows = [row for row in rows if row.face_id in wanted]
+    embeddings = {row.face_id: load_embedding(row.embedding) for row in rows if row.embedding}
+    if not embeddings:
+        return []
+
+    own_scores = _score_faces(rows, embeddings, person)
+    best: list[tuple[Person, float] | None] = [None] * len(rows)
+    others = (
+        session.query(Person)
+        .options(joinedload(Person.stage_embeddings))
+        .filter(Person.id != person_id, Person.avg_embedding.isnot(None))
+        .all()
+    )
+    for other in others:
+        for index, score in enumerate(_score_faces(rows, embeddings, other, skip_before_birth=True)):
+            if score is not None and (best[index] is None or score > best[index][1]):
+                best[index] = (other, score)
+
+    matches = [
+        LikelyMisassignedFace(row.face_id, own, other.id, other.name, other_score)
+        for row, own, match in zip(rows, own_scores, best)
+        if own is not None and match is not None
+        for other, other_score in [match]
+        if other_score > own
+    ]
+    matches.sort(key=lambda match: (-match.gap, match.face_id))
+    return matches
+
 
 @dataclass(frozen=True)
 class ClearedFaces:
@@ -596,11 +681,23 @@ def update_person_embedding(person_id: int, session):
              life_stage(birthdate, r.year, r.estimated_age))
             for r in rows
         ]
+        # Faces from before the birth year can't be this person; keep them out of the
+        # gallery. If that would empty it, the birthdate itself is the likelier error,
+        # so bucket every face as if there were none rather than leave the person
+        # unmatchable.
+        reps = [rep for rep in reps if rep[2] != STAGE_BEFORE_BIRTH] or [
+            (r.face_id, emb, life_stage(None, r.year, r.estimated_age))
+            for r, (_id, emb, _stage) in zip(rows, reps)
+        ]
 
         person.avg_embedding = serialize_embedding(_medoid([emb for _id, emb, _stage in reps]))
 
+        stages = _.group_by(reps, lambda t: t[2])
+        if any(len(group) >= MIN_STAGE_FACES for group in stages.values()):
+            stages = {stage: group for stage, group in stages.items() if len(group) >= MIN_STAGE_FACES}
+
         session.flush()  # apply the clear() before inserting fresh rows (same PK)
-        for stage, group in _.group_by(reps, lambda t: t[2]).items():
+        for stage, group in stages.items():
             person.stage_embeddings.append(PersonEmbedding(
                 life_stage=stage,
                 avg_embedding=serialize_embedding(_medoid([emb for _id, emb, _stage in group])),

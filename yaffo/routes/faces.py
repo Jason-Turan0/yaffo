@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass
-from typing import Optional, Tuple, List
+from typing import NamedTuple, Optional, List
 import numpy as np
 from flask import Flask, jsonify, render_template, request
 from flask_babel import gettext
@@ -10,13 +10,15 @@ from yaffo.logging_config import get_logger
 
 import pydash as _
 from sqlalchemy.orm import joinedload
-from yaffo.db.models import db, Face, Person, PersonFace, FACE_STATUS_UNASSIGNED, MediaItem, ApplicationSettings
+from yaffo.db.models import (
+    db, Face, Person, PersonFace, FACE_STATUS_IGNORED, FACE_STATUS_UNASSIGNED, MediaItem, ApplicationSettings,
+)
 
 from sklearn.metrics.pairwise import cosine_similarity
 
 from yaffo.db.repositories.person_repository import get_similarity_bounds
 from yaffo.db.repositories.media_repository import get_distinct_years, get_distinct_months
-from yaffo.domain.compare_utils import load_embedding, ui_threshold_to_similarity
+from yaffo.domain.compare_utils import load_embedding, similarity_to_ui_fraction, ui_threshold_to_similarity
 from yaffo.domain.face_clusters import cluster_faces
 from yaffo.utils.context import context
 from yaffo.utils.photo_dates import parse_date_taken
@@ -35,10 +37,11 @@ FACE_SHORTCUT_PEOPLE_SETTING = "face_shortcut_people"
 class FaceViewModel:
     id: int
     photo_date: str
-    #The best similarity of the person scaled to the UI range
+    # The best similarity on the threshold slider's scale, as a 0.0-1.0 fraction (the
+    # client shows it as a percent). Filled in by the route, which knows the band.
     similarity: Optional[float]
 
-    # The best similarity of the person scaled to the cosign range
+    # The same score as a raw cosine similarity.
     cosine_similarity: Optional[float]
     # The source media the face was cropped from — the hover preview shows it.
     media_item_id: int
@@ -46,6 +49,8 @@ class FaceViewModel:
     # Detection box in source-image pixels, so the preview can outline the face.
     # Absent on faces indexed before the box was recorded.
     region: Optional[dict]
+    # Shown only when the "Include ignored faces" filter is on; the grid marks them.
+    ignored: bool = False
 
 
 @dataclass
@@ -57,6 +62,13 @@ class FaceSuggestion:
     faces: list[FaceViewModel]
     date_start: Optional[str] = None
     date_end: Optional[str] = None
+
+
+class StageMatch(NamedTuple):
+    """How closely a face matches one of a person's life-stage embeddings."""
+    person: Person
+    life_stage: str
+    similarity: float
 
 
 logger = get_logger(__name__, 'webapp')
@@ -139,11 +151,12 @@ def _face_view_model(face: Face, cosign_similarity: Optional[float]) -> FaceView
     return FaceViewModel(
         id=face.id,
         photo_date=face.media_item.date_taken,
-        similarity=cosign_similarity,
+        similarity=None,  # slider-scale; the route converts cosine_similarity once it has the band
         cosine_similarity=cosign_similarity,
         media_item_id=face.media_item.id,
         media_type=face.media_item.media_type,
         region=_face_region(face),
+        ignored=face.status == FACE_STATUS_IGNORED,
     )
 
 
@@ -199,7 +212,8 @@ def make_suggestions_by_similarity(unassigned_faces: list[Face], min_similarity:
     return suggestions
 
 
-def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Person], min_cosine_similarity: float, person_id) -> list[
+def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Person], min_cosine_similarity: float,
+                                person_ids: list[int]) -> list[
     FaceSuggestion]:
     face_suggestions = []
     default_suggestion = FaceSuggestion(
@@ -209,42 +223,45 @@ def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Perso
         photo_date='',
         faces=[]
     )
+
     # min_cosine_similarity is the required cosine similarity, already scaled from the UI slider
     for face in unassigned_faces:
         emb = load_embedding(face.embedding)
 
-        def flat_map_people(person: Person) -> List[Tuple[Person, str, np.ndarray]]:
-            return [(person, stage_emb.life_stage, load_embedding(stage_emb.avg_embedding))
+        def stage_matches(person: Person) -> List[StageMatch]:
+            return [StageMatch(person, stage_emb.life_stage,
+                               float(cosine_similarity([emb], [load_embedding(stage_emb.avg_embedding)])[0][0]))
                     for stage_emb in person.stage_embeddings]
 
-        matching_people: List[Tuple[Person, float]] = (
+        # Each matching person's best life stage, best match first: grouping keeps
+        # the first (highest) stage per person, in the sorted order.
+        matching_people: List[StageMatch] = (
             _.chain(people)
-            .flat_map(flat_map_people)
-            .map(lambda tuple: (tuple[0], tuple[1], cosine_similarity([emb], [tuple[2]])[0][0]))
-            .filter(lambda tuple: tuple[2] > min_cosine_similarity and (person_id is None or tuple[0].id == person_id))
-            .sort_by(lambda pair: pair[1], True)
-            .group_by(lambda pair: pair[0].id)
+            .flat_map(stage_matches)
+            .filter(lambda match: match.similarity > min_cosine_similarity
+                    and (not person_ids or match.person.id in person_ids))
+            .sort_by(lambda match: match.similarity, True)
+            .group_by(lambda match: match.person.id)
             .values()
-            .map(lambda tuples_by_person: tuples_by_person[0])
+            .map(lambda matches_for_person: matches_for_person[0])
             .value()
         )
         best_suggestion: FaceSuggestion | None = next(
             (suggestion for suggestion in face_suggestions
-             if set(suggestion.person_ids) == (set([pair[0].id for pair in matching_people]))), None
+             if set(suggestion.person_ids) == {match.person.id for match in matching_people}), None
         )
         if best_suggestion is None and len(matching_people) > 0:
             best_suggestion = FaceSuggestion(
-                person_ids=[pair[0].id for pair in matching_people],
-                people=[pair[0] for pair in matching_people],
-                suggestion_name=gettext(" OR ").join([pair[0].name for pair in matching_people]),
+                person_ids=[match.person.id for match in matching_people],
+                people=[match.person for match in matching_people],
+                suggestion_name=gettext(" OR ").join([match.person.name for match in matching_people]),
                 photo_date=face.media_item.date_taken,
                 faces=[]
             )
             face_suggestions.append(best_suggestion)
 
         if best_suggestion is not None:
-            best_cosign_sim = float(matching_people[0][2])
-            best_suggestion.faces.append(_face_view_model(face, best_cosign_sim))
+            best_suggestion.faces.append(_face_view_model(face, matching_people[0].similarity))
         else:
             default_suggestion.faces.append(_face_view_model(face, None))
 
@@ -269,15 +286,18 @@ def init_faces_routes(app: Flask):
         month = request.args.get("month", type=int)
         threshold = request.args.get("threshold", default=DEFAULT_THRESHOLD, type=int)
         batch_size = request.args.get("batch_size", default=DEFAULT_BATCH_SIZE, type=int)
-        person_id = request.args.get("person", type=int)
+        person_ids = [int(value) for value in request.args.getlist("person") if value.isdigit()]
         assign_person_id = request.args.get("assign_person", type=int)
         group_by = request.args.get("group_by", type=str, default=DEFAULT_GROUP_BY)
+        include_ignored = request.args.get("include_ignored") == "1"
 
         if year:
             query = query.filter(MediaItem.year == year)
         if month:
             query = query.filter(MediaItem.month == month)
-        query = query.filter(Face.status == FACE_STATUS_UNASSIGNED).order_by(MediaItem.date_taken)
+        # Ignored faces join the pile only on request, so a past "ignore" can be revisited.
+        statuses = [FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED] if include_ignored else [FACE_STATUS_UNASSIGNED]
+        query = query.filter(Face.status.in_(statuses)).order_by(MediaItem.date_taken)
 
         unassigned_face_count = query.count()
         # Each pass pulls and clusters up to batch_size unassigned faces. The UI
@@ -305,16 +325,27 @@ def init_faces_routes(app: Flask):
         all_people_shortcuts = [_person_shortcut(person) for person in people]
 
         # Scale the 0-100 slider to a cosine similarity against the live data band.
-        min_cosign_similarity = ui_threshold_to_similarity(threshold, *get_similarity_bounds(db.session))
+        bounds = get_similarity_bounds(db.session)
+        min_cosign_similarity = ui_threshold_to_similarity(threshold, *bounds)
         face_suggestions = (
             make_suggestions_by_similarity(unassigned_faces, min_cosign_similarity)) \
             if (group_by == 'similarity') else \
-            make_suggestions_for_people(unassigned_faces, people, min_cosign_similarity, person_id)
+            make_suggestions_for_people(unassigned_faces, people, min_cosign_similarity, person_ids)
 
         for suggestion in face_suggestions:
+            # People mode: show the face-vs-person score on the slider's scale, so a
+            # face reads against the threshold that let it in. Similarity mode scores
+            # fit to the cluster's own centroid -- a different, much higher measure
+            # the band would clamp to 100% -- so it stays as is.
+            for face_view in suggestion.faces:
+                if face_view.cosine_similarity is not None:
+                    face_view.similarity = (face_view.cosine_similarity if group_by == 'similarity'
+                                            else similarity_to_ui_fraction(face_view.cosine_similarity, *bounds))
             # Ascending: the weakest matches lead, so the faces most likely to be
             # wrong are the ones you see first and can deselect before assigning.
-            suggestion.faces = _.sort_by(suggestion.faces, lambda f: f.similarity if f.similarity is not None else 0)
+            # Sorted on the raw cosine, which the slider scale clamps into ties.
+            suggestion.faces = _.sort_by(
+                suggestion.faces, lambda f: f.cosine_similarity if f.cosine_similarity is not None else 0)
             # Show the cluster's capture-date span. Pick min/max by parsed datetime
             # (robust to mixed separators) but keep the original strings to format.
             dated = [(f.photo_date, parse_date_taken(f.photo_date)) for f in suggestion.faces]
@@ -331,10 +362,11 @@ def init_faces_routes(app: Flask):
             "selected_month": month,
             "selected_threshold": threshold,
             "people": people,
-            'selected_person_id': person_id,
+            'selected_person_ids': person_ids,
             'selected_assign_person_id': assign_person_id,
             "selected_group_by": group_by,
             "selected_batch_size": batch_size,
+            "selected_include_ignored": include_ignored,
             "batch_sizes": [25, 50, 100, 250, 500, 1000, 2000, 5000, 10000, 20000, 50000],
         }
 

@@ -100,10 +100,12 @@ def _faces_response(face_ids: list[int], status: str, person_id: int | None, mes
     })
 
 
-def _unassigned_count(face_ids: list[int]) -> int:
+def _available_count(face_ids: list[int]) -> int:
+    """How many of the faces are free to assign or ignore: unassigned, or ignored
+    (the Faces page can include ignored faces, so a past ignore can be revisited)."""
     return (
         db.session.query(Face.id)
-        .filter(Face.id.in_(face_ids), Face.status == FACE_STATUS_UNASSIGNED)
+        .filter(Face.id.in_(face_ids), Face.status.in_((FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED)))
         .count()
     )
 
@@ -116,7 +118,7 @@ def _assign_faces(face_ids: list[int], raw_person_id):
     person = db.session.get(Person, person_id)
     if person is None:
         return _error(gettext("Person not found"), "person_not_found", 404)
-    if _unassigned_count(face_ids) != len(face_ids):
+    if _available_count(face_ids) != len(face_ids):
         return _error(gettext("One or more faces are no longer available"), "faces_not_available", 409)
 
     if current_app.config.get("DEMO_MODE"):
@@ -156,7 +158,7 @@ def _unassign_faces(face_ids: list[int]):
 
 
 def _ignore_faces(face_ids: list[int]):
-    if _unassigned_count(face_ids) != len(face_ids):
+    if _available_count(face_ids) != len(face_ids):
         return _error(gettext("One or more faces are no longer available"), "faces_not_available", 409)
     db.session.query(Face).filter(Face.id.in_(face_ids)).update(
         {Face.status: FACE_STATUS_IGNORED}, synchronize_session=False
@@ -176,9 +178,10 @@ def _ignore_faces(face_ids: list[int]):
 def faces_update():
     """Change the given faces' `person_id` or `status`:
 
-    - `{"ids": [...], "person_id": 7}` assigns unassigned faces to a person;
+    - `{"ids": [...], "person_id": 7}` assigns unassigned or ignored faces to a person;
     - `{"ids": [...], "person_id": null}` clears assigned or ignored faces;
-    - `{"ids": [...], "status": "IGNORED"}` ignores unassigned faces.
+    - `{"ids": [...], "status": "IGNORED"}` ignores unassigned faces (already-ignored
+      ones stay ignored).
 
     Faces in the wrong state for the change answer `409`."""
     data = _json_body()

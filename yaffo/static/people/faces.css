@@ -133,3 +133,36 @@
         height: 140px;
     }
 }
+
+/* Who a likely-misassigned face looks more like, under its own similarity. */
+.face-closer-to {
+    margin-top: 3px;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--color-danger);
+}
+
+/* "Move Selected to" sits under "Remove Selected" in the actions panel, laid out
+   like the Faces page's "Assign to Person" picker. */
+.move-faces-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.move-faces-form label {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+}
+
+/* Every .sidebar scrolls and is only as tall as its content, so the "Move Selected
+   to" picker -- the last thing in this short Actions panel -- had its dropdown
+   clipped, with a scrollbar on the panel. In the desktop sidebar the panel is never
+   tall enough to need scrolling, so let the dropdown overflow it. The selector stops
+   matching below the breakpoint, where nav.js moves the panel into the navbar and it
+   keeps its own scrolling. */
+.sidebar-container > #person-faces-actions {
+    overflow: visible;
+}
