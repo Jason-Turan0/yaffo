@@ -1,6 +1,6 @@
 {
     "page": "create-customize/custom-pages",
-    "lastVerifiedSha": "779cceda2c2f94690a95b63d65f87a569ca535d4",
+    "lastVerifiedSha": "52cf35f3ccf85b139c05502bca616306ddc5bca6",
     "observed": {
         "page": "create-customize/custom-pages",
         "urls": [
@@ -303,7 +303,7 @@
         "yaffo/templates/settings/_llm_active_model.html": "7ea4ad23370bb62393fda4240b83ce0ab8953ba7877543b3b80bc9238ada1b9b",
         "yaffo/templates/settings/_llm_models.html": "811bd8442c6fdc191623115bd9fc0f05212875e7c84bfb5ee93291371c69be3d",
         "yaffo/templates/settings/index.html": "f2520e7640c5d95551b82701ab76b08becc76885a9bc126acf278d566b71ebc8",
-        "yaffo_ui_tests/scripts/seed_database.py": "63364ee0107b22bd0106534fff3c839d42acb0fd943b944a1e9bbb3e89ce924b"
+        "yaffo_ui_tests/scripts/seed_database.py": "f24ebeca5cea0f071b8869e1d4d2d1e3dbc66693bd324b289a19734d5eefd7e7"
     },
     "shots": {
         "create-customize/assets/custom-pages/custom-page-view.webp": {

@@ -1,6 +1,6 @@
 {
     "page": "organize-review/albums",
-    "lastVerifiedSha": "779cceda2c2f94690a95b63d65f87a569ca535d4",
+    "lastVerifiedSha": "52cf35f3ccf85b139c05502bca616306ddc5bca6",
     "observed": {
         "page": "organize-review/albums",
         "urls": [
@@ -17,8 +17,8 @@
             "/assistant/conversations",
             "/media/:id",
             "/media/:id/poster",
-            "/sharing/devices/HNKG-4DUY-TD7V-JNXA",
-            "/sharing/devices/HNKG-4DUY-TD7V-JNXA/rename",
+            "/sharing/devices/LGGU-TW26-RLDF-4G66",
+            "/sharing/devices/LGGU-TW26-RLDF-4G66/rename",
             "/sharing/pairing-code",
             "/sharing/settings",
             "/sharing/sidebar",
