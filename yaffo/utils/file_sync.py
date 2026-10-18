@@ -15,6 +15,7 @@ from yaffo.db.repositories.job_repository import is_job_cancelled, open_run_job
 from yaffo.utils.index_errors import file_signature
 from yaffo.utils.job_codes import PROBLEM_MEDIA_FOLDER_EMPTY
 from yaffo.db.repositories.media_dir_repository import get_media_dirs
+from yaffo.db.repositories.media_integrity_repository import sweep_orphaned_media_dependents
 from yaffo.logging_config import get_logger
 from yaffo.utils.index_jobs import active_library_jobs, enqueue_index_jobs
 from yaffo.utils.index_jobs_dto import IndexJobs
@@ -26,6 +27,7 @@ from yaffo.utils.index_photos import (
 from yaffo.utils.settings import get_thumbnail_dir
 from yaffo.utils.safe_paths import PathOutsideAllowedRoots, resolve_path_in_roots
 from yaffo.utils.thumbnail_marker import ensure_thumbnail_dir, in_marked_thumbnail_dir
+from yaffo.utils.thumbnail_repair import find_missing_thumbnails, start_thumbnail_repair
 from yaffo.utils.time import utcnow
 
 logger = get_logger(__name__, 'background_tasks')
@@ -378,15 +380,17 @@ def _file_sync(session: Session, run: Job, scope_paths: list[str] | None = None)
         logger.info(f"file_sync: run {run.id} cancelled after the scan; nothing changed")
         _close_run(session, run, SYNC_CANCELLED, data)
         return None
-    if not scan.files_to_index and not orphaned_ids:
-        logger.info("file_sync: index already in sync; nothing to do")
-        _close_run(session, run, SYNC_IN_SYNC, data, error)
-        return None
-
     # The scan can take minutes; a sync started by hand meanwhile already covers this.
     if active_library_jobs(session):
         logger.info("file_sync: library jobs started during the scan; skipping")
         _close_run(session, run, SYNC_LIBRARY_BUSY, data)
+        return None
+
+    if not scan.files_to_index and not orphaned_ids:
+        delete_orphaned_thumbnails(session, thumbnail_dir)
+        _maintain_media_dependents(session, thumbnail_dir, data)
+        logger.info("file_sync: photo index already in sync; thumbnail maintenance checked")
+        _close_run(session, run, SYNC_IN_SYNC, data, error)
         return None
 
     logger.info(
@@ -397,6 +401,16 @@ def _file_sync(session: Session, run: Job, scope_paths: list[str] | None = None)
         session, scan.files_to_index, orphaned_ids, thumbnail_dir,
         automation_id=run.automation_id,
     )
+    _maintain_media_dependents(session, thumbnail_dir, data)
     _close_run(session, run, SYNC_STARTED,
                {**data, "import_job_id": jobs.import_job_id, "index_job_id": jobs.index_job_id}, error)
     return jobs
+
+
+def _maintain_media_dependents(session: Session, thumbnail_dir: Path, data: dict) -> None:
+    cleaned = sweep_orphaned_media_dependents(session)
+    logger.info("file_sync: orphaned dependents removed: %s", cleaned)
+    missing = find_missing_thumbnails(session, thumbnail_dir)
+    if missing.available and missing.total:
+        data["thumbnail_repair_job_id"] = start_thumbnail_repair(session, missing)
+        logger.info("file_sync: queued repair of %s missing thumbnails", missing.total)

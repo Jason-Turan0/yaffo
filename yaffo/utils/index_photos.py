@@ -11,11 +11,12 @@ from PIL.Image import Image as PIL_Image
 from PIL import ImageOps
 
 import piexif
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from yaffo.logging_config import get_logger
 from yaffo.db.models import (
-    MediaItem, Face, PersonFace, Tag,
+    MediaItem, MediaLabel, Face, PersonFace, Tag,
     FACE_STATUS_UNASSIGNED, MEDIA_STATUS_IMPORTED,
 )
 from yaffo.common import PHOTO_EXTENSIONS
@@ -604,6 +605,9 @@ def delete_orphaned_media_items(session: Session, media_item_ids: List[int]) -> 
     # Queue removal from sync targets, then delete dependents (SQLite foreign keys
     # don't cascade).
     sync_ids = queue_target_removals(session, media_item_ids)
+    face_ids = select(Face.id).where(Face.media_item_id.in_(media_item_ids))
+    session.query(PersonFace).filter(PersonFace.face_id.in_(face_ids)).delete(synchronize_session=False)
+    session.query(MediaLabel).filter(MediaLabel.media_item_id.in_(media_item_ids)).delete(synchronize_session=False)
     session.query(Tag).filter(Tag.media_item_id.in_(media_item_ids)).delete(synchronize_session=False)
     deleted_faces = session.query(Face).filter(Face.media_item_id.in_(media_item_ids)).delete(synchronize_session=False)
 
