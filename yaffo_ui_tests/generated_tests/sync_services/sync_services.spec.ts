@@ -41,6 +41,24 @@ function runFlickrFixture(slug: string, ...args: string[]): string {
   });
 }
 
+async function connectFlickrTestAccount(page: Page, slug: string, fakeUrl: string): Promise<void> {
+  await page.getByRole('link', { name: 'Account' }).click();
+  await expect(page.locator('#service-return-address')).toHaveValue(/127\.0\.0\.1/);
+  await page.locator('#service-client-id').fill('flickr-app-key');
+  await page.locator('#service-client-secret').fill('flickr-app-secret');
+  await page.getByRole('button', { name: 'Save credentials' }).click();
+  await expect(page.getByRole('status')).toContainText('App credentials saved');
+  await expect(page.locator('#service-client-secret')).toHaveValue('');
+  await expect(page.locator('#service-client-id')).toHaveValue('');
+
+  await page.getByRole('button', { name: /^Sign in to / }).click();
+  await expect(page).toHaveURL(url => url.origin === fakeUrl && url.pathname === '/services/oauth/authorize');
+  await page.locator('#approve').click();
+  await expect(page).toHaveURL(new RegExp(`/utilities/automations/services/${slug}\\?tab=account`));
+  await expect(page.locator('.service-account-row')).toContainText('jturan');
+  await expect(page.locator('.service-account-row')).toContainText('Signed in');
+}
+
 async function createFlickrSync(page: Page, serviceName: string, name: string): Promise<string> {
   await page.goto('/utilities/automations');
   await page.locator('#new-automation-button').click();
@@ -310,26 +328,13 @@ test('builder_can_approve_only_selected_documentation_domains', async ({ page })
 test('flickr_test_account_oauth_and_adapter_test_use_the_local_fake', async ({ page }) => {
   const fakeUrl = process.env.FAKE_FLICKR_URL;
   expect(fakeUrl, 'test:spec starts scripts/fake_flickr.py for this suite').toBeTruthy();
+  const initialState = await page.request.get(`${fakeUrl}/_admin/state`).then(response => response.json());
   const name = `UI Flickr Service ${Date.now()}`;
   const slug = await createService(page, name);
   try {
     runFlickrFixture(slug);
 
-    await page.getByRole('link', { name: 'Account' }).click();
-    await expect(page.locator('#service-return-address')).toHaveValue(/127\.0\.0\.1/);
-    await page.locator('#service-client-id').fill('flickr-app-key');
-    await page.locator('#service-client-secret').fill('flickr-app-secret');
-    await page.getByRole('button', { name: 'Save credentials' }).click();
-    await expect(page.getByRole('status')).toContainText('App credentials saved');
-    await expect(page.locator('#service-client-secret')).toHaveValue('');
-    await expect(page.locator('#service-client-id')).toHaveValue('');
-
-    await page.getByRole('button', { name: /^Sign in to / }).click();
-    await expect(page).toHaveURL(new RegExp(`^${fakeUrl!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/services/oauth/authorize`));
-    await page.locator('#approve').click();
-    await expect(page).toHaveURL(new RegExp(`/utilities/automations/services/${slug}\\?tab=account`));
-    await expect(page.locator('.service-account-row')).toContainText('jturan');
-    await expect(page.locator('.service-account-row')).toContainText('Signed in');
+    await connectFlickrTestAccount(page, slug, fakeUrl!);
 
     runFlickrFixture(slug, '--request-live-reads');
     await page.reload();
@@ -366,15 +371,32 @@ test('flickr_test_account_oauth_and_adapter_test_use_the_local_fake', async ({ p
     await expect(result).toContainText('https://up.flickr.com/services/upload/');
 
     const fakeState = await page.request.get(`${fakeUrl}/_admin/state`).then(response => response.json());
-    expect(fakeState.counters.calls).toBe(2); // OAuth login plus the Test's live photoset read.
-    expect(fakeState.counters.uploads || 0).toBe(0);
-    expect(fakeState.counters.sets_created || 0).toBe(0);
+    expect(fakeState.counters.calls - (initialState.counters.calls || 0)).toBe(2); // OAuth login plus the Test's live photoset read.
+    expect(fakeState.counters.uploads || 0).toBe(initialState.counters.uploads || 0);
+    expect(fakeState.counters.sets_created || 0).toBe(initialState.counters.sets_created || 0);
     await page.getByRole('link', { name: 'Account' }).click();
     await expect(page.locator('#service-client-secret')).toHaveValue('');
     await expect(page.locator('.service-account-row').first()).not.toContainText('flickr-app-secret');
     await expect(page.locator('.service-account-row').filter({ hasText: 'Live reads allowed' })).toBeVisible();
+  } finally {
+    await page.request.post(`/utilities/automations/services/${slug}/delete`).catch(() => {});
+  }
+});
 
-    const syncSlug = await createFlickrSync(page, name, `UI Flickr Sync ${Date.now()}`);
+test('republishing_wider_flickr_access_requires_sync_review', async ({ page }) => {
+  const fakeUrl = process.env.FAKE_FLICKR_URL;
+  expect(fakeUrl, 'test:spec starts scripts/fake_flickr.py for this suite').toBeTruthy();
+  const name = `UI Flickr Republish ${Date.now()}`;
+  const slug = await createService(page, name);
+  let syncSlug: string | undefined;
+  try {
+    runFlickrFixture(slug);
+    await connectFlickrTestAccount(page, slug, fakeUrl!);
+    await page.locator('#service-publish').click();
+    await page.locator('#servicePublishModal.active button[type="submit"]').click();
+    await expect(page.locator('.page-header')).toContainText('Published');
+
+    syncSlug = await createFlickrSync(page, name, `UI Flickr Sync ${Date.now()}`);
     execFileSync('python', ['-m', 'yaffo_ui_tests.scripts.seed_flickr_sync', syncSlug], {
       cwd: resolve(process.cwd(), '..'), env: process.env, stdio: 'pipe',
     });
@@ -408,6 +430,7 @@ test('flickr_test_account_oauth_and_adapter_test_use_the_local_fake', async ({ p
     await expect(page.locator('[data-confirm-delete] button[type="submit"]')).toBeEnabled();
     await deleteService(page, slug);
   } finally {
+    if (syncSlug) await page.request.post(`/utilities/automations/${syncSlug}/delete`).catch(() => {});
     await page.request.post(`/utilities/automations/services/${slug}/delete`).catch(() => {});
   }
 });

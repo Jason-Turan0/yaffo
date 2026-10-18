@@ -1,6 +1,6 @@
 {
     "page": "create-customize/themes",
-    "lastVerifiedSha": "038a029250218bce42cb9a98979c3068ba240b2e",
+    "lastVerifiedSha": "d21c959e6b027b41eb5bbb9fadf39a90de500bc8",
     "observed": {
         "page": "create-customize/themes",
         "urls": [
@@ -124,7 +124,7 @@
         "yaffo/routes/people.py": "d23743ad56c165f0b97f139ce49a3837ee14e241a6da7416234a26ebbc489d35",
         "yaffo/routes/themes_page.py": "78d49ad1761784cd85f71e78d02a93eef80483cea86311ed1dbc7e5005b366da",
         "yaffo/static/action-links.css": "fb3fd8e47c18993d826f7d34f8ccb24dc1aeb18a9aacb45c3a4fc41a901a4300",
-        "yaffo/static/app.js": "7aa9b2b8c921352f3928e5735a3210f9b085911c03085269e3e33c260ac6511b",
+        "yaffo/static/app.js": "0528b79fdc7d6be60af1e15f34314204a2f553a897b33e59d99593b5d31c593b",
         "yaffo/static/assistant/assistant.css": "51af784b2881e1c3f119d97f2e88227a17e5fe28a88e67a63e9de83d711a46ca",
         "yaffo/static/assistant/assistant.js": "117173da2d7541ee51a23dcee1d19acd102bba8a1b66585a0e9bba687f38a112",
         "yaffo/static/assistant/plan_card.js": "22339c5d29df625ce95a94124b30fe474512d9a17b3d8420ee20f87c37daaf32",
@@ -210,12 +210,68 @@
         "create-customize/assets/themes/themes-list.webp": {
             "width": 1400,
             "height": 900,
-            "sha256": "9001a2eaefa5500c24507c1d2e5789adbc543dd4f188717b142ea0d5b047f448"
+            "sha256": "9001a2eaefa5500c24507c1d2e5789adbc543dd4f188717b142ea0d5b047f448",
+            "layout": [
+                "link \"YAFFO!\" 65×20",
+                "heading \"Themes\" 68×20",
+                "heading \"SYSTEM\" 61×16",
+                "listitem \"Classic DEFAULT\" 178×16",
+                "link \"Classic DEFAULT\" 178×16",
+                "listitem \"Darkroom\" 61×16",
+                "link \"Darkroom\" 61×16",
+                "listitem \"Neo-Brutalist\" 81×16",
+                "link \"Neo-Brutalist\" 81×16",
+                "listitem \"Scrapbook\" 67×16",
+                "link \"Scrapbook\" 67×16",
+                "listitem \"Photos App\" 72×16",
+                "link \"Photos App\" 72×16",
+                "listitem \"Memphis\" 57×16",
+                "link \"Memphis\" 57×16",
+                "heading \"CUSTOM\" 63×16",
+                "listitem \"Test Ocean\" 71×16",
+                "link \"Test Ocean\" 71×16",
+                "button \"New theme\" 210×36",
+                "heading \"Classic\" 84×27",
+                "text \"A built-in theme that ships with Yaffo. System themes cannot be deleted.\" 447×16"
+            ]
         },
         "create-customize/assets/themes/theme-editor.webp": {
             "width": 1400,
             "height": 900,
-            "sha256": "e118619b2027ed03848e151e4393ed24c041f42bdba11a5b0a0834695d75a19d"
+            "sha256": "e118619b2027ed03848e151e4393ed24c041f42bdba11a5b0a0834695d75a19d",
+            "layout": [
+                "link \"YAFFO!\" 65×20",
+                "heading \"Themes\" 68×20",
+                "heading \"SYSTEM\" 61×16",
+                "listitem \"Classic DEFAULT\" 178×16",
+                "link \"Classic DEFAULT\" 178×16",
+                "listitem \"Darkroom\" 61×16",
+                "link \"Darkroom\" 61×16",
+                "listitem \"Neo-Brutalist\" 81×16",
+                "link \"Neo-Brutalist\" 81×16",
+                "listitem \"Scrapbook\" 67×16",
+                "link \"Scrapbook\" 67×16",
+                "listitem \"Photos App\" 72×16",
+                "link \"Photos App\" 72×16",
+                "listitem \"Memphis\" 57×16",
+                "link \"Memphis\" 57×16",
+                "heading \"CUSTOM\" 63×16",
+                "listitem \"Test Ocean\" 71×16",
+                "link \"Test Ocean\" 71×16",
+                "button \"New theme\" 210×36",
+                "heading \"Test Ocean\" 128×27",
+                "text \"A custom theme stored in the application database.\" 318×16",
+                "button \"Make default\" 120×36",
+                "button \"Rename\" 116×36",
+                "button \"Delete\" 103×36",
+                "heading \"Conversation\" 89×16",
+                "text \"Describe how this theme should look and the assistant will design it.\" 391×15",
+                "text \"Make me a calm, ocean-inspired light theme.\" 279×16",
+                "text \"I built Test Ocean: a pale sea-blue page with deep teal text and soft coastal borders.\" 421×32",
+                "textbox \"Describe how this theme should look…\" 528×100",
+                "button \"Send\" 54×31",
+                "button \"Cancel\" 64×31"
+            ]
         }
     }
 }

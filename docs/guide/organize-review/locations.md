@@ -4,7 +4,50 @@ The **Locations** page shows photos and videos that have GPS coordinates. It is
 useful for reviewing where photos were taken and assigning human-readable
 location names.
 
+## Explore the Map
+
+<div class="annotated-screenshot" markdown="1">
+
 ![The Locations page with its filter sidebar and clustered map markers](assets/locations/locations-map.webp)
+
+<div class="screenshot-annotation" data-x="19.8" data-y="3.5" data-region="1.1 1 20.1 79" markdown="1">
+
+### Filters
+
+Narrow the map by date, people, labels, tags, location names, and more. The gear
+chooses which filters the sidebar shows.
+[Read about filtering the map](#filter-the-map).
+
+</div>
+
+<div class="screenshot-annotation" data-x="95.9" data-y="5.1" data-region="24.1 4.5 73.3 1.2" markdown="1">
+
+### Selection Hint
+
+Hold **Shift** and click or drag to select several clusters at once.
+[Read about selecting photos](#select-photos-on-the-map).
+
+</div>
+
+<div class="screenshot-annotation" data-x="26.5" data-y="10" data-region="23.3 8.6 1.7 2.9" markdown="1">
+
+### Zoom
+
+Use **+** and **-**, the mouse wheel, or touch gestures to zoom, and drag the
+map to pan.
+
+</div>
+
+<div class="screenshot-annotation" data-x="50" data-y="11.3" data-region="45.2 10.2 3.2 2.8" markdown="1">
+
+### Clusters
+
+A numbered marker groups nearby located photos. Click it to select them and open
+the selection panel. [Read about markers and clusters](#map-markers-and-clusters).
+
+</div>
+
+</div>
 
 ## Map Markers and Clusters
 
@@ -25,17 +68,59 @@ selection panel. A plain click starts a new selection. Hold **Shift** while
 clicking to add or remove another cluster, or hold **Shift** and drag a box around
 several markers.
 
+<div class="annotated-screenshot annotated-screenshot--narrow" markdown="1">
+
 ![The location selection panel with previews, recommendations, assignment controls, and selected clusters](assets/locations/locations-selection-panel.webp)
 
-The panel shows:
+<div class="screenshot-annotation" data-x="94.6" data-y="4" data-region="3.9 1.5 92.2 7.4" markdown="1">
 
-- the selected photo count;
-- a preview image;
-- a thumbnail strip and selector when multiple photos are selected;
-- current location-name breakdown;
-- recommended location actions;
-- custom assignment controls;
-- clear-selection and clear-name actions.
+### Selection Summary
+
+The panel title shows how many photos and clusters are selected. **×** closes the
+panel and clears the selection.
+
+</div>
+
+<div class="screenshot-annotation" data-x="94.6" data-y="11.4" data-region="3.9 8.9 92.2 47.8" markdown="1">
+
+### Preview
+
+Shows one selected photo with its file name and location. Switch photos with the
+selector or the thumbnail strip, or collapse the section for more room.
+[Read about the preview](#preview-the-selection).
+
+</div>
+
+<div class="screenshot-annotation" data-x="94.6" data-y="59.2" data-region="3.9 56.7 92.2 18.1" markdown="1">
+
+### Assign a Name
+
+**Recommended** suggests a name for the selection. **Quick assign** lists the
+names already on the selected photos, with counts; click one to give it to every
+selected photo. Or type a name and click **Assign to All**.
+[Read about assigning names](#assign-location-names) and
+[recommendations](#use-recommendations).
+
+</div>
+
+<div class="screenshot-annotation" data-x="94.6" data-y="77.4" data-region="3.9 74.9 92.2 14.1" markdown="1">
+
+### Selected Clusters
+
+Each selected cluster with its photo count and current location names.
+
+</div>
+
+<div class="screenshot-annotation" data-x="94.6" data-y="91.5" data-region="3.9 89 92.2 9.5" markdown="1">
+
+### Clear Actions
+
+**Clear Selection** starts over. **Clear location names** removes the assigned
+names from the selected photos. [Read about clearing names](#clear-location-names).
+
+</div>
+
+</div>
 
 Click an empty part of the map, the close button, or **Clear Selection** to start
 over.
@@ -98,14 +183,9 @@ Click **Clear Filters** to restore the full located set.
 
 ## When the Map Looks Empty
 
-If the map has no markers:
-
-- confirm the photos have GPS metadata;
-- run indexing after adding new photos;
-- clear active filters;
-- check that the selected media folders are configured;
-- remember that a saved location name by itself is not enough: the item must also
-  have GPS coordinates to appear on the map.
+If the map has no markers, follow
+[Map or Location Suggestions Do Not Work](../reference-maintenance/troubleshooting.md#map-or-location-suggestions-do-not-work)
+in Troubleshooting.
 
 ## Ask Yaffo for Location Names
 

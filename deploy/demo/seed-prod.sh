@@ -47,8 +47,7 @@ else
     # COPYFILE_DISABLE stops macOS tar from synthesizing AppleDouble ._files
     # from xattrs (e.g. quarantine/provenance) — those aren't real images and
     # break the indexer on extraction.
-    # Bennett carries its own generated video; the UI-test duplicate clips in
-    # test_data/mp4 are for Playwright, not the demo.
+    # Bennett includes the beach video used by the shared sandbox.
     COPYFILE_DISABLE=1 tar -czf "$fixture_bundle" -C "$repo_root/yaffo_ui_tests/test_data" bennett obama/images
 
     gcloud compute scp "$fixture_bundle" "$vm:/tmp/yaffo-demo-fixtures.tar.gz" "${SSH_ARGS[@]}" --quiet

@@ -1,33 +1,55 @@
+---
+hide:
+  - toc
+---
+
 # Importing Photos
 
 Open **Library** → **Automations** to create a sync. This walkthrough takes you
 through setup, preview, and the first run.
 
+## Set Up the Sync
+
+<div class="guide-walkthrough" markdown="1">
+
+### Create an Import Sync
+
 Choose **New automation** → **Import from…**, select a service, and name the
 sync. The built-in choices are **Folder**, **OneDrive**, **Immich**, and
 **Paired device**. Published custom import services appear here too.
 
+For a photo service, complete **Account** first. OneDrive opens a browser
+sign-in; Immich asks for your server address and API key. An account already
+used by another sync can be reused.
+
 ![The new automation dialog with Import from and Folder selected](assets/importing/new-import-sync.webp)
 
-1. For a photo service, complete **Account** first. OneDrive opens a browser
-   sign-in; Immich asks for your server address and API key. An account already
-   used by another sync can be reused.
-2. Open **Folder and options** and choose what to import. For **Folder**, choose
-   the source folder or card and whether to include subfolders, photos, videos,
-   or both. A service's folder or album picker lists choices from your account.
+### Choose What to Import
 
-   ![The Folder and options step with a source folder entered](assets/importing/import-folder-options.webp)
+Open **Folder and options** and choose what to import. For **Folder**, choose
+the source folder or card and whether to include subfolders, photos, videos, or
+both. A service's folder or album picker lists choices from your account.
 
-3. In **Where to put them**, select a configured media directory and a subfolder
-   for the copies. Choose whether to keep the source's folder structure, arrange
-   files by capture year or year and month, or put them all in one folder.
+![The Folder and options step with a source folder entered](assets/importing/import-folder-options.webp)
 
-   ![The Where to put them step with a media folder, subfolder, and year-and-month layout](assets/importing/import-destination.webp)
+### Choose Where to Put Them
 
-4. Use **Test** to preview the import, then turn the sync on. Review the account,
-   source, and destination when Yaffo asks. Use **Run now** to start immediately.
+In **Where to put them**, select a configured media directory and a subfolder
+for the copies. Choose whether to keep the source's folder structure, arrange
+files by capture year or year and month, or put them all in one folder.
+
+![The Where to put them step with a media folder, subfolder, and year-and-month layout](assets/importing/import-destination.webp)
+
+### Preview and Run the Import
+
+Use **Test** to preview the import, then turn the sync on. Review the account,
+source, and destination when Yaffo asks. Use **Run now** to start immediately.
 
 ![A Test preview of a folder import listing photos already in the library](assets/importing/import-preview.webp)
+
+</div>
+
+## What Happens to the Files
 
 To index a folder in place, add it as a media directory in Settings. An import
 sync copies files into the destination you chose and indexes those copies. It

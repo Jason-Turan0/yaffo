@@ -1,6 +1,6 @@
 {
     "page": "library-basics/indexing-library",
-    "lastVerifiedSha": "038a029250218bce42cb9a98979c3068ba240b2e",
+    "lastVerifiedSha": "d21c959e6b027b41eb5bbb9fadf39a90de500bc8",
     "observed": {
         "page": "library-basics/indexing-library",
         "urls": [
@@ -152,7 +152,7 @@
         "yaffo/routes/utilities/index_photos.py": "e061783d1e7e8a7b079f2fe8babdc649aca07f249c267e8b1793904cc6a746e2",
         "yaffo/scripts/db/migrations/000_MIGRATION_20260620_INIT.py": "16d33b9d6167ec011e7f97a29bc1f35896674478c831beacb1846cecc0ca1763",
         "yaffo/static/action-links.css": "fb3fd8e47c18993d826f7d34f8ccb24dc1aeb18a9aacb45c3a4fc41a901a4300",
-        "yaffo/static/app.js": "7aa9b2b8c921352f3928e5735a3210f9b085911c03085269e3e33c260ac6511b",
+        "yaffo/static/app.js": "0528b79fdc7d6be60af1e15f34314204a2f553a897b33e59d99593b5d31c593b",
         "yaffo/static/assistant/assistant.css": "51af784b2881e1c3f119d97f2e88227a17e5fe28a88e67a63e9de83d711a46ca",
         "yaffo/static/assistant/assistant.js": "117173da2d7541ee51a23dcee1d19acd102bba8a1b66585a0e9bba687f38a112",
         "yaffo/static/assistant/plan_card.js": "22339c5d29df625ce95a94124b30fe474512d9a17b3d8420ee20f87c37daaf32",
@@ -229,7 +229,7 @@
         "yaffo/static/utilities/_base.css": "88ba38de1b2f83e13008efc45ef2ae143c4add99a4f05db4fb300fa85998f411",
         "yaffo/static/utilities/_base.js": "d1ddbb0f4fd52e01532391ea913a2151b2bb23467af8a3228bc8f97b394bdc17",
         "yaffo/static/utilities/automations.css": "6be7bb1f5f7fdb9c4b7b81e795dde05fad5d634286200ac3af85f35adcdf8a06",
-        "yaffo/static/utilities/automations.js": "ba3007e58a31c13805375cc3bd2db5a3896bbf00928752ce8a200ef9f7ad4af6",
+        "yaffo/static/utilities/automations.js": "bf186c1be36678ef1a48a51134a165c0731b1ef18012ac2008b8f49d097ca158",
         "yaffo/static/utilities/index_photos.js": "ebcfa41c76729c685544406c63d119711916b810360ee84420d92f0b04469388",
         "yaffo/static/utils.js": "0d4990647fb99c0c611f38f9f140fdba555043ce3857dbe082c53fd193861c4a",
         "yaffo/static/vendor/htmx/2.0.4/htmx.min.js": "e209dda5c8235479f3166defc7750e1dbcd5a5c1808b7792fc2e6733768fb447",
@@ -271,7 +271,27 @@
         "library-basics/assets/indexing-library/library-health.webp": {
             "width": 1122,
             "height": 560,
-            "sha256": "77500e73dff19361893225f99d56abe7d79b4763c8ac3665e753604ee6f0626f"
+            "sha256": "77500e73dff19361893225f99d56abe7d79b4763c8ac3665e753604ee6f0626f",
+            "layout": [
+                "heading \"Library Health\" 161×27",
+                "text \"Compare photos on the file system with the database\" 330×16",
+                "button \"Reindex Library\" 161×36",
+                "text \"Total on Filesystem\" 157×15",
+                "text \"32\" 36×36",
+                "text \"Imported in Database\" 91×30",
+                "text \"32\" 36×36",
+                "text \"Indexed in Database\" 155×15",
+                "text \"32\" 36×36",
+                "text \"Not Indexed\" 94×15",
+                "text \"0\" 18×36",
+                "text \"Orphaned in DB\" 119×15",
+                "text \"0\" 18×36",
+                "text \"Missing Thumbnails\" 151×15",
+                "text \"0\" 18×36",
+                "heading \"Library status\" 119×20",
+                "heading \"Everything is in sync\" 160×17",
+                "text \"Every photo on the filesystem is indexed, every database entry has its file, and every thumbnail is in place.\" 612×15"
+            ]
         }
     }
 }

@@ -1,6 +1,6 @@
 {
     "page": "create-customize/exporting",
-    "lastVerifiedSha": "038a029250218bce42cb9a98979c3068ba240b2e",
+    "lastVerifiedSha": "52cf35f3ccf85b139c05502bca616306ddc5bca6",
     "observed": {
         "page": "create-customize/exporting",
         "urls": [
@@ -139,7 +139,7 @@
         "yaffo/routes/utilities/automations.py": "f787c053db5f209bbcf692ad7ad5c3c165c0105bd85aa7cd456567f296ad3602",
         "yaffo/routes/utilities/sync_views.py": "1ecae1b9128102b97e6b177bc638ee9629b7775388b3dc823ce98852366c2cf0",
         "yaffo/static/action-links.css": "fb3fd8e47c18993d826f7d34f8ccb24dc1aeb18a9aacb45c3a4fc41a901a4300",
-        "yaffo/static/app.js": "7aa9b2b8c921352f3928e5735a3210f9b085911c03085269e3e33c260ac6511b",
+        "yaffo/static/app.js": "0528b79fdc7d6be60af1e15f34314204a2f553a897b33e59d99593b5d31c593b",
         "yaffo/static/assistant/assistant.css": "51af784b2881e1c3f119d97f2e88227a17e5fe28a88e67a63e9de83d711a46ca",
         "yaffo/static/assistant/assistant.js": "117173da2d7541ee51a23dcee1d19acd102bba8a1b66585a0e9bba687f38a112",
         "yaffo/static/assistant/plan_card.js": "22339c5d29df625ce95a94124b30fe474512d9a17b3d8420ee20f87c37daaf32",
@@ -212,7 +212,7 @@
         "yaffo/static/utilities/_base.css": "88ba38de1b2f83e13008efc45ef2ae143c4add99a4f05db4fb300fa85998f411",
         "yaffo/static/utilities/_base.js": "d1ddbb0f4fd52e01532391ea913a2151b2bb23467af8a3228bc8f97b394bdc17",
         "yaffo/static/utilities/automations.css": "6be7bb1f5f7fdb9c4b7b81e795dde05fad5d634286200ac3af85f35adcdf8a06",
-        "yaffo/static/utilities/automations.js": "ba3007e58a31c13805375cc3bd2db5a3896bbf00928752ce8a200ef9f7ad4af6",
+        "yaffo/static/utilities/automations.js": "bf186c1be36678ef1a48a51134a165c0731b1ef18012ac2008b8f49d097ca158",
         "yaffo/static/utilities/sync.css": "1348513232761e8acbffea8066381f7fadc96e9c9950e14c7d78121cf409cd3e",
         "yaffo/static/utilities/sync.js": "ef93b9ab8ef502d3cebe81c15184c78b980ac430d8acd992883abb62cf6c44d7",
         "yaffo/static/utils.js": "0d4990647fb99c0c611f38f9f140fdba555043ce3857dbe082c53fd193861c4a",
@@ -253,49 +253,179 @@
     },
     "shots": {
         "create-customize/assets/exporting/new-export-sync.webp": {
-            "width": 532,
-            "height": 932,
-            "sha256": "c45bb0a014cb8b07ae26c1952aca7277226a78138d0eefefb3515606c1b4ebb8"
+            "width": 500,
+            "height": 900,
+            "sha256": "5e188734a03059e8fb9837642f2bf86e6018efd7d90074a8b3337735e58d8ce3",
+            "layout": [
+                "heading \"New Automation\" 141×20",
+                "button \"Close\" 19×18",
+                "radiogroup \"What kind of automation? Custom Describe what it should do, and Yaffo writes it. Import from… Bring new photos into your library from a folder, an SD card, or OneDrive. Send to… Keep an album, or the photos matching a filter, copied to a folder. Add a new service… Connect another photo service. Describe it, and Yaffo writes and tests the connection.\" 411×332",
+                "label \"Custom Describe what it should do, and Yaffo writes it.\" 265×38",
+                "radio \"unchecked\" 13×13",
+                "label \"Import from… Bring new photos into your library from a folder, an SD card, or OneDrive.\" 360×58",
+                "radio \"unchecked\" 13×13",
+                "label \"Send to… Keep an album, or the photos matching a filter, copied to a folder.\" 375×38",
+                "radio \"checked\" 13×13",
+                "label \"Add a new service… Connect another photo service. Describe it, and Yaffo writes and tests the connection.\" 370×58",
+                "radio \"unchecked\" 13×13",
+                "radiogroup \"Service Folder A folder a desktop app syncs, a drive, a network share, or a card for a photo frame. Google Photos Keep selected photos in a Yaffo-created Google Photos album. Immich Keep photos in an Immich album. Connect with an API key from your server. OneDrive Keep selected photos in folders under a OneDrive folder. Flickr exports Keep selected photos in Flickr sets, uploaded as private photos. A service you added.\" 415×424",
+                "label \"Folder A folder a desktop app syncs, a drive, a network share, or a card for a photo frame.\" 371×58",
+                "radio \"checked\" 13×13",
+                "label \"Google Photos Keep selected photos in a Yaffo-created Google Photos album.\" 362×38",
+                "radio \"unchecked\" 13×13",
+                "label \"Immich Keep photos in an Immich album. Connect with an API key from your server.\" 367×58",
+                "radio \"unchecked\" 13×13",
+                "label \"OneDrive Keep selected photos in folders under a OneDrive folder.\" 327×38",
+                "radio \"unchecked\" 13×13",
+                "label \"Flickr exports Keep selected photos in Flickr sets, uploaded as private photos. A service you added.\" 379×58",
+                "radio \"unchecked\" 13×13",
+                "button \"Cancel\" 84×36",
+                "button \"Create\" 82×36"
+            ]
         },
         "create-customize/assets/exporting/export-account.webp": {
             "width": 1122,
             "height": 327,
-            "sha256": "9e9f623f39597d0ba62486769a18ce49ce12e3bbe71863079d99fb551929d267"
+            "sha256": "9e9f623f39597d0ba62486769a18ce49ce12e3bbe71863079d99fb551929d267",
+            "layout": [
+                "button \"Account TO DO\" 1050×21",
+                "heading \"Account\" 72×20",
+                "text \"Connect Yaffo to Immich with a key from your account. Yaffo only uses it for this service.\" 545×16",
+                "label \"Server address\" 95×16",
+                "button \"Your server's address, like photos.example.com. Yaffo uses https unless you type http://, which is only allowed for a server on your home network. Yaffo talks only to this server for this account.\" 15×15",
+                "textbox \"photos.example.com or http://192.168.1.20:2283\" 720×38",
+                "label \"API key\" 48×16",
+                "button \"In Immich, open Account Settings › API Keys and create a key. Yaffo checks the key, then keeps it in your system's keychain. It's never shown again.\" 15×15",
+                "textbox \"\" 720×38",
+                "button \"Connect to Immich\" 157×36"
+            ]
         },
         "create-customize/assets/exporting/export-folder-options.webp": {
             "width": 1122,
             "height": 465,
-            "sha256": "8a094966cec6cd6c08929c3bea7f11b9d4282572a8561c8dbb64261f3d2cef6a"
+            "sha256": "8a094966cec6cd6c08929c3bea7f11b9d4282572a8561c8dbb64261f3d2cef6a",
+            "layout": [
+                "button \"Folder and options TO DO\" 1050×21",
+                "heading \"Folder and options\" 162×20",
+                "text \"Where the copies go, and in what form.\" 244×16",
+                "label \"Folder\" 40×16",
+                "button \"Copies go here. It must exist, and it can't be inside your library.\" 15×15",
+                "textbox \"/tmp/yaffo-docs/Duplicate Scan Samples\" 588×38",
+                "button \"Browse…\" 124×38",
+                "label \"Layout\" 42×16",
+                "button \"For a named subfolder, Yaffo uses the album name or, for a filter, the automation name.\" 15×15",
+                "button \"In a named subfolder ▼\" 720×34",
+                "label \"Convert to JPEG\" 105×16",
+                "button \"No, copy the originals ▼\" 720×34",
+                "label \"When a photo leaves the selection\" 214×16",
+                "button \"Remove moves only unchanged copies Yaffo made to the Trash. Keep leaves them at the destination.\" 15×15",
+                "button \"Remove from destination ▼\" 720×34",
+                "button \"Save\" 72×36"
+            ]
         },
         "create-customize/assets/exporting/export-selection.webp": {
             "width": 1122,
             "height": 403,
-            "sha256": "7d134a39e6aab376c0d3a0e229384e7fd131f1b4fb198d2bd99bcfd4d61129d3"
+            "sha256": "c046d83bd8a76e9d1cb40bec77c91c978678b76ef6509a3f9bb2732a2caa7abc",
+            "layout": [
+                "button \"What to send TO DO\" 1050×21",
+                "heading \"What to send\" 113×20",
+                "text \"Photos added later are sent too; photos taken out are removed.\" 393×16",
+                "legend \"Choose what to send\" 150×17",
+                "label \"An album\" 73×17",
+                "radio \"checked\" 13×13",
+                "label \"Album\" 45×17",
+                "button \"Maya's Big Game ▼\" 664×34",
+                "label \"Photos matching a filter\" 182×17",
+                "radio \"unchecked\" 13×13",
+                "label \"A custom rule\" 106×17",
+                "radio \"unchecked\" 13×13",
+                "button \"Save selection\" 131×36"
+            ]
         },
         "create-customize/assets/exporting/export-custom-rule.webp": {
             "width": 1122,
             "height": 326,
-            "sha256": "d5edf44df1b6356c108d3345b9e312b3d50d8f670307d4d61c4b7ac4ef530bea"
+            "sha256": "b7aa9aa2ddd8884e3418d4d9d8605073f6afec7497423c6096b991ef2ff88500",
+            "layout": [
+                "heading \"Conversation\" 89×16",
+                "text \"Describe which photos to send and where to send them.\" 324×15",
+                "text \"No conversation yet — describe the photo rule you want.\" 327×15",
+                "textbox \"Send the photos in Maya's Big Game to the family photo frame folder.\" 485×100",
+                "button \"Send\" 54×31",
+                "button \"Cancel\" 64×31",
+                "heading \"CODE\" 40×15",
+                "text \"No published code yet.\" 142×16"
+            ]
         },
         "create-customize/assets/exporting/export-preview.webp": {
             "width": 1122,
-            "height": 596,
-            "sha256": "cfdc4780009fb7d9470e74c0cb6ecbafd09f5780c11bb0a0c6abd14441dbc178"
+            "height": 539,
+            "sha256": "86f8f628018fe3e5e6e61d7b8c463ec0dd2b71a42c880c7f4aa75d3227d9c37b",
+            "layout": [
+                "heading \"What a run would do now\" 218×20",
+                "button \"Close\" 57×27",
+                "text \"to copy\" 42×15",
+                "text \"3\" 10×20",
+                "columnheader \"FILE\" 30×15",
+                "columnheader \"DESTINATION\" 93×15",
+                "columnheader \"ACTION\" 53×15",
+                "cell \"2026-07-12_143012_volleyball-serve-reception.png\" 235×32",
+                "link \"2026-07-12_143012_volleyball-serve-reception.png\" 235×32",
+                "cell \"/tmp/yaffo-docs/Duplicate Scan Samples/Maya's Big Game/2026-07-12_143012_volleyball-serve-reception.png\" 566×32",
+                "cell \"COPY\" 33×12",
+                "cell \"2026-07-12_143847_volleyball-attack-approach.png\" 238×32",
+                "link \"2026-07-12_143847_volleyball-attack-approach.png\" 238×32",
+                "cell \"/tmp/yaffo-docs/Duplicate Scan Samples/Maya's Big Game/2026-07-12_143847_volleyball-attack-approach.png\" 566×32",
+                "cell \"COPY\" 33×12",
+                "cell \"2026-07-12_144526_volleyball-rally-save.png\" 283×16",
+                "link \"2026-07-12_144526_volleyball-rally-save.png\" 283×16",
+                "cell \"/tmp/yaffo-docs/Duplicate Scan Samples/Maya's Big Game/2026-07-12_144526_volleyball-rally-save.png\" 596×32",
+                "cell \"COPY\" 33×12"
+            ]
         },
         "create-customize/assets/exporting/export-ready-to-run.webp": {
             "width": 1122,
             "height": 149,
-            "sha256": "b49219aa12980ad29467eeef8e5e95b4cfa652ac84e674028d16954de06edcca"
+            "sha256": "4b86c9260e8bf6c09282d173bd6d63f40695487f4f306238877dbda33cddac21",
+            "layout": [
+                "heading \"Documentation Export Walkthrough\" 410×27",
+                "text \"The album Maya's Big Game → /tmp/yaffo-docs/Duplicate Scan Samples\" 454×16",
+                "button \"Run now\" 95×36",
+                "button \"Test\" 66×36",
+                "button \"Edit details\" 108×36",
+                "button \"Delete\" 103×36"
+            ]
         },
         "create-customize/assets/exporting/export-schedule.webp": {
             "width": 1122,
             "height": 516,
-            "sha256": "9b98f1f0056bd9320306ab1202c20c4a2951aeaddeb7275b4897849441490871"
+            "sha256": "9b98f1f0056bd9320306ab1202c20c4a2951aeaddeb7275b4897849441490871",
+            "layout": [
+                "button \"When\" 1050×21",
+                "heading \"When\" 49×20",
+                "listitem \"SCHEDULE Daily at 2:00 AM Everything On Edit Delete\" 1014×70",
+                "switch \"Schedule 0 2 * * *\" 75×36",
+                "button \"Edit\" 64×36",
+                "button \"Delete\" 80×36",
+                "listitem \"EVENT Media deleted On Delete\" 1014×70",
+                "switch \"Media deleted\" 75×36",
+                "button \"Delete\" 80×36",
+                "listitem \"EVENT Album changed On Delete\" 1014×70",
+                "switch \"Album changed\" 75×36",
+                "button \"Delete\" 80×36",
+                "button \"Add a schedule\" 137×36",
+                "button \"Add an event\" 123×36"
+            ]
         },
         "create-customize/assets/exporting/export-run-history.webp": {
             "width": 1122,
             "height": 109,
-            "sha256": "d1e4693d0a0d9d5c1c4377a170bcd3f4b591dea049cbf025ec798b4ef081bbda"
+            "sha256": "d1e4693d0a0d9d5c1c4377a170bcd3f4b591dea049cbf025ec798b4ef081bbda",
+            "layout": [
+                "heading \"Run history\" 100×20",
+                "text \"No runs yet.\" 75×16"
+            ]
         }
     }
 }

@@ -92,6 +92,12 @@ export default defineWalkthrough({
 
     shots: {
         "automations-list.webp": {
+            annotations: {
+                "automation-list": "#automations-nav",
+                "switch-and-actions": ".automation-actions",
+                "when": "#automation-trigger-panel",
+                "run-history": "#automation-runs",
+            },
             viewport: {width: 1440, height: 1000},
             goto: `/utilities/automations/${SEEDED_SLUG}`,
             setup: async (page) => {
@@ -103,6 +109,13 @@ export default defineWalkthrough({
             },
         },
         "automation-test.webp": {
+            annotations: {
+                "conversation": ".automation-conversation",
+                "code": ".automation-code-head, .automation-code-section pre.automation-code:visible",
+                "test": "#automation-test-button",
+                "test-result": "#automation-test-result",
+                "back-to-automation": ".utilities-content a:has-text(\"Back to automation\")",
+            },
             viewport: {width: 1440, height: 1100},
             goto: `/utilities/automations/${SEEDED_SLUG}/edit`,
             clip: ".utilities-content",
@@ -114,6 +127,12 @@ export default defineWalkthrough({
             },
         },
         "automation-triggers.webp": {
+            annotations: {
+                "trigger-list": "#automation-triggers ul.automation-triggers, #automation-triggers p.no-data",
+                "schedule": ".schedule-editor .automation-trigger-section:not(.schedule-scope-section)",
+                "scope": ".schedule-editor .schedule-scope-section",
+                "save-or-cancel": ".schedule-editor .js-save-schedule, .schedule-editor .js-cancel",
+            },
             viewport: {width: 1440, height: 900},
             goto: `/utilities/automations/${SEEDED_SLUG}/triggers/edit`,
             clip: ".utilities-content",

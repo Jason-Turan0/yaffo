@@ -39,11 +39,22 @@ export default defineWalkthrough({
             goto: "/library/health",
             clip: ".utility-page",
             setup: waitForIndexScan,
+            annotations: {
+                "reindex-library": "#reindex-button",
+                "library-counts": ".stats-grid",
+                "library-status": "#library-status",
+            },
         },
         "ai-generation-status.webp": {
             viewport: {width: 1400, height: 1000},
             goto: "/settings",
             clip: "#llm-section",
+            annotations: {
+                "active-model": "#llm-active-model",
+                "provider": ".form-group:has(#llm-provider)",
+                "model": "#llm-provider-models > .form-group",
+                "api-key": "#llm-api-key",
+            },
             setup: async (page) => {
                 await chooseProvider(page);
                 await page.locator("#llm-section").scrollIntoViewIfNeeded();

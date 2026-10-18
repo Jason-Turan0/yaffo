@@ -119,7 +119,6 @@ jobs:
           echo "seed_key=seed-${{ runner.os }}-${{ hashFiles(
             'yaffo_ui_tests/test_data/bennett/**',
             'yaffo_ui_tests/test_data/obama/images/**',
-            'yaffo_ui_tests/test_data/mp4/**',
             'yaffo_ui_tests/scripts/seed_database.py',
             'yaffo_ui_tests/lib/services/isolated_runner.ts',
             'yaffo/utils/index_photos.py',

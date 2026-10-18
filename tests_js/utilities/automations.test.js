@@ -113,4 +113,50 @@ describe('automation dry-run results', () => {
       vi.unstubAllGlobals();
     }
   });
+
+  const renderGroups = async (actions, i18n) => {
+    document.body.innerHTML = `
+      <button id="automation-test-button">Test</button>
+      <div id="automation-test-result" hidden></div>`;
+    const PO = await loadAutomations();
+    PO.pickFolder = vi.fn().mockResolvedValue('/photos');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, code_source: 'published', context: { media_item_ids: [1] }, actions }),
+    }));
+    PO.automations.initAutomationTest('test', {buildUrl: () => '/test-files'}, '/photos', i18n);
+    document.getElementById('automation-test-button').click();
+    await vi.waitFor(() => expect(document.querySelector('.automation-test-table')).not.toBeNull());
+    return [...document.querySelectorAll('.test-action-summary')].map((cell) => cell.textContent);
+  };
+
+  // Real i18next on a miss: the defaultValue if one was given, otherwise the key with
+  // its namespace stripped. The shared test stub echoes the full key, which is why a
+  // check against the namespaced key passed here while leaking raw keys in the app.
+  const i18nextMiss = (translations = {}) => ({
+    ...window.testI18n,
+    t: (key, options = {}) => translations[key] ?? options.defaultValue ?? key.replace(/^[^:]+:/, ''),
+  });
+
+  it('humanizes a grouped action that has no catalog entry instead of showing its key', async () => {
+    const query = { name: 'data_query', summary: 'Query people', args: [] };
+    try {
+      const summaries = await renderGroups([query, query, query, query], i18nextMiss());
+      expect(summaries).toEqual(['Data query × 4']);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('uses the catalog label for a grouped action when one exists', async () => {
+    const move = { name: 'move_media_items', summary: 'Move photo', args: [] };
+    try {
+      const summaries = await renderGroups([move, move], i18nextMiss({
+        'utilities:automations.test.actionNames.move_media_items': 'Move media items',
+      }));
+      expect(summaries).toEqual(['Move media items × 2']);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });

@@ -50,6 +50,14 @@ plugins:
 
 extra_css:
   - stylesheets/extra.css
+  - stylesheets/guide-walkthrough.css
+  - stylesheets/annotated-screenshot.css
+  - stylesheets/guide-decisions.css
+
+extra_javascript:
+  - javascripts/guide-walkthrough.js
+  - javascripts/annotated-screenshot.js
+  - javascripts/guide-decisions.js
 
 markdown_extensions:
   - admonition
@@ -79,6 +87,7 @@ nav:
           - Labels and Auto-Classification: guide/organize-review/labels.md
           - Locations & Map: guide/organize-review/locations.md
           - Finding Duplicates: guide/organize-review/duplicates.md
+          - Albums: guide/organize-review/albums.md
       - Create & Customize:
           - Custom Pages: guide/create-customize/custom-pages.md
           - Themes: guide/create-customize/themes.md
@@ -86,12 +95,14 @@ nav:
           - Importing Photos: guide/create-customize/importing.md
           - Exporting Photos: guide/create-customize/exporting.md
           - Creating a Photo Service: guide/create-customize/photo-services.md
+      - Sharing:
+          - Pairing Devices: guide/sharing/pairing-devices.md
+          - Sharing Folders and Albums: guide/sharing/sharing-folders-albums.md
+          - Receiving Photos: guide/sharing/receiving-photos.md
+          - Transfers and Connections: guide/sharing/transfers-connections.md
       - Reference & Maintenance:
           - Settings Reference: guide/reference-maintenance/settings.md
           - Comparison: guide/reference-maintenance/comparison.md
           - Troubleshooting: guide/reference-maintenance/troubleshooting.md
-          - Photos Show the Wrong Year: guide/reference-maintenance/troubleshooting/photos-wrong-year.md
-          - External Drive Not Showing: guide/reference-maintenance/troubleshooting/external-drive-not-showing.md
-          - Faces Stuck After Assigning: guide/reference-maintenance/troubleshooting/faces-stuck-after-assigning.md
           - Uninstalling Yaffo: guide/reference-maintenance/uninstalling.md
   - Privacy: privacy.md

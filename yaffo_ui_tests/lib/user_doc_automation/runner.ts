@@ -3,10 +3,10 @@ import type {Browser} from "@playwright/test";
 import {randomUUID} from "crypto";
 import {copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync} from "fs";
 import {dirname, join} from "path";
-import {compareShots} from "./compare";
+import {compareShots, renderReviewSheet} from "./compare";
 import type {CompareResult} from "./compare";
-import type {Box} from "./framing";
-import {resolveClip, resolveIgnoreRegions} from "./framing";
+import type {AnnotationGeometry, Box} from "./framing";
+import {resolveAnnotations, resolveClip, resolveIgnoreRegions} from "./framing";
 import {APP_UNREACHABLE, waitForApp} from "./app_reachability";
 import {toWebp} from "./encode";
 import {createObserver, PAGE_HEADER, RUN_HEADER, takeServerObservation} from "./observe";
@@ -14,6 +14,8 @@ import type {Observation} from "./observe";
 import {mediaIdByFilename} from "./media_lookup";
 import {blockOsSideEffects} from "./side_effects";
 import {settle} from "./settle";
+import {captureLayout} from "./layout";
+import type {LayoutLine} from "./layout";
 import type {Walkthrough} from "./types";
 
 /**
@@ -43,6 +45,13 @@ export interface RawShot {
     width: number;
     height: number;
     ignore: Box[];
+    /**
+     * The shot's text and controls, one `role "name" WxH` line each; see layout.ts.
+     * Absent when the page could not be read, which leaves the decision to pixels.
+     */
+    layout?: LayoutLine[];
+    /** Measured annotation boxes, keyed by annotation heading id; see `Shot.annotations`. */
+    annotations?: Record<string, AnnotationGeometry>;
 }
 
 export interface RawResult {
@@ -165,17 +174,29 @@ const captureOne = async (
 
                 const clip = await resolveClip(page, shot);
                 const ignore = await resolveIgnoreRegions(page, shot, clip, DEVICE_SCALE_FACTOR);
+                // Read in the same settled state the screenshot is taken in. A failure
+                // here costs only the element check, never the capture.
+                const layout = await captureLayout(page, shot).catch((e: unknown) => {
+                    console.warn(`      layout not read for ${filename}: ${e instanceof Error ? e.message : String(e)}`);
+                    return undefined;
+                });
 
                 const target = targetFor(walkthrough.page, filename);
                 const stagedPng = stagedPngFor(stagingDir, target);
                 mkdirSync(dirname(stagedPng), {recursive: true});
                 await page.screenshot({path: stagedPng, clip, scale: "device"});
+                // Measured after the screenshot rather than beside the clip: a page still
+                // settling (the trigger editor's cron preview is one) would otherwise put
+                // every marker below it a few pixels off what the image shows.
+                const annotations = await resolveAnnotations(page, shot, clip);
 
                 shots.push({
                     target,
                     width: Math.round(clip?.width ?? shot.viewport.width),
                     height: Math.round(clip?.height ?? shot.viewport.height),
                     ignore,
+                    ...(layout ? {layout} : {}),
+                    ...(Object.keys(annotations).length ? {annotations} : {}),
                 });
                 console.log(`      captured ${filename}`);
             } finally {
@@ -352,6 +373,15 @@ export const finalizeStability = (
             if (repeatedResult?.error || stabilityDiff.status !== "unchanged" || !sameBaselineOutcome) {
                 const repeatedPath = shot.staged.replace(/\.webp$/, ".repeat.webp");
                 copyFileSync(second.staged, repeatedPath);
+                // Two sheets: what was flagged against the committed image, and what
+                // differed between the two captures, which is where nondeterminism shows.
+                const committed = join(options.guideDir, shot.target);
+                if (existsSync(committed)) {
+                    renderReviewSheet(committed, shot.staged, shot.ignore,
+                        shot.staged.replace(/\.webp$/, ".review.webp"), shot.target);
+                }
+                renderReviewSheet(shot.staged, repeatedPath, shot.ignore,
+                    shot.staged.replace(/\.webp$/, ".repeat.review.webp"), `${shot.target} (first vs second capture)`);
                 return {
                     ...shot,
                     status: "unstable",
@@ -376,10 +406,15 @@ export const finalizeStability = (
                 status = diff.status;
                 if (diff.diffImage && existsSync(diff.diffImage)) {
                     copyFileSync(committed, shot.staged.replace(/\.webp$/, ".baseline.webp"));
+                    // Drawn from the capture that may ship, so the sheet describes it.
+                    renderReviewSheet(committed, shot.staged, shot.ignore,
+                        shot.staged.replace(/\.webp$/, ".review.webp"), shot.target);
                 }
             }
             return {
                 ...shot,
+                // The second capture's image is the one kept, so its layout goes with it.
+                ...(second.layout ? {layout: second.layout} : {}),
                 status,
                 diff,
                 stability: {status: "reproduced", diff: stabilityDiff},

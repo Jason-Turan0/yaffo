@@ -4,9 +4,12 @@ Indexing is how Yaffo learns what photos and videos are in your library. Yaffo
 does not move your originals into a special folder. Instead, you choose media
 folders, and Yaffo builds a local index from those files.
 
-![The Library Health page showing library counts and an in-sync result](assets/indexing-library/library-health.webp)
+## What are you trying to do?
 
-## Add Media Folders
+<div class="action-chooser" markdown="1">
+<div class="action-choice" data-choice="Add folders" markdown="1">
+
+### Add Media Folders
 
 Open **Settings** and add one or more media directories. These are the folders
 Yaffo scans for photos and videos.
@@ -22,7 +25,10 @@ Yaffo stores its own database, thumbnails, logs, and temporary files separately
 from these media folders. Removing a folder from Yaffo's settings removes it
 from future scans; it does not delete the folder from disk.
 
-## Scan the Library
+</div>
+<div class="action-choice" data-choice="Scan the library" markdown="1">
+
+### Scan the Library
 
 Go to **Library** → **Library Health**. Yaffo compares the configured media
 folders with the local database.
@@ -42,7 +48,37 @@ what needs attention, one card per problem with its own fix, or says
 **Everything is in sync** when nothing does. Select **Show files** on a card to
 see the files it's about.
 
-## Fix What the Scan Finds
+<div class="annotated-screenshot" markdown="1">
+
+![The Library Health page showing library counts and an in-sync result](assets/indexing-library/library-health.webp)
+
+<div class="screenshot-annotation" data-x="95.3" data-y="8.9" data-region="82.4 6.4 14.4 6.4" markdown="1">
+
+#### Reindex Library
+
+Rebuilds every indexed item, including detected faces. It removes face assignments, so Yaffo asks first.
+
+</div>
+
+<div class="screenshot-annotation" data-x="97.1" data-y="25.7" data-region="1.4 23.2 97.1 42" markdown="1">
+
+#### Library Counts
+
+Files on disk, imported and indexed items, items not yet indexed, orphaned entries, and missing thumbnails.
+
+</div>
+
+<div class="screenshot-annotation" data-x="97.1" data-y="73" data-region="1.4 70.5 97.1 26.6" markdown="1">
+
+#### Library Status
+
+One card per problem with its fix, or **Everything is in sync** when nothing needs attention.
+
+</div>
+
+</div>
+
+#### Fix What the Scan Finds
 
 Each card fixes only its own problem:
 
@@ -75,27 +111,55 @@ During indexing, Yaffo may:
 Large libraries can take time. You can keep using the app while background jobs
 run.
 
-## Watch Background Jobs
+</div>
+<div class="action-choice" data-choice="New photos" markdown="1">
 
-The **Library Health** page shows the import, index, or thumbnail run in
-progress as a job card, with its progress, any error count, and **Cancel** when cancellation is
-available. After you cancel, the run shows **Stopping** until it finishes the
-item it's working on, then **Cancelled**. Finished runs move to the page's
-**Run history**, each with a status chip: **Completed**, **Completed with
-errors** when some files failed, **Cancelled**, or **Failed**. A thumbnail
-run's row also says how many thumbnails it regenerated. A run that is
-still in progress has **Cancel** in the run history too, and a run's technical
-error, when it has one, is under **Details**.
+### Index the New Files
 
-A failed run, or one with errors, has an **Ask Yaffo** button that opens the
-[assistant](../start-here/ask-yaffo.md) with that run attached, so it can look up
-what went wrong.
+Open **Library** → **Library Health**, then select **Index them** on the
+**Photos aren't indexed** card. This imports and processes files Yaffo does not
+know yet.
 
-If you close the browser tab, the app and its background worker can continue
-running as long as Yaffo itself is still running. Use the Yaffo tray/menu icon to
-reopen the app or quit it.
+- **People and faces:** existing face assignments stay.
+- **Files on disk:** originals stay in place.
+- **Scope:** new, unindexed files.
 
-## Re-Index After Changes
+See [Scan the Library](#scan-the-library) and [Watch Background Jobs](#watch-background-jobs).
+
+</div>
+<div class="action-choice" data-choice="Broken thumbnails" markdown="1">
+
+### Regenerate Missing Thumbnails
+
+Select **Regenerate thumbnails** on **Library Health** to recreate missing face
+crops and video posters from the originals.
+
+- **People and faces:** assignments and ignored status stay; faces are not detected again.
+- **Files on disk:** originals stay in place.
+- **Scope:** missing thumbnails.
+
+See [Fix What the Scan Finds](#fix-what-the-scan-finds).
+
+</div>
+<div class="action-choice" data-choice="Changed metadata" markdown="1">
+
+### Reindex the Affected Items
+
+Use **Reindex** in a photo's details panel for one item, or **Reindex Library**
+on Library Health when the whole library needs rebuilding. Reindexing rereads
+metadata and rebuilds thumbnails, labels, and detected faces.
+
+- **People and faces:** rebuilt items lose their face-to-person assignments.
+- **Files on disk:** originals stay in place.
+- **Scope:** one item, or every indexed file with **Reindex Library**.
+
+!!! warning "Review the scope before reindexing"
+    **Reindex Library** removes existing face assignments throughout the library.
+    If only thumbnails are broken, use **Regenerate thumbnails** instead.
+
+See [Re-Index After Changes](#re-index-after-changes).
+
+#### Re-Index After Changes
 
 Yaffo has two automatic ways to notice library changes while the app is running:
 
@@ -129,7 +193,51 @@ Some operations, such as changing the automatic label vocabulary, have their own
 reprocessing controls. Use Library Health for file-system changes or when you do
 not want to wait for the watcher or hourly sync.
 
-## Files That Couldn't Be Indexed
+</div>
+<div class="action-choice" data-choice="Missing originals" markdown="1">
+
+### Check the Drive Before Removing Entries
+
+Reconnect the drive and confirm you can open the original files in Finder or
+File Explorer. Then scan **Library Health** again. An empty mount point can make
+valid library entries appear to have no file.
+
+- **People and faces:** **Remove them** drops the missing entries and their associated faces, including assignments.
+- **Files on disk:** removing an index entry does not reconnect a drive.
+- **Scope:** database entries whose originals are no longer present.
+
+!!! warning "Verify the originals first"
+    Leave **Remove them** alone while a drive is disconnected or unexpectedly empty.
+
+See [External Drive Not Showing](../reference-maintenance/troubleshooting.md#external-drive-not-showing).
+
+</div>
+<div class="action-choice" data-choice="Background jobs" markdown="1">
+
+### Watch Background Jobs
+
+The **Library Health** page shows the import, index, or thumbnail run in
+progress as a job card, with its progress, any error count, and **Cancel** when cancellation is
+available. After you cancel, the run shows **Stopping** until it finishes the
+item it's working on, then **Cancelled**. Finished runs move to the page's
+**Run history**, each with a status chip: **Completed**, **Completed with
+errors** when some files failed, **Cancelled**, or **Failed**. A thumbnail
+run's row also says how many thumbnails it regenerated. A run that is
+still in progress has **Cancel** in the run history too, and a run's technical
+error, when it has one, is under **Details**.
+
+A failed run, or one with errors, has an **Ask Yaffo** button that opens the
+[assistant](../start-here/ask-yaffo.md) with that run attached, so it can look up
+what went wrong.
+
+If you close the browser tab, the app and its background worker can continue
+running as long as Yaffo itself is still running. Use the Yaffo tray/menu icon to
+reopen the app or quit it.
+
+</div>
+<div class="action-choice" data-choice="Indexing errors" markdown="1">
+
+### Files That Couldn't Be Indexed
 
 Occasionally a file can't be indexed, for example because it's damaged, cut off
 partway through, or in a format Yaffo can't decode. The file still appears in your
@@ -154,7 +262,10 @@ a newer version may handle the file.
 If a file can't be reached at all, for example because its drive was disconnected
 during indexing, it isn't marked as failed. The next sync tries it again.
 
-## Supported Media
+</div>
+<div class="action-choice" data-choice="Supported files" markdown="1">
+
+### Supported Media
 
 Yaffo indexes these file extensions:
 
@@ -173,3 +284,6 @@ If a file does not appear after indexing, check that:
 - the file extension is a supported media type;
 - Yaffo has permission to read the folder;
 - indexing has finished.
+
+</div>
+</div>

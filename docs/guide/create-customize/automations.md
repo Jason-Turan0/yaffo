@@ -6,11 +6,53 @@ Yaffo keeps a library tidy without you clicking through the same steps by hand.
 
 Open **Library** → **Automations**.
 
+## Explore the Page
+
+<div class="annotated-screenshot" markdown="1">
+
 ![The Automations page with the system and custom list, and a selected automation's details and run history](assets/automations/automations-list.webp)
 
+<div class="screenshot-annotation" data-x="18.6" data-y="29.3" data-region="2.8 26.8 17.4 65.8" markdown="1">
+
+### Automation List
+
 The sidebar groups automations under **System**, **Syncs**, and **Custom**.
-Custom photo services appear under **Services** after you add one. Select an
-automation to see its setup and run history. An **ON** badge marks enabled ones.
+Custom photo services appear under **Services** after you add one. An **ON**
+badge marks enabled ones. Select an automation to see its setup and run history.
+
+</div>
+
+<div class="screenshot-annotation" data-x="94.3" data-y="11.5" data-region="63.4 9.7 32.4 3.6" markdown="1">
+
+### Switch and Actions
+
+Turn the automation on or off, or **Run…** it on demand. A custom automation
+also has **Edit**, **Edit details**, and **Delete**.
+[Read about custom automations](#create-a-custom-automation).
+
+</div>
+
+<div class="screenshot-annotation" data-x="95.7" data-y="23.2" data-region="21.5 20.7 75.7 6.1" markdown="1">
+
+### When
+
+Expand **When** to see and edit the automation's schedules and events.
+[Read about triggers](#triggers-when-an-automation-runs).
+
+</div>
+
+<div class="screenshot-annotation" data-x="95.7" data-y="31.7" data-region="21.5 29.2 75.7 8.9" markdown="1">
+
+### Run History
+
+Every run is recorded here with its status and time.
+[Read about runs](#run-and-review).
+
+</div>
+
+</div>
+
+## Kinds of Automation
 
 **New automation** offers four choices:
 
@@ -34,7 +76,7 @@ enabled, disabled, and tuned, but not deleted. They include:
 - **Auto-assign faces** — assigns new faces to people that already match.
 - **Classify labels** — runs label classification on new photos.
 - **Duplicate scan** — looks for duplicate photos.
-- **Export photo tag** — writes selected tags back to photo metadata.
+- **Export photo tag** — [writes selected metadata into the original files](#write-metadata-back-to-files).
 - **File sync** — keeps the index in step with your media folders.
 - **Geotag from neighbors** — fills in missing GPS from nearby photos taken close
   in time.
@@ -42,6 +84,41 @@ enabled, disabled, and tuned, but not deleted. They include:
 Select a system automation to turn its switch on or off or **Run…** it on demand.
 Open **When** to edit its triggers and **Configuration** to adjust its settings,
 such as a similarity threshold.
+
+### Write Metadata Back to Files
+
+Yaffo stores your organization in its database. **Export photo tag** can also
+write selected information into the original media files so other applications
+can read it. This changes files in your media directories; it does not create
+exported copies like a **Send to…** sync.
+
+Open **Library** → **Automations** → **Export photo tag**, then expand
+**Configuration**. All five export options are off by default:
+
+| Option | Written to the file |
+|---|---|
+| **Export Location Tags** | The assigned location name, rather than GPS coordinates. |
+| **Export People Tags** | Names of people assigned to faces in the photo. People tags are not written to videos. |
+| **Export Labels** | Classification labels as keywords. |
+| **Export Custom Tags** | Manual tags as keywords: `name: value`, or just `name` when there is no value. |
+| **Export Favorite** | A `Favorite` keyword when the item is marked as a favorite. |
+
+Choose the fields you want and click **Save**. Turn the automation on and check
+**When** for its triggers. With the photo-modified event trigger, later changes
+to affected items write the enabled fields. To write metadata for existing
+items, choose **Run…** and review its scope before starting. Check **Run
+history** afterwards; if a write fails, check that the original is available,
+writable, and in a supported format.
+
+Write-back supports JPEG, PNG, HEIC/HEIF, and supported video containers. Metadata
+fields vary by format and by what another application can read. This automation
+does not export capture-date corrections, GPS coordinates, or album membership.
+
+Turning an export option off stops future writes for that field; it does not
+remove metadata already written. Do not rely on deleting a tag or unmarking a
+favorite in Yaffo to erase its embedded value: keyword writes through ExifTool
+merge with existing keywords. If you need to remove embedded metadata, inspect
+the original file in a metadata editor.
 
 ## Create a Custom Automation
 
@@ -86,7 +163,51 @@ The test is a safe dry-run:
   without actually changing anything.
 - Nothing is written and no run is recorded in the automation's history.
 
+<div class="annotated-screenshot" markdown="1">
+
 ![A custom automation editor showing its conversation, published code, and safe dry-run result](assets/automations/automation-test.webp)
+
+<div class="screenshot-annotation" data-x="46" data-y="15.1" data-region="1.4 12.6 46.1 51.6" markdown="1">
+
+### Conversation
+
+Describe what the automation should do, and the assistant writes or changes it. [Read about custom automations](#create-a-custom-automation).
+
+</div>
+
+<div class="screenshot-annotation" data-x="95.6" data-y="16.5" data-region="51.1 14 46.1 33.2" markdown="1">
+
+### Code
+
+The code the assistant wrote. It runs only on indexed photos.
+
+</div>
+
+<div class="screenshot-annotation" data-x="59.7" data-y="50.1" data-region="51.1 48.4 7.1 3.5" markdown="1">
+
+### Test
+
+Choose a file or folder to run a safe dry-run on.
+
+</div>
+
+<div class="screenshot-annotation" data-x="95.6" data-y="55.5" data-region="51.1 53 46.1 18" markdown="1">
+
+### Test Result
+
+What the automation would do, such as its queries and moves. Nothing is written and no run is recorded.
+
+</div>
+
+<div class="screenshot-annotation" data-x="95.3" data-y="5.2" data-region="80.9 3.5 15.8 3.5" markdown="1">
+
+### Back to Automation
+
+Returns to the automation's details and run history.
+
+</div>
+
+</div>
 
 You can test either the working **draft** or the currently **published** code, so
 you can check a change before publishing it. Once the results look right, use
@@ -101,7 +222,43 @@ several:
   example, every night at 2 AM). Yaffo validates the expression as you type.
 - **Event** — run when something happens in Yaffo, such as a photo being indexed.
 
+<div class="annotated-screenshot" markdown="1">
+
 ![The trigger editor with a new hourly schedule ready to save](assets/automations/automation-triggers.webp)
+
+<div class="screenshot-annotation" data-x="97.1" data-y="16.4" data-region="1.4 15.5 97.1 1.9" markdown="1">
+
+### Trigger List
+
+The automation's triggers. With none, it runs only when you start it.
+
+</div>
+
+<div class="screenshot-annotation" data-x="95.6" data-y="29.8" data-region="2.9 27.3 94.1 17" markdown="1">
+
+### Schedule
+
+Choose a common schedule or write a cron expression. **Runs** says when it will run.
+
+</div>
+
+<div class="screenshot-annotation" data-x="95.6" data-y="48.3" data-region="2.9 45.8 94.1 13.6" markdown="1">
+
+### Scope
+
+Which media the run covers, such as everything in your media folders.
+
+</div>
+
+<div class="screenshot-annotation" data-x="21.4" data-y="62.9" data-region="2.9 60.8 19.9 4.3" markdown="1">
+
+### Save or Cancel
+
+**Save schedule** adds it to the automation's triggers; **Cancel** discards it.
+
+</div>
+
+</div>
 
 New syncs start with a nightly schedule. Album send syncs also react to membership
 changes and library deletions; bursts of edits are combined into one run. Paired

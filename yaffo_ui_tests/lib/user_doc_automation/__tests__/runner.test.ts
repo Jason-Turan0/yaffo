@@ -13,7 +13,16 @@ const compareShots = jest.fn<(
     ignore?: Box[],
     diffOut?: string
 ) => CompareResult>();
+const renderReviewSheet = jest.fn<(
+    baseline: string,
+    candidate: string,
+    ignore: Box[],
+    out: string,
+    name: string
+) => boolean>();
+const captureLayout = jest.fn<(page: unknown, shot: {clip?: string}) => Promise<string[]>>();
 const resolveClip = jest.fn<(page: unknown, shot: unknown) => Promise<Box | undefined>>();
+const resolveAnnotations = jest.fn(async () => ({}));
 const resolveIgnoreRegions = jest.fn<(
     page: unknown,
     shot: unknown,
@@ -32,8 +41,9 @@ const settle = jest.fn<(page: unknown) => Promise<void>>();
 await jest.unstable_mockModule("@playwright/test", () => ({
     chromium: {launch},
 }));
-await jest.unstable_mockModule("../compare", () => ({compareShots}));
-await jest.unstable_mockModule("../framing", () => ({resolveClip, resolveIgnoreRegions}));
+await jest.unstable_mockModule("../compare", () => ({compareShots, renderReviewSheet}));
+await jest.unstable_mockModule("../layout", () => ({captureLayout}));
+await jest.unstable_mockModule("../framing", () => ({resolveAnnotations, resolveClip, resolveIgnoreRegions}));
 await jest.unstable_mockModule("../encode", () => ({toWebp}));
 await jest.unstable_mockModule("../observe", () => ({
     createObserver,
@@ -100,7 +110,7 @@ beforeEach(() => {
     mkdirSync(guideDir, {recursive: true});
 
     for (const mock of [
-        launch, compareShots, resolveClip, resolveIgnoreRegions, toWebp,
+        launch, compareShots, renderReviewSheet, captureLayout, resolveClip, resolveIgnoreRegions, toWebp,
         observerAttach, observerResult, createObserver, takeServerObservation,
         mediaIdByFilename, blockOsSideEffects, settle,
     ]) mock.mockReset();
@@ -117,6 +127,7 @@ beforeEach(() => {
     settle.mockResolvedValue(undefined);
     resolveClip.mockResolvedValue(undefined);
     resolveIgnoreRegions.mockResolvedValue([]);
+    captureLayout.mockImplementation(async (_page, shot) => [`text "${shot.clip ?? "viewport"}" 10×10`]);
     toWebp.mockImplementation((pngPath) => {
         const webpPath = pngPath.replace(/\.png$/, ".webp");
         mkdirSync(dirname(webpPath), {recursive: true});
@@ -229,12 +240,14 @@ describe("captureWalkthroughs", () => {
                     width: 500,
                     height: 241,
                     ignore: [{x: 3, y: 4, width: 20, height: 10}],
+                    layout: [`text "${walkthrough.shots["clipped.webp"].clip}" 10×10`],
                 },
                 {
                     target: "library/assets/browsing/detail.webp",
                     width: 1000,
                     height: 700,
                     ignore: [],
+                    layout: ['text "viewport" 10×10'],
                 },
             ],
             observation,
@@ -489,19 +502,23 @@ describe("stability recapture", () => {
             mkdirSync(dirname(path), {recursive: true});
             writeFileSync(path, content, "utf8");
         }
+        const diffImage = first.replace(/\.webp$/, ".diff.png");
+        writeFileSync(diffImage, "overlay", "utf8");
         compareShots
             .mockReturnValueOnce({status: "unchanged", diffPixels: 0})
-            .mockReturnValueOnce({status: "changed", diffPixels: 220});
+            .mockReturnValueOnce({status: "changed", diffPixels: 220, diffImage});
 
         const [final] = finalizeStability(
-            [result(first, "changed")],
-            [result(second, "changed")],
+            [{...result(first, "changed"), shots: [{...result(first, "changed").shots[0], layout: ['text "first" 1×1']}]}],
+            [{...result(second, "changed"), shots: [{...result(second, "changed").shots[0], layout: ['text "second" 1×1']}]}],
             {guideDir, stagingDir, promote: true}
         );
 
         expect(final.shots[0]).toMatchObject({
             status: "changed",
             staged: first,
+            // The kept image is the second capture's, so its layout goes with it.
+            layout: ['text "second" 1×1'],
             stability: {status: "reproduced", diff: {status: "unchanged", diffPixels: 0}},
         });
         expect(readFileSync(first, "utf8")).toBe("second");
@@ -510,6 +527,10 @@ describe("stability recapture", () => {
             first, second, [], first.replace(/\.webp$/, ".repeat.diff.png"));
         expect(compareShots).toHaveBeenNthCalledWith(2,
             committed, first, [], first.replace(/\.webp$/, ".diff.png"));
+        // The sheet is drawn from the capture that may ship, after the swap.
+        expect(renderReviewSheet).toHaveBeenCalledTimes(1);
+        expect(renderReviewSheet).toHaveBeenCalledWith(
+            committed, first, [], first.replace(/\.webp$/, ".review.webp"), target);
     });
 
     it("quarantines two candidates that disagree and preserves both", () => {
@@ -542,6 +563,12 @@ describe("stability recapture", () => {
         expect(readFileSync(committed, "utf8")).toBe("baseline");
         const report = JSON.parse(readFileSync(join(stagingDir, "report.json"), "utf8"));
         expect(report.results[0].shots[0].status).toBe("unstable");
+        // What was flagged, and what differed between the two captures.
+        expect(renderReviewSheet).toHaveBeenCalledWith(
+            committed, first, [], first.replace(/\.webp$/, ".review.webp"), target);
+        expect(renderReviewSheet).toHaveBeenCalledWith(
+            first, first.replace(/\.webp$/, ".repeat.webp"), [],
+            first.replace(/\.webp$/, ".repeat.review.webp"), `${target} (first vs second capture)`);
     });
 });
 

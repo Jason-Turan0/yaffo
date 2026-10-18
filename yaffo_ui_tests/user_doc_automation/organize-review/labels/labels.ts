@@ -27,12 +27,23 @@ export default defineWalkthrough({
 
     shots: {
         "settings-labels.webp": {
+            annotations: {
+                "filter-labels": "#label-filter",
+                "label-pills": "#labels-section .labels-list",
+                "add-label": "#labels-section .add-label-form",
+                "re-classify-all-photos": "#labels-section .labels-reclassify button",
+            },
             viewport: {width: 1400, height: 2200},
             goto: "/settings",
             clip: "#labels-section",
             setup: waitForLabels,
         },
         "classify-labels-automation.webp": {
+            annotations: {
+                "confidence-threshold": ".form-group:has(#config-confidence_threshold)",
+                "max-labels-per-photo": ".form-group:has(#config-max_labels)",
+                "save": ".automation-configure-form > button[type=submit]",
+            },
             viewport: {width: 1400, height: 1000},
             goto: "/utilities/automations/classify_labels",
             clip: "#automation-configure-panel",

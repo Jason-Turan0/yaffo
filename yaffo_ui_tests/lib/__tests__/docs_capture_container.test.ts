@@ -80,6 +80,18 @@ describe("buildCaptureArgs", () => {
 });
 
 describe("buildAppArgs", () => {
+    it("builds and serves the peer in the same container on its own loopback port", () => {
+        const build = appArgs({mode: "fixture", withPeer: true});
+        expect(build.slice(-3)).toEqual(["--build-seed", "--docs", "--peer"]);
+        expect(build).not.toContain("-p");
+        const serve = appArgs({withPeer: true});
+        expect(serve).toContain("127.0.0.1:5003:5003");
+        expect(serve).toContain("yaffo.docs.peer=true");
+        expect(serve.at(-1)).toBe("--peer");
+        expect(appArgs()).not.toContain("127.0.0.1:5003:5003");
+        expect(appArgs({withPeer: true, hostPort: 5302})).toContain("127.0.0.1:5303:5003");
+    });
+
     it("serves the docs fixture by name on the docs network", () => {
         const argv = appArgs();
         expect(argv).toEqual(expect.arrayContaining(["--name", DOCS_APP_CONTAINER, "--network", DOCS_NETWORK]));

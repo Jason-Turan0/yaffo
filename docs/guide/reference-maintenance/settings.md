@@ -3,7 +3,61 @@
 This page lists the options on the **Settings** screen. Open **Settings** from
 the top navigation.
 
+## Explore the Page
+
+<div class="annotated-screenshot annotated-screenshot--narrow" markdown="1">
+
 ![The Settings page showing Language, Units, and Media Directories](assets/settings/settings-overview.webp)
+
+<div class="screenshot-annotation" data-x="97.4" data-y="8.6" data-region="1.1 6.1 97.7 10.1" markdown="1">
+
+### Media Directories Section
+
+The folders Yaffo scans. [Read more](#media-directories).
+
+</div>
+
+<div class="screenshot-annotation" data-x="97.4" data-y="20.5" data-region="1.1 18 97.7 14.3" markdown="1">
+
+### Thumbnail Directory Section
+
+Where face thumbnails are stored, with their count and size. [Read more](#thumbnail-directory).
+
+</div>
+
+<div class="screenshot-annotation" data-x="97.4" data-y="36.7" data-region="1.1 34.2 97.7 9.3" markdown="1">
+
+### Language Section
+
+The interface language. [Read more](#language).
+
+</div>
+
+<div class="screenshot-annotation" data-x="97.4" data-y="47.8" data-region="1.1 45.3 97.7 9.3" markdown="1">
+
+### Units Section
+
+Miles or kilometers. [Read more](#units).
+
+</div>
+
+<div class="screenshot-annotation" data-x="97.4" data-y="59" data-region="1.1 56.5 97.7 10.1" markdown="1">
+
+### AI Generation Section
+
+The provider, model, and API key for AI features. [Read more](#ai-generation).
+
+</div>
+
+<div class="screenshot-annotation" data-x="97.4" data-y="70.9" data-region="1.1 68.4 97.7 31.6" markdown="1">
+
+### Assistant Section
+
+What Ask Yaffo may look at and change. [Read more](#assistant).
+
+</div>
+
+</div>
 
 Most sections have their own **Save** button — changes take effect when you save
 that section.
@@ -20,8 +74,11 @@ that section.
 
 ## Media Directories
 
-The folders Yaffo scans for photos and videos to index. Yaffo reads these files
-in place; it does not move or modify your originals.
+The folders Yaffo scans for photos and videos to index. Yaffo indexes these files
+in place. Adding a directory does not move or modify the originals. If you
+enable metadata write-back through
+[Export photo tag](../create-customize/automations.md#write-metadata-back-to-files),
+that automation writes the selected fields into the original files.
 
 - **Add Directory** — type a path or **Browse…** to a folder, then add it.
 - **Remove** — stop scanning a folder. This does not delete anything on disk.

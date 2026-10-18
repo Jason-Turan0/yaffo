@@ -5,6 +5,7 @@
  *   npm run docs:capture -- --docker
  *   npm run docs:capture -- --docker --promote library-basics/browsing-filtering
  *   npm run docs:capture                  # host browser against a host sandbox
+ *   npm run docs:capture -- --docker --sync-annotations   # markers only, no images
  *
  * Captures land in .staging/ and are compared against what is committed. Nothing
  * touches docs/ unless --promote is passed, so a plain run can answer "is anything
@@ -18,7 +19,6 @@
  * not comparable. Encoding and comparison stay on the host: they need Pillow and
  * NumPy from the project virtualenv.
  */
-import {createHash} from "crypto";
 import {scrubProcessEnv} from "./env";
 import {
     appContainerRunning,
@@ -33,7 +33,9 @@ import {existsSync, readFileSync, writeFileSync} from "fs";
 import {join, resolve} from "path";
 import {pathToFileURL} from "url";
 import {parse as parseYaml} from "yaml";
+import {syncAnnotations} from "./annotations";
 import {loadWalkthroughs} from "./load";
+import {lockShotEntry} from "./lockfile";
 import {currentHead, dependencyHashes} from "./dependency_changes";
 import {BASE_URL, CAPTURE_DIR, CONTENT_DIR, DOCS_DATA_DIR, GUIDE_DIR} from "./paths";
 import {
@@ -91,18 +93,7 @@ const writeLockfile = (result: WalkthroughResult): void => {
         observed: result.observation,
         dependencyHashes: dependencyHashes(
             result.observation, declaredDependencies(result.page), REPO),
-        shots: Object.fromEntries(result.shots.map((shot) => [
-            shot.target,
-            {
-                width: shot.width,
-                height: shot.height,
-                // Detects a committed screenshot being replaced outside this pipeline;
-                // the staleness comparison itself is per-pixel, not by hash.
-                sha256: existsSync(join(GUIDE_DIR, shot.target))
-                    ? createHash("sha256").update(readFileSync(join(GUIDE_DIR, shot.target))).digest("hex")
-                    : null,
-            },
-        ])),
+        shots: Object.fromEntries(result.shots.map((shot) => [shot.target, lockShotEntry(shot, GUIDE_DIR)])),
     };
     writeFileSync(join(dir, `${name}.lock.json`), JSON.stringify(lock, null, 4) + "\n");
 };
@@ -112,6 +103,10 @@ export const main = async (
     dockerEnv: Record<string, string> = DOCKER_ENV
 ): Promise<number> => {
     const promote = args.includes("--promote");
+    // Promotion moves annotation markers with their images. This writes the markers
+    // alone, for a page whose screenshots are current but whose markers were placed
+    // by hand or predate their selectors.
+    const annotationsOnly = args.includes("--sync-annotations");
     const useDocker = args.includes("--docker");
     // The GitHub discovery capture hands walkthrough defects to docs:heal. This is
     // deliberately opt-in: verification captures omit it and remain strict.
@@ -206,6 +201,8 @@ export const main = async (
             const mark = {new: "+", changed: "~", unchanged: "=", unstable: "?"}[shot.status];
             const detail = shot.status === "unstable"
                 ? "  did not reproduce"
+                : shot.diff?.change && !["changed", "unchanged"].includes(shot.diff.change)
+                ? `  ${shot.diff.change}`
                 : shot.diff?.reason === "size"
                 ? "  reframed"
                 : shot.diff?.diffPixels
@@ -223,6 +220,15 @@ export const main = async (
             failed++;
             console.error(`  ! ${result.error}`);
         }
+    }
+
+    if (promote || annotationsOnly) {
+        // Same rule as the lockfile: geometry from a failed or unstable capture is not
+        // a verified layout, so it never reaches the page.
+        const verified = results.filter((result) =>
+            !result.error && !result.shots.some((shot) => shot.status === "unstable"));
+        const report = syncAnnotations(GUIDE_DIR, verified);
+        if (report.length) console.log(`\nAnnotations:\n${report.map((line) => `  ${line}`).join("\n")}`);
     }
 
     const shots = results.flatMap((result) => result.shots);

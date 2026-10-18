@@ -98,6 +98,12 @@ export default defineWalkthrough({
 
     shots: {
         "themes-list.webp": {
+            annotations: {
+                "system-themes": "#themes-nav .themes-nav-heading:text-is(\"System\"), #themes-nav .themes-nav-heading:text-is(\"System\") + ul.panel-nav",
+                "custom-themes": "#themes-nav .themes-nav-heading:text-is(\"Custom\"), #themes-nav .themes-nav-heading:text-is(\"Custom\") + ul.panel-nav",
+                "new-theme": "#new-theme-button",
+                "theme-details": ".themes-content .page-header",
+            },
             viewport: {width: 1400, height: 900},
             goto: "/themes/classic",
             setup: async (page) => {
@@ -107,6 +113,11 @@ export default defineWalkthrough({
             },
         },
         "theme-editor.webp": {
+            annotations: {
+                "conversation": ".theme-conversation",
+                "theme-actions": ".theme-actions",
+                "selected-theme": "#themes-nav a.active",
+            },
             viewport: {width: 1400, height: 900},
             goto: "/themes/test-ocean",
             setup: async (page) => {

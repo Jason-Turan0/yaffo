@@ -51,13 +51,20 @@ describe('app initializer', () => {
     await loadModule('utilities/_base.js');
 
     const events = [];
-    document.addEventListener('yaffo:app-init-complete', (event) => events.push(event));
+    const readyDuringDispatch = [];
+    document.addEventListener('yaffo:app-init-complete', (event) => {
+        events.push(event);
+        readyDuringDispatch.push(document.documentElement.dataset.appReady);
+    });
 
     await loadModule('app.js');
     const app = await window.PHOTO_ORGANIZER.appReady;
 
     expect(app).toBe(window.PHOTO_ORGANIZER);
     expect(events).toHaveLength(1);
+    // Marked only after every init listener has run.
+    expect(readyDuringDispatch).toEqual([undefined]);
+    expect(document.documentElement.dataset.appReady).toBe('true');
     expect(events[0].detail.app).toBe(window.PHOTO_ORGANIZER);
     expect(window.PHOTO_ORGANIZER.COMPONENTS.navPagesBar).toBeTruthy();
 

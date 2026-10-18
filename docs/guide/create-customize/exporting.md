@@ -1,7 +1,18 @@
+---
+hide:
+  - toc
+---
+
 # Exporting Photos
 
 Open **Library** → **Automations** to create a sync. This walkthrough takes you
 through setup, preview, and the first run.
+
+## Set Up the Sync
+
+<div class="guide-walkthrough" markdown="1">
+
+### Create a Send Sync
 
 Choose **New automation** → **Send to…**, select **Folder**, **OneDrive**,
 **Google Photos**, **Immich**, or a published custom send service, and name the
@@ -9,41 +20,58 @@ sync.
 
 ![The new automation dialog with Send to and Folder selected](assets/exporting/new-export-sync.webp)
 
-1. For a photo service, complete **Account** first. Syncs using the same service account
-   share its sign-in; if it needs access for sending as well as importing, Yaffo
-   asks you to sign in for that access.
+### Connect an Account
 
-   ![The Account step for connecting an Immich service](assets/exporting/export-account.webp)
-2. Choose the destination in **Folder and options**. A Folder destination must
-   be outside your library. Folder and OneDrive targets offer folder layouts;
-   Folder also offers JPEG conversion and a photo-frame-sized option.
+For a photo service, complete **Account** first. Syncs using the same service
+account share its sign-in; if it needs access for sending as well as importing,
+Yaffo asks you to sign in for that access.
 
-   ![Folder destination and export options](assets/exporting/export-folder-options.webp)
-3. In **What to send**, choose **An album**, **Photos matching a filter**, or
-   **A custom rule**. Album membership follows your edits. Filters are checked
-   again on each run, so new matches are sent and photos that stop matching leave
-   the selection. Choose at least one filter to use this option.
+![The Account step for connecting an Immich service](assets/exporting/export-account.webp)
 
-   ![Choose an album, a filter, or a custom rule for the photos to send](assets/exporting/export-selection.webp)
-4. **A custom rule** opens the selection builder. Describe which photos to send,
-   their destination collections and captions where the service supports them,
-   then test and publish the rule. It selects photos; the sync performs the
-   transfers.
+### Choose the Destination
 
-   ![The custom rule selection builder](assets/exporting/export-custom-rule.webp)
-5. Use **Test** to preview the selected photos and destinations. Turn the sync
-   on after reviewing what will be sent and how removals are handled, then use
-   **Run now** for the first transfer.
+Choose the destination in **Folder and options**. A Folder destination must be
+outside your library. Folder and OneDrive targets offer folder layouts; Folder
+also offers JPEG conversion and a photo-frame-sized option.
 
-   ![A dry-run preview of the selected album and destination](assets/exporting/export-preview.webp)
+![Folder destination and export options](assets/exporting/export-folder-options.webp)
 
-   After enabling the sync, **Run now** is available for the first transfer.
+### Choose What to Send
 
-   ![An enabled sync ready for its first run](assets/exporting/export-ready-to-run.webp)
+In **What to send**, choose **An album**, **Photos matching a filter**, or
+**A custom rule**. Album membership follows your edits. Filters are checked again
+on each run, so new matches are sent and photos that stop matching leave the
+selection. Choose at least one filter to use this option.
+
+![Choose an album, a filter, or a custom rule for the photos to send](assets/exporting/export-selection.webp)
+
+### Build a Custom Rule
+
+**A custom rule** opens the selection builder. Describe which photos to send,
+their destination collections and captions where the service supports them,
+then test and publish the rule. It selects photos; the sync performs the
+transfers.
+
+![The custom rule selection builder](assets/exporting/export-custom-rule.webp)
+
+### Preview the Transfer
+
+Use **Test** to preview the selected photos and destinations. Turn the sync on
+after reviewing what will be sent and how removals are handled.
+
+![A dry-run preview of the selected album and destination](assets/exporting/export-preview.webp)
+
+### Run the Sync
+
+After enabling the sync, **Run now** is available for the first transfer.
 
 Syncs send photos in batches and remember completed work. An interrupted run can
 continue later. Changing the account, destination, selection, or access may
 require turning the sync on again after another review.
+
+![An enabled sync ready for its first run](assets/exporting/export-ready-to-run.webp)
+
+</div>
 
 ## What Happens When a Photo Leaves the Selection?
 
@@ -68,10 +96,16 @@ does not make a two-way mirror.
 
 ## Schedule and Monitor the Sync
 
+<div class="guide-walkthrough" markdown="1">
+
+### Set the Schedule
+
 New syncs start with a nightly schedule. Open **When** to adjust it; with no
 triggers, the sync runs only when you start it manually. Album send syncs also react to membership changes and library deletions.
 
 ![The sync's schedule and event triggers](assets/exporting/export-schedule.webp)
+
+### Check Run History
 
 Check **Run history** for progress. Expand **Items** to search photos, filter
 statuses, and read failure reasons. Fix the problem before using **Retry failed**.
@@ -80,6 +114,8 @@ same account. Turn the sync off to pause automatic runs. Changes to setup or
 access can require another review before turning it on again.
 
 ![The run history panel before the first run](assets/exporting/export-run-history.webp)
+
+</div>
 
 ## Related
 

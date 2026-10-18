@@ -3,6 +3,7 @@ import {join, resolve} from "path";
 import {z} from "zod";
 import {toTextPart} from "@lib/model_clients/model_client.interface";
 import type {ToolProvider} from "@lib/tool_providers/toolprovider.types";
+import {GUIDE_COMPONENTS} from "./guide_components";
 import {parseAnswer, runToolLoop} from "./tool_loop";
 import {revertPage, runGates} from "./gates";
 import type {Evidence} from "./evidence";
@@ -126,6 +127,8 @@ ${evidence.stringChanges.map((c) => c.now !== undefined
 
 Each of these is a control the reader is told to use by a name that no longer exists.
 ` : ""}
+${GUIDE_COMPONENTS}
+
 ## What matters
 
 - Anything the page says that the new screenshot contradicts must be corrected —
@@ -135,6 +138,9 @@ Each of these is a control the reader is told to use by a name that no longer ex
 - Every image reference must point at a file that exists. Adding a screenshot means
   adding it to the walkthrough too, or the docs build fails.
 - The walkthrough is TypeScript and must still compile if you change it.
+- An annotated screenshot's markers come from its shot's \`annotations\` selectors.
+  When the layout moved, fix the selector, never the coordinates; when you add,
+  rename, or remove an annotation, change its selector entry to match.
 - Leave the page alone where it is already accurate. Do not rewrite for its own sake.
 
 ## Your answer

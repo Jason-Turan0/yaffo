@@ -183,13 +183,15 @@ automations.initAutomationTest = (slug, config, defaultPath = null, i18n) => {
     };
 
     // Action name -> a generic label for a grouped run, e.g. "tag_media_items" -> "Tag media items".
+    // Names without a catalog entry fall back to the humanized name via defaultValue:
+    // on a miss i18next returns the key without its namespace, so comparing the result
+    // to the namespaced key never detected one and leaked the raw key into the page.
     /** @param {string} name */
     const humanize = (name) => {
-        const key = `utilities:automations.test.actionNames.${name}`;
-        const translated = i18n.t(key);
-        if (translated !== key) return translated;
         const words = name.replace(/_/g, ' ');
-        return words.charAt(0).toUpperCase() + words.slice(1);
+        return i18n.t(`utilities:automations.test.actionNames.${name}`, {
+            defaultValue: words.charAt(0).toUpperCase() + words.slice(1),
+        });
     };
 
     /** @param {AutomationTestResult} data */

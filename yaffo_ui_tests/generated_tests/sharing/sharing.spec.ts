@@ -462,7 +462,7 @@ test.describe('Sharing Feature', () => {
 
     // Share the seeded album from the album's own Share action
     await page.goto('/albums');
-    await page.locator('a', { hasText: 'Seeded Album' }).first().click();
+    await page.locator('a', { hasText: "Maya's Big Game" }).first().click();
     await page.waitForURL(/\/albums\/\d+/);
     const albumUrl = new URL(page.url());
     await page.locator('#share-album-button').click();
@@ -476,12 +476,12 @@ test.describe('Sharing Feature', () => {
     await page.goto('/albums');
     await expect(page.locator('.chip', { hasText: 'Shared' }).first()).toBeVisible();
     await page.goto('/sharing/settings');
-    const albumRow = page.locator('.sharing-shares-nav .sharing-share-nav-item', { hasText: 'Seeded Album' });
+    const albumRow = page.locator('.sharing-shares-nav .sharing-share-nav-item', { hasText: "Maya's Big Game" });
     await expect(albumRow).toHaveCount(1);
 
     // B lists the album's photos. The album may be empty if a prior run removed
     // all members — the share itself still works and can be revoked.
-    const viewLink = await sharedWithMeView(pageB, /Seeded Album/);
+    const viewLink = await sharedWithMeView(pageB, /Maya's Big Game/);
     await viewLink.click();
     const initialCount = await pageB.locator('.remote-photo-card').count();
     const albumFilesUrl = pageB.url();
@@ -502,14 +502,14 @@ test.describe('Sharing Feature', () => {
     }
 
     // Cleanup: revoke the album share
-    await revokeOutboundShares(page, /Seeded Album/);
+    await revokeOutboundShares(page, /Maya's Big Game/);
   });
 
   test('sharing_album_share_modal_toggle - The album Share modal shares with a device and un-shares it again', async ({ page }) => {
     const ids = await deviceIds(page, pageB);
 
     await page.goto('/albums');
-    await page.locator('a', { hasText: 'Seeded Album' }).first().click();
+    await page.locator('a', { hasText: "Maya's Big Game" }).first().click();
     await page.waitForURL(/\/albums\/\d+/);
     const albumPath = new URL(page.url()).pathname;
     const albumUrlPattern = new RegExp(`${albumPath.replace(/\//g, '\\/')}$`);
@@ -548,7 +548,7 @@ test.describe('Sharing Feature', () => {
 
     // And it is listed under "Shared With Others", named by the album
     await page.goto('/sharing/settings');
-    await expect(page.locator('.sharing-shares-nav .sharing-share-nav-item', { hasText: 'Seeded Album' })).toHaveCount(1);
+    await expect(page.locator('.sharing-shares-nav .sharing-share-nav-item', { hasText: "Maya's Big Game" })).toHaveCount(1);
 
     // Reopen: the checkbox reflects the truth; unchecking revokes
     await page.goto(albumPath);
@@ -564,7 +564,7 @@ test.describe('Sharing Feature', () => {
     await page.goto('/albums');
     await expect(page.locator('.album-tile .chip', { hasText: 'Shared' })).toHaveCount(0);
     await page.goto('/sharing/settings');
-    await expect(page.locator('.sharing-shares-nav .sharing-share-nav-item', { hasText: 'Seeded Album' })).toHaveCount(0);
+    await expect(page.locator('.sharing-shares-nav .sharing-share-nav-item', { hasText: "Maya's Big Game" })).toHaveCount(0);
   });
 
   // Entry condition for everything below: none of the sharing routes may scroll

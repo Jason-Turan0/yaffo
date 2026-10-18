@@ -60,6 +60,8 @@ export interface Shot {
     goto: string | ((context: GotoContext) => string | Promise<string>);
     /** Element whose box defines the crop. Omit for a plain viewport shot. */
     clip?: string;
+    /** Breathing room around the crop in CSS pixels. Defaults to 16; use 0 for a modal. */
+    clipPadding?: number;
     /** Trim the crop to N complete rows of a grid. */
     rows?: RowRule;
     /**
@@ -68,6 +70,17 @@ export interface Shot {
      * live map tiles. See "Non-reproducible regions" in the plan.
      */
     ignoreRegions?: string[];
+    /**
+     * Annotation heading id -> selector, for a shot the page shows as an annotated
+     * screenshot. The id is the slug of the annotation's heading in the markdown
+     * (`### Library Counts` -> `library-counts`). A selector matching several
+     * elements frames all of them, so one annotation can cover a row of buttons.
+     *
+     * Capture measures each box in the settled page and `--promote` writes it into
+     * the annotation's `data-region`, `data-x`, and `data-y`, so the markers follow
+     * the layout instead of being placed by eye.
+     */
+    annotations?: Record<string, string>;
     /** Drive the page into the state this shot needs, after it has settled. */
     setup?: (page: Page) => Promise<void>;
     /** Undo state created by setup after the image has been captured. */

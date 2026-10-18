@@ -1,5 +1,7 @@
 import { expect, APIRequestContext } from '@playwright/test';
 
+export const PRIMARY_VIDEO = '2021-07-11_113104_boy-and-the-waves.mp4';
+
 export const PRIMARY_DETAIL_IMAGE = '2015-09-10_153200_daughter-one-year-portrait.png';
 
 export async function findMediaIdByFilename(request: APIRequestContext, filename: string): Promise<number> {

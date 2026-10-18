@@ -1,6 +1,6 @@
 {
     "page": "start-here/concepts",
-    "lastVerifiedSha": "038a029250218bce42cb9a98979c3068ba240b2e",
+    "lastVerifiedSha": "d21c959e6b027b41eb5bbb9fadf39a90de500bc8",
     "observed": {
         "page": "start-here/concepts",
         "urls": [
@@ -270,7 +270,7 @@
         "yaffo/static/action-links.css": "fb3fd8e47c18993d826f7d34f8ccb24dc1aeb18a9aacb45c3a4fc41a901a4300",
         "yaffo/static/albums/albums.css": "3e89aa5c8295acce76268629ae1a0e7cbd0eecc6153dec90d456724f9971210f",
         "yaffo/static/albums/albums.js": "2bc17963a8cbce25be2b8106c1450ad9ea9ef51a6041ac5e3c840ac74a87e42a",
-        "yaffo/static/app.js": "7aa9b2b8c921352f3928e5735a3210f9b085911c03085269e3e33c260ac6511b",
+        "yaffo/static/app.js": "0528b79fdc7d6be60af1e15f34314204a2f553a897b33e59d99593b5d31c593b",
         "yaffo/static/assistant/assistant.css": "51af784b2881e1c3f119d97f2e88227a17e5fe28a88e67a63e9de83d711a46ca",
         "yaffo/static/assistant/assistant.js": "117173da2d7541ee51a23dcee1d19acd102bba8a1b66585a0e9bba687f38a112",
         "yaffo/static/assistant/plan_card.js": "22339c5d29df625ce95a94124b30fe474512d9a17b3d8420ee20f87c37daaf32",
@@ -379,7 +379,7 @@
         "yaffo/static/utilities/_base.css": "88ba38de1b2f83e13008efc45ef2ae143c4add99a4f05db4fb300fa85998f411",
         "yaffo/static/utilities/_base.js": "d1ddbb0f4fd52e01532391ea913a2151b2bb23467af8a3228bc8f97b394bdc17",
         "yaffo/static/utilities/automations.css": "6be7bb1f5f7fdb9c4b7b81e795dde05fad5d634286200ac3af85f35adcdf8a06",
-        "yaffo/static/utilities/automations.js": "ba3007e58a31c13805375cc3bd2db5a3896bbf00928752ce8a200ef9f7ad4af6",
+        "yaffo/static/utilities/automations.js": "bf186c1be36678ef1a48a51134a165c0731b1ef18012ac2008b8f49d097ca158",
         "yaffo/static/utilities/index_photos.js": "ebcfa41c76729c685544406c63d119711916b810360ee84420d92f0b04469388",
         "yaffo/static/utilities/remove_duplicates.js": "7a214e027b94ae7bdc30bc81c8d302147c9c51660a370e28f79098dfe58bafab",
         "yaffo/static/utils.js": "0d4990647fb99c0c611f38f9f140fdba555043ce3857dbe082c53fd193861c4a",

@@ -5,6 +5,14 @@ export default defineWalkthrough({
 
     shots: {
         "settings-overview.webp": {
+            annotations: {
+                "media-directories-section": ".settings-section:has(> h2:text-is(\"Media Directories\"))",
+                "thumbnail-directory-section": ".settings-section:has(> h2:text-is(\"Thumbnail Directory\"))",
+                "language-section": ".settings-section:has(> h2:text-is(\"Language\"))",
+                "units-section": ".settings-section:has(> h2:text-is(\"Units\"))",
+                "ai-generation-section": "#llm-section",
+                "assistant-section": "#assistant-section",
+            },
             viewport: {width: 1400, height: 2200},
             goto: "/settings",
             clip: ".main-content",

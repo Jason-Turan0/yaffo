@@ -134,6 +134,12 @@ export default defineWalkthrough({
 
     shots: {
         "utilities-remove-duplicates.webp": {
+            annotations: {
+                "scan-totals": "#remove-duplicates-form .stats-grid",
+                "directory": "#directory-row-0",
+                "rescan-and-add": "#rescan-directories, #add-directory-button",
+                "find-duplicates": "#find-duplicates-button",
+            },
             viewport: {width: 1400, height: 1000},
             goto: "/utilities/remove-duplicates",
             clip: "#remove-duplicates-form",
@@ -147,6 +153,13 @@ export default defineWalkthrough({
             },
         },
         "duplicate-results.webp": {
+            annotations: {
+                "result-totals": "#duplicates-header .stats-grid",
+                "action": "#duplicates-header .form-group:has(#action-type)",
+                "remove-button": "#duplicates-header button.btn-danger",
+                "keeper": ".duplicate-group >> nth=0 >> .photo-card:not(.selected)",
+                "selected-copy": ".duplicate-group >> nth=0 >> .photo-card.selected",
+            },
             viewport: {width: 1400, height: 1800},
             goto: "/utilities/remove-duplicates",
             clip: ".utility-page",

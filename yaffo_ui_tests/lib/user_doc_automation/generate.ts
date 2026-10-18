@@ -10,6 +10,7 @@ import {
 import {supportsVision, toTextPart, visionModelFor} from "@lib/model_clients/model_client.interface";
 import type {ModelAlias} from "@lib/model_clients/model_client.interface";
 import type {ToolProvider} from "@lib/tool_providers/toolprovider.types";
+import {GUIDE_COMPONENTS} from "./guide_components";
 import {parseAnswer, runToolLoop} from "./tool_loop";
 
 /**
@@ -81,7 +82,9 @@ dependencies.
 
 Write documentation a reader can follow: what the screen is for, what each control does,
 and what to do when it does not behave as expected. Describe only what you have actually
-seen in the app.
+seen in the app. Explain screenshots by annotating them, and use the guide's other
+components where the content has their shape: a sequence of steps, a choice between
+options, or a diagnosis.
 
 Work out how to reach each view by reading the app's routes and templates and by driving
 the running sandbox with the browser tools. Prefer a URL that pins state over clicking
@@ -135,6 +138,8 @@ You decide which screenshots the page needs. For each one:
 The two must match exactly. A reference with no file behind it fails the docs build,
 and a captured file nothing references is dead weight.
 
+${GUIDE_COMPONENTS}
+
 ## The types you are writing against
 
 \`\`\`typescript
@@ -172,6 +177,8 @@ Start from the templates and routes. Do not search the filesystem to find them.
 - Pin every piece of server-persisted state in the URL. The library view is the known
   example: it is saved server-side and rewritten by the timeline scrubber.
 - Grids should end on a whole row.
+- Every annotated screenshot's shot declares \`annotations\`, one selector per
+  annotation heading, chosen from the templates and confirmed in the browser.
 - \`flows\` should drive the sections the page describes but does not picture, so their
   templates are recorded. A page with no shots still needs them.
 - Comment *why*, not what — especially anything non-obvious you discovered.

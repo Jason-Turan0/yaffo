@@ -21,7 +21,7 @@ import {parse as parseYaml} from "yaml";
 import {applyFix, buildEvidence, openSession, triageShot} from "./index";
 import {changedStrings, changesQuotedBy} from "./strings";
 import type {StringChange} from "./strings";
-import type {Triage, WalkthroughResult} from "./index";
+import type {RowHunk, Triage, WalkthroughResult} from "./index";
 import {createFilesystemClient} from "@lib/tool_providers/mcp_filesystem_client";
 import {createPlaywrightClient} from "@lib/tool_providers/mcp_playwright_client";
 import {localFilesystemMemoryToolFactory} from "@lib/tool_providers/local_filesystem_memory_tool";
@@ -29,6 +29,9 @@ import type {ToolProvider} from "@lib/tool_providers/toolprovider.types";
 import type {ModelAlias} from "@lib/model_clients/model_client.interface";
 import {YAFFO_APP_ROOT} from "@lib/types";
 import {changedDependencies} from "./dependency_changes";
+import {compareLayouts} from "./layout";
+import {committedLockShot, recordPromotedShot} from "./lockfile";
+import type {LockShot} from "./lockfile";
 import type {DependencyChange, PageLock} from "./dependency_changes";
 
 // Authored spec, generated walkthroughs, and transient staging live in the
@@ -77,6 +80,96 @@ export const acceptMinorEnvironmentVariation = (
             `Accepted as a minor environment variation: ` +
             `${(diff.ratio * 100).toFixed(4)}% of pixels changed, within the 0.1% limit, ` +
             "with no reframing or prose impact.",
+    };
+};
+
+/**
+ * A verdict that needs no model: the differ aligned the shot's rows and found the
+ * same content with only blank space added or removed, and the change reproduced on
+ * an immediate recapture. Nothing the page can quote or describe changed, so the shot
+ * is promoted as the app's current rendering and the prose is left alone. Anything
+ * else, including content revealed or hidden by a reframe, still goes to triage.
+ */
+export const layoutOnlyVerdict = (shot: WalkthroughResult["shots"][number]): Triage | null => {
+    const diff = shot.diff;
+    if (
+        shot.status !== "changed" ||
+        diff?.change !== "layout-only" ||
+        shot.stability?.status !== "reproduced"
+    ) return null;
+
+    // Rows first, then bands found inside strips. Moves pair a removal with an insertion
+    // of the same pixels, so they are described once, from the insertion's side.
+    const band = (axis: "rows" | "columns", hunk: RowHunk): string | null => {
+        const [unit, coordinate] = axis === "rows" ? ["row", "y"] : ["column", "x"];
+        if (hunk.moved) {
+            return hunk.op === "insert"
+                ? `content moved to ${coordinate}=${hunk.candidate[0]} (${hunk.candidate[1] - hunk.candidate[0]} ${unit}s)`
+                : null;
+        }
+        return hunk.op === "insert"
+            ? `${hunk.candidate[1] - hunk.candidate[0]} blank ${unit}(s) added at ${coordinate}=${hunk.candidate[0]}`
+            : hunk.op === "delete"
+            ? `${hunk.baseline[1] - hunk.baseline[0]} blank ${unit}(s) removed at ${coordinate}=${hunk.baseline[0]}`
+            : `blank ${unit}s ${hunk.baseline[0]}–${hunk.baseline[1]} became ${hunk.candidate[0]}–${hunk.candidate[1]}`;
+    };
+    const bands = [
+        ...(diff.hunks ?? []).filter((hunk) => hunk.op !== "equal").map((hunk) => band("rows", hunk)),
+        ...(diff.blocks ?? []).filter((block) => block.op !== "equal").map((block) => band(block.axis, block)),
+    ].filter((text): text is string => text !== null);
+    const shown = bands.length > 4 ? [...bands.slice(0, 4), `${bands.length - 4} more`] : bands;
+    return {
+        classification: "intended_change",
+        confidence: "high",
+        summary: `Same content, re-laid out: ${shown.join("; ")}.`,
+        reasoning: "Decided without a model. The differ aligned rows before comparing" +
+            (diff.blocks?.length ? ", and the columns of strips that still differed" : "") +
+            ": every row of content in the committed shot is present and unchanged in the new one " +
+            `(${diff.residualPixels ?? 0} px residual), and only blank space was added or removed. ` +
+            "The change reproduced on an immediate recapture, so it is the app's current " +
+            "rendering. No visible text or control changed, so the page prose is unaffected.",
+        proseImpact: [],
+        recommendedAction: "promote",
+    };
+};
+
+/**
+ * A verdict that needs no model, from text and controls rather than pixels: the
+ * change reproduced, and every element the committed shot shows is still there, in
+ * order, with the same role, the same text, and the same size, and nothing was added.
+ * Whatever the pixels did (columns widened by a fraction of a pixel, glyphs drawn at
+ * a new offset, a control restyled), nothing a page could quote or a reader could
+ * act on changed, so the shot is promoted as the app's current rendering.
+ *
+ * Needs the committed shot's layout, recorded in the lockfile from the capture that
+ * produced it, and a lock entry whose hash still matches the committed image.
+ */
+export const layoutVerifiedVerdict = (
+    shot: WalkthroughResult["shots"][number],
+    committed: LockShot | null
+): Triage | null => {
+    if (
+        shot.status !== "changed" ||
+        shot.stability?.status !== "reproduced" ||
+        !shot.layout?.length ||
+        !committed?.layout?.length
+    ) return null;
+    const diff = compareLayouts(committed.layout, shot.layout);
+    if (!diff.same) return null;
+
+    const pixels = shot.diff?.change ? ` The pixel comparison called it ${shot.diff.change}` +
+        (shot.diff.residualPixels ? `, with ${shot.diff.residualPixels} px left after alignment.` : ".") : "";
+    return {
+        classification: "intended_change",
+        confidence: "high",
+        summary: `Same text and controls, re-rendered: all ${shot.layout.length} elements present ` +
+            "with the same roles, text, and sizes.",
+        reasoning: "Decided without a model. Every element the committed shot shows (role, text, and " +
+            "size, from the lockfile) is in the new capture in the same order, and none was added." +
+            `${pixels} The change reproduced on an immediate recapture, so it is the app's current ` +
+            "rendering. No visible text or control changed, so the page prose is unaffected.",
+        proseImpact: [],
+        recommendedAction: "promote",
     };
 };
 
@@ -365,6 +458,26 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
         }
 
         for (const {result, shot} of pending) {
+            const committedShot = committedLockShot(CONTENT_DIR, GUIDE_DIR, result.page, shot.target);
+            const mechanical = layoutOnlyVerdict(shot) ?? layoutVerifiedVerdict(shot, committedShot);
+            if (mechanical) {
+                verdicts.push({page: result.page, target: shot.target, triage: mechanical});
+                console.log(`${MARK[mechanical.classification]} ${shot.target}`);
+                console.log(`   ${mechanical.summary}`);
+                if (apply) {
+                    const committed = join(GUIDE_DIR, shot.target);
+                    mkdirSync(dirname(committed), {recursive: true});
+                    copyFileSync(shot.staged, committed);
+                    // No verification capture follows, so record the shot here, or the
+                    // lock would go on describing the image just replaced.
+                    recordPromotedShot(CONTENT_DIR, GUIDE_DIR, result.page, shot);
+                    console.log("   → promoted without a model call; prose unaffected\n");
+                } else {
+                    console.log("   → would promote without a model call (re-run with --apply)\n");
+                }
+                continue;
+            }
+
             const evidence = buildEvidence(result, shot, {
                 guideDir: GUIDE_DIR,
                 stagingDir: CAPTURE_DIR,
@@ -375,6 +488,7 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
                 // Without this the dependency diff spans only uncommitted work, which
                 // in CI is nothing at all.
                 lastVerifiedSha: pageLock(result.page)?.lastVerifiedSha,
+                committedLayout: committedShot?.layout,
             });
 
             // Memory is per page — the same scoping the generator uses for a feature.

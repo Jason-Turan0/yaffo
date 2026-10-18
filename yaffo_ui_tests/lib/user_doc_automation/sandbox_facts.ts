@@ -36,14 +36,6 @@ export interface SandboxFacts {
 /** How many of each to report. Enough to choose from, not enough to bury the prompt. */
 const SAMPLE = 8;
 
-/**
- * Fixture files that exist to be duplicates, not to be looked at. They are synthetic
- * test patterns, and the duplicate-detection fixture needs them, so they cannot be
- * removed — but a screenshot of one looks like a broadcast test card rather than a
- * photo library, so a walkthrough should never frame one.
- */
-const TEST_PATTERN = /^1mb-example-video-file/;
-
 const fetchText = async (url: string): Promise<string> => {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`${url} -> HTTP ${response.status}`);
@@ -88,8 +80,7 @@ export const describeSandboxFacts = (facts: SandboxFacts): string => {
             `browser tools to find what you need; do not guess filenames.`;
     }
     const list = (names: string[]): string => names.length
-        ? names.slice(0, SAMPLE).map((n) => `  - \`${n}\`` +
-            (TEST_PATTERN.test(n) ? "  ← synthetic test pattern, do not screenshot" : ""))
+        ? names.slice(0, SAMPLE).map((n) => `  - \`${n}\``)
             .join("\n")
         : "  - (none in the fixture)";
 
@@ -132,9 +123,6 @@ export const describeSandboxFacts = (facts: SandboxFacts): string => {
         "",
         "Videos:",
         list(facts.videos),
-        "",
-        "Prefer a file with real content for any shot: some fixture files exist only so",
-        "duplicate detection has something to find, and photograph as colour bars.",
         "",
         "### Useful queries on the gallery",
         "",

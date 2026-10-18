@@ -232,13 +232,12 @@ test.describe('Custom Pages', () => {
   });
 
   test('pages_presentation_view_renders_widgets', async ({ page }) => {
-    // The Bennett sandbox has one published showcase page.
+    // The shared sandbox includes a showcase and two page-builder examples.
     await page.goto('/');
     await ensurePagesBarVisible(page);
     const pageLinks = page.locator('.nav-page-tab');
-    await expect(pageLinks).toHaveCount(1);
-    await expect(pageLinks.first()).toHaveText('Florida Trip');
-    await pageLinks.first().click();
+    await expect(pageLinks).toHaveText(['Florida Trip', "Maya's Third Birthday", 'Chicago 2015']);
+    await pageLinks.filter({ hasText: /^Florida Trip$/ }).click();
 
     // The hero replaces the ordinary page header, and the template gallery fills
     // the remainder of the static presentation grid.

@@ -81,6 +81,13 @@ export default defineWalkthrough({
 
     shots: {
         "locations-map.webp": {
+            // The cluster markers are drawn on the map canvas, out of reach of a
+            // selector, so the "Clusters" annotation keeps its hand-placed geometry.
+            annotations: {
+                "filters": "#locations-filters",
+                "selection-hint": ".locations-container .page-header .subtitle",
+                "zoom": ".ol-zoom",
+            },
             viewport: {width: 1400, height: 1700},
             goto: "/locations",
             clip: ".main-container-layout",
@@ -90,6 +97,13 @@ export default defineWalkthrough({
             setup: waitForMap,
         },
         "locations-selection-panel.webp": {
+            annotations: {
+                "selection-summary": "#selection-panel .selection-panel-header",
+                "preview": "#selection-panel .preview-section",
+                "assign-a-name": "#selection-panel .selection-assignment",
+                "selected-clusters": "#selection-panel .clusters-summary",
+                "clear-actions": "#selection-panel .selection-panel-actions",
+            },
             viewport: {width: 1400, height: 1500},
             goto: "/locations",
             clip: "#selection-panel",

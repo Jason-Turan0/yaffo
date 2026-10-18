@@ -59,14 +59,14 @@ async function saveFolderOptions(page: Page, slug: string): Promise<void> {
 async function chooseAlbum(page: Page): Promise<number> {
   const syncUrl = page.url();
   await page.goto('/albums');
-  const albumPath = await page.locator('.album-tile', { hasText: 'Seeded Album' }).first().getAttribute('href');
+  const albumPath = await page.locator('.album-tile', { hasText: "Maya's Big Game" }).first().getAttribute('href');
   expect(albumPath).not.toBeNull();
   await page.goto(albumPath!);
   const count = await page.locator('#album-grid .photo-card').count();
   expect(count).toBeGreaterThan(0);
   await page.goto(syncUrl);
   await page.locator('#sync-selection-album').check();
-  await chooseSearchableOption(page, '#sync-album', 'Seeded Album');
+  await chooseSearchableOption(page, '#sync-album', "Maya's Big Game");
   await Promise.all([
     page.waitForResponse(response => response.url().includes('/sync/selection')
       && response.request().method() === 'POST'),
@@ -276,7 +276,7 @@ test('onedrive_target_reviews_destination_and_selection_changes', async ({ page 
     await page.locator('#sync-enable-review').click();
     const review = page.locator('#syncEnableModal.active');
     await expect(review).toBeVisible();
-    await expect(review).toContainText('Seeded Album');
+    await expect(review).toContainText("Maya's Big Game");
     await expect(review).toContainText('jason@example.com');
     await expect(review).toContainText('Camera Roll');
     await expect(review).toContainText('deletes its unchanged copy from OneDrive');

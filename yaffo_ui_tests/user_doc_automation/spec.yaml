@@ -171,19 +171,52 @@ pages:
     also_depends_on:
       - yaffo/background_tasks/tasks/find_duplicates.py  # perceptual-hash grouping policy
       - yaffo/background_tasks/tasks/remove_duplicates.py  # trash/delete/move behavior
-      - yaffo_ui_tests/lib/services/isolated_runner.ts  # docs-only duplicate sample composition
+      - yaffo_ui_tests/lib/services/isolated_runner.ts  # shared duplicate sample composition
+
+  organize-review/albums:
+    covers: >-
+      Albums as hand-curated collections whose membership never changes on its
+      own: the albums overview and its cover tiles, creating an album, adding
+      photos from the filterable add screen (picking individual photos or every
+      match), the album page, reordering by drag, choosing the cover, removing
+      photos, editing the name and description, sharing an album with a paired
+      device, and deleting an album (which never deletes photos). Creating an
+      album and filling it must be a guided walkthrough (the guide-walkthrough
+      component) with one screenshot per step; other screenshots are annotated
+      screenshots. The docs fixture seeds "Maya's Big Game", three volleyball
+      photos from July 2026. A walkthrough that creates an album must delete it
+      in teardown; reordering, cover, and removal must not change the seeded
+      album.
+    walkthrough: true
+    also_depends_on:
+      - yaffo/db/repositories/album_repository.py  # membership, order, and cover rules
+      - yaffo/routes/selection.py  # "every match" selection semantics on the add screen
 
   create-customize/custom-pages:
     covers: >-
       Creating a page, working with widgets, and publishing and presenting it.
       The set of available widget types is enumerable and must stay complete.
+      Building a page with the Assistant must be a guided walkthrough (the
+      guide-walkthrough component) with one screenshot per step: + New page and
+      the empty design view it opens, describing the page to the Assistant, the
+      locked canvas while generation runs (elapsed timer and Cancel), reviewing
+      the finished draft, saving it, and the published page in presentation mode.
+      Other screenshots are annotated screenshots. The docs fixture has pages for
+      each state: "Florida Trip" is published; "Maya's Third Birthday" has a READY
+      draft that adds a People widget below its party-photo grid and waits for
+      Save; "Chicago 2015" is still generating, its working version started at
+      2026-09-01 12:00:00 UTC, so pin
+      the browser clock (Playwright's page.clock) to get a stable elapsed timer.
+      Never click Save, Send, Cancel, or Delete on these seeded pages: they write
+      to the shared fixture. A page the walkthrough creates must be deleted in
+      teardown.
     walkthrough: true
     also_depends_on:
       - yaffo/site_agents/widget_templates.py  # the complete built-in widget catalog
       - yaffo/db/repositories/custom_page_repository.py  # page/version publishing semantics
       - yaffo/background_tasks/tasks/generate_page.py  # durable assistant generation
       - yaffo/site_agents/llm_config.py  # provider and API-key requirements
-      - yaffo_ui_tests/scripts/seed_database.py  # the published Florida Trip fixture
+      - yaffo_ui_tests/scripts/seed_database.py  # Florida Trip and the shared example page drafts
 
   create-customize/themes:
     covers: >-
@@ -201,10 +234,17 @@ pages:
       and Add a new service. Custom rules need draft, test, publish, and trigger
       workflows. Link to the dedicated importing, exporting, and photo-service
       walkthroughs. Cover scheduling, event triggers, manual runs, run history,
-      disabling, and failure investigation. A new automation or trigger type is a gap.
+      disabling, and failure investigation. Explain Export photo tag's five
+      opt-in fields, defaults, original-file writes, format differences, manual
+      backfill, and why disabling or removing a value does not erase embedded
+      metadata. Distinguish write-back from Send to syncs. A new automation or
+      trigger type is a gap.
     walkthrough: true
     also_depends_on:
       - yaffo/scripts/db/migrations/000_MIGRATION_20260620_INIT.py
+      - yaffo/background_tasks/automation_config.py
+      - yaffo/background_tasks/tasks/export_photo_tag.py
+      - yaffo/utils/write_metadata.py
 
   create-customize/importing:
     covers: >-
@@ -256,6 +296,15 @@ pages:
       writes, correcting drafts, publishing and reviewing endpoints, and creating
       a sync with the published service. Explain draft versus published behavior,
       wider-access review for existing syncs, regeneration, and deletion while in use.
+      The build must be a guided walkthrough (the guide-walkthrough component) that a
+      reader follows in order, with one screenshot per step: the New automation
+      dialog with Add a new service selected, the builder conversation with its
+      Overview, the Account tab, the Access tab's endpoints, the Code tab, the Test
+      tab with its options, the Publish review, and the published service offered
+      under Send to in New automation. Screenshots outside the walkthrough are
+      annotated screenshots. The docs fixture seeds a published "Flickr exports"
+      service with a newer unpublished draft for these steps. A Test result needs a
+      real signed-in account, so describe it in prose rather than picturing it.
     walkthrough: true
     also_depends_on:
       - yaffo/db/repositories/service_builder_repository.py # drafts, publishing, permissions
@@ -263,6 +312,61 @@ pages:
       - yaffo/sync/fetch_docs.py                   # documentation-domain approval
       - yaffo/sync/connections.py                  # test accounts and shared sign-in
       - yaffo/sync/setup.py                        # published service setup and consent
+
+  sharing/pairing-devices:
+    covers: >-
+      Trust without media access, generating and entering a single-use expiring
+      pairing code, both devices being online, checking device IDs, local labels
+      and renaming, presence states, and revoking and forgetting a device.
+      Pairing must be a guided walkthrough with one screenshot per step. The docs
+      sandbox must be built and started with --peer; the peer uses the primary's
+      hostname and port 5003. Restore pairing after a revoke demonstration.
+    walkthrough: true
+    also_depends_on:
+      - yaffo/p2p/pairing.py
+      - yaffo/db/repositories/p2p_repository.py
+
+  sharing/sharing-folders-albums:
+    covers: >-
+      Granting a paired device access to a media directory, a folder within one,
+      or an album; scope boundaries, current album membership, album Share dialog,
+      reviewing Shared With Others and Shared With Me, and revoking one grant.
+      Pairing alone grants nothing. Existing downloaded copies survive revocation.
+      Use annotated screenshots. Revoke demonstration grants after capture and
+      never change the seeded album's members.
+    walkthrough: true
+    also_depends_on:
+      - yaffo/db/repositories/p2p_repository.py
+      - yaffo/p2p/handlers/sharing.py
+
+  sharing/receiving-photos:
+    covers: >-
+      Browsing a granted remote gallery with filters and previews, setting a
+      download directory, selecting individual files or every match across pages,
+      pulling copies in the background, finding the completed copies, adding
+      the download folder to Media Directories and indexing it locally, and
+      unavailable-device or missing-grant cases. Distinguish a completed manual
+      pull from indexing and link to paired-device imports for automatic copying
+      and indexing. Pulling must be a guided
+      walkthrough with one screenshot per step; the gallery is annotated.
+      Sharing copies media and never moves or deletes originals. Keep the seeded
+      album unchanged and revoke demonstration grants after capture.
+    walkthrough: true
+    also_depends_on:
+      - yaffo/p2p/handlers/sharing.py
+      - yaffo/p2p/transfers.py
+
+  sharing/transfers-connections:
+    covers: >-
+      Transfer progress, state and per-file errors, local versus direct versus
+      relayed paths, the soft relay-data budget, pausing and continuing anyway,
+      cancellation, dismissing inactive records, and connection troubleshooting.
+      Cancelling or dismissing keeps completed copies. Capture a real transfer;
+      describe relay-only states in prose when the LAN-only sandbox cannot show
+      them. Revoke demonstration grants and dismiss completed records afterwards.
+    walkthrough: true
+    also_depends_on:
+      - yaffo/p2p/transfers.py
 
   reference-maintenance/settings:
     covers: >-
@@ -297,27 +401,10 @@ pages:
   reference-maintenance/troubleshooting:
     covers: >-
       The common failure modes and how to narrow them down: photos not appearing,
-      stuck or slow jobs, wrong faces or labels or duplicates, map and location
-      lookups failing, and AI features failing.
+      an unavailable external drive, photos in the wrong year, stuck or slow jobs,
+      faces stuck after assigning, wrong faces or labels or duplicates, map and
+      location lookups failing, and AI features failing.
     walkthrough: true
-
-  reference-maintenance/troubleshooting/external-drive-not-showing:
-    covers: >-
-      Diagnose an unavailable external media drive, verify its configured path,
-      and scan safely after reconnecting it.
-    walkthrough: false
-
-  reference-maintenance/troubleshooting/faces-stuck-after-assigning:
-    covers: >-
-      Diagnose faces that remain in review or processing after assignment, check
-      job status, and review the assistant's repair proposal.
-    walkthrough: false
-
-  reference-maintenance/troubleshooting/photos-wrong-year:
-    covers: >-
-      Diagnose incorrect capture dates and gallery year filters, then choose
-      between correcting source metadata, reindexing, or an assistant change.
-    walkthrough: false
 
   reference-maintenance/uninstalling:
     covers: >-

@@ -3,7 +3,45 @@
 The duplicate utility finds photos and videos with the same visual fingerprint.
 Use it as a review workflow, not as an automatic delete button.
 
+## Explore the Page
+
+<div class="annotated-screenshot" markdown="1">
+
 ![The duplicate scan configuration with one four-file sample directory](assets/duplicates/utilities-remove-duplicates.webp)
+
+<div class="screenshot-annotation" data-x="97.1" data-y="6.7" data-region="1.4 4.2 97.1 26" markdown="1">
+
+### Scan Totals
+
+How many media files and directories the scan will cover.
+
+</div>
+
+<div class="screenshot-annotation" data-x="94.8" data-y="64.3" data-region="3.7 61.8 92.7 14" markdown="1">
+
+### Directory
+
+A folder to scan. Type a path or **Browse** to one; **Delete** removes it from the scan.
+
+</div>
+
+<div class="screenshot-annotation" data-x="33.4" data-y="82.5" data-region="3.7 80 31.3 9.4" markdown="1">
+
+### Rescan and Add
+
+**Rescan Directories** refreshes the media count. **+ Add Another Directory** adds a folder.
+
+</div>
+
+<div class="screenshot-annotation" data-x="46" data-y="82.5" data-region="35.3 80 12.2 9.4" markdown="1">
+
+### Find Duplicates
+
+Starts the scan as a background job. [Read about starting a scan](#start-a-duplicate-scan).
+
+</div>
+
+</div>
 
 ## How Duplicate Detection Works
 
@@ -33,7 +71,51 @@ finishes, click **Show Results** on its job card.
 Duplicate results are shown in groups. Each group contains files with the same
 visual fingerprint.
 
+<div class="annotated-screenshot" markdown="1">
+
 ![Duplicate results with two groups and one selected copy in each](assets/duplicates/duplicate-results.webp)
+
+<div class="screenshot-annotation" data-x="97.1" data-y="13.1" data-region="1.4 10.6 97.1 8.2" markdown="1">
+
+### Result Totals
+
+Media processed, duplicate groups found, and how many copies are selected.
+
+</div>
+
+<div class="screenshot-annotation" data-x="94.8" data-y="25.5" data-region="3.7 23.3 92.7 4.5" markdown="1">
+
+### Action
+
+What happens to the selected copies. [Read about the actions](#choose-an-action).
+
+</div>
+
+<div class="screenshot-annotation" data-x="21.7" data-y="30.9" data-region="3.7 29.4 19.6 2.9" markdown="1">
+
+### Remove Button
+
+**Remove Selected Duplicates** starts the action immediately, with no extra confirmation. [Read more](#remove-selected-duplicates).
+
+</div>
+
+<div class="screenshot-annotation" data-x="32.2" data-y="44.9" data-region="3.7 42.4 30 20.9" markdown="1">
+
+### Keeper
+
+The first card in each group starts unselected as the copy to keep. This is a starting point, not a quality judgment.
+
+</div>
+
+<div class="screenshot-annotation" data-x="63.5" data-y="44.9" data-region="35 42.4 30 20.9" markdown="1">
+
+### Selected Copy
+
+A blue outline marks a copy selected for the action. Click a card to toggle it.
+
+</div>
+
+</div>
 
 Yaffo leaves the first card in each group unselected as the initial keeper and
 selects the remaining cards for removal. This is only a starting point; it is not

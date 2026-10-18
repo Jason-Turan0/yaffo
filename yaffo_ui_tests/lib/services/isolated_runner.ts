@@ -40,8 +40,8 @@ export interface IsolatedEnvironmentOptions {
      * port+1, and enable LAN-only p2p sharing
      * on BOTH instances: YAFFO_P2P_ENABLED=1, distinct YAFFO_P2P_PORT UDP
      * ports, an unreachable YAFFO_HUB_URL (the sharing tests pair over mDNS,
-     * hubless by design), and YAFFO_P2P_EPHEMERAL_IDENTITY=1 so throwaway
-     * instances never write device keys into the real OS keychain.
+     * hubless by design). Throwaway instances use ephemeral identities; docs
+     * persist sandbox-only keys in their data directories, outside the OS keychain.
      */
     withPeer?: boolean;
     /**
@@ -116,11 +116,12 @@ const VENV_DIR = process.env.YAFFO_VENV || join(YAFFO_DIR, "venv");
  * an ephemeral timestamped directory.
  */
 export const DOCS_DATA_DIR = AUTOMATION_DOCS_DATA_DIR;
+export const DOCS_PEER_DATA_DIR = join(DOCS_DATA_DIR, "peer");
 export const DOCS_MEDIA_DIR = join(DOCS_DATA_DIR, "Family Photos");
 export const DOCS_DUPLICATE_SCAN_DIR = join(DOCS_DATA_DIR, "Duplicate Scan Samples");
 
 // UDP ports for the p2p QUIC transport, well away from the web ports.
-const quicPortFor = (webPort: number): number => webPort + 10_000;
+export const quicPortFor = (webPort: number): number => webPort + 10_000;
 // ws:// to a discard port: connects fail fast, so the instances behave as
 // "no hub reachable" (the sharing spec's required environment).
 const UNREACHABLE_HUB_URL = "ws://127.0.0.1:9";
@@ -218,8 +219,6 @@ interface StartInstanceOptions {
     fixtureDir: string;
     /** Selects fixture-specific database records created by the seed script. */
     seedProfile: "bennett" | "obama";
-    /** Include the separate video fixtures in this instance. */
-    includeVideos?: boolean;
     /** Public-demo role. When omitted, the instance runs in normal test mode. */
     demoRole?: "source" | "receiver";
     /**
@@ -346,9 +345,6 @@ interface ProvisionOptions {
     tempDir: string;
     fixtureDir: string;
     seedProfile: "bennett" | "obama";
-    includeVideos?: boolean;
-    /** Index videos nested in the photo fixture, used by the docs composition. */
-    recursiveVideos?: boolean;
     /** Fail fixture construction instead of preserving the UI-test runner's warning. */
     strictSeed?: boolean;
 }
@@ -361,8 +357,7 @@ interface ProvisionOptions {
  * seeded DB stores absolute media paths.
  */
 export const provisionInstanceData = (options: ProvisionOptions): void => {
-    const {label, tempDir, fixtureDir, seedProfile, includeVideos = false,
-           recursiveVideos = false, strictSeed = false} = options;
+    const {label, tempDir, fixtureDir, seedProfile, strictSeed = false} = options;
     const mediaDir = join(tempDir, "Family Photos");
 
     console.log(`\n🔧 Provisioning data dir for instance ${label}...`);
@@ -378,11 +373,6 @@ export const provisionInstanceData = (options: ProvisionOptions): void => {
     }
     cpSync(fixtureDir, mediaDir, {recursive: true});
     console.log(`   ✅ Copied photo fixture: ${fixtureDir}`);
-    if (includeVideos) {
-        const testVideoDir = join(UI_TESTS_DIR, "test_data", "mp4");
-        cpSync(testVideoDir, mediaDir, {recursive: true});
-        console.log(`   ✅ Copied video fixtures`);
-    }
 
     writeFileSync(join(tempDir, "yaffo.db"), "");
     console.log(`   ✅ Created empty database`);
@@ -392,10 +382,7 @@ export const provisionInstanceData = (options: ProvisionOptions): void => {
     console.log(`\n📦 Seeding instance ${label} (${seedScript})...`);
     try {
         execSync(`python "${join(SCRIPTS_DIR, seedScript)}"`, {
-            env: {
-                ...instanceEnv(tempDir, seedProfile),
-                YAFFO_SEED_RECURSIVE_VIDEOS: recursiveVideos ? "1" : "0",
-            },
+            env: instanceEnv(tempDir, seedProfile),
             cwd: YAFFO_DIR,
             stdio: "inherit",
         });
@@ -407,30 +394,13 @@ export const provisionInstanceData = (options: ProvisionOptions): void => {
             emptyDirectory(tempDir);
             throw e;
         }
+        return;
     }
+    if (seedProfile === "bennett") stageDuplicateSamples(tempDir);
 };
 
-/**
- * Build the docs-grade fixture without the synthetic duplicate-test videos. The
- * Bennett fixture already contains a short real beach video, so capture still covers
- * video cards and playback while the gallery remains presentable.
- *
- * Duplicate review needs something useful to find, but putting duplicates inside
- * Family Photos would pollute the gallery and index. Stage two pairs of real images
- * beside the indexed library instead: the utility can scan them explicitly, while
- * every other guide page continues to see one canonical copy of each photo.
- */
-export const buildDocumentationFixture = (dataDir = DOCS_DATA_DIR): string => {
-    emptyDirectory(dataDir);
-    provisionInstanceData({
-        label: "docs",
-        tempDir: dataDir,
-        fixtureDir: PRIMARY_FIXTURE_DIR,
-        seedProfile: "bennett",
-        includeVideos: false,
-        recursiveVideos: true,
-        strictSeed: true,
-    });
+/** Duplicate samples stay outside the indexed library used by tests and captures. */
+const stageDuplicateSamples = (dataDir: string): void => {
     const mediaDir = join(dataDir, "Family Photos");
     const duplicateDir = join(dataDir, "Duplicate Scan Samples");
     mkdirSync(duplicateDir, {recursive: true});
@@ -448,7 +418,6 @@ export const buildDocumentationFixture = (dataDir = DOCS_DATA_DIR): string => {
         for (const name of sample.names) cpSync(sample.source, join(duplicateDir, name));
     }
     console.log(`   ✅ Staged ${samples.length} duplicate-review groups outside the indexed library`);
-    return dataDir;
 };
 
 const startInstance = async (options: StartInstanceOptions): Promise<IsolatedInstance> => {
@@ -458,7 +427,6 @@ const startInstance = async (options: StartInstanceOptions): Promise<IsolatedIns
         tempDir,
         fixtureDir,
         seedProfile,
-        includeVideos = false,
         demoRole,
         flaskOnlyEnv = {},
         syncOriginOverrides,
@@ -479,7 +447,7 @@ const startInstance = async (options: StartInstanceOptions): Promise<IsolatedIns
         }
         console.log(`\n♻️  Instance ${label}: serving preseeded data dir ${tempDir}`);
     } else {
-        provisionInstanceData({label, tempDir, fixtureDir, seedProfile, includeVideos});
+        provisionInstanceData({label, tempDir, fixtureDir, seedProfile});
     }
 
     const env = {
@@ -584,13 +552,14 @@ const stopInstance = async (instance: IsolatedInstance | undefined): Promise<voi
     }
 };
 
-// With a peer, BOTH instances run the p2p engine so they can pair over the LAN
-// (mDNS). Ephemeral identities keep device keys out of the OS keychain.
-const p2pEnv = (webPort: number): Record<string, string> => ({
+// Both instances pair over LAN discovery. Tests use ephemeral identities; docs
+// keep sandbox keys alongside the persisted databases so pairing survives restarts.
+export const p2pEnv = (webPort: number, persistentDataDir?: string): Record<string, string> => ({
     YAFFO_P2P_ENABLED: "1",
     YAFFO_P2P_PORT: String(quicPortFor(webPort)),
     YAFFO_HUB_URL: UNREACHABLE_HUB_URL,
-    YAFFO_P2P_EPHEMERAL_IDENTITY: "1",
+    YAFFO_P2P_EPHEMERAL_IDENTITY: persistentDataDir ? "0" : "1",
+    ...(persistentDataDir ? {YAFFO_P2P_KEY_FILE: join(persistentDataDir, "p2p-key.pem")} : {}),
 });
 
 // Canonical seed-cache locations. The seed writes absolute media paths into the
@@ -627,12 +596,8 @@ export const copySeedCache = (role: "primary" | "peer", destination: string): st
  */
 export const buildSeedCache = (options: {withPeer?: boolean; docsFixture?: boolean} = {}): {primary: string; peer?: string} => {
     const {withPeer = false, docsFixture = false} = options;
-    if (docsFixture) {
-        if (withPeer) throw new Error("The documentation fixture does not have a peer instance");
-        return {primary: buildDocumentationFixture()};
-    }
-    const primaryDir = seedCacheDir("primary");
-    rmSync(primaryDir, {recursive: true, force: true});
+    const primaryDir = docsFixture ? DOCS_DATA_DIR : seedCacheDir("primary");
+    emptyDirectory(primaryDir);
     // Strict: a failed seed throws (non-zero exit), so CI caches nothing rather
     // than an empty database every suite would then restore.
     provisionInstanceData({
@@ -640,14 +605,13 @@ export const buildSeedCache = (options: {withPeer?: boolean; docsFixture?: boole
         tempDir: primaryDir,
         fixtureDir: PRIMARY_FIXTURE_DIR,
         seedProfile: "bennett",
-        includeVideos: true,
         strictSeed: true,
     });
     if (!withPeer) {
         return {primary: primaryDir};
     }
-    const peerDir = seedCacheDir("peer");
-    rmSync(peerDir, {recursive: true, force: true});
+    const peerDir = docsFixture ? DOCS_PEER_DATA_DIR : seedCacheDir("peer");
+    emptyDirectory(peerDir);
     provisionInstanceData({
         label: "B (peer)",
         tempDir: peerDir,
@@ -672,9 +636,6 @@ export const startIsolatedEnvironment = async (
         withFakeSyncServices = false,
         syncOriginOverrides = {},
     } = options;
-    if (docsFixture && withPeer) {
-        throw new Error("The documentation fixture does not have a peer instance");
-    }
     if (docsFixture && !preseeded) {
         throw new Error("Build the documentation fixture first, then serve it with preseeded=true");
     }
@@ -683,6 +644,9 @@ export const startIsolatedEnvironment = async (
     }
     if (copyPreseeded && docsFixture) {
         throw new Error("The documentation fixture cannot be copied as a UI-test seed cache");
+    }
+    if (docsFixture && withPeer && !existsSync(join(DOCS_PEER_DATA_DIR, "yaffo.db"))) {
+        throw new Error("Documentation peer fixture is missing; run npm run docs:sandbox:build -- --peer first");
     }
     // Check the whole web-port slot before copying a potentially large cache.
     // startInstance checks again immediately before spawn to close the race as
@@ -707,7 +671,7 @@ export const startIsolatedEnvironment = async (
     let fakeFlickrUrl: string | undefined;
     let fakeOneDriveUrl: string | undefined;
     let fakeImmichUrl: string | undefined;
-    const flaskOnlyEnv: Record<string, string> = withPeer ? p2pEnv(port) : {};
+    const flaskOnlyEnv: Record<string, string> = withPeer ? p2pEnv(port, docsFixture ? tempDir : undefined) : {};
     const originOverrides: Record<string, string> = {};
     try {
         if (withFakeSyncServices) {
@@ -745,7 +709,6 @@ export const startIsolatedEnvironment = async (
             tempDir,
             fixtureDir: PRIMARY_FIXTURE_DIR,
             seedProfile: "bennett",
-            includeVideos: true,
             demoRole: demoMode ? "source" : undefined,
             flaskOnlyEnv,
             syncOriginOverrides: originOverrides,
@@ -765,7 +728,7 @@ export const startIsolatedEnvironment = async (
     let peer: IsolatedInstance | undefined;
     if (withPeer) {
         const peerPort = port + 1;
-        let peerTempDir = preseeded
+        let peerTempDir = docsFixture ? DOCS_PEER_DATA_DIR : preseeded
             ? seedCacheDir("peer")
             : join(TEMP_ROOT, `yaffo_test_${runId}_peer`);
         try {
@@ -779,7 +742,7 @@ export const startIsolatedEnvironment = async (
                 fixtureDir: PEER_FIXTURE_DIR,
                 seedProfile: "obama",
                 demoRole: demoMode ? "receiver" : undefined,
-                flaskOnlyEnv: p2pEnv(peerPort),
+                flaskOnlyEnv: p2pEnv(peerPort, docsFixture ? peerTempDir : undefined),
                 preseeded,
                 disposableData: copyPreseeded,
                 assetDir: copyPreseeded ? seedCacheDir("peer") : undefined,

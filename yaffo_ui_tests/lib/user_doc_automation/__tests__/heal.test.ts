@@ -1,4 +1,5 @@
 import {afterAll, afterEach, beforeEach, describe, expect, it, jest} from "@jest/globals";
+import {createHash} from "crypto";
 import {mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from "fs";
 import {tmpdir} from "os";
 import {dirname, join} from "path";
@@ -49,6 +50,8 @@ await jest.unstable_mockModule("../paths", () => ({
 
 const {
     acceptMinorEnvironmentVariation,
+    layoutOnlyVerdict,
+    layoutVerifiedVerdict,
     main,
     MINOR_VARIATION_MAX_RATIO,
     runCli,
@@ -200,6 +203,109 @@ describe("minor environment variation policy", () => {
             {...environmentInstability, recommendedAction: "report_regression"},
             diff() as never
         ).recommendedAction).toBe("report_regression");
+    });
+});
+
+const layoutOnly = (over: Record<string, unknown> = {}) => shot({
+    diff: {
+        status: "changed",
+        change: "layout-only",
+        diffPixels: 65664,
+        residualPixels: 0,
+        reason: "size",
+        baselineSize: [912, 1846],
+        candidateSize: [912, 1918],
+        hunks: [
+            {op: "equal", baseline: [0, 1445], candidate: [0, 1445], offset: 0},
+            {op: "insert", baseline: [1445, 1445], candidate: [1445, 1517], added: "blank"},
+            {op: "equal", baseline: [1445, 1846], candidate: [1517, 1918], offset: 72},
+        ],
+    },
+    stability: {status: "reproduced", diff: {status: "unchanged", diffPixels: 0}},
+    ...over,
+});
+
+describe("layout-only gate", () => {
+    it("promotes a reproduced layout-only shot with no prose impact", () => {
+        expect(layoutOnlyVerdict(layoutOnly() as never)).toMatchObject({
+            classification: "intended_change",
+            confidence: "high",
+            recommendedAction: "promote",
+            proseImpact: [],
+            summary: "Same content, re-laid out: 72 blank row(s) added at y=1445.",
+        });
+    });
+
+    it("leaves a layout-only shot that has not reproduced to triage", () => {
+        expect(layoutOnlyVerdict(layoutOnly({stability: undefined}) as never)).toBeNull();
+    });
+
+    it("summarizes bands found along columns, and moves once", () => {
+        const candidate = layoutOnly() as unknown as {diff: Record<string, unknown>};
+        const verdict = layoutOnlyVerdict({...candidate, diff: {
+            ...candidate.diff,
+            hunks: [{op: "equal", baseline: [0, 470], candidate: [0, 470], offset: 0}],
+            blocks: [
+                {axis: "columns", op: "insert", baseline: [363, 363], candidate: [363, 403], added: "blank"},
+                {axis: "columns", op: "delete", baseline: [999, 1089], candidate: [999, 999], removed: "blank"},
+                {axis: "rows", op: "delete", baseline: [10, 24], candidate: [10, 10], removed: "moved", moved: true},
+                {axis: "rows", op: "insert", baseline: [40, 40], candidate: [40, 54], added: "moved", moved: true},
+            ],
+        }} as never);
+        expect(verdict?.summary).toBe("Same content, re-laid out: 40 blank column(s) added at x=363; " +
+            "90 blank column(s) removed at x=999; content moved to y=40 (14 rows).");
+        expect(verdict?.reasoning).toContain("and the columns of strips that still differed");
+    });
+
+    it("leaves revealed or hidden content to triage", () => {
+        for (const change of ["content-added", "content-removed", "changed"]) {
+            const candidate = layoutOnly() as unknown as {diff: Record<string, unknown>};
+            expect(layoutOnlyVerdict(
+                {...candidate, diff: {...candidate.diff, change}} as never
+            )).toBeNull();
+        }
+    });
+});
+
+const ELEMENTS = ['heading "People" 92×31', 'button "Add Person" 150×44', 'cell "Female" 53×18'];
+
+// A shot the pixel test calls changed (columns moved by a fraction of a pixel, so the
+// glyphs repaint) while its text and controls are exactly what is committed.
+const rerendered = (over: Record<string, unknown> = {}) => shot({
+    diff: {status: "changed", change: "changed", diffPixels: 13352, residualPixels: 13352, hunks: []},
+    stability: {status: "reproduced", diff: {status: "unchanged", diffPixels: 0}},
+    layout: ELEMENTS,
+    ...over,
+});
+
+describe("element-verified gate", () => {
+    const committed = {width: 100, height: 80, sha256: "x", layout: ELEMENTS};
+
+    it("promotes a reproduced change whose elements are all unchanged", () => {
+        expect(layoutVerifiedVerdict(rerendered() as never, committed)).toMatchObject({
+            classification: "intended_change",
+            confidence: "high",
+            recommendedAction: "promote",
+            proseImpact: [],
+            summary: "Same text and controls, re-rendered: all 3 elements present with the same roles, text, and sizes.",
+        });
+    });
+
+    it("leaves a renamed, added, or resized element to triage", () => {
+        for (const layout of [
+            ['heading "People" 92×31', 'button "Add someone" 150×44', 'cell "Female" 53×18'],
+            [...ELEMENTS, 'button "Import" 90×44'],
+            ['heading "People" 92×31', 'button "Add Person" 180×44', 'cell "Female" 53×18'],
+        ]) {
+            expect(layoutVerifiedVerdict(rerendered({layout}) as never, committed)).toBeNull();
+        }
+    });
+
+    it("needs a reproduced change and both layouts", () => {
+        expect(layoutVerifiedVerdict(rerendered({stability: undefined}) as never, committed)).toBeNull();
+        expect(layoutVerifiedVerdict(rerendered({layout: undefined}) as never, committed)).toBeNull();
+        expect(layoutVerifiedVerdict(rerendered() as never, null)).toBeNull();
+        expect(layoutVerifiedVerdict(rerendered() as never, {...committed, layout: undefined})).toBeNull();
     });
 });
 
@@ -397,6 +503,74 @@ describe("heal CLI", () => {
             classification: "environment_instability",
             recommendedAction: "promote",
         });
+    });
+
+    it("promotes a layout-only shot under --apply without a model call", async () => {
+        const changed = layoutOnly();
+        write(changed.staged as string, "new image");
+        writeReport([result({shots: [changed]})]);
+
+        await expect(main(["--apply", "--model", "vision-model"])).resolves.toBe(0);
+
+        expect(triageShot).not.toHaveBeenCalled();
+        expect(buildEvidence).not.toHaveBeenCalled();
+        expect(applyFix).not.toHaveBeenCalled();
+        expect(readFileSync(join(GUIDE_DIR, changed.target as string), "utf8")).toBe("new image");
+        const saved = JSON.parse(readFileSync(join(STAGING_DIR, "triage.json"), "utf8"));
+        expect(saved.verdicts[0]).toMatchObject({
+            target: changed.target,
+            triage: {classification: "intended_change", recommendedAction: "promote"},
+        });
+    });
+
+    const writeLock = (layout: string[]): string => {
+        const target = shot().target as string;
+        write(join(GUIDE_DIR, target), "committed image");
+        const lock = join(CONTENT_DIR, "area", "page", "page.lock.json");
+        write(lock, JSON.stringify({page: "area/page", lastVerifiedSha: "abc", shots: {
+            [target]: {width: 100, height: 80, layout,
+                       sha256: createHash("sha256").update("committed image").digest("hex")},
+        }}));
+        return lock;
+    };
+
+    it("promotes an element-verified shot under --apply and records it in the lock", async () => {
+        const lock = writeLock(ELEMENTS);
+        const changed = rerendered();
+        write(changed.staged as string, "new image");
+        writeReport([result({shots: [changed]})]);
+
+        await expect(main(["--apply", "--model", "vision-model"])).resolves.toBe(0);
+
+        expect(triageShot).not.toHaveBeenCalled();
+        expect(readFileSync(join(GUIDE_DIR, changed.target as string), "utf8")).toBe("new image");
+        const saved = JSON.parse(readFileSync(lock, "utf8"));
+        expect(saved.lastVerifiedSha).toBe("abc");
+        expect(saved.shots[changed.target as string]).toMatchObject({
+            layout: ELEMENTS,
+            sha256: createHash("sha256").update("new image").digest("hex"),
+        });
+    });
+
+    it("sends a renamed control to triage with the committed elements as evidence", async () => {
+        writeLock(ELEMENTS);
+        const renamed = ['heading "People" 92×31', 'button "Add someone" 150×44', 'cell "Female" 53×18'];
+        writeReport([result({shots: [rerendered({layout: renamed})]})]);
+
+        await expect(main([])).resolves.toBe(0);
+
+        expect(triageShot).toHaveBeenCalledTimes(1);
+        expect(buildEvidence).toHaveBeenCalledWith(expect.anything(), expect.anything(),
+            expect.objectContaining({committedLayout: ELEMENTS}));
+    });
+
+    it("still triages a content-added shot", async () => {
+        const candidate = layoutOnly() as unknown as {diff: Record<string, unknown>};
+        writeReport([result({shots: [{...candidate, diff: {...candidate.diff, change: "content-added"}}]})]);
+
+        await expect(main([])).resolves.toBe(0);
+
+        expect(triageShot).toHaveBeenCalledTimes(1);
     });
 
     it("records an inconclusive verdict when a changed shot cannot be triaged", async () => {

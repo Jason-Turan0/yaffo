@@ -17,7 +17,7 @@ on:
       - "yaffo_ui_tests/package.json"
       - "yaffo_ui_tests/scripts/seed_database.py"
       - "yaffo_ui_tests/test_data/bennett/**"
-      - "yaffo_ui_tests/test_data/mp4/**"
+      - "yaffo_ui_tests/test_data/obama/**"
       - "yaffo_ui_tests/user_doc_automation/**"
   workflow_dispatch:
     inputs:
@@ -83,7 +83,7 @@ jobs:
       - name: Compute documentation fixture cache key
         id: seed-key
         run: |
-          echo "seed_key=docs-seed-${{ runner.os }}-${{ hashFiles('yaffo_ui_tests/test_data/bennett/**', 'yaffo_ui_tests/test_data/mp4/**', 'yaffo_ui_tests/scripts/seed_database.py', 'yaffo_ui_tests/lib/services/isolated_runner.ts', 'yaffo_ui_tests/docker/docs-capture/Dockerfile', 'yaffo/utils/index_photos.py', 'yaffo/utils/index_video.py', 'yaffo/utils/face_analysis.py', 'yaffo/utils/image_classifier.py', 'yaffo/download_assets.py', 'yaffo/db/models.py', 'pyproject.toml') }}-v2" >> "$GITHUB_OUTPUT"
+          echo "seed_key=docs-seed-${{ runner.os }}-${{ hashFiles('yaffo_ui_tests/test_data/bennett/**', 'yaffo_ui_tests/test_data/obama/**', 'yaffo_ui_tests/scripts/seed_database.py', 'yaffo_ui_tests/lib/services/isolated_runner.ts', 'yaffo_ui_tests/docker/docs-capture/Dockerfile', 'yaffo/utils/index_photos.py', 'yaffo/utils/index_video.py', 'yaffo/utils/face_analysis.py', 'yaffo/utils/image_classifier.py', 'yaffo/download_assets.py', 'yaffo/db/models.py', 'pyproject.toml') }}-v2" >> "$GITHUB_OUTPUT"
 
   seed-cache:
     name: Build documentation fixture
@@ -121,7 +121,7 @@ jobs:
         # Created first so Docker does not create the bind sources root-owned.
         run: |
           mkdir -p "$DOCS_DATA_MOUNT" "$DOCS_ASSET_MOUNT"
-          npm run docs:sandbox:build
+          npm run docs:sandbox:build -- --peer
 
   heal:
     name: Heal ${{ matrix.page }}
@@ -183,7 +183,7 @@ jobs:
         # The app runs in the docs image too, so its thumbnails, face and label results,
         # and fixture paths match a local capture. Published on 127.0.0.1:5002 for the
         # healer's host browser; the capture container reaches it over the docs network.
-        run: npm run docs:sandbox:start -- --detach
+        run: npm run docs:sandbox:start -- --peer --detach
       - name: Validate documentation automation
         working-directory: yaffo_ui_tests
         run: npm run docs:validate
@@ -306,6 +306,9 @@ jobs:
           done < <(git ls-files --others --exclude-standard -z -- "${paths[@]}")
 
           git diff --binary -- "${paths[@]}" > "patches/${{ matrix.id }}.patch"
+          # An empty patch means nothing to apply. Leave no file, so no patch artifact
+          # is uploaded and the PR links a patch only for pages that have one.
+          [ -s "patches/${{ matrix.id }}.patch" ] || rm -f "patches/${{ matrix.id }}.patch"
       - name: Upload documentation patch
         id: patch_artifact
         if: ${{ always() }}
@@ -504,6 +507,29 @@ jobs:
           gh api --method POST "repos/${GITHUB_REPOSITORY}/check-runs" --input "$REQUEST_FILE" \
             --jq '"\(.conclusion): \(.output.title)"'
 
+      # The run summary and the PR body list artifacts by page: pages with changes
+      # first, with their shots, verdicts, and links; pages with none collapsed.
+      - name: Summarize artifacts by page
+        if: ${{ always() }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # upload-artifact exposes artifact URLs only inside each matrix job. Look up
+          # the run's artifacts, every page of them, so the summary can link each one.
+          if gh api --paginate \
+            "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100" \
+            --jq '.artifacts[]' > "$RUNNER_TEMP/artifacts.jsonl"; then
+            jq -s '{artifacts: .}' "$RUNNER_TEMP/artifacts.jsonl" > "$RUNNER_TEMP/artifacts.json"
+          else
+            echo '{"artifacts":[]}' > "$RUNNER_TEMP/artifacts.json"
+          fi
+          python3 yaffo_ui_tests/scripts/docs_artifact_summary.py \
+            --evidence healing-evidence \
+            --artifacts "$RUNNER_TEMP/artifacts.json" \
+            --artifact-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts/" \
+            --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            > "$RUNNER_TEMP/artifact-summary.md"
+          cat "$RUNNER_TEMP/artifact-summary.md" >> "$GITHUB_STEP_SUMMARY"
       - name: Apply documentation patches
         id: patches
         run: |
@@ -552,7 +578,6 @@ jobs:
           shopt -s nullglob globstar
           BRANCH="auto-heal/docs-${RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           BODY_FILE=$(mktemp)
-          ARTIFACTS_FILE=$(mktemp)
           TRIAGE_FILES=(healing-evidence/**/triage.json)
           API_LOG_FILES=(healing-evidence/**/heal-logs/**/*_api.json)
 
@@ -571,14 +596,6 @@ jobs:
           fi
           formatted_cost=$(printf '$%.4f' "$total_cost")
 
-          # upload-artifact exposes these URLs only inside each matrix job. Look
-          # up the completed run's artifact IDs so the PR can link to every
-          # per-page artifact that was actually produced.
-          if ! gh api \
-            "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100" \
-            > "$ARTIFACTS_FILE"; then
-            echo '{"artifacts":[]}' > "$ARTIFACTS_FILE"
-          fi
           {
             echo "Auto-generated user-guide updates for feature branch \`${HEAD_BRANCH}\`."
             echo ""
@@ -631,33 +648,8 @@ jobs:
             done
             [ "$any_reasoning" -eq 0 ] && echo "_No structured model reasoning was produced._"
             echo ""
-            echo "## Artifacts"
-            echo ""
-            artifact_count=$(jq -r '
-              [.artifacts[]
-                | select(.expired == false)
-                | select(.name | test("^docs-(capture|heal|patch)-"))]
-              | sort_by(.name, .created_at)
-              | group_by(.name)
-              | map(last)
-              | length' "$ARTIFACTS_FILE")
-            if [ "$artifact_count" -gt 0 ]; then
-              jq -r \
-                --arg base "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts/" \
-                '[.artifacts[]
-                  | select(.expired == false)
-                  | select(.name | test("^docs-(capture|heal|patch)-"))]
-                | sort_by(.name, .created_at)
-                | group_by(.name)
-                | map(last)
-                | .[]
-                | "- [\(.name)](\($base)\(.id))"' \
-                "$ARTIFACTS_FILE"
-            else
-              echo "- [Artifacts for this workflow run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})"
-            fi
-            echo ""
-            echo "_Artifacts expire according to their configured retention period._"
+            # Written by "Summarize artifacts by page", which also put it on the run summary.
+            cat "$RUNNER_TEMP/artifact-summary.md"
           } > "$BODY_FILE"
 
           git config user.name "github-actions[bot]"

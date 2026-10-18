@@ -5,12 +5,15 @@
  */
 import {Dirent, existsSync, readdirSync, statSync} from "node:fs";
 import {dirname, join, relative, resolve, sep} from "node:path";
+import {createSocket} from "node:dgram";
 
 import {
     IsolatedEnvironment,
     IsolatedEnvironmentOptions,
     seedCacheDir,
     needsFakeSyncServices,
+    isTcpPortAvailable,
+    quicPortFor,
     startIsolatedEnvironment,
 } from "@lib/services/isolated_runner";
 import {runPlaywrightTests, RunOptions} from "@lib/services/run_playwright_tests";
@@ -63,6 +66,7 @@ export interface SandboxedSuiteRunOptions {
 }
 
 export interface SandboxedSuiteDependencies {
+    isPortAvailable?: (port: number, protocol: "tcp" | "udp") => Promise<boolean>;
     startEnvironment?: (
         port: number,
         options: IsolatedEnvironmentOptions,
@@ -70,6 +74,44 @@ export interface SandboxedSuiteDependencies {
     runTests?: typeof runPlaywrightTests;
     log?: (message: string) => void;
 }
+
+const isPortAvailable = (port: number, protocol: "tcp" | "udp"): Promise<boolean> => {
+    if (protocol === "tcp") return isTcpPortAvailable(port);
+    return new Promise((resolveAvailable, reject) => {
+        const socket = createSocket("udp4");
+        socket.unref();
+        socket.once("error", (error: NodeJS.ErrnoException) => {
+            socket.close();
+            if (error.code === "EADDRINUSE") resolveAvailable(false);
+            else reject(error);
+        });
+        socket.bind({address: "0.0.0.0", port, exclusive: true}, () => {
+            socket.close(() => resolveAvailable(true));
+        });
+    });
+};
+
+/** Probe distinct two-port slots before any fixture copies or app launches. */
+export const findSandboxPortSlots = async (
+    basePort: number,
+    count: number,
+    withPeer: boolean,
+    available = isPortAvailable,
+): Promise<number[]> => {
+    const slots: number[] = [];
+    const maximumPort = withPeer ? 65_535 - quicPortFor(0) : 65_535;
+    for (let port = basePort; port + 1 <= maximumPort && slots.length < count; port += 2) {
+        if (!(await available(port, "tcp")) || !(await available(port + 1, "tcp"))) continue;
+        if (withPeer && (!(await available(quicPortFor(port), "udp")) ||
+            !(await available(quicPortFor(port + 1), "udp")))) continue;
+        slots.push(port);
+    }
+    if (slots.length < count) {
+        throw new Error(`Could not find ${count} free sandbox port pairs starting at ${basePort}; ` +
+            "choose a lower TEST_SANDBOX_BASE_PORT or --base-port");
+    }
+    return slots;
+};
 
 const collectSpecs = (path: string): string[] => {
     if (statSync(path).isFile()) {
@@ -191,12 +233,16 @@ export const runSandboxedSuites = async (
     const runTests = dependencies.runTests ?? runPlaywrightTests;
     const log = dependencies.log ?? console.log;
     const reporters = options.reporters ?? "json,html,list,junit";
+    const workerPorts = await findSandboxPortSlots(
+        basePort, Math.min(concurrency, suites.length), suites.some((suite) => suite.withPeer),
+        dependencies.isPortAvailable,
+    );
 
     log(`\nFound ${suites.length} suite director${suites.length === 1 ? "y" : "ies"}; ` +
         `running up to ${concurrency} concurrently.`);
 
     return runWorkerPool(suites, concurrency, async (suite, workerIndex) => {
-        const port = basePort + (workerIndex * 2);
+        const port = workerPorts[workerIndex];
         let environment: IsolatedEnvironment | undefined;
         let runError: Error | undefined;
         let success = false;

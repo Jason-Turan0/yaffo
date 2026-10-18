@@ -14,7 +14,7 @@ await jest.unstable_mockModule("../paths", () => ({
 await jest.unstable_mockModule("../load", () => ({loadWalkthroughs}));
 await jest.unstable_mockModule("../runner", () => ({captureWalkthroughs}));
 
-const {main, runCli} = await import("../capture_worker");
+const {main, reportLateRejection, runCli} = await import("../capture_worker");
 const initialScrubCalls = scrubProcessEnv.mock.calls.map((call) => [...call]);
 
 let log: jest.SpiedFunction<typeof console.log>;
@@ -117,6 +117,22 @@ describe("capture worker main", () => {
         loadWalkthroughs.mockResolvedValue([]);
         await runCli([]);
         expect(process.exitCode).toBe(1);
+    });
+
+    it("the direct-run wrapper logs a walkthrough's late rejection instead of ending the process", async () => {
+        loadWalkthroughs.mockResolvedValue([]);
+        const warn = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+        try {
+            await runCli([]);
+            expect(process.listeners("unhandledRejection")).toContain(reportLateRejection);
+            reportLateRejection(new Error("page.waitForResponse: Timeout 30000ms exceeded\n  at pinPagesBar"));
+            expect(warn).toHaveBeenCalledWith(
+                "  ! a walkthrough left an unawaited promise that rejected later: " +
+                "page.waitForResponse: Timeout 30000ms exceeded");
+        } finally {
+            process.removeListener("unhandledRejection", reportLateRejection);
+            warn.mockRestore();
+        }
     });
 
     it("the direct-run wrapper reports rejected orchestration", async () => {
