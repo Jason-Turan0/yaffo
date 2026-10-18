@@ -49,7 +49,7 @@ const configureDestination = async (page: Page): Promise<void> => {
 const chooseAlbum = async (page: Page): Promise<void> => {
     const selection = page.locator("#sync-step-where");
     await selection.locator("#sync-selection-album").check();
-    await selection.locator("#sync-album").selectOption({label: "Seeded Album"}, {force: true});
+    await selection.locator("#sync-album").selectOption({label: "Maya's Big Game"}, {force: true});
     await Promise.all([
         page.waitForResponse((response) => response.url().includes("/sync/selection") &&
             response.request().method() === "POST"),
@@ -149,7 +149,7 @@ export default defineWalkthrough({
                 await createTargetSync(page);
                 await configureDestination(page);
                 await page.locator("#sync-selection-album").check();
-                await page.locator("#sync-album").selectOption({label: "Seeded Album"}, {force: true});
+                await page.locator("#sync-album").selectOption({label: "Maya's Big Game"}, {force: true});
             }),
             teardown,
         },
@@ -169,7 +169,7 @@ export default defineWalkthrough({
                 await waitForAppReady(page);
                 await expect(page.locator(".automation-edit-screen")).toBeVisible();
                 await page.locator(".automation-edit-screen textarea").fill(
-                    "Send the photos in Seeded Album to the family photo frame folder.");
+                    "Send the photos in Maya's Big Game to the family photo frame folder.");
                 await page.mouse.move(1390, 0);
             }),
             teardown,

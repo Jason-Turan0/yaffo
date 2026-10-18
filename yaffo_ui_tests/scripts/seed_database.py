@@ -307,6 +307,50 @@ def seed_sync_adapters(db) -> None:
     db.session.commit()
 
 
+def seed_example_photo_service(db) -> None:
+    """A published custom photo service with a newer draft, for the documentation.
+
+    The guide walks through the service builder, but the docs sandbox has no AI key,
+    so the builder can never produce a draft there. This stores the checked-in Flickr
+    example the way the builder would: a conversation, an approved documentation
+    request, a published version, and a newer unpublished draft. The draft differs
+    only by a comment, so Publish is offered without inventing endpoints. A Test
+    result can't be seeded: Test reads a real signed-in account live.
+    """
+    from yaffo.db.models import CONVERSATION_TYPE_ASSISTANT, CONVERSATION_TYPE_USER
+    from yaffo.db.repositories import service_builder_repository as services
+
+    code = (YAFFO_PROJECT_ROOT / "yaffo/site_agents/adapter/examples/flickr_target.star").read_text()
+    row = services.create_service(db.session, "Flickr exports")
+    services.add_message(db.session, row.id, CONVERSATION_TYPE_USER,
+                         "Send selected photos to Flickr sets. Let me choose a destination set.")
+    services.add_message(db.session, row.id, CONVERSATION_TYPE_ASSISTANT,
+                         "I'll read Flickr's API documentation for uploads and photo sets first.")
+    services.ask_for_docs(db.session, row.id, {"www.flickr.com": [
+        "https://www.flickr.com/services/api/upload.api.html",
+        "https://www.flickr.com/services/api/flickr.photosets.addPhoto.html",
+    ]})
+    request, _ = services.pending_permission(db.session, row.id, services.PERMISSION_DOCS)
+    services.resolve_permission(db.session, row.id, request.id, allow=True)
+    for draft in (code, f"# Sends selected photos to a Flickr set the user chooses.\n{code}"):
+        analysis = services.save_draft(db.session, row.id, draft)
+        if not analysis.ok:
+            raise RuntimeError("The Flickr example failed adapter analysis: "
+                               + "; ".join(map(str, analysis.problems)))
+        if draft is code:
+            services.publish(db.session, row.id)
+            services.add_message(db.session, row.id, CONVERSATION_TYPE_ASSISTANT,
+                                 "The draft signs in with your Flickr app, uploads each photo, and "
+                                 "adds it to the set you choose. Add your app credentials and a test "
+                                 "account under Account, then try it from Test.")
+    services.add_message(db.session, row.id, CONVERSATION_TYPE_USER,
+                         "Add a note at the top saying what this service does.")
+    services.add_message(db.session, row.id, CONVERSATION_TYPE_ASSISTANT,
+                         "Added it. Syncs keep using the published version until you publish "
+                         "this draft.")
+    print(f"  Seeded example photo service: {row.slug}")
+
+
 def seed_system_automations(db) -> None:
     """Seed the built-in system automations + triggers, mirroring what the
     production migrations seed (000_INIT, with events renamed by 002)."""
@@ -589,29 +633,95 @@ def seed_custom_pages(db, seed_profile: str) -> None:
     print(f"  Seeded custom page: Florida Trip (id={page.id})")
 
 
-def seed_albums(db) -> None:
+def seed_example_page_drafts(db) -> None:
+    """Two pages caught mid-edit, for the documentation's page-builder walkthrough.
+
+    The docs sandbox has no AI key, so the builder can never produce a working
+    version there. This stores the two states the guide pictures, the way a
+    generation run leaves them: "Maya's Third Birthday" has a READY draft that adds a
+    People widget and waits for Save, and "Chicago 2015" is still generating a map.
+    The generating version starts at a fixed time, so a walkthrough can pin the
+    browser clock and get the same elapsed timer on every capture.
+    """
+    from datetime import datetime
+    from yaffo.db.models import (
+        CONVERSATION_TYPE_ASSISTANT,
+        CONVERSATION_TYPE_USER,
+        PAGE_VERSION_STATUS_READY,
+    )
+    from yaffo.db.repositories import custom_page_repository as pages
+    from yaffo.site_agents.widget_templates import TEMPLATES_BY_NAME
+
+    def photos(year: int, limit: int) -> dict:
+        return {"source": "media_items", "year": {"eq": year}, "media_type": {"eq": "photo"},
+                "limit": limit}
+
+    # No Hero banner here: it titles itself with the photo's location name, which
+    # reads oddly on a birthday page ("Lincoln Square, Chicago").
+    grid = TEMPLATES_BY_NAME["Photo grid"].to_widget_item(x=0, y=0)
+    grid.update(title="Party photos", w=12)
+    grid["data_query"] = {"photos": photos(2017, 12)}
+    people = TEMPLATES_BY_NAME["People"].to_widget_item(x=0, y=grid["h"])
+    birthday = pages.create_page(db.session, "Maya's Third Birthday", "September 2017")
+    pages.save_page_widgets(db.session, birthday.id, [grid])
+    for entry_type, content in (
+        (CONVERSATION_TYPE_USER, "Make a page for Maya's third birthday with all the party photos in a grid."),
+        (CONVERSATION_TYPE_ASSISTANT, "I added a photo grid with the photos from the party."),
+    ):
+        pages.add_message(db.session, birthday.id, entry_type, content)
+    draft = pages.fork_version(db.session, birthday.id)
+    pages.save_version_widgets(db.session, draft.id, [grid, people])
+    for entry_type, content in (
+        (CONVERSATION_TYPE_USER, "Add a section where we can pick someone and see their photos."),
+        (CONVERSATION_TYPE_ASSISTANT, "Added a People widget below the grid. Choose a person to see their photos."),
+    ):
+        pages.add_version_message(db.session, draft.id, entry_type, content)
+    pages.set_version_status(db.session, draft.id, PAGE_VERSION_STATUS_READY, completed=True)
+
+    gallery = TEMPLATES_BY_NAME["Photo gallery"].to_widget_item(x=0, y=0)
+    gallery["data_query"] = {"photos": photos(2015, 20)}
+    chicago = pages.create_page(db.session, "Chicago 2015", "")
+    pages.save_page_widgets(db.session, chicago.id, [gallery])
+    for entry_type, content in (
+        (CONVERSATION_TYPE_USER, "Show the photos from our 2015 Chicago trip."),
+        (CONVERSATION_TYPE_ASSISTANT, "I added a gallery of the 2015 photos."),
+    ):
+        pages.add_message(db.session, chicago.id, entry_type, content)
+    running = pages.fork_version(db.session, chicago.id)
+    pages.add_version_message(db.session, running.id, CONVERSATION_TYPE_USER,
+                              "Add a map of where these were taken.")
+    running.started_at = datetime(2026, 9, 1, 12, 0, 0)
+    db.session.commit()
+    print(f"  Seeded example page drafts: ready (id={birthday.id}), generating (id={chicago.id}, "
+          f"started {running.started_at.isoformat()} UTC)")
+
+
+def seed_albums(db, docs: bool = False) -> None:
     """One album with a few members, so album screens have something to show without a
-    test having to build one first. Runs AFTER indexing — an album needs media items."""
+    test having to build one first. Runs AFTER indexing — an album needs media items.
+
+    The documentation instance gets a presentable album instead: the volleyball
+    photos as "Maya's Big Game". The UI tests keep "Seeded Album", which their specs
+    select by name."""
     from yaffo.db.models import MediaItem
     from yaffo.db.repositories import album_repository
 
     if album_repository.list_albums(db.session):
         return
-    photo_ids = [
-        row[0]
-        for row in db.session.query(MediaItem.id)
-        .order_by(MediaItem.date_taken.desc())
-        .limit(4)
-        .all()
-    ]
+    query = db.session.query(MediaItem.id)
+    if docs:
+        name, description = "Maya's Big Game", "Her volleyball tournament, July 2026"
+        query = query.filter(MediaItem.full_file_path.like("%/volleyball/%")).order_by(MediaItem.date_taken)
+    else:
+        name, description = "Seeded Album", "Seeded for UI tests"
+        query = query.order_by(MediaItem.date_taken.desc()).limit(4)
+    photo_ids = [row[0] for row in query.all()]
     if not photo_ids:
         print("  Skipped album seed: no indexed media items")
         return
-    album = album_repository.create_album(
-        db.session, "Seeded Album", description="Seeded for UI tests"
-    )
+    album = album_repository.create_album(db.session, name, description=description)
     album_repository.add_items(db.session, album.id, photo_ids)
-    print(f"  Seeded album: Seeded Album ({len(photo_ids)} photos)")
+    print(f"  Seeded album: {name} ({len(photo_ids)} photos)")
 
 
 def index_media_library(photos_dir: Path, thumbnail_dir: Path) -> int:
@@ -767,7 +877,13 @@ def seed_database() -> int:
         seed_media_labels(db)
 
         # After indexing: an album needs media items to hold.
-        seed_albums(db)
+        seed_albums(db, docs=os.environ.get("YAFFO_SEED_DOCS") == "1")
+
+        # Documentation only: the UI-test databases start with no custom services,
+        # and the sync-service specs create their own.
+        if os.environ.get("YAFFO_SEED_DOCS") == "1":
+            seed_example_photo_service(db)
+            seed_example_page_drafts(db)
 
         total = db.session.query(MediaItem).count()
         print(f"  Total media items in database: {total}")

@@ -1,6 +1,6 @@
 {
     "page": "create-customize/custom-pages",
-    "lastVerifiedSha": "d21c959e6b027b41eb5bbb9fadf39a90de500bc8",
+    "lastVerifiedSha": "bac7c340b6acffb39ca8707f177ccb6557c26fc3",
     "observed": {
         "page": "create-customize/custom-pages",
         "urls": [
@@ -10,15 +10,13 @@
             "/media/:id/poster",
             "/pages",
             "/pages/:id",
-            "/pages/:id/chat",
             "/pages/:id/delete",
             "/pages/:id/design",
             "/pages/:id/update",
-            "/pages/:id/versions/:id/publish",
             "/pages/:id/versions/:id/status",
+            "/pages/:id/versions/:id/widgets/:id/delete",
             "/pages/:id/widgets/:id/frame",
             "/pages/:id/widgets/preview",
-            "/pages/bar-visibility",
             "/placeholder",
             "/settings",
             "/settings/thumbnail-stats/stream",
@@ -302,7 +300,7 @@
         "yaffo/templates/settings/_llm_active_model.html": "7ea4ad23370bb62393fda4240b83ce0ab8953ba7877543b3b80bc9238ada1b9b",
         "yaffo/templates/settings/_llm_models.html": "811bd8442c6fdc191623115bd9fc0f05212875e7c84bfb5ee93291371c69be3d",
         "yaffo/templates/settings/index.html": "f2520e7640c5d95551b82701ab76b08becc76885a9bc126acf278d566b71ebc8",
-        "yaffo_ui_tests/scripts/seed_database.py": "a387f7147b936ebd1f5987ac60c26247a425c022892f653e64225bad12af1383"
+        "yaffo_ui_tests/scripts/seed_database.py": "554e1cef5011b0beff364986508e7c73544630288a3cdb704a4c2028415b523a"
     },
     "shots": {
         "create-customize/assets/custom-pages/custom-page-view.webp": {
@@ -343,6 +341,148 @@
                 "button \"Edit title\" 20×13",
                 "button \"Delete widget\" 19×18"
             ]
+        },
+        "create-customize/assets/custom-pages/new-page-empty.webp": {
+            "width": 1400,
+            "height": 900,
+            "sha256": "3e0055b31eaa56d0201ce211e485d932182a0138b8b2894e590784410c51bad8",
+            "layout": [
+                "link \"YAFFO!\" 65×20",
+                "listitem \"Florida Trip\" 70×16",
+                "link \"Florida Trip\" 70×16",
+                "listitem \"Maya's Third Birthday\" 135×16",
+                "link \"Maya's Third Birthday\" 135×16",
+                "listitem \"Chicago 2015\" 86×16",
+                "link \"Chicago 2015\" 86×16",
+                "listitem \"Untitled Page\" 84×16",
+                "link \"Untitled Page\" 84×16",
+                "button \"New page\" 113×33",
+                "label \"Title\" 26×16",
+                "textbox \"Untitled Page\" 320×38",
+                "label \"Subtitle\" 47×16",
+                "textbox \"\" 320×100",
+                "label \"Tab order\" 59×16",
+                "textbox \"4\" 320×38",
+                "label \"Display title?\" 79×16",
+                "checkbox \"checked\" 18×18",
+                "button \"Add widget\" 111×31",
+                "button \"Save\" 54×31",
+                "button \"Delete Page\" 119×31",
+                "heading \"Assistant\" 63×16",
+                "text \"Collaborate to build your page.\" 177×15",
+                "text \"Describe what you want and I'll add widgets — e.g. “a map of Maine” or “our beach photos from 2023”.\" 309×30",
+                "textbox \"Describe what you want…\" 328×100",
+                "button \"Send\" 54×31",
+                "button \"Cancel\" 64×31"
+            ]
+        },
+        "create-customize/assets/custom-pages/assistant-description.webp": {
+            "width": 392,
+            "height": 341,
+            "sha256": "c888eed6f46288e310bf0db42c629ba81a6ae21445628c692b09f071083e38e8",
+            "layout": [
+                "heading \"Assistant\" 63×16",
+                "text \"Collaborate to build your page.\" 177×15",
+                "text \"Describe what you want and I'll add widgets — e.g. “a map of Maine” or “our beach photos from 2023”.\" 309×30",
+                "textbox \"A page for our Siesta Key trip: a hero photo across the top, then the rest of the beach photos in a grid below it.\" 328×100",
+                "button \"Send\" 54×31",
+                "button \"Cancel\" 64×31"
+            ]
+        },
+        "create-customize/assets/custom-pages/generation-running.webp": {
+            "width": 1392,
+            "height": 911,
+            "sha256": "a2a10f5cfd415164432041393df07d6fb77179749a35f4df53c1d373b12436ed",
+            "layout": [
+                "label \"Title\" 26×16",
+                "textbox \"Chicago 2015\" 320×38",
+                "label \"Subtitle\" 47×16",
+                "textbox \"\" 320×100",
+                "label \"Tab order\" 59×16",
+                "textbox \"3\" 320×38",
+                "label \"Display title?\" 79×16",
+                "checkbox \"checked\" 18×18",
+                "button \"Add widget\" 111×31",
+                "button \"Save\" 54×31",
+                "button \"Delete Page\" 119×31",
+                "heading \"Assistant\" 63×16",
+                "text \"Collaborate to build your page.\" 177×15",
+                "text \"Show the photos from our 2015 Chicago trip.\" 255×32",
+                "text \"I added a gallery of the 2015 photos.\" 227×16",
+                "text \"Add a map of where these were taken.\" 240×16",
+                "text \"Generating…\" 77×15",
+                "text \"2:41\" 25×15",
+                "textbox \"Describe what you want…\" 328×100",
+                "button \"Send\" 54×31",
+                "button \"Cancel\" 64×31",
+                "text \"Photo gallery\" 76×15"
+            ]
+        },
+        "create-customize/assets/custom-pages/draft-review.webp": {
+            "width": 1392,
+            "height": 966,
+            "sha256": "681dd8d968fd4b80bef28e11596eb3a966ea5fb98718ee411b34ed175ad99da9",
+            "layout": [
+                "label \"Title\" 26×16",
+                "textbox \"Maya's Third Birthday\" 320×38",
+                "label \"Subtitle\" 47×16",
+                "textbox \"September 2017\" 320×100",
+                "label \"Tab order\" 59×16",
+                "textbox \"2\" 320×38",
+                "label \"Display title?\" 79×16",
+                "checkbox \"checked\" 18×18",
+                "button \"Add widget\" 111×31",
+                "button \"Save\" 54×31",
+                "button \"Delete Page\" 119×31",
+                "heading \"Assistant\" 63×16",
+                "text \"Collaborate to build your page.\" 177×15",
+                "text \"Make a page for Maya's third birthday with one photo across the top.\" 266×32",
+                "text \"I added a full-width hero with a photo from the party.\" 265×32",
+                "text \"Add the rest of the party photos in a grid underneath.\" 253×32",
+                "text \"Added a photo grid with the photos from that day, below the hero.\" 252×32",
+                "textbox \"Describe what you want…\" 328×100",
+                "button \"Send\" 54×31",
+                "button \"Cancel\" 64×31",
+                "text \"Hero banner\" 72×15",
+                "button \"Edit title\" 20×13",
+                "button \"Delete widget\" 19×18",
+                "text \"Photo grid\" 59×15",
+                "button \"Edit title\" 20×13",
+                "button \"Delete widget\" 19×18"
+            ]
+        },
+        "create-customize/assets/custom-pages/save-page.webp": {
+            "width": 1392,
+            "height": 774,
+            "sha256": "9791c2652398b98000f3a2be90bd979212acccee9afbe91264fa5f89efccdf68",
+            "layout": [
+                "label \"Title\" 26×16",
+                "textbox \"Untitled Page\" 320×38",
+                "label \"Subtitle\" 47×16",
+                "textbox \"\" 320×100",
+                "label \"Tab order\" 59×16",
+                "textbox \"4\" 320×38",
+                "label \"Display title?\" 79×16",
+                "checkbox \"checked\" 18×18",
+                "button \"Add widget\" 111×31",
+                "button \"Save\" 54×31",
+                "button \"Delete Page\" 119×31",
+                "heading \"Assistant\" 63×16",
+                "text \"Collaborate to build your page.\" 177×15",
+                "text \"Describe what you want and I'll add widgets — e.g. “a map of Maine” or “our beach photos from 2023”.\" 309×30",
+                "textbox \"Describe what you want…\" 328×100",
+                "button \"Send\" 54×31",
+                "button \"Cancel\" 64×31",
+                "text \"Notes\" 34×15",
+                "button \"Edit title\" 20×13",
+                "button \"Delete widget\" 19×18"
+            ]
+        },
+        "create-customize/assets/custom-pages/page-presentation.webp": {
+            "width": 1400,
+            "height": 912,
+            "sha256": "99a7f1f23224b8bb70d83d50af321743dcde3528c1b68e445183f97403aff493",
+            "layout": []
         }
     }
 }

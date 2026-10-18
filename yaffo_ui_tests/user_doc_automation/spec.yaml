@@ -173,17 +173,50 @@ pages:
       - yaffo/background_tasks/tasks/remove_duplicates.py  # trash/delete/move behavior
       - yaffo_ui_tests/lib/services/isolated_runner.ts  # docs-only duplicate sample composition
 
+  organize-review/albums:
+    covers: >-
+      Albums as hand-curated collections whose membership never changes on its
+      own: the albums overview and its cover tiles, creating an album, adding
+      photos from the filterable add screen (picking individual photos or every
+      match), the album page, reordering by drag, choosing the cover, removing
+      photos, editing the name and description, sharing an album with a paired
+      device, and deleting an album (which never deletes photos). Creating an
+      album and filling it must be a guided walkthrough (the guide-walkthrough
+      component) with one screenshot per step; other screenshots are annotated
+      screenshots. The docs fixture seeds "Maya's Big Game", three volleyball
+      photos from July 2026. A walkthrough that creates an album must delete it
+      in teardown; reordering, cover, and removal must not change the seeded
+      album.
+    walkthrough: true
+    also_depends_on:
+      - yaffo/db/repositories/album_repository.py  # membership, order, and cover rules
+      - yaffo/routes/selection.py  # "every match" selection semantics on the add screen
+
   create-customize/custom-pages:
     covers: >-
       Creating a page, working with widgets, and publishing and presenting it.
       The set of available widget types is enumerable and must stay complete.
+      Building a page with the Assistant must be a guided walkthrough (the
+      guide-walkthrough component) with one screenshot per step: + New page and
+      the empty design view it opens, describing the page to the Assistant, the
+      locked canvas while generation runs (elapsed timer and Cancel), reviewing
+      the finished draft, saving it, and the published page in presentation mode.
+      Other screenshots are annotated screenshots. The docs fixture has pages for
+      each state: "Florida Trip" is published; "Maya's Third Birthday" has a READY
+      draft that adds a People widget below its party-photo grid and waits for
+      Save; "Chicago 2015" is still generating, its working version started at
+      2026-09-01 12:00:00 UTC, so pin
+      the browser clock (Playwright's page.clock) to get a stable elapsed timer.
+      Never click Save, Send, Cancel, or Delete on these seeded pages: they write
+      to the shared fixture. A page the walkthrough creates must be deleted in
+      teardown.
     walkthrough: true
     also_depends_on:
       - yaffo/site_agents/widget_templates.py  # the complete built-in widget catalog
       - yaffo/db/repositories/custom_page_repository.py  # page/version publishing semantics
       - yaffo/background_tasks/tasks/generate_page.py  # durable assistant generation
       - yaffo/site_agents/llm_config.py  # provider and API-key requirements
-      - yaffo_ui_tests/scripts/seed_database.py  # the published Florida Trip fixture
+      - yaffo_ui_tests/scripts/seed_database.py  # Florida Trip and the docs-only page drafts
 
   create-customize/themes:
     covers: >-
@@ -256,6 +289,15 @@ pages:
       writes, correcting drafts, publishing and reviewing endpoints, and creating
       a sync with the published service. Explain draft versus published behavior,
       wider-access review for existing syncs, regeneration, and deletion while in use.
+      The build must be a guided walkthrough (the guide-walkthrough component) that a
+      reader follows in order, with one screenshot per step: the New automation
+      dialog with Add a new service selected, the builder conversation with its
+      Overview, the Account tab, the Access tab's endpoints, the Code tab, the Test
+      tab with its options, the Publish review, and the published service offered
+      under Send to in New automation. Screenshots outside the walkthrough are
+      annotated screenshots. The docs fixture seeds a published "Flickr exports"
+      service with a newer unpublished draft for these steps. A Test result needs a
+      real signed-in account, so describe it in prose rather than picturing it.
     walkthrough: true
     also_depends_on:
       - yaffo/db/repositories/service_builder_repository.py # drafts, publishing, permissions
@@ -263,6 +305,30 @@ pages:
       - yaffo/sync/fetch_docs.py                   # documentation-domain approval
       - yaffo/sync/connections.py                  # test accounts and shared sign-in
       - yaffo/sync/setup.py                        # published service setup and consent
+
+  create-customize/sharing:
+    covers: >-
+      Sharing between two Yaffo installations: what pairing is and that it grants
+      nothing by itself, making a pairing code on one device and entering it on
+      the other, the paired device list with presence and renaming, sharing a
+      media directory, a folder in one, or an album with a device, the Shared
+      With Others list and revoking a share, browsing what another device shared
+      in its remote gallery with filters, pulling a selection as a background
+      transfer, the download directory, transfers that pause at the relay data
+      budget and continue, cancel, or delete, and revoking and forgetting a
+      device. Explain direct versus relayed connections, that sharing copies
+      media and never moves or deletes originals, and that files already pulled
+      are kept after a revoke. Pairing and pulling must be guided walkthroughs
+      (the guide-walkthrough component) with one screenshot per step; other
+      screenshots are annotated screenshots. This needs a second, paired Yaffo
+      instance in the docs fixture (the sharing test sandbox runs two); until it
+      exists, nothing on the peer side can be captured.
+    walkthrough: true
+    also_depends_on:
+      - yaffo/db/repositories/p2p_repository.py  # grants, devices, and revocation
+      - yaffo/p2p/handlers/sharing.py  # what a grant exposes to the peer
+      - yaffo/p2p/transfers.py  # batching, the relay budget, and resume
+      - yaffo/p2p/pairing.py  # pairing codes: single use, expiry
 
   reference-maintenance/settings:
     covers: >-

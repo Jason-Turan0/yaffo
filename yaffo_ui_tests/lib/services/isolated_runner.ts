@@ -351,6 +351,8 @@ interface ProvisionOptions {
     recursiveVideos?: boolean;
     /** Fail fixture construction instead of preserving the UI-test runner's warning. */
     strictSeed?: boolean;
+    /** Seed the documentation-only examples, such as a published custom photo service. */
+    docsExamples?: boolean;
 }
 
 /**
@@ -362,7 +364,7 @@ interface ProvisionOptions {
  */
 export const provisionInstanceData = (options: ProvisionOptions): void => {
     const {label, tempDir, fixtureDir, seedProfile, includeVideos = false,
-           recursiveVideos = false, strictSeed = false} = options;
+           recursiveVideos = false, strictSeed = false, docsExamples = false} = options;
     const mediaDir = join(tempDir, "Family Photos");
 
     console.log(`\n🔧 Provisioning data dir for instance ${label}...`);
@@ -395,6 +397,7 @@ export const provisionInstanceData = (options: ProvisionOptions): void => {
             env: {
                 ...instanceEnv(tempDir, seedProfile),
                 YAFFO_SEED_RECURSIVE_VIDEOS: recursiveVideos ? "1" : "0",
+                YAFFO_SEED_DOCS: docsExamples ? "1" : "0",
             },
             cwd: YAFFO_DIR,
             stdio: "inherit",
@@ -430,6 +433,7 @@ export const buildDocumentationFixture = (dataDir = DOCS_DATA_DIR): string => {
         includeVideos: false,
         recursiveVideos: true,
         strictSeed: true,
+        docsExamples: true,
     });
     const mediaDir = join(dataDir, "Family Photos");
     const duplicateDir = join(dataDir, "Duplicate Scan Samples");
