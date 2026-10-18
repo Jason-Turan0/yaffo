@@ -95,7 +95,9 @@
       "noneSelected": "Ignoré : aucun visage sélectionné",
       "requestFailed": "Erreur: {{reason}}",
       "selectPersonFirst": "Veuillez d'abord sélectionner une personne",
-      "videoPreviewUnavailable": "Aperçu non disponible pour les vidéos"
+      "videoPreviewUnavailable": "Aperçu non disponible pour les vidéos",
+      "ignoredBadge": "Ignoré",
+      "personSimilarity": "{{name}} : {{value}}"
     },
     "people": {
       "created": "Créé \"{{name}}\"",
@@ -209,7 +211,13 @@
       "removeMessage_one": "Supprimer le visage sélectionné de cette personne ?",
       "removeMessage_other": "Retirez le {{count}} visages sélectionnés de cette personne ?",
       "removeTitle": "Supprimer les visages",
-      "selectRequired": "Veuillez sélectionner au moins un visage à supprimer"
+      "selectRequired": "Veuillez sélectionner au moins un visage à supprimer",
+      "moveConfirm": "Déplacer",
+      "moveMessage_one": "Déplacer le visage sélectionné vers {{person}} ?",
+      "moveMessage_other": "Déplacer les {{count}} visages sélectionnés vers {{person}} ?",
+      "movePersonRequired": "Choisissez vers qui déplacer les visages",
+      "moveSelectRequired": "Veuillez sélectionner au moins un visage à déplacer",
+      "moveTitle": "Déplacer les visages"
     }
   },
   "pages": {

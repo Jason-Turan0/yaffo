@@ -116,7 +116,7 @@ scenarios:
       - Create two people and assign one pool face to the first (setup via API, then wait for the background assignment)
       - Open the first person's faces view and select the face
       - Choose the second person in the "Move Selected to" picker (#move-target-person, a searchable-select) and click Move Selected (#move-selected-faces)
-      - Confirm the global confirm dialog
+      - Before confirming the move, cancel it once and reload to verify the face still belongs to the first person, then repeat and confirm
       - Cleanup — delete both people, which unassigns the face back to the pool
     verify:
       - A success message is displayed and the face leaves the first person's view (the move is synchronous, no taskq wait)
@@ -125,12 +125,13 @@ scenarios:
     goal: The "Show" choice lists all faces, only likely misassigned ones, or only ones that look like nobody
     priority: medium
     steps:
-      - Open a person's faces view (Show = All faces), then with ?show=misassigned, then ?show=nobody
+      - Open a person's faces view (Show = All faces), choose Likely misassigned and apply, choose Looks like nobody and apply, then return to All faces and apply
     verify:
       - The matching radio (input[name="show"]) is checked each time; each of the three options has an info tip (.help-tip[data-tooltip])
       - All faces shows no .face-closer-to line
       - Likely misassigned shows a .face-closer-to line on every face (or the empty state when none)
       - Looks like nobody shows no .face-closer-to line (or the empty state when none)
+      - Applying each choice persists its show parameter in the URL and restores the matching checked radio
   # ---------------------------------------------------------------------------
   # Responsive coverage (P3 — people). The shared shell contract itself is verified
   # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen

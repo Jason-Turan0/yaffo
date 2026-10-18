@@ -189,9 +189,9 @@ test.describe('Face Assignment', () => {
       page.locator('#sidebar-assign-selected-btn').click(),
     ]);
     expect(response.ok()).toBeTruthy();
-    await expect(page.locator('.notification.visible')).toBeVisible();
 
-    // Assignment completes in a background task; the face lands on Obama's page
+    // Advancing past the last cluster navigates away and clears its toast.
+    // The persisted assignment is the success signal across either path.
     await waitForFaceAssigned(page, obama.id, faceId!);
   });
 
@@ -301,9 +301,70 @@ test.describe('Face Assignment', () => {
       const shown = await payloadFaces();
       expect(shown.filter(face => face.ignored).map(face => face.id)).toEqual([target.id]);
       expect(shown.length).toBe(hidden.length + 1);
+      const groups = page.locator('.suggestion-group');
+      const targetIndex = await groups.evaluateAll((elements, id) => elements.findIndex(element =>
+        JSON.parse(element.getAttribute('data-faces') ?? '[]').some((face: { id: number }) => face.id === id)), target.id);
+      expect(targetIndex).toBeGreaterThanOrEqual(0);
+      for (let index = 0; index < targetIndex; index++) {
+        await page.locator('.suggestion-group:not([hidden]) .skip-cluster-btn').click();
+      }
+      const ignored = page.locator(`.face[data-face-id="${target.id}"]`);
+      await expect(ignored).toHaveClass(/face-ignored/);
+      await expect(ignored.locator('.face-ignored-badge')).toHaveText('Ignored');
     } finally {
       await patchFace({ ids: [target.id], person_id: null });  // un-ignore: back to unassigned
     }
+  });
+
+  test('People filters keep multiple selections only for Group by People', async ({ page }) => {
+    await page.goto('/faces?group_by=people&threshold=2');
+    const people = page.locator('#people-filter-group');
+    const choices = people.locator('input[name="person"]');
+    expect(await choices.count()).toBeGreaterThanOrEqual(2);
+    await expect(people.locator('input[name="person-match-type"]')).toHaveCount(0);
+    await people.locator('.multi-select-header').click();
+    await choices.nth(0).check();
+    await choices.nth(1).check();
+    const selected = await choices.evaluateAll(elements => elements.slice(0, 2).map(element =>
+      (element as HTMLInputElement).value));
+    await people.locator('.multi-select-header').click();
+
+    await page.locator('#group-by-similarity').check();
+    await expect(people).toBeHidden();
+    await expect(choices.nth(0)).toBeDisabled();
+    await expect(choices.nth(1)).toBeDisabled();
+    await page.locator('#group-by-people').check();
+    await expect(people).toBeVisible();
+    await expect(choices.nth(0)).toBeEnabled();
+    await expect(choices.nth(0)).toBeChecked();
+    await expect(choices.nth(1)).toBeChecked();
+    await page.locator('#filter-form button[type="submit"]').click();
+    await expect(page).toHaveURL(/group_by=people/);
+    expect(new URL(page.url()).searchParams.getAll('person')).toEqual(selected);
+    for (const value of selected) await expect(people.locator(`input[value="${value}"]`)).toBeChecked();
+
+    await page.locator('#group-by-similarity').check();
+    await page.locator('#filter-form button[type="submit"]').click();
+    await expect(page).toHaveURL(/group_by=similarity/);
+    expect(new URL(page.url()).searchParams.has('person')).toBe(false);
+    await expect(people).toBeHidden();
+  });
+
+  test('Next batch and Start over preserve filters while changing the face cursor', async ({ page }) => {
+    await page.goto('/faces?group_by=people&threshold=2&batch_size=25&include_ignored=1');
+    await expect(page.locator('.subtitle')).toContainText(/1–25 of/);
+    await page.locator('#faces-next-batch').click();
+    await expect(page).toHaveURL(/after=/);
+    await expect(page.locator('.subtitle')).toContainText(/26–/);
+    await expect(page.locator('input[name="include_ignored"]')).toBeChecked();
+    await page.locator('#faces-start-over').click();
+    await expect(page.locator('.subtitle')).toContainText(/1–25 of/);
+    const params = new URL(page.url()).searchParams;
+    expect(params.has('after')).toBe(false);
+    expect(params.get('group_by')).toBe('people');
+    expect(params.get('threshold')).toBe('2');
+    expect(params.get('include_ignored')).toBe('1');
+    await expect(page.locator('#faces-start-over')).toHaveCount(0);
   });
 
   test('skipping every cluster moves on to the next batch instead of reloading the same one', async ({ page }) => {

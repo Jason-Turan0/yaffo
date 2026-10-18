@@ -1,7 +1,7 @@
 import { VIEWPORTS, expectNoPageOverflow, expectFitsViewport, expectPanelContract, withTouchContext } from '../_support/responsive';
 import { test, expect, Page } from '@playwright/test';
 import path from 'node:path';
-import { copyPhotoWithUniqueMarker, findAnyPhotoIn, findFileWithContentIn, removeTempFile } from '../_support/sandbox-fs';
+import { copyPhotoWithUniqueMarker, findAnyPhotoIn, findFileWithContentIn, listFilesRecursive, removeTempFile } from '../_support/sandbox-fs';
 
 const UNIQ = Date.now();
 const SPEC_FILE_STEM = `spec-index-${UNIQ}`;
@@ -138,21 +138,16 @@ async function assignFaceViaApi(page: Page, faceId: number, id: number): Promise
   expect(result.ok, `Failed to assign face ${faceId}: HTTP ${result.status}`).toBeTruthy();
 }
 
-// The tail of the unassigned pool, skipping the similarity cluster the parallel
-// face_assignment suite works through.
+// This suite owns its sandbox; every unassigned face is available for setup.
 async function pickUnassignedFaceId(page: Page): Promise<number> {
-  await page.goto('/faces?group_by=similarity&threshold=2');
-  const clusterJson = await page.locator('.suggestion-group').first().getAttribute('data-faces').catch(() => null);
-  const reserved = new Set(clusterJson ? (JSON.parse(clusterJson) as { id: number }[]).map(f => f.id) : []);
   await page.goto('/faces?group_by=people&threshold=100');
   const ids: number[] = [];
   for (const json of await page.locator('.suggestion-group').evaluateAll(
     els => els.map(el => el.getAttribute('data-faces')))) {
     if (json) ids.push(...(JSON.parse(json) as { id: number }[]).map(f => f.id));
   }
-  const candidates = ids.filter(id => !reserved.has(id));
-  expect(candidates.length, 'expected an unassigned face').toBeGreaterThan(0);
-  return candidates[candidates.length - 1];
+  expect(ids.length, 'expected an unassigned face').toBeGreaterThan(0);
+  return ids[ids.length - 1];
 }
 
 test.describe('Library Health', () => {
@@ -284,6 +279,43 @@ test.describe('Library Health', () => {
     expect((await page.request.get(`/faces/${faceId}`)).status()).toBe(200);
     await page.goto(`/people/${personId}/faces`);
     await expect(page.locator(`[data-face-id="${faceId}"]`)).toBeVisible();
+  });
+
+  test('file_sync_repairs_and_cleans_thumbnails_without_photo_changes', async ({ page }) => {
+    await expectInSync(page);
+    const imported = await statValue(page, 'stat-total-imported');
+    expect(await statValue(page, 'stat-unindexed')).toBe(0);
+    expect(await statValue(page, 'stat-orphaned')).toBe(0);
+    const thumbnailDir = await readThumbnailDir(page);
+    const crop = await page.request.get(`/faces/${faceId}`);
+    expect(crop.ok()).toBeTruthy();
+    const cropFile = findFileWithContentIn(thumbnailDir, await crop.body());
+    expect(cropFile).not.toBeNull();
+    const orphan = path.join(thumbnailDir, `${SPEC_FILE_STEM}-unused.jpg`);
+    copyPhotoWithUniqueMarker(cropFile!, orphan, 'unreferenced-thumbnail');
+    removeTempFile(cropFile);
+    try {
+      await page.goto('/utilities/automations/file_sync');
+      await page.locator('.js-run-files').click();
+      await expect(page.locator('#folder-picker-modal')).toHaveClass(/active/);
+      await expect(page.locator('#folder-picker-path')).not.toHaveText('');
+      const [run] = await Promise.all([
+        page.waitForResponse(response => response.url().endsWith('/utilities/automations/file_sync/run')
+          && response.request().method() === 'POST'),
+        page.locator('#folder-picker-select').click(),
+      ]);
+      expect(run.ok()).toBeTruthy();
+      await expect(async () => {
+        expect(listFilesRecursive(thumbnailDir)).not.toContain(orphan);
+        expect((await page.request.get(`/faces/${faceId}`)).status()).toBe(200);
+      }).toPass({ timeout: 20_000, intervals: [500, 1_000] });
+      await expectInSync(page);
+      expect(await statValue(page, 'stat-total-imported')).toBe(imported);
+      await page.goto(`/people/${personId}/faces`);
+      await expect(page.locator(`[data-face-id="${faceId}"]`)).toBeVisible();
+    } finally {
+      removeTempFile(orphan);
+    }
   });
 
   // The "no media directories configured" empty state is intentionally not

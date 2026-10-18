@@ -41,6 +41,10 @@ the owning stylesheet rather than the global layer.
 | `max-width: 640px` | Single-column nav grid, sheet-style modals, icon-only pagination, stacked form rows |
 | `max-width: 400px` | Navbar button text is hidden so Actions, Filters and Menu fit one row |
 
+The corresponding `min-width: 641px` and `width > 1200px` queries are shared
+boundaries too. Above 1200px, the desktop sidebar column sticks and scrolls as
+one unit; at 1200px and below, its panels move into the navbar.
+
 Capability queries carry as much weight as width:
 
 - `@media (hover: none), (pointer: coarse)` — touch sizing and touch-only

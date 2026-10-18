@@ -21,7 +21,7 @@ export const slugify = (heading: string): string =>
     heading
         .replace(/[*_`]/g, "")
         .normalize("NFKD")
-        .replace(/[^\x00-\x7F]/g, "")
+        .replace(/[^\p{ASCII}]/gu, "")
         .replace(/[^\w\s-]/g, "")
         .trim()
         .toLowerCase()

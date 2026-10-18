@@ -48,7 +48,7 @@ scenarios:
 
     verify:
       - The selected face is removed from the view
-      - Success message is displayed
+      - The assignment succeeds even when finishing the cluster navigates to the next batch and clears the transient success toast
       - The selected face is assigned to Obama on the people -> view faces screen
     cleanup:
       - Delete person Obama
@@ -108,7 +108,31 @@ scenarios:
     verify:
       - By default the checkbox is unchecked, the subtitle counts "unassigned faces", and the ignored face is in no cluster's data-faces payload
       - With the filter on, the checkbox is checked, the subtitle counts "unassigned and ignored faces", and exactly that face appears with ignored=true
-      - Painted ignored faces carry a .face-ignored class and a .face-ignored-badge label (not asserted here — which cluster is active varies)
+      - After skipping to its group, the painted ignored face carries a .face-ignored class and a .face-ignored-badge label
+  - name: people_filters_apply_only_to_group_by_people
+    goal: Multiple people can be selected; switching to Similarity disables their filter
+    priority: high
+    steps:
+      - Load Group by People, open the People picker, select two people, and close the picker
+      - Switch to Similarity, then back to People before applying
+      - Apply the People filters, then switch to Similarity and apply again
+    verify:
+      - People has no Any/All match-type control
+      - Similarity hides People and disables its checkboxes
+      - Switching back before applying restores enabled checkboxes with both selections intact
+      - Applying People includes both person parameters and restores both checked selections
+      - Applying Similarity submits no person parameters and keeps People hidden
+  - name: next_batch_and_start_over_preserve_filters
+    goal: The explicit batch links move the cursor and retain the current filters
+    priority: medium
+    steps:
+      - Load Group by People with threshold 2, batch size 25, and Include ignored faces on
+      - Click Next batch, then Start over
+    verify:
+      - Next batch adds after to the URL and the subtitle starts at 26
+      - Start over removes after and the subtitle starts at 1 again
+      - Both links preserve grouping, threshold, batch size, and Include ignored faces
+      - Start over is absent on the first batch
   - name: skipping_every_cluster_moves_on_to_the_next_batch
     goal: Faces left in the pool (skipped, or ignored when included) don't bring the same batch back
     priority: medium

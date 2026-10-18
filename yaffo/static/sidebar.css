@@ -170,7 +170,7 @@
    by that panel. The 4px padding (cancelled by the margin) keeps the panels'
    shadows clear of the column's scroll box. Below the breakpoint the panels move
    into the navbar (responsive.css), so none of this applies. */
-@media (min-width: 1201px) {
+@media (width > 1200px) {
     .sidebar-container {
         position: sticky;
         top: calc(var(--navbar-height, 64px) + 12px);  /* + the 4px padding = the panels' old 16px */

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-11 20:37-0500\n"
+"POT-Creation-Date: 2026-10-18 12:36-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: zh\n"
@@ -67,9 +67,7 @@ msgid "Threshold"
 msgstr "阈值"
 
 #: yaffo/background_tasks/automation_config.py:67
-msgid ""
-"Low finds more faces, Medium is balanced, and High keeps only more "
-"confident faces."
+msgid "Low finds more faces, Medium is balanced, and High keeps only more confident faces."
 msgstr "低：检测更多人脸；中：均衡模式；高：仅保留置信度较高的人脸。"
 
 #: yaffo/background_tasks/automation_config.py:73
@@ -77,9 +75,7 @@ msgid "Low"
 msgstr "低"
 
 #: yaffo/background_tasks/automation_config.py:74
-msgid ""
-"More sensitive; finds more weak, small, blurry, or side-angle faces, but "
-"may add false positives."
+msgid "More sensitive; finds more weak, small, blurry, or side-angle faces, but may add false positives."
 msgstr "更灵敏；可检测更多模糊、细小、侧角或不清晰的人脸，但可能产生误报。"
 
 #: yaffo/background_tasks/automation_config.py:78
@@ -104,8 +100,8 @@ msgstr "扫描速度"
 
 #: yaffo/background_tasks/automation_config.py:92
 msgid ""
-"Fast scans quickest, Balanced keeps the default behavior, and Thorough is"
-" slower but better at finding small or distant faces."
+"Fast scans quickest, Balanced keeps the default behavior, and Thorough is slower but better at "
+"finding small or distant faces."
 msgstr "快速：扫描最快；均衡：保持默认行为；精细：速度较慢，但更善于发现细小或远处的人脸。"
 
 #: yaffo/background_tasks/automation_config.py:99
@@ -138,8 +134,8 @@ msgstr "匹配阈值"
 
 #: yaffo/background_tasks/automation_config.py:120
 msgid ""
-"Threshold to use when comparing faces (0 = least similar, 100 = most "
-"similar) Higher is stricter: fewer, more confident assignments."
+"Threshold to use when comparing faces (0 = least similar, 100 = most similar) Higher is stricter:"
+" fewer, more confident assignments."
 msgstr "比较面孔时使用的阈值（0 = 最不相似，100 = 最相似）越高越严格：分配更少、更有信心。"
 
 #: yaffo/background_tasks/automation_config.py:131
@@ -148,9 +144,8 @@ msgstr "多人匹配时分配"
 
 #: yaffo/background_tasks/automation_config.py:133
 msgid ""
-"When on, a face matching more than one person above the threshold is "
-"assigned to the highest-scoring match. When off, ambiguous faces are left"
-" unassigned."
+"When on, a face matching more than one person above the threshold is assigned to the highest-"
+"scoring match. When off, ambiguous faces are left unassigned."
 msgstr "启用后，与超过一个人匹配且高于阈值的人脸将被分配给得分最高的匹配。关闭时，不明确的面孔将保持未分配状态。"
 
 #: yaffo/background_tasks/automation_config.py:144
@@ -174,9 +169,7 @@ msgid "Export Custom Tags"
 msgstr "导出自定义标签"
 
 #: yaffo/background_tasks/automation_config.py:164
-msgid ""
-"Write the photo's manual tags (name, or name: value) into the file's "
-"keywords."
+msgid "Write the photo's manual tags (name, or name: value) into the file's keywords."
 msgstr "将照片的手动标签（名称或名称：值）写入文件的关键字中。"
 
 #: yaffo/background_tasks/automation_config.py:170
@@ -184,9 +177,7 @@ msgid "Export Favorite"
 msgstr "导出收藏夹"
 
 #: yaffo/background_tasks/automation_config.py:171
-msgid ""
-"Write a \"Favorite\" keyword into the file when the photo is marked a "
-"favorite."
+msgid "Write a \"Favorite\" keyword into the file when the photo is marked a favorite."
 msgstr "当照片被标记为收藏时，在文件中写入“收藏”关键字。"
 
 #: yaffo/background_tasks/automation_config.py:179
@@ -195,8 +186,8 @@ msgstr "重复使用附近照片的名称"
 
 #: yaffo/background_tasks/automation_config.py:181
 msgid ""
-"Copy the location name of the closest already-named photo within the "
-"radius below. Free, offline, and keeps your own naming."
+"Copy the location name of the closest already-named photo within the radius below. Free, offline,"
+" and keeps your own naming."
 msgstr "复制下面半径内最接近的已命名照片的位置名称。免费、离线，并保留您自己的命名。"
 
 #: yaffo/background_tasks/automation_config.py:189
@@ -205,8 +196,8 @@ msgstr "附近半径"
 
 #: yaffo/background_tasks/automation_config.py:191
 msgid ""
-"How close an already-named photo must be to copy its name. Larger values "
-"reuse names more aggressively and make fewer online lookups."
+"How close an already-named photo must be to copy its name. Larger values reuse names more "
+"aggressively and make fewer online lookups."
 msgstr "一张已经命名的照片必须有多接近才能复制它的名字。较大的值会更积极地重用名称并减少在线查找。"
 
 #: yaffo/background_tasks/automation_config.py:201
@@ -215,8 +206,8 @@ msgstr "在线查找名称（OpenStreetMap）"
 
 #: yaffo/background_tasks/automation_config.py:203
 msgid ""
-"When no nearby photo is named, reverse-geocode the coordinates via "
-"OpenStreetMap Nominatim (throttled to ~1 request/second)."
+"When no nearby photo is named, reverse-geocode the coordinates via OpenStreetMap Nominatim "
+"(throttled to ~1 request/second)."
 msgstr "当没有命名附近的照片时，通过 OpenStreetMap Nominatim 对坐标进行反向地理编码（限制为每秒 1 个请求）。"
 
 #: yaffo/background_tasks/automation_config.py:211
@@ -233,9 +224,9 @@ msgstr "时间窗口（分钟）"
 
 #: yaffo/background_tasks/automation_config.py:222
 msgid ""
-"A photo with no GPS borrows the coordinates of the closest-in-time GPS-"
-"tagged photo, but only if it was taken within this many minutes (so "
-"coordinates aren't copied across a long gap / a different place)."
+"A photo with no GPS borrows the coordinates of the closest-in-time GPS-tagged photo, but only if "
+"it was taken within this many minutes (so coordinates aren't copied across a long gap / a "
+"different place)."
 msgstr "没有 GPS 的照片会借用最近的带 GPS 标签的照片的坐标，但前提是该照片是在这么多分钟内拍摄的（因此坐标不会复制到很长的间隙/不同的地方）。"
 
 #: yaffo/background_tasks/automation_config.py:236
@@ -244,9 +235,8 @@ msgstr "置信阈值"
 
 #: yaffo/background_tasks/automation_config.py:238
 msgid ""
-"A photo gets a label only when the CLIP image–text similarity is at or "
-"above this confidence (0 = least similar, 100 = most similar) Higher is "
-"stricter: fewer, more confident labels."
+"A photo gets a label only when the CLIP image–text similarity is at or above this confidence (0 ="
+" least similar, 100 = most similar) Higher is stricter: fewer, more confident labels."
 msgstr "仅当 CLIP 图像-文本相似度等于或高于此置信度时，照片才会获得标签（0 = 最不相似，100 = 最相似）越高越严格：标签越少，置信度越高。"
 
 #: yaffo/background_tasks/automation_config.py:249
@@ -257,7 +247,7 @@ msgstr "每张照片的最大标签数"
 msgid "At most this many labels are kept per photo (the highest-scoring ones)."
 msgstr "每张照片最多保留这么多标签（得分最高的标签）。"
 
-#: yaffo/db/models.py:392 yaffo/routes/utilities/run_history.py:103
+#: yaffo/db/models.py:392 yaffo/routes/utilities/run_history.py:104
 msgid "File sync"
 msgstr "文件同步"
 
@@ -271,8 +261,8 @@ msgstr "自动分配面孔"
 
 #: yaffo/db/models.py:398
 msgid ""
-"When a photo is indexed, assign each detected face to the one person it "
-"matches above the threshold."
+"When a photo is indexed, assign each detected face to the one person it matches above the "
+"threshold."
 msgstr "为照片建立索引时，将每张检测到的人脸分配给超过阈值的匹配人物。"
 
 #: yaffo/db/models.py:403
@@ -280,9 +270,7 @@ msgid "Export photo tag"
 msgstr "导出照片标签"
 
 #: yaffo/db/models.py:405
-msgid ""
-"When a photo is modified, write its people and/or location tags back into"
-" the photo file."
+msgid "When a photo is modified, write its people and/or location tags back into the photo file."
 msgstr "修改照片后，将其人物和/或位置标签写回到照片文件中。"
 
 #: yaffo/db/models.py:410
@@ -291,8 +279,8 @@ msgstr "分配位置名称"
 
 #: yaffo/db/models.py:412
 msgid ""
-"When a photo is indexed, name its location from GPS — reuse a nearby "
-"named photo's name, then fall back to an OpenStreetMap lookup."
+"When a photo is indexed, name its location from GPS — reuse a nearby named photo's name, then "
+"fall back to an OpenStreetMap lookup."
 msgstr "当照片被索引时，通过 GPS 命名其位置 - 重复使用附近的命名照片的名称，然后回退到 OpenStreetMap 查找。"
 
 #: yaffo/db/models.py:417
@@ -301,9 +289,8 @@ msgstr "来自邻居的地理标记"
 
 #: yaffo/db/models.py:419
 msgid ""
-"When a photo is indexed, give a GPS-less photo the coordinates of the "
-"closest-in-time photo that has GPS (e.g. a camera shot taken alongside "
-"phone shots)."
+"When a photo is indexed, give a GPS-less photo the coordinates of the closest-in-time photo that "
+"has GPS (e.g. a camera shot taken alongside phone shots)."
 msgstr "当照片被索引时，为无 GPS 的照片提供最近的有 GPS 的照片的坐标（例如，相机拍摄的照片与手机拍摄的照片）。"
 
 #: yaffo/db/models.py:425
@@ -312,9 +299,8 @@ msgstr "对标签进行分类"
 
 #: yaffo/db/models.py:427
 msgid ""
-"When a photo is indexed, label it with the subjects, scenes, and "
-"activities it matches from your label vocabulary (offline CLIP image "
-"recognition)."
+"When a photo is indexed, label it with the subjects, scenes, and activities it matches from your "
+"label vocabulary (offline CLIP image recognition)."
 msgstr "当照片被索引时，使用与标签词汇（离线 CLIP 图像识别）相匹配的主题、场景和活动来标记它。"
 
 #: yaffo/db/models.py:433
@@ -323,16 +309,15 @@ msgstr "重复扫描"
 
 #: yaffo/db/models.py:435
 msgid ""
-"Scan your indexed photos for duplicates on a schedule — results appear in"
-" the Remove Duplicates tool."
+"Scan your indexed photos for duplicates on a schedule — results appear in the Remove Duplicates "
+"tool."
 msgstr "按计划扫描索引照片中的重复项 - 结果显示在“删除重复项”工具中。"
 
 #: yaffo/routes/api.py:56
 msgid "Send the request body as JSON."
 msgstr "以 JSON 格式发送请求正文。"
 
-#: yaffo/routes/api.py:72 yaffo/routes/media.py:51 yaffo/routes/media.py:201
-#: yaffo/routes/media.py:221
+#: yaffo/routes/api.py:72 yaffo/routes/media.py:51 yaffo/routes/media.py:201 yaffo/routes/media.py:221
 msgid "Photo not found"
 msgstr "未找到照片"
 
@@ -340,63 +325,60 @@ msgstr "未找到照片"
 msgid "Favorite must be true or false"
 msgstr "Favorite 必须为 true 或 false"
 
-#: yaffo/routes/api.py:115 yaffo/routes/api.py:118 yaffo/routes/faces.py:382
-#: yaffo/routes/people.py:95 yaffo/routes/people.py:154
-#: yaffo/routes/people.py:177 yaffo/routes/people.py:255
+#: yaffo/routes/api.py:117 yaffo/routes/api.py:120 yaffo/routes/faces.py:472 yaffo/routes/people.py:104
+#: yaffo/routes/people.py:163 yaffo/routes/people.py:190 yaffo/routes/people.py:298
+#: yaffo/routes/people.py:319
 msgid "Person not found"
 msgstr "找不到人"
 
-#: yaffo/routes/api.py:120 yaffo/routes/api.py:160
+#: yaffo/routes/api.py:122 yaffo/routes/api.py:162
 msgid "One or more faces are no longer available"
 msgstr "一张或多张面孔不再可用"
 
-#: yaffo/routes/api.py:133
+#: yaffo/routes/api.py:135
 #, python-format
 msgid "Successfully assigned %(count)s face to %(person)s"
 msgid_plural "Successfully assigned %(count)s faces to %(person)s"
 msgstr[0] "分配成功 %(count)s 面对 %(person)s"
 
-#: yaffo/routes/api.py:146
+#: yaffo/routes/api.py:148
 msgid "This face isn't assigned to anyone"
 msgstr "这张人脸没有分配给任何人"
 
-#: yaffo/routes/api.py:150
+#: yaffo/routes/api.py:152
 #, python-format
 msgid "Cleared %(count)s face"
 msgid_plural "Cleared %(count)s faces"
 msgstr[0] "已清除 %(count)s 张人脸"
 
-#: yaffo/routes/api.py:166
+#: yaffo/routes/api.py:168
 #, python-format
 msgid "Successfully ignored %(count)s face"
 msgid_plural "Successfully ignored %(count)s faces"
 msgstr[0] "成功忽略 %(count)s 脸"
 
-#: yaffo/routes/api.py:187
+#: yaffo/routes/api.py:190
 msgid "Faces must contain numeric identifiers"
 msgstr "面孔必须包含数字标识符"
 
-#: yaffo/routes/api.py:192
+#: yaffo/routes/api.py:195
 msgid "Faces, person, and face status are required"
 msgstr "需要面孔、人物和面孔状态"
 
-#: yaffo/routes/api.py:203
+#: yaffo/routes/api.py:206
 msgid "Could not process faces"
 msgstr "无法处理人脸"
 
-#: yaffo/routes/api.py:279
-msgid ""
-"That file or folder isn't available. It may have moved, or its drive "
-"isn't connected."
+#: yaffo/routes/api.py:282
+msgid "That file or folder isn't available. It may have moved, or its drive isn't connected."
 msgstr "该文件或文件夹不可用。它可能已被移动，或其所在的驱动器未连接。"
 
-#: yaffo/routes/api.py:284
+#: yaffo/routes/api.py:287
 msgid "Couldn't open it on this computer."
 msgstr "无法在此电脑上打开。"
 
-#: yaffo/routes/assistant.py:92 yaffo/routes/pages.py:250
-#: yaffo/routes/themes_page.py:239 yaffo/routes/utilities/automations.py:614
-#: yaffo/routes/utilities/sync_services.py:273
+#: yaffo/routes/assistant.py:92 yaffo/routes/pages.py:262 yaffo/routes/themes_page.py:239
+#: yaffo/routes/utilities/automations.py:614 yaffo/routes/utilities/sync_services.py:273
 msgid "Message is required."
 msgstr "需要留言。"
 
@@ -405,25 +387,20 @@ msgstr "需要留言。"
 msgid "Messages can be at most %(count)s characters."
 msgstr "消息最多 %(count)s 个字符。"
 
-#: yaffo/routes/assistant.py:101 yaffo/routes/pages.py:254
-#: yaffo/routes/themes_page.py:243 yaffo/routes/utilities/automations.py:618
-#: yaffo/routes/utilities/sync_services.py:275
+#: yaffo/routes/assistant.py:101 yaffo/routes/pages.py:266 yaffo/routes/themes_page.py:243
+#: yaffo/routes/utilities/automations.py:618 yaffo/routes/utilities/sync_services.py:275
 #, python-format
-msgid ""
-"No API key configured. Add your %(provider)s API key in Settings → AI "
-"Generation."
+msgid "No API key configured. Add your %(provider)s API key in Settings → AI Generation."
 msgstr "未配置 API 密钥。添加您的 %(provider)s 设置 → AI 生成中的 API 密钥。"
 
 #: yaffo/routes/assistant.py:143
 msgid ""
-"Before reading a new website, Ask Yaffo asks you to allow its domain for "
-"that conversation. Page contents are sent to your AI provider."
+"Before reading a new website, Ask Yaffo asks you to allow its domain for that conversation. Page "
+"contents are sent to your AI provider."
 msgstr "读取新网站前，Ask Yaffo 会请你允许在此对话中访问该域名。网页内容会发送给你的 AI 提供商。"
 
 #: yaffo/routes/assistant.py:146
-msgid ""
-"Reads a photo's capture date from its file when checking a date problem, "
-"never the image itself."
+msgid "Reads a photo's capture date from its file when checking a date problem, never the image itself."
 msgstr "在检查日期问题时，从文件的拍摄日期读取，而不是从图像本身。"
 
 #: yaffo/routes/assistant.py:147
@@ -436,26 +413,24 @@ msgstr "其中的人脸将变为未分配；照片仍保留在你的图库中。
 
 #: yaffo/routes/assistant.py:150
 msgid ""
-"Hides unassigned faces you don't want to name, such as strangers in the "
-"background, from Unassigned Faces. Assigned faces are never ignored."
+"Hides unassigned faces you don't want to name, such as strangers in the background, from "
+"Unassigned Faces. Assigned faces are never ignored."
 msgstr "在未分配人脸中隐藏你不想命名的人脸，例如背景中的陌生人。已分配的人脸永远不会被忽略。"
 
 #: yaffo/routes/assistant.py:153
 msgid ""
-"Puts ignored faces back in Unassigned Faces so they can be assigned to "
-"people. Faces that aren't ignored are left alone."
+"Puts ignored faces back in Unassigned Faces so they can be assigned to people. Faces that aren't "
+"ignored are left alone."
 msgstr "将已忽略的人脸放回未分配人脸，以便将其分配给人物。未忽略的人脸保持不变。"
 
 #: yaffo/routes/assistant.py:156
 msgid ""
-"A birthdate decides which of a person's faces are compared with each "
-"other by age, so matching for that person is rebuilt."
+"A birthdate decides which of a person's faces are compared with each other by age, so matching "
+"for that person is rebuilt."
 msgstr "出生日期决定某个人的哪些人脸按年龄相互比较，因此会重建该人物的匹配。"
 
 #: yaffo/routes/assistant.py:159
-msgid ""
-"Photos only get a new label when they're classified again; the assistant "
-"can start that too."
+msgid "Photos only get a new label when they're classified again; the assistant can start that too."
 msgstr "照片只有在再次分类时才会获得新标签；助手也可以启动该过程。"
 
 #: yaffo/routes/assistant.py:160
@@ -463,9 +438,7 @@ msgid "Every photo loses that label."
 msgstr "每张照片都会失去该标签。"
 
 #: yaffo/routes/assistant.py:162
-msgid ""
-"Stops a pending or running job, as its Cancel button does. Work already "
-"done stays done."
+msgid "Stops a pending or running job, as its Cancel button does. Work already done stays done."
 msgstr "像其“取消”按钮一样停止待处理或正在运行的任务。已完成的工作仍会保留。"
 
 #: yaffo/routes/assistant.py:163
@@ -474,34 +447,33 @@ msgstr "其中的人脸将重新检测，因此分配给它们的人物会被移
 
 #: yaffo/routes/assistant.py:165
 msgid ""
-"Writes missing face crops and video posters again from your photos and "
-"videos. Faces keep their people; nothing is re-detected."
+"Writes missing face crops and video posters again from your photos and videos. Faces keep their "
+"people; nothing is re-detected."
 msgstr "从你的照片和视频中重新写入缺失的人脸裁剪图和视频海报图。人脸会保留其所属人物；不会重新检测任何内容。"
 
 #: yaffo/routes/assistant.py:168
 msgid ""
-"Takes a face off the person it's assigned to, e.g. a wrong match. The "
-"face goes back to Unassigned Faces; the photo and the person stay."
+"Takes a face off the person it's assigned to, e.g. a wrong match. The face goes back to "
+"Unassigned Faces; the photo and the person stay."
 msgstr "将人脸从其所属人物中移除，例如错误匹配。该人脸会回到未分配人脸；照片和人物保持不变。"
 
 #: yaffo/routes/assistant.py:171
 msgid ""
-"Combines two people who are really the same person: every face of one "
-"moves to the other, and the emptied one is deleted."
+"Combines two people who are really the same person: every face of one moves to the other, and the"
+" emptied one is deleted."
 msgstr "合并实际上同一个人的两个人：其中一个人的所有人脸都会移动到另一个人，而清空的那个人会被删除。"
 
 #: yaffo/routes/assistant.py:174
 msgid ""
-"Fixes faces whose status doesn't match their person link: assigned to "
-"someone but still listed as unassigned, stuck mid-assignment, or ignored "
-"but still linked (the link is removed). Nothing is re-detected."
+"Fixes faces whose status doesn't match their person link: assigned to someone but still listed as"
+" unassigned, stuck mid-assignment, or ignored but still linked (the link is removed). Nothing is "
+"re-detected."
 msgstr "修复状态与人物链接不匹配的人脸：已分配给某人但仍列为未分配、卡在分配中，或被忽略但仍链接（链接会被移除）。不会重新检测任何内容。"
 
 #: yaffo/routes/assistant.py:178
 msgid ""
-"Starts the chosen automation once for all media, selected media "
-"directories, files, or folders. The automation may change your library or"
-" files; review its Run history for the result."
+"Starts the chosen automation once for all media, selected media directories, files, or folders. "
+"The automation may change your library or files; review its Run history for the result."
 msgstr "为所有媒体、选定的媒体目录、文件或文件夹启动所选自动化一次。自动化可能会更改您的图库或文件；请查看其运行历史记录以了解结果。"
 
 #: yaffo/routes/assistant.py:185
@@ -710,8 +682,7 @@ msgstr "排列侧边栏筛选器"
 msgid "Read public websites"
 msgstr "读取公开网站"
 
-#: yaffo/routes/assistant.py:387 yaffo/routes/assistant.py:392
-#: yaffo/routes/assistant.py:426
+#: yaffo/routes/assistant.py:387 yaffo/routes/assistant.py:392 yaffo/routes/assistant.py:426
 msgid "The assistant is still answering."
 msgstr "助手仍在回答。"
 
@@ -765,8 +736,8 @@ msgstr "助手已开启。"
 msgid "Assistant turned off."
 msgstr "助手已关闭。"
 
-#: yaffo/routes/assistant.py:521 yaffo/routes/assistant.py:528
-#: yaffo/routes/assistant.py:535 yaffo/routes/assistant.py:548
+#: yaffo/routes/assistant.py:521 yaffo/routes/assistant.py:528 yaffo/routes/assistant.py:535
+#: yaffo/routes/assistant.py:548
 msgid "Assistant settings saved."
 msgstr "助手设置已保存。"
 
@@ -803,31 +774,29 @@ msgstr "同名的文件或文件夹已存在"
 msgid "Could not create folder: %(reason)s"
 msgstr "无法创建文件夹： %(reason)s"
 
-#: yaffo/routes/faces.py:176
+#: yaffo/routes/faces.py:192
 #, python-format
 msgid "Cluster %(number)s"
 msgstr "簇 %(number)s"
 
-#: yaffo/routes/faces.py:208 yaffo/templates/sharing/_device_content.html:14
+#: yaffo/routes/faces.py:225 yaffo/templates/sharing/_device_content.html:14
 #: yaffo/templates/sharing/_device_panel.html:18
 msgid "Unknown"
 msgstr "未知"
 
-#: yaffo/routes/faces.py:239
+#: yaffo/routes/faces.py:260
 msgid " OR "
 msgstr " 或者 "
 
-#: yaffo/routes/faces.py:360 yaffo/routes/filter_config.py:151
+#: yaffo/routes/faces.py:450 yaffo/routes/filter_config.py:151
 msgid "Items must be a list"
 msgstr "项目必须是列表"
 
-#: yaffo/routes/faces.py:399 yaffo/routes/people.py:68
-#: yaffo/routes/people.py:100
+#: yaffo/routes/faces.py:489 yaffo/routes/people.py:77 yaffo/routes/people.py:109
 msgid "Name is required"
 msgstr "姓名为必填项"
 
-#: yaffo/routes/faces.py:406 yaffo/routes/people.py:74
-#: yaffo/routes/people.py:109
+#: yaffo/routes/faces.py:496 yaffo/routes/people.py:83 yaffo/routes/people.py:118
 #, python-format
 msgid "Person '%(name)s' already exists"
 msgstr "人 '%(name)s'已经存在"
@@ -843,20 +812,18 @@ msgid "Female"
 msgstr "女性"
 
 #: yaffo/routes/home.py:77 yaffo/templates/albums/add.html:74
-#: yaffo/templates/components/photo_card.html:46
-#: yaffo/templates/components/photo_card.html:70
-#: yaffo/templates/people/faces.html:73 yaffo/templates/sharing/files.html:118
-#: yaffo/templates/sharing/files.html:133
-#: yaffo/templates/utilities/sync_filter.html:64
+#: yaffo/templates/components/photo_card.html:46 yaffo/templates/components/photo_card.html:70
+#: yaffo/templates/people/faces.html:111 yaffo/templates/sharing/files.html:118
+#: yaffo/templates/sharing/files.html:133 yaffo/templates/utilities/sync_filter.html:64
 #: yaffo/templates/utilities/sync_peer_filter.html:67
 msgid "Unknown date"
 msgstr "日期未知"
 
-#: yaffo/routes/home.py:331
+#: yaffo/routes/home.py:336
 #, python-format
 msgid ""
-"Media folders are not available: %(directories)s. If they are on an "
-"external drive, make sure the drive is connected."
+"Media folders are not available: %(directories)s. If they are on an external drive, make sure the"
+" drive is connected."
 msgstr "媒体文件夹不可用： %(directories)s。如果它们位于外部驱动器上，请确保驱动器已连接。"
 
 #: yaffo/routes/locations.py:133
@@ -900,61 +867,67 @@ msgstr "每个标签必须是一个对象"
 msgid "Tag name is required"
 msgstr "标签名称为必填项"
 
-#: yaffo/routes/pages.py:107 yaffo/routes/pages.py:133
-#: yaffo/templates/pages/design.html:18
+#: yaffo/routes/pages.py:119 yaffo/routes/pages.py:145 yaffo/templates/pages/design.html:18
 msgid "Untitled Page"
 msgstr "无标题页面"
 
-#: yaffo/routes/pages.py:268 yaffo/routes/themes_page.py:235
-#: yaffo/routes/utilities/automations.py:611
+#: yaffo/routes/pages.py:280 yaffo/routes/themes_page.py:235 yaffo/routes/utilities/automations.py:611
 msgid "A generation is already running."
 msgstr "一代人已经在奔跑。"
 
-#: yaffo/routes/pages.py:310
+#: yaffo/routes/pages.py:322
 msgid "Version is not ready to publish."
 msgstr "版本尚未准备好发布。"
 
-#: yaffo/routes/people.py:31
+#: yaffo/routes/people.py:40
 msgid "Gender must be male, female, or not specified"
 msgstr "性别必须为男、女或不指定"
 
-#: yaffo/routes/people.py:87
+#: yaffo/routes/people.py:96
 #, python-format
 msgid "Added %(name)s"
 msgstr "额外 %(name)s"
 
-#: yaffo/routes/people.py:129
+#: yaffo/routes/people.py:138
 msgid "Birthdate must be YYYY-MM-DD"
 msgstr "出生日期必须为 YYYY-MM-DD"
 
-#: yaffo/routes/people.py:142
+#: yaffo/routes/people.py:151
 #, python-format
 msgid "Updated '%(name)s'"
 msgstr "已更新'%(name)s'"
 
-#: yaffo/routes/people.py:144
+#: yaffo/routes/people.py:153
 #, python-format
 msgid "Renamed '%(old_name)s' to '%(name)s'"
 msgstr "更名'%(old_name)s' 到 '%(name)s'"
 
-#: yaffo/routes/people.py:161
+#: yaffo/routes/people.py:170
 #, python-format
 msgid "Deleted %(name)s"
 msgstr "已删除 %(name)s"
 
-#: yaffo/routes/people.py:259
+#: yaffo/routes/people.py:302 yaffo/routes/people.py:335
 msgid "No faces selected"
 msgstr "未选择面"
 
-#: yaffo/routes/people.py:265
+#: yaffo/routes/people.py:308
 msgid "Person updated"
 msgstr "人员已更新"
 
+#: yaffo/routes/people.py:323
+msgid "Choose another person to move the faces to"
+msgstr "选择要将人脸移至的另一位人物"
+
+#: yaffo/routes/people.py:341
+#, python-format
+msgid "Moved %(count)s face to %(person)s"
+msgid_plural "Moved %(count)s faces to %(person)s"
+msgstr[0] "已将 %(count)s 张人脸移至 %(person)s"
+
 #: yaffo/routes/settings.py:96 yaffo/templates/settings/index.html:19
 #: yaffo/templates/settings/index.html:53
-msgid ""
-"Media and thumbnail directories cannot be changed while importing or "
-"indexing is in progress."
+msgid "Media and thumbnail directories cannot be changed while importing or indexing is in progress."
 msgstr "导入或索引正在进行时，无法更改媒体和缩略图目录。"
 
 #: yaffo/routes/settings.py:194 yaffo/routes/utilities/automations.py:379
@@ -1062,8 +1035,7 @@ msgid "Unknown share"
 msgstr "未知分享"
 
 #: yaffo/routes/sharing.py:180 yaffo/templates/components/photo_card.html:41
-#: yaffo/templates/sharing/_device_panel.html:73
-#: yaffo/templates/sharing/_device_panel.html:90
+#: yaffo/templates/sharing/_device_panel.html:73 yaffo/templates/sharing/_device_panel.html:90
 #: yaffo/templates/sharing/files.html:128
 msgid "Folder"
 msgstr "文件夹"
@@ -1076,11 +1048,10 @@ msgstr "已删除相册"
 msgid "Shared folder"
 msgstr "共享文件夹"
 
-#: yaffo/routes/sharing.py:252 yaffo/routes/sharing.py:404
-#: yaffo/routes/sharing.py:421 yaffo/routes/sharing.py:443
-#: yaffo/routes/sharing.py:594 yaffo/routes/sharing.py:707
-#: yaffo/routes/sharing.py:828 yaffo/routes/sharing.py:841
-#: yaffo/routes/sharing.py:855 yaffo/routes/utilities/sync_views.py:788
+#: yaffo/routes/sharing.py:252 yaffo/routes/sharing.py:404 yaffo/routes/sharing.py:421
+#: yaffo/routes/sharing.py:443 yaffo/routes/sharing.py:594 yaffo/routes/sharing.py:707
+#: yaffo/routes/sharing.py:828 yaffo/routes/sharing.py:841 yaffo/routes/sharing.py:855
+#: yaffo/routes/utilities/sync_views.py:788
 msgid "Device sharing is not running."
 msgstr "设备共享未运行。"
 
@@ -1128,9 +1099,7 @@ msgid "Device revoked. The other device was notified."
 msgstr "设备已撤销。另一台设备已收到通知。"
 
 #: yaffo/routes/sharing.py:454
-msgid ""
-"Device revoked. The other device is offline and will find out when it "
-"next tries to connect."
+msgid "Device revoked. The other device is offline and will find out when it next tries to connect."
 msgstr "设备已撤销。另一台设备处于离线状态，下次尝试连接时将会发现。"
 
 #: yaffo/routes/sharing.py:477
@@ -1145,8 +1114,7 @@ msgstr "设备已删除。"
 msgid "Device name cannot be empty."
 msgstr "设备名称不能为空。"
 
-#: yaffo/routes/sharing.py:489 yaffo/routes/sharing.py:511
-#: yaffo/routes/sharing.py:710
+#: yaffo/routes/sharing.py:489 yaffo/routes/sharing.py:511 yaffo/routes/sharing.py:710
 #, python-format
 msgid "%(device)s is not a known device."
 msgstr "%(device)s 不是已知设备。"
@@ -1304,8 +1272,7 @@ msgstr "相册已更改"
 msgid "Media deleted"
 msgstr "媒体已删除"
 
-#: yaffo/routes/utilities/automations.py:254
-#: yaffo/routes/utilities/automations.py:325
+#: yaffo/routes/utilities/automations.py:254 yaffo/routes/utilities/automations.py:325
 msgid "Automation name is required"
 msgstr "自动化名称为必填项"
 
@@ -1313,8 +1280,7 @@ msgstr "自动化名称为必填项"
 msgid "Choose a service"
 msgstr "选择一项服务"
 
-#: yaffo/routes/utilities/automations.py:322
-#: yaffo/routes/utilities/automations.py:609
+#: yaffo/routes/utilities/automations.py:322 yaffo/routes/utilities/automations.py:609
 msgid "System automations cannot be edited."
 msgstr "系统自动化无法编辑。"
 
@@ -1322,14 +1288,12 @@ msgstr "系统自动化无法编辑。"
 msgid "This automation has no configurable settings."
 msgstr "此自动化没有可配置的设置。"
 
-#: yaffo/routes/utilities/automations.py:360
-#: yaffo/routes/utilities/automations.py:390
+#: yaffo/routes/utilities/automations.py:360 yaffo/routes/utilities/automations.py:390
 #, python-format
 msgid "%(label)s must be a number."
 msgstr "%(label)s 必须是一个数字。"
 
-#: yaffo/routes/utilities/automations.py:368
-#: yaffo/routes/utilities/automations.py:398
+#: yaffo/routes/utilities/automations.py:368 yaffo/routes/utilities/automations.py:398
 #, python-format
 msgid "%(label)s must be between %(min)s and %(max)s."
 msgstr "%(label)s 必须介于 %(min)s 和 %(max)s."
@@ -1397,21 +1361,15 @@ msgid "A folder on this computer, a drive, or a card."
 msgstr "此电脑上的文件夹、驱动器或存储卡。"
 
 #: yaffo/routes/utilities/common.py:44
-msgid ""
-"A folder a desktop app syncs, a drive, a network share, or a card for a "
-"photo frame."
+msgid "A folder a desktop app syncs, a drive, a network share, or a card for a photo frame."
 msgstr "桌面应用同步的文件夹、驱动器、网络共享，或数码相框的存储卡。"
 
 #: yaffo/routes/utilities/common.py:46
-msgid ""
-"New photos and videos in a OneDrive folder. Sign in with your Microsoft "
-"account."
+msgid "New photos and videos in a OneDrive folder. Sign in with your Microsoft account."
 msgstr "OneDrive 文件夹中的新照片和视频。使用 Microsoft 帐户登录。"
 
 #: yaffo/routes/utilities/common.py:48
-msgid ""
-"New photos and videos in an Immich album or library. Connect with an API "
-"key from your server."
+msgid "New photos and videos in an Immich album or library. Connect with an API key from your server."
 msgstr "Immich 相册或图库中的新照片和视频。使用服务器提供的 API 密钥进行连接。"
 
 #: yaffo/routes/utilities/common.py:50
@@ -1455,63 +1413,63 @@ msgstr "无法索引此视频。"
 msgid "This file couldn't be indexed because of an error while processing it."
 msgstr "由于处理时发生错误，无法索引此文件。"
 
-#: yaffo/routes/utilities/index_photos.py:128
-msgid ""
-"No media directories configured. Please configure media directories in "
-"Settings before syncing."
+#: yaffo/routes/utilities/index_photos.py:110
+msgid "Indexing is already in progress. Wait for it to finish, or cancel it, then try again."
+msgstr "索引已在进行中。请等待索引完成，或取消索引后重试。"
+
+#: yaffo/routes/utilities/index_photos.py:131
+msgid "No media directories configured. Please configure media directories in Settings before syncing."
 msgstr "未配置媒体目录。同步前请在“设置”中配置媒体目录。"
 
-#: yaffo/routes/utilities/index_photos.py:137
+#: yaffo/routes/utilities/index_photos.py:140
 #, python-format
 msgid "The following media directories do not exist: %(directories)s"
 msgstr "以下媒体目录不存在： %(directories)s"
 
-#: yaffo/routes/utilities/index_photos.py:146
+#: yaffo/routes/utilities/index_photos.py:149
 msgid ""
-"No thumbnail directory configured. Please configure thumbnail directory "
-"in Settings before syncing."
+"No thumbnail directory configured. Please configure thumbnail directory in Settings before "
+"syncing."
 msgstr "未配置缩略图目录。同步前请在“设置”中配置缩略图目录。"
 
-#: yaffo/routes/utilities/index_photos.py:153
+#: yaffo/routes/utilities/index_photos.py:156
 #, python-format
 msgid ""
-"Thumbnail directory does not exist: %(directory)s. It will be created "
-"automatically during indexing."
+"Thumbnail directory does not exist: %(directory)s. It will be created automatically during "
+"indexing."
 msgstr "缩略图目录不存在： %(directory)s。它将在索引期间自动创建。"
 
-#: yaffo/routes/utilities/index_photos.py:208
+#: yaffo/routes/utilities/index_photos.py:207
 msgid "Could not scan the filesystem"
 msgstr "无法扫描文件系统"
 
-#: yaffo/routes/utilities/index_photos.py:231
-#: yaffo/templates/settings/index.html:33
+#: yaffo/routes/utilities/index_photos.py:230 yaffo/templates/settings/index.html:33
 msgid "No media directories configured"
 msgstr "未配置媒体目录"
 
-#: yaffo/routes/utilities/index_photos.py:239
+#: yaffo/routes/utilities/index_photos.py:238
 #, python-format
 msgid "Media directories do not exist: %(directories)s"
 msgstr "媒体目录不存在： %(directories)s"
 
-#: yaffo/routes/utilities/index_photos.py:247
-#: yaffo/routes/utilities/index_photos.py:265
-#: yaffo/routes/utilities/index_photos.py:292
+#: yaffo/routes/utilities/index_photos.py:246 yaffo/routes/utilities/index_photos.py:268
+#: yaffo/routes/utilities/index_photos.py:297
 msgid "No thumbnail directory configured"
 msgstr "未配置缩略图目录"
 
-#: yaffo/routes/utilities/index_photos.py:275
+#: yaffo/routes/utilities/index_photos.py:278
 msgid "There are no failed files to retry"
 msgstr "没有可重试的失败文件"
 
-#: yaffo/routes/utilities/index_photos.py:306
+#: yaffo/routes/utilities/index_photos.py:311
 msgid "There is nothing indexed to reindex"
 msgstr "没有任何索引可以重新索引"
 
-#: yaffo/routes/utilities/index_photos.py:324
+#: yaffo/routes/utilities/index_photos.py:331
 msgid "The thumbnail folder isn't available. Check its drive is connected."
 msgstr "缩略图文件夹不可用。请检查其所在驱动器是否已连接。"
 
-#: yaffo/routes/utilities/index_photos.py:328
+#: yaffo/routes/utilities/index_photos.py:335
 msgid "No thumbnails are missing"
 msgstr "没有缺失的缩略图"
 
@@ -1545,294 +1503,282 @@ msgid "Started removing %(count)s duplicate"
 msgid_plural "Started removing %(count)s duplicates"
 msgstr[0] "开始移除 %(count)s 复制"
 
-#: yaffo/routes/utilities/run_history.py:99
+#: yaffo/routes/utilities/run_history.py:100
 msgid "Import photos"
 msgstr "导入照片"
 
-#: yaffo/routes/utilities/run_history.py:100
+#: yaffo/routes/utilities/run_history.py:101
 msgid "Index photos"
 msgstr "索引照片"
 
-#: yaffo/routes/utilities/run_history.py:101
+#: yaffo/routes/utilities/run_history.py:102
 msgid "Find duplicates"
 msgstr "查找重复项"
 
-#: yaffo/routes/utilities/run_history.py:102
+#: yaffo/routes/utilities/run_history.py:103
 msgid "Remove duplicates"
 msgstr "删除重复项"
 
-#: yaffo/routes/utilities/run_history.py:104
-#: yaffo/templates/utilities/index_photos.html:92
+#: yaffo/routes/utilities/run_history.py:105 yaffo/templates/utilities/index_photos.html:92
 msgid "Regenerate thumbnails"
 msgstr "重新生成缩略图"
 
-#: yaffo/routes/utilities/run_history.py:128
+#: yaffo/routes/utilities/run_history.py:129
 #, python-format
 msgid "Imported %(done)s/%(total)s photos"
 msgstr "已导入 %(done)s/%(total)s 张照片"
 
-#: yaffo/routes/utilities/run_history.py:130
+#: yaffo/routes/utilities/run_history.py:131
 #, python-format
 msgid "Indexed %(done)s/%(total)s photos"
 msgstr "已索引 %(done)s/%(total)s 张照片"
 
-#: yaffo/routes/utilities/run_history.py:132
+#: yaffo/routes/utilities/run_history.py:133
 #, python-format
 msgid "Processed %(done)s/%(total)s media items"
 msgstr "已处理 %(done)s/%(total)s 个媒体项"
 
-#: yaffo/routes/utilities/run_history.py:134
+#: yaffo/routes/utilities/run_history.py:135
 #, python-format
 msgid "Regenerated %(done)s/%(total)s thumbnails"
 msgstr "已重新生成 %(done)s/%(total)s 个缩略图"
 
-#: yaffo/routes/utilities/run_history.py:139
+#: yaffo/routes/utilities/run_history.py:140
 #, python-format
 msgid "Moved %(done)s/%(total)s files to the trash"
 msgstr "已将 %(done)s/%(total)s 个文件移至废纸篓"
 
-#: yaffo/routes/utilities/run_history.py:141
+#: yaffo/routes/utilities/run_history.py:142
 #, python-format
 msgid "Deleted %(done)s/%(total)s files"
 msgstr "已删除 %(done)s/%(total)s 个文件"
 
-#: yaffo/routes/utilities/run_history.py:143
+#: yaffo/routes/utilities/run_history.py:144
 #, python-format
 msgid "Moved %(done)s/%(total)s files to %(destination)s"
 msgstr "已将 %(done)s/%(total)s 个文件移至 %(destination)s"
 
-#: yaffo/routes/utilities/run_history.py:145
+#: yaffo/routes/utilities/run_history.py:146
 #, python-format
 msgid "Processed %(done)s/%(total)s files"
 msgstr "已处理 %(done)s/%(total)s 个文件"
 
-#: yaffo/routes/utilities/run_history.py:155
+#: yaffo/routes/utilities/run_history.py:156
 msgid "Already in sync"
 msgstr "已同步"
 
-#: yaffo/routes/utilities/run_history.py:160
+#: yaffo/routes/utilities/run_history.py:158
+msgid "Skipped: indexing was already in progress"
+msgstr "已跳过：索引已在进行中"
+
+#: yaffo/routes/utilities/run_history.py:163
 #, python-format
 msgid "Indexing %(count)s new file"
 msgid_plural "Indexing %(count)s new files"
 msgstr[0] "正在索引 %(count)s 个新文件"
 
-#: yaffo/routes/utilities/run_history.py:163
+#: yaffo/routes/utilities/run_history.py:166
 #, python-format
 msgid "removed %(count)s missing item"
 msgid_plural "removed %(count)s missing items"
 msgstr[0] "已移除 %(count)s 个缺失项目"
 
-#: yaffo/routes/utilities/run_history.py:167
+#: yaffo/routes/utilities/run_history.py:170
 msgid "Skipped: no media folders are configured"
 msgstr "已跳过：未配置媒体文件夹"
 
-#: yaffo/routes/utilities/run_history.py:169
+#: yaffo/routes/utilities/run_history.py:172
 msgid "Skipped: no thumbnail folder is configured"
 msgstr "已跳过：未配置缩略图文件夹"
 
-#: yaffo/routes/utilities/run_history.py:171
+#: yaffo/routes/utilities/run_history.py:174
 msgid "Skipped: no media folder is connected"
 msgstr "已跳过：未连接媒体文件夹"
 
-#: yaffo/routes/utilities/run_history.py:173
+#: yaffo/routes/utilities/run_history.py:176
 msgid "The sync failed"
 msgstr "同步失败"
 
-#: yaffo/routes/utilities/run_history.py:175
+#: yaffo/routes/utilities/run_history.py:178
 msgid "Cancelled before changing anything"
 msgstr "在进行任何更改之前已取消"
 
-#: yaffo/routes/utilities/run_history.py:176
-#: yaffo/routes/utilities/run_history.py:364
+#: yaffo/routes/utilities/run_history.py:179 yaffo/routes/utilities/run_history.py:367
 msgid "Running"
 msgstr "跑步"
 
-#: yaffo/routes/utilities/run_history.py:190
+#: yaffo/routes/utilities/run_history.py:193
 msgid "No indexed media to process"
 msgstr "没有可处理的已索引媒体"
 
-#: yaffo/routes/utilities/run_history.py:192
+#: yaffo/routes/utilities/run_history.py:195
 #, python-format
 msgid "Labeled %(labeled)s of %(num)d photo"
 msgid_plural "Labeled %(labeled)s of %(num)d photos"
 msgstr[0] "已为 %(num)d 张照片中的 %(labeled)s 张添加标签"
 
-#: yaffo/routes/utilities/run_history.py:196
+#: yaffo/routes/utilities/run_history.py:199
 #, python-format
 msgid "Assigned %(num)d face"
 msgid_plural "Assigned %(num)d faces"
 msgstr[0] "已分配 %(num)d 张人脸"
 
-#: yaffo/routes/utilities/run_history.py:198
+#: yaffo/routes/utilities/run_history.py:201
 #, python-format
 msgid "Named the location of %(named)s of %(num)d photo"
 msgid_plural "Named the location of %(named)s of %(num)d photos"
 msgstr[0] "已为 %(num)d 张照片中的 %(named)s 张命名位置"
 
-#: yaffo/routes/utilities/run_history.py:201
+#: yaffo/routes/utilities/run_history.py:204
 #, python-format
 msgid "Geotagged %(geotagged)s of %(num)d photo"
 msgid_plural "Geotagged %(geotagged)s of %(num)d photos"
 msgstr[0] "已为 %(num)d 张照片中的 %(geotagged)s 张添加地理标记"
 
-#: yaffo/routes/utilities/run_history.py:204
+#: yaffo/routes/utilities/run_history.py:207
 #, python-format
 msgid "Wrote metadata to %(written)s of %(num)d file"
 msgid_plural "Wrote metadata to %(written)s of %(num)d files"
 msgstr[0] "已将元数据写入 %(num)d 个文件中的 %(written)s 个"
 
-#: yaffo/routes/utilities/run_history.py:215
+#: yaffo/routes/utilities/run_history.py:218
 msgid "No thumbnails were missing"
 msgstr "没有缺失的缩略图"
 
-#: yaffo/routes/utilities/run_history.py:217
+#: yaffo/routes/utilities/run_history.py:220
 #, python-format
 msgid "Regenerated %(num)d thumbnail"
 msgid_plural "Regenerated %(num)d thumbnails"
 msgstr[0] "已重新生成 %(num)d 个缩略图"
 
-#: yaffo/routes/utilities/run_history.py:218
+#: yaffo/routes/utilities/run_history.py:221
 #, python-format
 msgid "Regenerated %(written)s of %(num)d thumbnail"
 msgid_plural "Regenerated %(written)s of %(num)d thumbnails"
 msgstr[0] "已重新生成 %(num)d 个缩略图中的 %(written)s 个"
 
-#: yaffo/routes/utilities/run_history.py:262
+#: yaffo/routes/utilities/run_history.py:265
 #, python-format
 msgid "%(completed)s of %(total)s processed"
 msgstr "%(completed)s 的 %(total)s 加工过的"
 
-#: yaffo/routes/utilities/run_history.py:268
-#: yaffo/templates/fragments/job_status_fragment.html:67
+#: yaffo/routes/utilities/run_history.py:271 yaffo/templates/fragments/job_status_fragment.html:67
 #, python-format
 msgid "%(count)s error"
 msgid_plural "%(count)s errors"
 msgstr[0] "%(count)s 错误"
 
-#: yaffo/routes/utilities/run_history.py:275
+#: yaffo/routes/utilities/run_history.py:278
 #, python-format
 msgid "%(count)s cancelled"
 msgid_plural "%(count)s cancelled"
 msgstr[0] "%(count)s 取消"
 
-#: yaffo/routes/utilities/run_history.py:300
+#: yaffo/routes/utilities/run_history.py:303
 #, python-format
 msgid ""
-"These media folders hold no files, so %(num)d item under them was left "
-"alone: %(roots)s. Check the drive is connected, or remove the folder in "
-"Settings."
+"These media folders hold no files, so %(num)d item under them was left alone: %(roots)s. Check "
+"the drive is connected, or remove the folder in Settings."
 msgid_plural ""
-"These media folders hold no files, so %(num)d items under them were left "
-"alone: %(roots)s. Check the drive is connected, or remove the folder in "
-"Settings."
+"These media folders hold no files, so %(num)d items under them were left alone: %(roots)s. Check "
+"the drive is connected, or remove the folder in Settings."
 msgstr[0] "这些媒体文件夹中没有任何文件，因此其下的 %(num)d 个项目未做处理：%(roots)s。请检查驱动器是否已连接，或在设置中移除该文件夹。"
 
-#: yaffo/routes/utilities/run_history.py:307
+#: yaffo/routes/utilities/run_history.py:310
 #, python-format
-msgid ""
-"%(num)d item was never processed because a background worker stopped "
-"unexpectedly."
-msgid_plural ""
-"%(num)d items were never processed because a background worker stopped "
-"unexpectedly."
+msgid "%(num)d item was never processed because a background worker stopped unexpectedly."
+msgid_plural "%(num)d items were never processed because a background worker stopped unexpectedly."
 msgstr[0] "由于后台工作程序意外停止，%(num)d 个项目从未得到处理。"
 
-#: yaffo/routes/utilities/run_history.py:311
+#: yaffo/routes/utilities/run_history.py:314
 msgid "The background worker stopped unexpectedly."
 msgstr "后台工作程序意外停止。"
 
-#: yaffo/routes/utilities/run_history.py:313
-#: yaffo/routes/utilities/run_history.py:330
+#: yaffo/routes/utilities/run_history.py:316 yaffo/routes/utilities/run_history.py:333
 msgid "The run stopped with an error."
 msgstr "运行因错误而停止。"
 
-#: yaffo/routes/utilities/run_history.py:315
+#: yaffo/routes/utilities/run_history.py:318
 msgid "The script stopped with an error."
 msgstr "脚本因错误而停止。"
 
-#: yaffo/routes/utilities/run_history.py:317
+#: yaffo/routes/utilities/run_history.py:320
 msgid "The script ran past its time limit."
 msgstr "脚本运行超过了时间限制。"
 
-#: yaffo/routes/utilities/run_history.py:319
+#: yaffo/routes/utilities/run_history.py:322
 msgid "The script made too many calls."
 msgstr "脚本调用了太多次。"
 
-#: yaffo/routes/utilities/run_history.py:321
+#: yaffo/routes/utilities/run_history.py:324
 msgid ""
-"The scheduled scope is no longer valid. Edit the trigger to choose a "
-"configured media directory or a folder inside one."
+"The scheduled scope is no longer valid. Edit the trigger to choose a configured media directory "
+"or a folder inside one."
 msgstr "计划范围已失效。请编辑触发器以选择已配置的媒体目录或其中的子文件夹。"
 
-#: yaffo/routes/utilities/run_history.py:327
+#: yaffo/routes/utilities/run_history.py:330
 msgid "The scheduled run could not start."
 msgstr "计划的运行无法开始。"
 
-#: yaffo/routes/utilities/run_history.py:328
+#: yaffo/routes/utilities/run_history.py:331
 msgid "The run could not start."
 msgstr "运行无法开始。"
 
-#: yaffo/routes/utilities/run_history.py:363
+#: yaffo/routes/utilities/run_history.py:366
 msgid "Pending"
 msgstr "待办的"
 
-#: yaffo/routes/utilities/run_history.py:365
-#: yaffo/templates/sharing/_transfers_panel.html:29
+#: yaffo/routes/utilities/run_history.py:368 yaffo/templates/sharing/_transfers_panel.html:29
 msgid "Completed"
 msgstr "完全的"
 
-#: yaffo/routes/utilities/run_history.py:366
-#: yaffo/templates/sharing/_transfers_panel.html:32
+#: yaffo/routes/utilities/run_history.py:369 yaffo/templates/sharing/_transfers_panel.html:32
 msgid "Cancelled"
 msgstr "取消"
 
-#: yaffo/routes/utilities/run_history.py:367
-#: yaffo/routes/utilities/sync_text.py:212
+#: yaffo/routes/utilities/run_history.py:370 yaffo/routes/utilities/sync_text.py:212
 #: yaffo/templates/sharing/_transfers_panel.html:31
 msgid "Failed"
 msgstr "失败的"
 
-#: yaffo/routes/utilities/run_history.py:394
-#: yaffo/routes/utilities/sync_text.py:208
+#: yaffo/routes/utilities/run_history.py:397 yaffo/routes/utilities/sync_text.py:208
 msgid "Skipped"
 msgstr "已跳过"
 
-#: yaffo/routes/utilities/run_history.py:396
+#: yaffo/routes/utilities/run_history.py:399
 msgid "Stopping"
 msgstr "正在停止"
 
-#: yaffo/routes/utilities/run_history.py:398
-#: yaffo/templates/sharing/_transfers_panel.html:30
+#: yaffo/routes/utilities/run_history.py:401 yaffo/templates/sharing/_transfers_panel.html:30
 msgid "Completed with errors"
 msgstr "已完成但有错误"
 
-#: yaffo/routes/utilities/run_history.py:461
+#: yaffo/routes/utilities/run_history.py:464
 msgid "less than a minute left"
 msgstr "剩余不到一分钟"
 
-#: yaffo/routes/utilities/run_history.py:463
+#: yaffo/routes/utilities/run_history.py:466
 #, python-format
 msgid "about %(num)d minute left"
 msgid_plural "about %(num)d minutes left"
 msgstr[0] "剩余约 %(num)d 分钟"
 
-#: yaffo/routes/utilities/run_history.py:468
+#: yaffo/routes/utilities/run_history.py:471
 #, python-format
 msgid "about %(hours)d h %(minutes)d min left"
 msgstr "剩余约 %(hours)d 小时 %(minutes)d 分钟"
 
-#: yaffo/routes/utilities/run_history.py:469
-#: yaffo/routes/utilities/run_history.py:471
+#: yaffo/routes/utilities/run_history.py:472 yaffo/routes/utilities/run_history.py:474
 #, python-format
 msgid "about %(num)d hour left"
 msgid_plural "about %(num)d hours left"
 msgstr[0] "剩余约 %(num)d 小时"
 
-#: yaffo/routes/utilities/run_history.py:487
+#: yaffo/routes/utilities/run_history.py:490
 msgid "Importing"
 msgstr "正在导入"
 
-#: yaffo/routes/utilities/run_history.py:487
+#: yaffo/routes/utilities/run_history.py:490
 msgid "Indexing"
 msgstr "正在建立索引"
 
@@ -1843,9 +1789,7 @@ msgstr "%(service)s 需要你重新登录 %(account)s。"
 
 #: yaffo/routes/utilities/sync_account.py:90
 #, python-format
-msgid ""
-"This sync needs more access to %(account)s than it has. Sign in again to "
-"allow it."
+msgid "This sync needs more access to %(account)s than it has. Sign in again to allow it."
 msgstr "此同步需要访问 %(account)s 的更多权限。请重新登录以授予权限。"
 
 #: yaffo/routes/utilities/sync_account.py:274
@@ -1861,8 +1805,7 @@ msgstr "验证码已过期。请重新开始。"
 msgid "The sign-in was refused."
 msgstr "登录请求被拒绝。"
 
-#: yaffo/routes/utilities/sync_account.py:319
-#: yaffo/routes/utilities/sync_views.py:930
+#: yaffo/routes/utilities/sync_account.py:319 yaffo/routes/utilities/sync_views.py:930
 msgid "Sign in first."
 msgstr "请先登录。"
 
@@ -2057,9 +2000,7 @@ msgstr "正在等待 %(device)s：目前无法连接到该设备"
 
 #: yaffo/routes/utilities/sync_text.py:110
 #, python-format
-msgid ""
-"Waiting for a direct connection to %(device)s (copying through the relay "
-"is off)"
+msgid "Waiting for a direct connection to %(device)s (copying through the relay is off)"
 msgstr "正在等待与 %(device)s 建立直接连接（已关闭通过中继复制）"
 
 #: yaffo/routes/utilities/sync_text.py:113
@@ -2084,20 +2025,18 @@ msgstr "所选相册已删除。请选择其他相册发送。"
 
 #: yaffo/routes/utilities/sync_text.py:138
 msgid ""
-"The destination isn't available (an unplugged drive or a removed "
-"folder?). The sync carries on when it's back."
+"The destination isn't available (an unplugged drive or a removed folder?). The sync carries on "
+"when it's back."
 msgstr "目标位置不可用（驱动器已拔出或文件夹已移除？）。恢复可用后，同步将继续。"
 
 #: yaffo/routes/utilities/sync_text.py:141
 msgid ""
-"The device isn't paired with this one any more. Pair it again on the "
-"Sharing page, or choose another device."
+"The device isn't paired with this one any more. Pair it again on the Sharing page, or choose "
+"another device."
 msgstr "此设备已不再与当前设备配对。请前往“共享”页面重新配对，或选择其他设备。"
 
 #: yaffo/routes/utilities/sync_text.py:144
-msgid ""
-"The chosen folder or album no longer exists at the service. Choose "
-"another."
+msgid "The chosen folder or album no longer exists at the service. Choose another."
 msgstr "该服务上的所选文件夹或相册已不存在。请选择其他项。"
 
 #: yaffo/routes/utilities/sync_text.py:145
@@ -2105,9 +2044,7 @@ msgid "Paused."
 msgstr "已暂停。"
 
 #: yaffo/routes/utilities/sync_text.py:150
-msgid ""
-"The setup changed since this sync was turned on. Review it and turn it on"
-" again."
+msgid "The setup changed since this sync was turned on. Review it and turn it on again."
 msgstr "启用此同步后，设置发生了变化。请检查设置并重新启用。"
 
 #: yaffo/routes/utilities/sync_text.py:152
@@ -2123,11 +2060,11 @@ msgstr[0] "有 %(num)d 个项目未能完成。请查看“项目”了解原因
 #: yaffo/routes/utilities/sync_text.py:161
 #, python-format
 msgid ""
-"%(num)d item the service refused before wasn't sent again. Fix the "
-"service, or press Retry failed in Items."
+"%(num)d item the service refused before wasn't sent again. Fix the service, or press Retry failed"
+" in Items."
 msgid_plural ""
-"%(num)d items the service refused before weren't sent again. Fix the "
-"service, or press Retry failed in Items."
+"%(num)d items the service refused before weren't sent again. Fix the service, or press Retry "
+"failed in Items."
 msgstr[0] "服务之前拒绝的 %(num)d 个项目没有再次发送。请修复该服务，或在“项目”中点击“重试失败项”。"
 
 #: yaffo/routes/utilities/sync_text.py:168
@@ -2143,13 +2080,10 @@ msgid "The run stopped because of an error in the service's code."
 msgstr "由于服务代码中的错误，本次运行已停止。"
 
 #: yaffo/routes/utilities/sync_text.py:174
-msgid ""
-"Something the sync reads from is gone at the service. It tries again "
-"later."
+msgid "Something the sync reads from is gone at the service. It tries again later."
 msgstr "该服务上已不存在同步读取的某项内容。稍后会重试。"
 
-#: yaffo/routes/utilities/sync_text.py:175
-#: yaffo/routes/utilities/sync_text.py:186
+#: yaffo/routes/utilities/sync_text.py:175 yaffo/routes/utilities/sync_text.py:186
 msgid "The run stopped early. The next run carries on."
 msgstr "本次运行提前停止。下次运行时会继续。"
 
@@ -2346,20 +2280,17 @@ msgstr "设备上线时（静默一分钟后）"
 msgid "Copies new photos from"
 msgstr "从以下位置复制新照片"
 
-#: yaffo/routes/utilities/sync_views.py:293
-#: yaffo/routes/utilities/sync_views.py:333
+#: yaffo/routes/utilities/sync_views.py:293 yaffo/routes/utilities/sync_views.py:333
 #: yaffo/routes/utilities/sync_views.py:359
 msgid "Into"
 msgstr "至"
 
-#: yaffo/routes/utilities/sync_views.py:295
-#: yaffo/routes/utilities/sync_views.py:335
+#: yaffo/routes/utilities/sync_views.py:295 yaffo/routes/utilities/sync_views.py:335
 #: yaffo/routes/utilities/sync_views.py:361
 msgid "Already in your library"
 msgstr "已在你的图库中"
 
-#: yaffo/routes/utilities/sync_views.py:295
-#: yaffo/routes/utilities/sync_views.py:335
+#: yaffo/routes/utilities/sync_views.py:295 yaffo/routes/utilities/sync_views.py:335
 #: yaffo/routes/utilities/sync_views.py:361
 msgid "Linked, not copied again"
 msgstr "已关联，不会再次复制"
@@ -2372,19 +2303,16 @@ msgstr "原件"
 msgid "Never changed or deleted"
 msgstr "从不修改或删除"
 
-#: yaffo/routes/utilities/sync_views.py:302
-#: yaffo/routes/utilities/sync_views.py:377
+#: yaffo/routes/utilities/sync_views.py:302 yaffo/routes/utilities/sync_views.py:377
 #, python-format
 msgid "The photos in the album %(album)s"
 msgstr "相册 %(album)s 中的照片"
 
-#: yaffo/routes/utilities/sync_views.py:304
-#: yaffo/routes/utilities/sync_views.py:379
+#: yaffo/routes/utilities/sync_views.py:304 yaffo/routes/utilities/sync_views.py:379
 msgid "The photos selected by your custom rule"
 msgstr "符合自定义规则的照片"
 
-#: yaffo/routes/utilities/sync_views.py:306
-#: yaffo/routes/utilities/sync_views.py:381
+#: yaffo/routes/utilities/sync_views.py:306 yaffo/routes/utilities/sync_views.py:381
 msgid "The photos matching your filter"
 msgstr "符合筛选条件的照片"
 
@@ -2405,18 +2333,14 @@ msgid "Its copy stays in the folder"
 msgstr "副本会保留在文件夹中"
 
 #: yaffo/routes/utilities/sync_views.py:313
-msgid ""
-"Yaffo deletes its copy, to the trash (only copies it wrote and nobody "
-"changed)"
+msgid "Yaffo deletes its copy, to the trash (only copies it wrote and nobody changed)"
 msgstr "Yaffo 会将其副本移至废纸篓（仅限由 Yaffo 写入且无人修改的副本）"
 
-#: yaffo/routes/utilities/sync_views.py:315
-#: yaffo/routes/utilities/sync_views.py:383
+#: yaffo/routes/utilities/sync_views.py:315 yaffo/routes/utilities/sync_views.py:383
 msgid "Sends"
 msgstr "发送"
 
-#: yaffo/routes/utilities/sync_views.py:316
-#: yaffo/routes/utilities/sync_views.py:384
+#: yaffo/routes/utilities/sync_views.py:316 yaffo/routes/utilities/sync_views.py:384
 msgid "To"
 msgstr "发送至"
 
@@ -2428,13 +2352,11 @@ msgstr "格式"
 msgid "If a photo leaves or is deleted"
 msgstr "照片移出或被删除时"
 
-#: yaffo/routes/utilities/sync_views.py:331
-#: yaffo/routes/utilities/sync_views.py:357
+#: yaffo/routes/utilities/sync_views.py:331 yaffo/routes/utilities/sync_views.py:357
 msgid "Copies new photos and videos from"
 msgstr "从以下位置复制新照片和视频"
 
-#: yaffo/routes/utilities/sync_views.py:332
-#: yaffo/routes/utilities/sync_views.py:385
+#: yaffo/routes/utilities/sync_views.py:332 yaffo/routes/utilities/sync_views.py:385
 msgid "Signed in as"
 msgstr "登录身份"
 
@@ -2443,13 +2365,11 @@ msgstr "登录身份"
 msgid "Deleted in %(service)s"
 msgstr "已在 %(service)s 中删除"
 
-#: yaffo/routes/utilities/sync_views.py:336
-#: yaffo/routes/utilities/sync_views.py:364
+#: yaffo/routes/utilities/sync_views.py:336 yaffo/routes/utilities/sync_views.py:364
 msgid "Kept in your library"
 msgstr "保留在你的图库中"
 
-#: yaffo/routes/utilities/sync_views.py:337
-#: yaffo/routes/utilities/sync_views.py:386
+#: yaffo/routes/utilities/sync_views.py:337 yaffo/routes/utilities/sync_views.py:386
 msgid "Yaffo talks to"
 msgstr "Yaffo 连接到"
 
@@ -2458,16 +2378,13 @@ msgstr "Yaffo 连接到"
 msgid "In %(service)s"
 msgstr "在 %(service)s 中"
 
-#: yaffo/routes/utilities/sync_views.py:338
-#: yaffo/routes/utilities/sync_views.py:365
+#: yaffo/routes/utilities/sync_views.py:338 yaffo/routes/utilities/sync_views.py:365
 msgid "Nothing is changed or deleted"
 msgstr "不会更改或删除任何内容"
 
 #: yaffo/routes/utilities/sync_views.py:351
 #, python-format
-msgid ""
-"On your network, over a direct connection, or through Yaffo's relay (up "
-"to %(num)s GB per run)"
+msgid "On your network, over a direct connection, or through Yaffo's relay (up to %(num)s GB per run)"
 msgstr "在你的网络中、通过直接连接，或经由 Yaffo 中继（每次运行最多 %(num)s GB）"
 
 #: yaffo/routes/utilities/sync_views.py:354
@@ -2500,8 +2417,7 @@ msgstr "在 %(device)s 上已删除或不再共享"
 msgid "On %(device)s"
 msgstr "在 %(device)s 上"
 
-#: yaffo/routes/utilities/sync_views.py:389
-#: yaffo/routes/utilities/sync_views.py:392
+#: yaffo/routes/utilities/sync_views.py:389 yaffo/routes/utilities/sync_views.py:392
 #: yaffo/routes/utilities/sync_views.py:395
 msgid "If a photo leaves the selection"
 msgstr "如果照片不再属于所选范围"
@@ -2542,8 +2458,7 @@ msgstr "登录"
 msgid "Choose where in your library the photos go"
 msgstr "选择照片在媒体库中的存放位置"
 
-#: yaffo/routes/utilities/sync_views.py:415
-#: yaffo/templates/utilities/sync_detail.html:327
+#: yaffo/routes/utilities/sync_views.py:415 yaffo/templates/utilities/sync_detail.html:327
 msgid "Choose what to send"
 msgstr "选择要发送的内容"
 
@@ -2579,8 +2494,7 @@ msgstr "选择要从设备导入的内容"
 msgid "Finish the folder and options"
 msgstr "完成文件夹和选项设置"
 
-#: yaffo/routes/utilities/sync_views.py:511
-#: yaffo/templates/utilities/sync_detail.html:303
+#: yaffo/routes/utilities/sync_views.py:511 yaffo/templates/utilities/sync_detail.html:303
 #: yaffo/templates/utilities/sync_detail.html:352
 msgid "Photos matching a filter"
 msgstr "符合筛选条件的照片"
@@ -2613,8 +2527,7 @@ msgid "Photos matching a filter (%(num)d now)"
 msgid_plural "Photos matching a filter (%(num)d now)"
 msgstr[0] "符合筛选条件的照片（当前 %(num)d 张）"
 
-#: yaffo/routes/utilities/sync_views.py:539
-#: yaffo/routes/utilities/sync_views.py:544
+#: yaffo/routes/utilities/sync_views.py:539 yaffo/routes/utilities/sync_views.py:544
 #: yaffo/routes/utilities/sync_views.py:555
 #, python-format
 msgid "Imports new photos from %(source)s"
@@ -2664,8 +2577,7 @@ msgstr "无法向设备发送请求：%(reason)s"
 msgid "The device didn't answer. Is it online?"
 msgstr "设备没有响应。设备是否在线？"
 
-#: yaffo/routes/utilities/sync_views.py:922
-#: yaffo/routes/utilities/sync_views.py:942
+#: yaffo/routes/utilities/sync_views.py:922 yaffo/routes/utilities/sync_views.py:942
 msgid "Finish the setup first."
 msgstr "请先完成设置。"
 
@@ -2771,8 +2683,8 @@ msgstr "Yaffo 无法连接到服务器。请检查地址以及服务器是否正
 
 #: yaffo/routes/utilities/sync_views.py:963
 msgid ""
-"The server didn't answer a secure (https) connection. If it uses http on "
-"your home network, enter its address starting with http://."
+"The server didn't answer a secure (https) connection. If it uses http on your home network, enter"
+" its address starting with http://."
 msgstr "服务器未响应安全（https）连接。如果它在家庭网络中使用 http，请输入以 http:// 开头的地址。"
 
 #: yaffo/routes/utilities/sync_views.py:965
@@ -2868,8 +2780,8 @@ msgstr "该页面未开发"
 
 #: yaffo/templates/404.html:14
 msgid ""
-"We searched every album and contact sheet, but this one never made it out"
-" of the darkroom. The link may be broken or the page may have moved."
+"We searched every album and contact sheet, but this one never made it out of the darkroom. The "
+"link may be broken or the page may have moved."
 msgstr "我们搜查了每一张专辑和联系表，但这张专辑从未走出暗室。链接可能已损坏或页面可能已移动。"
 
 #: yaffo/templates/500.html:3
@@ -2882,26 +2794,23 @@ msgstr "暗室出了问题"
 
 #: yaffo/templates/500.html:14
 msgid ""
-"A processing error stopped this page from loading. Give it another moment"
-" — if it keeps happening, the trouble is on our end, not yours."
+"A processing error stopped this page from loading. Give it another moment — if it keeps "
+"happening, the trouble is on our end, not yours."
 msgstr "处理错误导致该页面无法加载。再等一下——如果这种情况继续发生，麻烦就在我们这边，而不是你的。"
 
 #: yaffo/templates/500.html:19 yaffo/templates/assistant/_panel.html:11
-#: yaffo/templates/assistant/_panel.html:46 yaffo/templates/base.html:157
-#: yaffo/templates/base.html:206 yaffo/templates/base.html:226
-#: yaffo/templates/components/run_history.html:45
+#: yaffo/templates/assistant/_panel.html:46 yaffo/templates/base.html:157 yaffo/templates/base.html:205
+#: yaffo/templates/base.html:225 yaffo/templates/components/run_history.html:45
 #: yaffo/templates/fragments/job_status_fragment.html:36
 msgid "Ask Yaffo"
 msgstr "询问 Yaffo"
 
-#: yaffo/templates/_sidebar.html:11
-#: yaffo/templates/components/nav_panel.html:38
+#: yaffo/templates/_sidebar.html:11 yaffo/templates/components/nav_panel.html:38
 #: yaffo/templates/people/list.html:29 yaffo/templates/people/list.html:54
 msgid "Actions"
 msgstr "行动"
 
-#: yaffo/templates/_sidebar.html:17
-#: yaffo/templates/components/nav_panel.html:40
+#: yaffo/templates/_sidebar.html:17 yaffo/templates/components/nav_panel.html:40
 msgid "Filters"
 msgstr "过滤器"
 
@@ -2927,7 +2836,7 @@ msgstr[0] "%(shown)s 物品"
 msgid "Type to search…"
 msgstr "输入搜索..."
 
-#: yaffo/templates/base.html:4 yaffo/templates/faces/index.html:283
+#: yaffo/templates/base.html:4 yaffo/templates/faces/index.html:327
 #: yaffo/templates/pages/widget_frame.html:4
 msgid "No results found"
 msgstr "没有找到结果"
@@ -2952,8 +2861,7 @@ msgstr "更改可能会影响其他访客。"
 msgid "Next reset:"
 msgstr "下次重置："
 
-#: yaffo/templates/base.html:127 yaffo/templates/base.html:129
-#: yaffo/templates/base.html:132
+#: yaffo/templates/base.html:127 yaffo/templates/base.html:129 yaffo/templates/base.html:132
 msgid "Menu"
 msgstr "菜单"
 
@@ -2966,8 +2874,8 @@ msgstr "家"
 msgid "Faces"
 msgstr "面孔"
 
-#: yaffo/templates/base.html:141 yaffo/templates/faces/index.html:120
-#: yaffo/templates/filters/_people.html:4 yaffo/templates/people/list.html:17
+#: yaffo/templates/base.html:141 yaffo/templates/faces/index.html:134
+#: yaffo/templates/filters/_people.html:6 yaffo/templates/people/list.html:17
 msgid "People"
 msgstr "人们"
 
@@ -2998,49 +2906,44 @@ msgstr "设置"
 msgid "Pages"
 msgstr "页数"
 
-#: yaffo/templates/base.html:181
+#: yaffo/templates/base.html:180
 msgid "Edit page"
 msgstr "编辑页面"
 
-#: yaffo/templates/base.html:189
+#: yaffo/templates/base.html:188
 msgid "New page"
 msgstr "新页面"
 
-#: yaffo/templates/assistant/_panel.html:31 yaffo/templates/base.html:209
-#: yaffo/templates/components/info_modal.html:6
-#: yaffo/templates/components/info_modal.html:12
-#: yaffo/templates/components/modal.html:9
-#: yaffo/templates/utilities/sync_detail.html:427
+#: yaffo/templates/assistant/_panel.html:31 yaffo/templates/base.html:208
+#: yaffo/templates/components/info_modal.html:6 yaffo/templates/components/info_modal.html:12
+#: yaffo/templates/components/modal.html:9 yaffo/templates/utilities/sync_detail.html:427
 msgid "Close"
 msgstr "关闭"
 
-#: yaffo/templates/base.html:234
+#: yaffo/templates/base.html:233
 msgid "Select a folder"
 msgstr "选择一个文件夹"
 
-#: yaffo/templates/base.html:238
+#: yaffo/templates/base.html:237
 msgid "Up"
 msgstr "向上"
 
-#: yaffo/templates/base.html:253 yaffo/templates/base.html:269
-#: yaffo/templates/components/chat_dialog.html:39
-#: yaffo/templates/components/modal.html:17
-#: yaffo/templates/components/run_history.html:40
-#: yaffo/templates/fragments/job_status_fragment.html:46
+#: yaffo/templates/base.html:252 yaffo/templates/base.html:268
+#: yaffo/templates/components/chat_dialog.html:39 yaffo/templates/components/modal.html:17
+#: yaffo/templates/components/run_history.html:40 yaffo/templates/fragments/job_status_fragment.html:46
 #: yaffo/templates/sharing/_transfers_panel.html:41
 #: yaffo/templates/utilities/automations_triggers.html:125
 #: yaffo/templates/utilities/automations_triggers.html:145
-#: yaffo/templates/utilities/sync_detail.html:79
-#: yaffo/templates/utilities/sync_filter.html:31
+#: yaffo/templates/utilities/sync_detail.html:79 yaffo/templates/utilities/sync_filter.html:31
 #: yaffo/templates/utilities/sync_peer_filter.html:33
 msgid "Cancel"
 msgstr "取消"
 
-#: yaffo/templates/base.html:254
+#: yaffo/templates/base.html:253
 msgid "Select this folder"
 msgstr "选择该文件夹"
 
-#: yaffo/templates/base.html:263 yaffo/templates/base.html:270
+#: yaffo/templates/base.html:262 yaffo/templates/base.html:269
 msgid "Confirm"
 msgstr "确认"
 
@@ -3054,9 +2957,8 @@ msgstr "您的图书馆数据库已过时"
 
 #: yaffo/templates/db_error.html:17
 msgid ""
-"This version of Yaffo expects a newer database than the one it opened. "
-"Restarting Yaffo applies the pending updates — your photos and people are"
-" untouched."
+"This version of Yaffo expects a newer database than the one it opened. Restarting Yaffo applies "
+"the pending updates — your photos and people are untouched."
 msgstr "这一版本的 Yaffo 需要一个比它打开的数据库更新的数据库。重新启动 Yaffo 会应用待处理的更新 - 您的照片和人物不会受到影响。"
 
 #: yaffo/templates/index.html:4
@@ -3079,9 +2981,8 @@ msgstr "时间轴"
 msgid "Photo Library"
 msgstr "照片库"
 
-#: yaffo/templates/albums/add.html:97 yaffo/templates/index.html:50
-#: yaffo/templates/index.html:145 yaffo/templates/utilities/sync_filter.html:71
-#: yaffo/templates/utilities/sync_peer_filter.html:74
+#: yaffo/templates/albums/add.html:97 yaffo/templates/index.html:50 yaffo/templates/index.html:145
+#: yaffo/templates/utilities/sync_filter.html:71 yaffo/templates/utilities/sync_peer_filter.html:74
 msgid "No photos found"
 msgstr "没有找到照片"
 
@@ -3106,14 +3007,11 @@ msgid "Try adjusting your filters or check back later."
 msgstr "尝试调整您的过滤器或稍后再回来查看。"
 
 #: yaffo/templates/albums/_base.html:13 yaffo/templates/albums/album.html:33
-#: yaffo/templates/components/photo_card.html:36
-#: yaffo/templates/macros/automation_forms.html:4
+#: yaffo/templates/components/photo_card.html:36 yaffo/templates/macros/automation_forms.html:4
 #: yaffo/templates/people/list.html:24 yaffo/templates/people/list.html:35
 #: yaffo/templates/people/list.html:85 yaffo/templates/sharing/files.html:124
-#: yaffo/templates/themes_page/index.html:124
-#: yaffo/templates/themes_page/index.html:136
-#: yaffo/templates/utilities/_base.html:53
-#: yaffo/templates/utilities/sync_service.html:122
+#: yaffo/templates/themes_page/index.html:124 yaffo/templates/themes_page/index.html:136
+#: yaffo/templates/utilities/_base.html:53 yaffo/templates/utilities/sync_service.html:122
 msgid "Name"
 msgstr "姓名"
 
@@ -3150,8 +3048,7 @@ msgstr "新专辑"
 msgid "New Album"
 msgstr "新专辑"
 
-#: yaffo/templates/albums/_base.html:68
-#: yaffo/templates/themes_page/index.html:131
+#: yaffo/templates/albums/_base.html:68 yaffo/templates/themes_page/index.html:131
 #: yaffo/templates/utilities/_base.html:158
 msgid "Create"
 msgstr "创造"
@@ -3177,9 +3074,7 @@ msgid "%(count)s in this album"
 msgstr "%(count)s 在这张专辑中"
 
 #: yaffo/templates/albums/add.html:38
-msgid ""
-"Filter the library, then pick the photos to add. Photos already in the "
-"album are not shown."
+msgid "Filter the library, then pick the photos to add. Photos already in the album are not shown."
 msgstr "过滤图库，然后选择要添加的照片。相册中已有的照片不会显示。"
 
 #: yaffo/templates/albums/add.html:43
@@ -3199,15 +3094,13 @@ msgid "Add photos"
 msgstr "添加照片"
 
 #: yaffo/templates/albums/add.html:66 yaffo/templates/albums/album.html:110
-#: yaffo/templates/components/photo_card.html:16
-#: yaffo/templates/utilities/sync_filter.html:56
+#: yaffo/templates/components/photo_card.html:16 yaffo/templates/utilities/sync_filter.html:56
 #, python-format
 msgid "Video from %(date)s"
 msgstr "视频来自 %(date)s"
 
 #: yaffo/templates/albums/add.html:70 yaffo/templates/albums/album.html:114
-#: yaffo/templates/components/photo_card.html:32
-#: yaffo/templates/utilities/sync_filter.html:60
+#: yaffo/templates/components/photo_card.html:32 yaffo/templates/utilities/sync_filter.html:60
 #, python-format
 msgid "Photo from %(date)s"
 msgstr "照片来自 %(date)s"
@@ -3217,14 +3110,11 @@ msgid "Nothing left to add"
 msgstr "没有什么可以添加的"
 
 #: yaffo/templates/albums/add.html:95
-msgid ""
-"Every photo matching these filters is already in this album. Adjust the "
-"filters to find more."
+msgid "Every photo matching these filters is already in this album. Adjust the filters to find more."
 msgstr "与这些滤镜匹配的每张照片都已在此相册中。调整过滤器以找到更多。"
 
-#: yaffo/templates/albums/add.html:98 yaffo/templates/people/faces.html:109
-#: yaffo/templates/utilities/sync_filter.html:72
-#: yaffo/templates/utilities/sync_peer_filter.html:75
+#: yaffo/templates/albums/add.html:98 yaffo/templates/people/faces.html:158
+#: yaffo/templates/utilities/sync_filter.html:72 yaffo/templates/utilities/sync_peer_filter.html:75
 msgid "Try adjusting your filters."
 msgstr "尝试调整你的过滤器。"
 
@@ -3235,8 +3125,8 @@ msgstr "%(album)s - 专辑 - Yaffo"
 
 #: yaffo/templates/albums/album.html:13
 msgid ""
-"Checked devices can pull this album. They see its contents at the time "
-"they ask, so adding or removing photos changes what they get next time."
+"Checked devices can pull this album. They see its contents at the time they ask, so adding or "
+"removing photos changes what they get next time."
 msgstr "已检查的设备可以拉取该相册。他们在询问时会看到其内容，因此添加或删除照片会改变他们下次获得的内容。"
 
 #: yaffo/templates/albums/album.html:27
@@ -3249,20 +3139,16 @@ msgstr "这张专辑有什么用？"
 
 #: yaffo/templates/albums/album.html:44
 #, python-format
-msgid ""
-"Delete %(album)s? The album and its contents list go away — the photos "
-"themselves are not deleted."
+msgid "Delete %(album)s? The album and its contents list go away — the photos themselves are not deleted."
 msgstr "删除 %(album)s？相册及其内容列表会消失 - 照片本身不会被删除。"
 
 #: yaffo/templates/albums/album.html:50 yaffo/templates/people/list.html:61
-#: yaffo/templates/utilities/automations.html:83
-#: yaffo/templates/utilities/automations_edit.html:15
+#: yaffo/templates/utilities/automations.html:83 yaffo/templates/utilities/automations_edit.html:15
 #: yaffo/templates/utilities/automations_triggers.html:46
 msgid "Edit"
 msgstr "编辑"
 
-#: yaffo/templates/albums/album.html:53
-#: yaffo/templates/utilities/automations.html:86
+#: yaffo/templates/albums/album.html:53 yaffo/templates/utilities/automations.html:86
 #: yaffo/templates/utilities/sync_detail.html:133
 msgid "Edit details"
 msgstr "编辑详细信息"
@@ -3277,15 +3163,11 @@ msgid "Delete album?"
 msgstr "删除相册？"
 
 #: yaffo/templates/albums/album.html:61 yaffo/templates/albums/album.html:62
-#: yaffo/templates/people/list.html:65
-#: yaffo/templates/sharing/_device_content.html:35
-#: yaffo/templates/sharing/_device_content.html:37
-#: yaffo/templates/themes_page/index.html:75
-#: yaffo/templates/utilities/automations.html:89
-#: yaffo/templates/utilities/automations_triggers.html:51
+#: yaffo/templates/people/list.html:65 yaffo/templates/sharing/_device_content.html:35
+#: yaffo/templates/sharing/_device_content.html:37 yaffo/templates/themes_page/index.html:75
+#: yaffo/templates/utilities/automations.html:89 yaffo/templates/utilities/automations_triggers.html:51
 #: yaffo/templates/utilities/remove_duplicates_form.html:49
-#: yaffo/templates/utilities/sync_detail.html:134
-#: yaffo/templates/utilities/sync_service.html:73
+#: yaffo/templates/utilities/sync_detail.html:134 yaffo/templates/utilities/sync_service.html:73
 msgid "Delete"
 msgstr "删除"
 
@@ -3308,9 +3190,7 @@ msgid "Remove from album?"
 msgstr "从相册中删除？"
 
 #: yaffo/templates/albums/album.html:85
-msgid ""
-"Remove the selected photos from this album? The photos themselves are not"
-" deleted."
+msgid "Remove the selected photos from this album? The photos themselves are not deleted."
 msgstr "要从此相册中删除选定的照片吗？照片本身不会被删除。"
 
 #: yaffo/templates/albums/album.html:86 yaffo/templates/settings/index.html:29
@@ -3347,20 +3227,13 @@ msgstr "尚未添加任何内容。"
 msgid "Edit album"
 msgstr "编辑相册"
 
-#: yaffo/templates/albums/album.html:145
-#: yaffo/templates/components/modal.html:18
-#: yaffo/templates/filters/_config_modal.html:22
-#: yaffo/templates/pages/design.html:38
-#: yaffo/templates/settings/_llm_api_key.html:19
-#: yaffo/templates/settings/index.html:112
-#: yaffo/templates/settings/index.html:131
-#: yaffo/templates/sharing/_download_directory_panel.html:18
-#: yaffo/templates/themes_page/index.html:143
-#: yaffo/templates/utilities/automations.html:110
-#: yaffo/templates/utilities/automations.html:124
-#: yaffo/templates/utilities/sync_detail.html:275
-#: yaffo/templates/utilities/sync_detail.html:313
-#: yaffo/templates/utilities/sync_detail.html:413
+#: yaffo/templates/albums/album.html:145 yaffo/templates/components/modal.html:18
+#: yaffo/templates/filters/_config_modal.html:22 yaffo/templates/pages/design.html:38
+#: yaffo/templates/settings/_llm_api_key.html:19 yaffo/templates/settings/index.html:112
+#: yaffo/templates/settings/index.html:131 yaffo/templates/sharing/_download_directory_panel.html:18
+#: yaffo/templates/themes_page/index.html:143 yaffo/templates/utilities/automations.html:110
+#: yaffo/templates/utilities/automations.html:124 yaffo/templates/utilities/sync_detail.html:275
+#: yaffo/templates/utilities/sync_detail.html:313 yaffo/templates/utilities/sync_detail.html:413
 #: yaffo/templates/utilities/sync_detail.html:486
 msgid "Save"
 msgstr "节省"
@@ -3387,9 +3260,7 @@ msgid "Cover of %(album)s"
 msgstr "封面 %(album)s"
 
 #: yaffo/templates/albums/index.html:44
-msgid ""
-"An album is a collection you curate by hand — create one, then add photos"
-" to it."
+msgid "An album is a collection you curate by hand — create one, then add photos to it."
 msgstr "相册是您手动策划的集合 - 创建一个相册，然后向其中添加照片。"
 
 #: yaffo/templates/assistant/_panel.html:16
@@ -3400,8 +3271,7 @@ msgstr "调整面板大小"
 msgid "Drag to resize. Double-click to reset."
 msgstr "拖动以调整大小。双击恢复默认。"
 
-#: yaffo/templates/assistant/_panel.html:21
-#: yaffo/templates/themes_page/index.html:106
+#: yaffo/templates/assistant/_panel.html:21 yaffo/templates/themes_page/index.html:106
 #: yaffo/templates/utilities/automations_edit.html:23
 msgid "Conversation"
 msgstr "对话"
@@ -3425,15 +3295,15 @@ msgstr "在完整页面中打开"
 #: yaffo/templates/assistant/_panel.html:39
 #, python-format
 msgid ""
-"Uses %(model)s (%(provider)s). To troubleshoot, it can check this "
-"computer, and what it reads is sent with your question."
+"Uses %(model)s (%(provider)s). To troubleshoot, it can check this computer, and what it reads is "
+"sent with your question."
 msgstr "使用 %(model)s（%(provider)s）。排查问题时，它可以检查这台电脑，读取的内容会连同你的问题一起发送。"
 
 #: yaffo/templates/assistant/_panel.html:41
 #, python-format
 msgid ""
-"Uses %(model)s (%(provider)s) and answers from Yaffo's documentation "
-"only. Nothing from this computer is sent."
+"Uses %(model)s (%(provider)s) and answers from Yaffo's documentation only. Nothing from this "
+"computer is sent."
 msgstr "使用 %(model)s（%(provider)s），只根据 Yaffo 的文档回答。不会发送这台电脑上的任何内容。"
 
 #: yaffo/templates/assistant/_panel.html:43
@@ -3452,8 +3322,7 @@ msgstr "移除附加的上下文"
 msgid "Ask Yaffo - Yaffo"
 msgstr "询问 Yaffo - Yaffo"
 
-#: yaffo/templates/assistant/index.html:8
-#: yaffo/templates/assistant/index.html:9
+#: yaffo/templates/assistant/index.html:8 yaffo/templates/assistant/index.html:9
 msgid "Conversations"
 msgstr "对话"
 
@@ -3499,59 +3368,47 @@ msgstr "输入目录路径"
 msgid "Directory"
 msgstr "目录"
 
-#: yaffo/templates/components/file_browser.html:14
-#: yaffo/templates/sharing/_device_panel.html:100
+#: yaffo/templates/components/file_browser.html:14 yaffo/templates/sharing/_device_panel.html:100
 #: yaffo/templates/sharing/_download_directory_panel.html:16
 #: yaffo/templates/utilities/sync_detail.html:32
 msgid "Browse…"
 msgstr "浏览…"
 
-#: yaffo/templates/components/htmx_pagination.html:16
-#: yaffo/templates/components/pagination.html:29
+#: yaffo/templates/components/htmx_pagination.html:16 yaffo/templates/components/pagination.html:29
 #, python-format
 msgid "Showing %(start)s–%(end)s of %(total)s results"
 msgstr "显示中 %(start)s–%(end)s 的 %(total)s 结果"
 
-#: yaffo/templates/components/htmx_pagination.html:24
-#: yaffo/templates/components/pagination.html:37
+#: yaffo/templates/components/htmx_pagination.html:24 yaffo/templates/components/pagination.html:37
 msgid "Items per page:"
 msgstr "每页项目："
 
 #: yaffo/templates/components/htmx_pagination.html:44
-#: yaffo/templates/components/htmx_pagination.html:52
-#: yaffo/templates/components/pagination.html:52
-#: yaffo/templates/components/pagination.html:54
-#: yaffo/templates/faces/index.html:267
+#: yaffo/templates/components/htmx_pagination.html:52 yaffo/templates/components/pagination.html:52
+#: yaffo/templates/components/pagination.html:54 yaffo/templates/faces/index.html:304
 msgid "First"
 msgstr "第一的"
 
 #: yaffo/templates/components/htmx_pagination.html:55
-#: yaffo/templates/components/htmx_pagination.html:63
-#: yaffo/templates/components/pagination.html:59
-#: yaffo/templates/components/pagination.html:61
-#: yaffo/templates/faces/index.html:269
+#: yaffo/templates/components/htmx_pagination.html:63 yaffo/templates/components/pagination.html:59
+#: yaffo/templates/components/pagination.html:61 yaffo/templates/faces/index.html:306
 msgid "Previous"
 msgstr "以前的"
 
-#: yaffo/templates/components/htmx_pagination.html:67
-#: yaffo/templates/components/pagination.html:65
+#: yaffo/templates/components/htmx_pagination.html:67 yaffo/templates/components/pagination.html:65
 #, python-format
 msgid "Page %(page)s of %(total)s"
 msgstr "页 %(page)s 的 %(total)s"
 
 #: yaffo/templates/components/htmx_pagination.html:72
-#: yaffo/templates/components/htmx_pagination.html:80
-#: yaffo/templates/components/pagination.html:72
-#: yaffo/templates/components/pagination.html:74
-#: yaffo/templates/faces/index.html:272
+#: yaffo/templates/components/htmx_pagination.html:80 yaffo/templates/components/pagination.html:72
+#: yaffo/templates/components/pagination.html:74 yaffo/templates/faces/index.html:309
 msgid "Next"
 msgstr "下一个"
 
 #: yaffo/templates/components/htmx_pagination.html:83
-#: yaffo/templates/components/htmx_pagination.html:91
-#: yaffo/templates/components/pagination.html:79
-#: yaffo/templates/components/pagination.html:81
-#: yaffo/templates/faces/index.html:274
+#: yaffo/templates/components/htmx_pagination.html:91 yaffo/templates/components/pagination.html:79
+#: yaffo/templates/components/pagination.html:81 yaffo/templates/faces/index.html:311
 msgid "Last"
 msgstr "最后的"
 
@@ -3567,8 +3424,7 @@ msgstr "详情"
 msgid "Processing in Progress"
 msgstr "处理中"
 
-#: yaffo/templates/components/photo_card.html:11
-#: yaffo/templates/media/view.html:240
+#: yaffo/templates/components/photo_card.html:11 yaffo/templates/media/view.html:240
 msgid "Toggle favorite"
 msgstr "切换收藏夹"
 
@@ -3576,14 +3432,13 @@ msgstr "切换收藏夹"
 msgid "Play video"
 msgstr "播放视频"
 
-#: yaffo/templates/components/photo_card.html:45
-#: yaffo/templates/sharing/files.html:132
+#: yaffo/templates/components/photo_card.html:45 yaffo/templates/sharing/files.html:132
 #: yaffo/templates/utilities/_service_test_result.html:36
 msgid "Taken"
 msgstr "采取"
 
-#: yaffo/templates/components/photo_card.html:50
-#: yaffo/templates/media/view.html:90 yaffo/templates/sharing/files.html:137
+#: yaffo/templates/components/photo_card.html:50 yaffo/templates/media/view.html:90
+#: yaffo/templates/sharing/files.html:137
 msgid "Location"
 msgstr "地点"
 
@@ -3606,14 +3461,12 @@ msgstr "询问 Yaffo 关于此次运行"
 msgid "%(count)s selected"
 msgstr "%(count)s 已选择"
 
-#: yaffo/templates/components/selection_bar.html:29
-#: yaffo/templates/components/selection_bar.html:30
-#: yaffo/templates/faces/index.html:241 yaffo/templates/people/faces.html:60
+#: yaffo/templates/components/selection_bar.html:29 yaffo/templates/components/selection_bar.html:30
+#: yaffo/templates/faces/index.html:278 yaffo/templates/people/faces.html:98
 msgid "Clear selection"
 msgstr "清除选择"
 
-#: yaffo/templates/components/switch.html:12
-#: yaffo/templates/utilities/_base.html:70
+#: yaffo/templates/components/switch.html:12 yaffo/templates/utilities/_base.html:70
 msgid "On"
 msgstr "在"
 
@@ -3643,10 +3496,9 @@ msgstr "此页面如何运作"
 
 #: yaffo/templates/faces/index.html:25
 msgid ""
-"The job here is to empty the pile of unassigned faces. Faces are detected"
-" automatically and grouped for you, so you can accept or reject a whole "
-"group at once — assign a group to a person, or ignore the ones you don't "
-"want."
+"The job here is to empty the pile of unassigned faces. Faces are detected automatically and "
+"grouped for you, so you can accept or reject a whole group at once — assign a group to a person, "
+"or ignore the ones you don't want."
 msgstr "这里的工作是清空未分配的面孔堆。系统会自动检测人脸并为您分组，因此您可以立即接受或拒绝整个组 - 将一组分配给某个人，或忽略您不想要的人。"
 
 #: yaffo/templates/faces/index.html:27
@@ -3670,9 +3522,7 @@ msgid "Similarity Threshold:"
 msgstr "相似度阈值："
 
 #: yaffo/templates/faces/index.html:29
-msgid ""
-"Higher values make tighter, cleaner groups; lower values make larger, "
-"looser ones"
+msgid "Higher values make tighter, cleaner groups; lower values make larger, looser ones"
 msgstr "值越高，群体越紧密、越干净；值越低，值越大、越松"
 
 #: yaffo/templates/faces/index.html:32
@@ -3684,9 +3534,7 @@ msgid "Start broad with Similarity."
 msgstr "从相似性开始广泛。"
 
 #: yaffo/templates/faces/index.html:34
-msgid ""
-"Group by Similarity at a high threshold and assign the big, obvious "
-"clusters first."
+msgid "Group by Similarity at a high threshold and assign the big, obvious clusters first."
 msgstr "按高阈值的相似性进行分组，并首先分配大的、明显的集群。"
 
 #: yaffo/templates/faces/index.html:35
@@ -3695,9 +3543,8 @@ msgstr "当群体缩小时，降低阈值。"
 
 #: yaffo/templates/faces/index.html:35
 msgid ""
-"Once the biggest groups get small, drop the threshold to pull looser "
-"matches together. The right values vary a lot from batch to batch, so "
-"adjust to taste."
+"Once the biggest groups get small, drop the threshold to pull looser matches together. The right "
+"values vary a lot from batch to batch, so adjust to taste."
 msgstr "一旦最大的群体变小，就降低门槛，将松散的比赛拉到一起。不同批次的正确值差异很大，因此请根据口味进行调整。"
 
 #: yaffo/templates/faces/index.html:36
@@ -3713,9 +3560,7 @@ msgid "Ignore what's left."
 msgstr "忽略剩下的东西。"
 
 #: yaffo/templates/faces/index.html:37
-msgid ""
-"The remainder is usually low quality — blurry, partial, or odd angles. "
-"Select and Ignore it."
+msgid "The remainder is usually low quality — blurry, partial, or odd angles. Select and Ignore it."
 msgstr "其余部分通常质量较低——模糊、部分或奇怪的角度。选择并忽略它。"
 
 #: yaffo/templates/faces/index.html:40
@@ -3734,15 +3579,15 @@ msgstr "点击"
 msgid "Select range of faces"
 msgstr "选择面部范围"
 
-#: yaffo/templates/faces/index.html:51 yaffo/templates/faces/index.html:199
+#: yaffo/templates/faces/index.html:51 yaffo/templates/faces/index.html:213
 msgid "Assign to selected person"
 msgstr "分配给选定的人"
 
-#: yaffo/templates/faces/index.html:54 yaffo/templates/faces/index.html:202
+#: yaffo/templates/faces/index.html:54 yaffo/templates/faces/index.html:216
 msgid "or"
 msgstr "或者"
 
-#: yaffo/templates/faces/index.html:55 yaffo/templates/faces/index.html:203
+#: yaffo/templates/faces/index.html:55 yaffo/templates/faces/index.html:217
 msgid "Ignore selected faces"
 msgstr "忽略选定的面孔"
 
@@ -3756,14 +3601,14 @@ msgstr "尖端："
 
 #: yaffo/templates/faces/index.html:66
 msgid ""
-"Refresh the page between passes — it re-clusters the remaining faces into"
-" tighter, higher-quality groups"
+"Refresh the page between passes — it re-clusters the remaining faces into tighter, higher-quality"
+" groups"
 msgstr "在两次传递之间刷新页面——它将剩余的面孔重新聚集成更紧密、更高质量的组"
 
 #: yaffo/templates/faces/index.html:67
 msgid ""
-"As your catalog of people grows, a background task assigns matching faces"
-" automatically — so this pile should shrink on its own over time"
+"As your catalog of people grows, a background task assigns matching faces automatically — so this"
+" pile should shrink on its own over time"
 msgstr "随着人员目录的增加，后台任务会自动分配匹配的面孔 - 因此随着时间的推移，这堆人应该会自行缩小"
 
 #: yaffo/templates/faces/index.html:68
@@ -3774,113 +3619,142 @@ msgstr "选择面孔，然后按数字键进行快速分配"
 msgid "Hold Shift+Click to select multiple faces at once"
 msgstr "按住 Shift+单击可一次选择多个面"
 
-#: yaffo/templates/faces/index.html:105
-#: yaffo/templates/filters/_config_modal.html:20
+#: yaffo/templates/faces/index.html:105 yaffo/templates/filters/_config_modal.html:20
 msgid "Reset to defaults"
 msgstr "重置为默认值"
 
-#: yaffo/templates/faces/index.html:115
+#: yaffo/templates/faces/index.html:118
+msgid "Faces you ignored earlier join the groups, marked Ignored."
+msgstr "您之前忽略的人脸会加入分组，并标记为“已忽略”。"
+
+#: yaffo/templates/faces/index.html:123
+msgid "Include ignored faces"
+msgstr "包含已忽略的人脸"
+
+#: yaffo/templates/faces/index.html:129
 msgid "Group by"
 msgstr "分组依据"
 
-#: yaffo/templates/faces/index.html:125
+#: yaffo/templates/faces/index.html:139
 msgid "Similarity"
 msgstr "相似"
 
-#: yaffo/templates/faces/index.html:130
+#: yaffo/templates/faces/index.html:144
 msgid "Similarity Threshold"
 msgstr "相似度阈值"
 
-#: yaffo/templates/faces/index.html:137
+#: yaffo/templates/faces/index.html:151
 msgid "Faces to analyze"
 msgstr "待分析的面孔"
 
-#: yaffo/templates/faces/index.html:161
+#: yaffo/templates/faces/index.html:175
 msgid "Assign to Person"
 msgstr "分配给人员"
 
-#: yaffo/templates/faces/index.html:163
+#: yaffo/templates/faces/index.html:177 yaffo/templates/people/faces.html:62
 msgid "Select person"
 msgstr "选择人员"
 
-#: yaffo/templates/faces/index.html:169
+#: yaffo/templates/faces/index.html:183
 msgid "Assign Selected"
 msgstr "分配选定的"
 
-#: yaffo/templates/faces/index.html:171
+#: yaffo/templates/faces/index.html:185
 msgid "Ignore Selected"
 msgstr "忽略选定的"
 
-#: yaffo/templates/faces/index.html:183
+#: yaffo/templates/faces/index.html:197
 msgid "Create Person"
 msgstr "创建人物"
 
-#: yaffo/templates/faces/index.html:191 yaffo/templates/faces/index.html:193
-#: yaffo/templates/faces/index.html:194 yaffo/templates/faces/index.html:297
+#: yaffo/templates/faces/index.html:205 yaffo/templates/faces/index.html:207
+#: yaffo/templates/faces/index.html:208 yaffo/templates/faces/index.html:342
 msgid "Keyboard Shortcuts:"
 msgstr "键盘快捷键："
 
-#: yaffo/templates/faces/index.html:208
+#: yaffo/templates/faces/index.html:222
 msgid "Press <kbd>?</kbd> for help"
 msgstr "按 <kbd>?</kbd> 寻求帮助"
 
-#: yaffo/templates/faces/index.html:216
+#: yaffo/templates/faces/index.html:235 yaffo/templates/faces/index.html:323
+msgid "Start over"
+msgstr "重新开始"
+
+#: yaffo/templates/faces/index.html:238 yaffo/templates/faces/index.html:329
+msgid "Next batch"
+msgstr "下一批"
+
+#: yaffo/templates/faces/index.html:244 yaffo/templates/faces/index.html:254
 msgid "Unassigned Faces"
 msgstr "未指定的面"
 
-#: yaffo/templates/faces/index.html:217
+#: yaffo/templates/faces/index.html:248
 #, python-format
-msgid "Showing %(shown)s of %(total)s unassigned face"
-msgid_plural "Showing %(shown)s of %(total)s unassigned faces"
-msgstr[0] "显示中 %(shown)s 的 %(total)s 未指定的面"
+msgid "Showing %(first)s–%(last)s of %(total)s unassigned and ignored face"
+msgid_plural "Showing %(first)s–%(last)s of %(total)s unassigned and ignored faces"
+msgstr[0] "正在显示 %(total)s 张未分配及已忽略的人脸中的第 %(first)s–%(last)s 张"
 
-#: yaffo/templates/faces/index.html:229
+#: yaffo/templates/faces/index.html:250
+#, python-format
+msgid "Showing %(first)s–%(last)s of %(total)s unassigned face"
+msgid_plural "Showing %(first)s–%(last)s of %(total)s unassigned faces"
+msgstr[0] "正在显示 %(total)s 张未分配的人脸中的第 %(first)s–%(last)s 张"
+
+#: yaffo/templates/faces/index.html:266
 #, python-format
 msgid "%(formatted_count)s face"
 msgid_plural "%(formatted_count)s faces"
 msgstr[0] "%(formatted_count)s 脸"
 
-#: yaffo/templates/faces/index.html:240
+#: yaffo/templates/faces/index.html:277
 #, python-format
 msgid "Select all %(count)s faces"
 msgstr "选择全部 %(count)s 面孔"
 
-#: yaffo/templates/faces/index.html:243
+#: yaffo/templates/faces/index.html:280
 msgid "Shuffle"
 msgstr "随机播放"
 
-#: yaffo/templates/faces/index.html:247
+#: yaffo/templates/faces/index.html:284
 #, python-format
 msgid "Assign to %(person)s"
 msgstr "分配给 %(person)s"
 
-#: yaffo/templates/faces/index.html:249
+#: yaffo/templates/faces/index.html:286
 msgid "Skip cluster"
 msgstr "跳过簇"
 
-#: yaffo/templates/faces/index.html:258
+#: yaffo/templates/faces/index.html:295
 #, python-format
 msgid "Showing <span class=\"sample-range\">0</span> of %(total)s face"
 msgid_plural "Showing <span class=\"sample-range\">0</span> of %(total)s faces"
 msgstr[0] "显示中 <span class=\"sample-range\">0</span> 的 %(total)s 脸"
 
-#: yaffo/templates/faces/index.html:270
+#: yaffo/templates/faces/index.html:307
 msgid "Page 1 of 1"
 msgstr "第 1 页，共 1 页"
 
-#: yaffo/templates/faces/index.html:284
+#: yaffo/templates/faces/index.html:321
+msgid "You've reached the end"
+msgstr "已到末尾"
+
+#: yaffo/templates/faces/index.html:322
+msgid "There are no more faces after this point."
+msgstr "后面没有更多人脸了。"
+
+#: yaffo/templates/faces/index.html:328
 msgid "Double-check the applied filters or decrease the similarity threshold."
 msgstr "仔细检查所应用的过滤器或降低相似性阈值。"
 
-#: yaffo/templates/faces/index.html:289
+#: yaffo/templates/faces/index.html:334
 msgid "All Faces Assigned!"
 msgstr "所有面孔均已指定！"
 
-#: yaffo/templates/faces/index.html:290
+#: yaffo/templates/faces/index.html:335
 msgid "There isn't anything for you to do here."
 msgstr "这里没有什么可让你做的。"
 
-#: yaffo/templates/faces/index.html:296
+#: yaffo/templates/faces/index.html:341
 msgid "Help"
 msgstr "帮助"
 
@@ -3921,13 +3795,11 @@ msgstr "性别"
 msgid "All Genders"
 msgstr "所有性别"
 
-#: yaffo/templates/filters/_labels.html:4
-#: yaffo/templates/utilities/_service_test_result.html:26
+#: yaffo/templates/filters/_labels.html:4 yaffo/templates/utilities/_service_test_result.html:26
 msgid "Label"
 msgstr "标签"
 
-#: yaffo/templates/filters/_labels.html:8
-#: yaffo/templates/filters/_labels.html:16
+#: yaffo/templates/filters/_labels.html:8 yaffo/templates/filters/_labels.html:16
 msgid "All Labels"
 msgstr "所有标签"
 
@@ -3940,8 +3812,7 @@ msgstr "{count} 已选择标签"
 msgid "Search labels…"
 msgstr "搜索标签..."
 
-#: yaffo/templates/filters/_locations.html:8
-#: yaffo/templates/filters/_locations.html:16
+#: yaffo/templates/filters/_locations.html:8 yaffo/templates/filters/_locations.html:16
 msgid "All Locations"
 msgstr "所有地点"
 
@@ -4007,8 +3878,7 @@ msgstr "所有月份"
 msgid "Page Size"
 msgstr "页面尺寸"
 
-#: yaffo/templates/filters/_path.html:2
-#: yaffo/templates/utilities/_service_test_result.html:36
+#: yaffo/templates/filters/_path.html:2 yaffo/templates/utilities/_service_test_result.html:36
 msgid "File"
 msgstr "文件"
 
@@ -4016,27 +3886,18 @@ msgstr "文件"
 msgid "Search file or folder name…"
 msgstr "搜索文件或文件夹名称..."
 
-#: yaffo/templates/filters/_people.html:8
-#: yaffo/templates/filters/_people.html:16
+#: yaffo/templates/filters/_people.html:12 yaffo/templates/filters/_people.html:20
 msgid "All People"
 msgstr "所有人"
 
-#: yaffo/templates/filters/_people.html:10
+#: yaffo/templates/filters/_people.html:14
 #, python-brace-format
 msgid "{count} people selected"
 msgstr "{count} 被选中的人"
 
-#: yaffo/templates/filters/_people.html:13
+#: yaffo/templates/filters/_people.html:17
 msgid "Search people…"
 msgstr "搜索人..."
-
-#: yaffo/templates/filters/_person.html:2
-msgid "Person"
-msgstr "人"
-
-#: yaffo/templates/filters/_person.html:4
-msgid "Any Person"
-msgstr "任何人"
 
 #: yaffo/templates/filters/_shape.html:5
 msgid "Shape"
@@ -4062,8 +3923,7 @@ msgstr "正方形"
 msgid "Tag Name"
 msgstr "标签名称"
 
-#: yaffo/templates/filters/_tags.html:5
-#: yaffo/templates/utilities/sync_items.html:13
+#: yaffo/templates/filters/_tags.html:5 yaffo/templates/utilities/sync_items.html:13
 msgid "All"
 msgstr "全部"
 
@@ -4121,9 +3981,7 @@ msgid "File Information"
 msgstr "文件信息"
 
 #: yaffo/templates/media/view.html:27
-msgid ""
-"Its date, location, faces and labels weren't read. Use Reindex to try "
-"again."
+msgid "Its date, location, faces and labels weren't read. Use Reindex to try again."
 msgstr "未能读取其日期、位置、人脸和标签。请使用重新索引再试一次。"
 
 #: yaffo/templates/media/view.html:34 yaffo/templates/media/view.html:95
@@ -4194,7 +4052,7 @@ msgid "Face (%(count)s)"
 msgid_plural "Faces (%(count)s)"
 msgstr[0] "脸 （%(count)s)"
 
-#: yaffo/templates/media/view.html:147 yaffo/templates/people/faces.html:71
+#: yaffo/templates/media/view.html:147 yaffo/templates/people/faces.html:109
 msgid "Face"
 msgstr "脸"
 
@@ -4320,8 +4178,7 @@ msgstr "添加小部件"
 msgid "Delete Page"
 msgstr "删除页面"
 
-#: yaffo/templates/pages/design.html:46
-#: yaffo/templates/settings/_assistant.html:16
+#: yaffo/templates/pages/design.html:46 yaffo/templates/settings/_assistant.html:16
 msgid "Assistant"
 msgstr "助手"
 
@@ -4335,8 +4192,8 @@ msgstr "描述你想要什么..."
 
 #: yaffo/templates/pages/design.html:50
 msgid ""
-"Describe what you want and I'll add widgets — e.g. “a map of Maine” or "
-"“our beach photos from 2023”."
+"Describe what you want and I'll add widgets — e.g. “a map of Maine” or “our beach photos from "
+"2023”."
 msgstr "描述你想要什么，我将添加小部件 - 例如“缅因州地图”或“我们 2023 年的海滩照片”。"
 
 #: yaffo/templates/pages/widget_frame.html:49
@@ -4356,46 +4213,102 @@ msgstr "最小相似度"
 msgid "Max Similarity"
 msgstr "最大相似度"
 
-#: yaffo/templates/people/faces.html:30
+#: yaffo/templates/people/faces.html:27
+msgid "All faces"
+msgstr "所有人脸"
+
+#: yaffo/templates/people/faces.html:27
+#, python-format
+msgid "Every face assigned to %(person)s, weakest match first."
+msgstr "分配给 %(person)s 的所有人脸，按匹配度从低到高排列。"
+
+#: yaffo/templates/people/faces.html:28
+msgid "Likely misassigned"
+msgstr "可能分配有误"
+
+#: yaffo/templates/people/faces.html:28
+#, python-format
+msgid "Faces that look more like someone else than like %(person)s."
+msgstr "比起 %(person)s，更像其他人的人脸。"
+
+#: yaffo/templates/people/faces.html:29
+msgid "Looks like nobody"
+msgstr "与任何人都不像"
+
+#: yaffo/templates/people/faces.html:29
+#, python-format
+msgid ""
+"Faces that don't clearly match %(person)s or anyone else — often a stranger, sometimes a poor "
+"detection."
+msgstr "与 %(person)s 或其他任何人都没有明显匹配的人脸——通常是陌生人，有时是检测不准确。"
+
+#: yaffo/templates/people/faces.html:32 yaffo/templates/utilities/sync_items.html:10
+msgid "Show"
+msgstr "显示"
+
+#: yaffo/templates/people/faces.html:53
 msgid "Remove Selected"
 msgstr "删除所选内容"
 
-#: yaffo/templates/people/faces.html:39
+#: yaffo/templates/people/faces.html:60
+msgid "Move Selected to"
+msgstr "将所选项移至"
+
+#: yaffo/templates/people/faces.html:68
+msgid "Move Selected"
+msgstr "移动所选项"
+
+#: yaffo/templates/people/faces.html:77
 msgid "Back to People"
 msgstr "回到人物"
 
-#: yaffo/templates/people/faces.html:41
+#: yaffo/templates/people/faces.html:79
 #, python-format
 msgid "%(person)s's Faces"
 msgstr "%(person)s的面孔"
 
-#: yaffo/templates/people/faces.html:43
+#: yaffo/templates/people/faces.html:81
 #, python-format
 msgid "Showing %(total)s face"
 msgid_plural "Showing %(total)s faces"
 msgstr[0] "显示中 %(total)s 脸"
 
-#: yaffo/templates/people/faces.html:49
+#: yaffo/templates/people/faces.html:87
 msgid "(filtered)"
 msgstr "（已过滤）"
 
-#: yaffo/templates/people/faces.html:52 yaffo/templates/people/faces.html:107
+#: yaffo/templates/people/faces.html:90 yaffo/templates/people/faces.html:152
 msgid "No faces found"
 msgstr "未找到面孔"
 
-#: yaffo/templates/people/faces.html:58
+#: yaffo/templates/people/faces.html:96
 msgid "Select all"
 msgstr "选择全部"
 
-#: yaffo/templates/people/faces.html:76
+#: yaffo/templates/people/faces.html:114
 msgid "Similarity:"
 msgstr "相似："
 
-#: yaffo/templates/people/faces.html:83
+#: yaffo/templates/people/faces.html:121
 msgid "N/A"
 msgstr "不适用"
 
-#: yaffo/templates/people/faces.html:111
+#: yaffo/templates/people/faces.html:126
+#, python-format
+msgid "Closer to %(person)s:"
+msgstr "更像 %(person)s："
+
+#: yaffo/templates/people/faces.html:154
+#, python-format
+msgid "None of %(person)s's faces look more like someone else."
+msgstr "分配给 %(person)s 的人脸中，没有更像其他人的。"
+
+#: yaffo/templates/people/faces.html:156
+#, python-format
+msgid "All of %(person)s's faces clearly match someone."
+msgstr "分配给 %(person)s 的所有人脸都有明确匹配的人物。"
+
+#: yaffo/templates/people/faces.html:160
 #, python-format
 msgid "No faces have been assigned to %(person)s yet."
 msgstr "尚未分配任何面孔 %(person)s 然而。"
@@ -4463,8 +4376,8 @@ msgstr "返回雅福"
 
 #: yaffo/templates/settings/_assistant.html:18
 msgid ""
-"Ask Yaffo answers questions and troubleshoots using your AI Generation "
-"key. Nothing in your library changes until you approve it."
+"Ask Yaffo answers questions and troubleshoots using your AI Generation key. Nothing in your "
+"library changes until you approve it."
 msgstr "Ask Yaffo 使用您的 AI Generation 密钥来回答问题并进行故障排除。在您批准之前，您的库中不会有任何更改。"
 
 #: yaffo/templates/settings/_assistant.html:25
@@ -4477,9 +4390,8 @@ msgstr "它可以查看的内容"
 
 #: yaffo/templates/settings/_assistant.html:32
 msgid ""
-"What it reads is sent with your question, without your home folder, email"
-" addresses or keys. Turn everything off to answer from the documentation "
-"only."
+"What it reads is sent with your question, without your home folder, email addresses or keys. Turn"
+" everything off to answer from the documentation only."
 msgstr "读取到的内容会随你的问题一起发送，不会包含你的主文件夹、电子邮件地址或密钥。关闭所有选项即可仅根据文档作答。"
 
 #: yaffo/templates/settings/_assistant.html:59
@@ -4488,8 +4400,8 @@ msgstr "它可以提议的更改"
 
 #: yaffo/templates/settings/_assistant.html:61
 msgid ""
-"Each change appears as a card you approve or decline, with the exact "
-"items and counts. Needs Library contents."
+"Each change appears as a card you approve or decline, with the exact items and counts. Needs "
+"Library contents."
 msgstr "每项更改都会显示为一张卡片，供你批准或拒绝，并附有确切的条目和数量。需要资料库内容。"
 
 #: yaffo/templates/settings/_assistant.html:69
@@ -4502,9 +4414,7 @@ msgid "Can't be undone"
 msgstr "无法撤销"
 
 #: yaffo/templates/settings/_assistant.html:91
-msgid ""
-"When a change affects more items than this, Approve also asks you to "
-"confirm the count."
+msgid "When a change affects more items than this, Approve also asks you to confirm the count."
 msgstr "当某项更改影响的条目超过此数量时，批准时还会要求你确认数量。"
 
 #: yaffo/templates/settings/_assistant.html:93
@@ -4513,13 +4423,10 @@ msgstr "确认大型更改"
 
 #: yaffo/templates/settings/_labels.html:2
 msgid ""
-"A label’s name is the tag shown on photos. Its optional prompt is the "
-"phrase the recognizer matches against — leave it blank for simple objects"
-" like “dog”, and use a fuller phrase for activities, e.g. “people "
-"swimming in water”."
-msgstr ""
-"标签的名称是照片上显示的标签。它的可选提示是识别器匹配的短语 - "
-"对于“狗”等简单对象将其留空，并使用更完整的短语来表示活动，例如“人们在水中游泳”。"
+"A label’s name is the tag shown on photos. Its optional prompt is the phrase the recognizer "
+"matches against — leave it blank for simple objects like “dog”, and use a fuller phrase for "
+"activities, e.g. “people swimming in water”."
+msgstr "标签的名称是照片上显示的标签。它的可选提示是识别器匹配的短语 - 对于“狗”等简单对象将其留空，并使用更完整的短语来表示活动，例如“人们在水中游泳”。"
 
 #: yaffo/templates/settings/_labels.html:4
 msgid "Photo labels"
@@ -4527,14 +4434,14 @@ msgstr "照片标签"
 
 #: yaffo/templates/settings/_labels.html:8
 msgid ""
-"Label names and prompts must be written in English — the offline image "
-"recognition model only understands English text."
+"Label names and prompts must be written in English — the offline image recognition model only "
+"understands English text."
 msgstr "标签名称和提示必须用英文书写——离线图像识别模型只能理解英文文本。"
 
 #: yaffo/templates/settings/_labels.html:14
 msgid ""
-"Enable the labels the <strong>Classify labels</strong> automation should "
-"detect in your photos, or add your own."
+"Enable the labels the <strong>Classify labels</strong> automation should detect in your photos, "
+"or add your own."
 msgstr "启用标签 <strong>对标签进行分类</strong> 自动化应该检测您的照片，或添加您自己的。"
 
 #: yaffo/templates/settings/_labels.html:18
@@ -4585,8 +4492,8 @@ msgstr "人工智能一代"
 
 #: yaffo/templates/settings/_llm.html:4
 msgid ""
-"Powers AI customization features. The API key for the selected model's "
-"provider is stored securely in the operating system's credential store."
+"Powers AI customization features. The API key for the selected model's provider is stored "
+"securely in the operating system's credential store."
 msgstr "增强人工智能定制功能。所选模型提供程序的 API 密钥安全地存储在操作系统的凭据存储中。"
 
 #: yaffo/templates/settings/_llm.html:10
@@ -4630,8 +4537,7 @@ msgstr "更换钥匙"
 msgid "Set key"
 msgstr "设置键"
 
-#: yaffo/templates/settings/_llm_api_key.html:16
-#: yaffo/templates/utilities/sync_service.html:126
+#: yaffo/templates/settings/_llm_api_key.html:16 yaffo/templates/utilities/sync_service.html:126
 msgid "API key"
 msgstr "API密钥"
 
@@ -4640,9 +4546,7 @@ msgid "Clear"
 msgstr "清除"
 
 #: yaffo/templates/settings/_llm_models.html:7
-msgid ""
-"Models are looked up using your saved provider keys. The last saved list "
-"is available offline."
+msgid "Models are looked up using your saved provider keys. The last saved list is available offline."
 msgstr "使用已保存的提供商密钥查询模型。最近保存的列表可离线使用。"
 
 #: yaffo/templates/settings/_llm_models.html:11
@@ -4667,8 +4571,8 @@ msgstr "媒体目录"
 
 #: yaffo/templates/settings/index.html:17
 msgid ""
-"Add directories where your photos are stored. Yaffo scans these "
-"directories for photos and videos to index."
+"Add directories where your photos are stored. Yaffo scans these directories for photos and videos"
+" to index."
 msgstr "添加存储照片的目录。 Yaffo 扫描这些目录中的照片和视频以建立索引。"
 
 #: yaffo/templates/settings/index.html:40
@@ -4684,9 +4588,7 @@ msgid "Thumbnail Directory"
 msgstr "缩略图目录"
 
 #: yaffo/templates/settings/index.html:51
-msgid ""
-"Configure where cropped thumbnails of detected faces are stored for quick"
-" loading."
+msgid "Configure where cropped thumbnails of detected faces are stored for quick loading."
 msgstr "配置检测到的人脸的裁剪缩略图的存储位置以便快速加载。"
 
 #: yaffo/templates/settings/index.html:59
@@ -4714,9 +4616,7 @@ msgid "Change Directory"
 msgstr "更改目录"
 
 #: yaffo/templates/settings/index.html:81
-msgid ""
-"No thumbnail directory configured. Set a directory to enable face "
-"thumbnail generation."
+msgid "No thumbnail directory configured. Set a directory to enable face thumbnail generation."
 msgstr "未配置缩略图目录。设置一个目录以启用面部缩略图生成。"
 
 #: yaffo/templates/settings/index.html:87
@@ -4761,8 +4661,8 @@ msgstr "构建详细信息和配置的路径（只读）。"
 
 #: yaffo/templates/settings/index.html:150
 msgid ""
-"An application component failed to download. Double check network "
-"settings and restart the application."
+"An application component failed to download. Double check network settings and restart the "
+"application."
 msgstr "应用程序组件下载失败。仔细检查网络设置并重新启动应用程序。"
 
 #: yaffo/templates/settings/index.html:156
@@ -4790,9 +4690,7 @@ msgid "Database Path:"
 msgstr "数据库路径："
 
 #: yaffo/templates/settings/index.html:170
-msgid ""
-"Location of the SQLite database containing photo metadata, faces, and "
-"people information."
+msgid "Location of the SQLite database containing photo metadata, faces, and people information."
 msgstr "包含照片元数据、面孔和人物信息的 SQLite 数据库的位置。"
 
 #: yaffo/templates/settings/index.html:174
@@ -4807,10 +4705,8 @@ msgstr "后台任务队列用来处理作业的数据库。"
 msgid "ExifTool Path:"
 msgstr "Exif工具路径："
 
-#: yaffo/templates/settings/index.html:181
-#: yaffo/templates/settings/index.html:187
-#: yaffo/templates/settings/index.html:193
-#: yaffo/templates/settings/index.html:203
+#: yaffo/templates/settings/index.html:181 yaffo/templates/settings/index.html:187
+#: yaffo/templates/settings/index.html:193 yaffo/templates/settings/index.html:203
 msgid "Not found"
 msgstr "未找到"
 
@@ -4834,8 +4730,7 @@ msgstr "图像分类模型："
 msgid "Downloaded model cache used for image classification."
 msgstr "下载的模型缓存用于图像分类。"
 
-#: yaffo/templates/settings/index.html:197
-#: yaffo/templates/settings/index.html:207
+#: yaffo/templates/settings/index.html:197 yaffo/templates/settings/index.html:207
 msgid "Will be downloaded on app start."
 msgstr "将在应用程序启动时下载。"
 
@@ -4847,50 +4742,42 @@ msgstr "人脸识别模型："
 msgid "Downloaded model cache used for face recognition."
 msgstr "下载的模型缓存用于人脸识别。"
 
-#: yaffo/templates/sharing/_device_content.html:6
-#: yaffo/templates/sharing/_sidebar.html:27
+#: yaffo/templates/sharing/_device_content.html:6 yaffo/templates/sharing/_sidebar.html:27
 msgid "Revoked"
 msgstr "已撤销"
 
-#: yaffo/templates/sharing/_device_content.html:8
-#: yaffo/templates/sharing/_sidebar.html:29
+#: yaffo/templates/sharing/_device_content.html:8 yaffo/templates/sharing/_sidebar.html:29
 msgid "Local"
 msgstr "当地的"
 
-#: yaffo/templates/sharing/_device_content.html:10
-#: yaffo/templates/sharing/_sidebar.html:31
+#: yaffo/templates/sharing/_device_content.html:10 yaffo/templates/sharing/_sidebar.html:31
 msgid "Online"
 msgstr "在线的"
 
-#: yaffo/templates/sharing/_device_content.html:12
-#: yaffo/templates/sharing/_sidebar.html:33
+#: yaffo/templates/sharing/_device_content.html:12 yaffo/templates/sharing/_sidebar.html:33
 msgid "Offline"
 msgstr "离线"
 
 #: yaffo/templates/sharing/_device_content.html:20
 #, python-format
 msgid ""
-"Revoke %(name)s? It will lose access to everything shared with it. Files "
-"it already copied stay on it."
+"Revoke %(name)s? It will lose access to everything shared with it. Files it already copied stay "
+"on it."
 msgstr "撤销 %(name)s？它将失去对其共享的所有内容的访问权限。已复制的文件保留在其中。"
 
 #: yaffo/templates/sharing/_device_content.html:23
 msgid "Revoke device?"
 msgstr "撤销设备？"
 
-#: yaffo/templates/sharing/_device_content.html:25
-#: yaffo/templates/sharing/_device_content.html:28
-#: yaffo/templates/sharing/_sidebar.html:54
-#: yaffo/templates/sharing/_sidebar.html:58
+#: yaffo/templates/sharing/_device_content.html:25 yaffo/templates/sharing/_device_content.html:28
+#: yaffo/templates/sharing/_sidebar.html:54 yaffo/templates/sharing/_sidebar.html:58
 #: yaffo/templates/utilities/sync_service.html:187
 msgid "Revoke"
 msgstr "撤销"
 
 #: yaffo/templates/sharing/_device_content.html:30
 #, python-format
-msgid ""
-"Delete %(name)s from this device? Pair it again later if you want to "
-"restore it."
+msgid "Delete %(name)s from this device? Pair it again later if you want to restore it."
 msgstr "删除 %(name)s 从这个设备？如果您想恢复它，请稍后再配对。"
 
 #: yaffo/templates/sharing/_device_content.html:33
@@ -4929,8 +4816,7 @@ msgstr "设备名称"
 msgid "Device name"
 msgstr "设备名称"
 
-#: yaffo/templates/sharing/_device_panel.html:40
-#: yaffo/templates/themes_page/index.html:72
+#: yaffo/templates/sharing/_device_panel.html:40 yaffo/templates/themes_page/index.html:72
 msgid "Rename"
 msgstr "重命名"
 
@@ -4939,9 +4825,7 @@ msgid "These shares include photos imported from this device:"
 msgstr "这些共享内容包含从此设备导入的照片："
 
 #: yaffo/templates/sharing/_device_panel.html:54
-msgid ""
-"If this device imports them from you, older versions may transfer the "
-"same photos again."
+msgid "If this device imports them from you, older versions may transfer the same photos again."
 msgstr "如果此设备从你的设备导入这些照片，较旧版本可能会再次传输相同的照片。"
 
 #: yaffo/templates/sharing/_device_panel.html:61
@@ -4952,13 +4836,11 @@ msgstr "添加共享"
 msgid "Share type"
 msgstr "股份类型"
 
-#: yaffo/templates/sharing/_device_panel.html:72
-#: yaffo/templates/sharing/_device_panel.html:79
+#: yaffo/templates/sharing/_device_panel.html:72 yaffo/templates/sharing/_device_panel.html:79
 msgid "Media Directory"
 msgstr "媒体目录"
 
-#: yaffo/templates/sharing/_device_panel.html:74
-#: yaffo/templates/sharing/_device_panel.html:108
+#: yaffo/templates/sharing/_device_panel.html:74 yaffo/templates/sharing/_device_panel.html:108
 #: yaffo/templates/utilities/sync_detail.html:337
 msgid "Album"
 msgstr "专辑"
@@ -4977,8 +4859,8 @@ msgstr "该设备已被撤销。在与其共享文件夹之前再次配对。"
 
 #: yaffo/templates/sharing/_devices_section.html:8
 msgid ""
-"Device sharing is not running in this process. Start Yaffo with the full "
-"application (python -m yaffo) to enable it."
+"Device sharing is not running in this process. Start Yaffo with the full application (python -m "
+"yaffo) to enable it."
 msgstr "此进程中不运行设备共享。使用完整的应用程序 (python -m yaffo) 启动 Yaffo 以启用它。"
 
 #: yaffo/templates/sharing/_devices_section.html:12
@@ -4989,8 +4871,7 @@ msgstr "如此显示，以便您可以在配对期间从另一台设备直观地
 msgid "This device"
 msgstr "这个装置"
 
-#: yaffo/templates/sharing/_devices_section.html:19
-#: yaffo/templates/sharing/_pairing_code.html:7
+#: yaffo/templates/sharing/_devices_section.html:19 yaffo/templates/sharing/_pairing_code.html:7
 msgid "Copied!"
 msgstr "复制了！"
 
@@ -5016,9 +4897,8 @@ msgstr "配对设备"
 
 #: yaffo/templates/sharing/_devices_section.html:38
 msgid ""
-"Pairing establishes trust between two of your devices, once. Generate a "
-"code here, then paste or scan it on the other device — both must be "
-"online at the same time."
+"Pairing establishes trust between two of your devices, once. Generate a code here, then paste or "
+"scan it on the other device — both must be online at the same time."
 msgstr "配对一次即可在两台设备之间建立信任。在此处生成代码，然后将其粘贴或扫描到另一台设备上 - 两台设备必须同时在线。"
 
 #: yaffo/templates/sharing/_devices_section.html:40
@@ -5026,9 +4906,7 @@ msgid "Show a pairing code"
 msgstr "显示配对码"
 
 #: yaffo/templates/sharing/_devices_section.html:44
-msgid ""
-"Generate a code here, then paste or scan it on the other device within 5 "
-"minutes."
+msgid "Generate a code here, then paste or scan it on the other device within 5 minutes."
 msgstr "在此处生成代码，然后在 5 分钟内将其粘贴或扫描到其他设备上。"
 
 #: yaffo/templates/sharing/_devices_section.html:47
@@ -5040,17 +4918,14 @@ msgid "Enter a pairing code"
 msgstr "输入配对码"
 
 #: yaffo/templates/sharing/_devices_section.html:53
-msgid ""
-"Paste the code generated on your other device. Pairing can take up to a "
-"minute."
+msgid "Paste the code generated on your other device. Pairing can take up to a minute."
 msgstr "粘贴在其他设备上生成的代码。配对最多可能需要一分钟。"
 
 #: yaffo/templates/sharing/_devices_section.html:59
 msgid "Paste the pairing code here"
 msgstr "将配对代码粘贴到此处"
 
-#: yaffo/templates/sharing/_devices_section.html:60
-#: yaffo/templates/sharing/_pairing_code.html:5
+#: yaffo/templates/sharing/_devices_section.html:60 yaffo/templates/sharing/_pairing_code.html:5
 msgid "Pairing code"
 msgstr "配对码"
 
@@ -5128,8 +5003,7 @@ msgstr "撤销分享自 %(device)s"
 msgid "No shares with other devices"
 msgstr "不与其他设备共享"
 
-#: yaffo/templates/sharing/_sidebar.html:71
-#: yaffo/templates/sharing/_sidebar_shared_with_me.html:2
+#: yaffo/templates/sharing/_sidebar.html:71 yaffo/templates/sharing/_sidebar_shared_with_me.html:2
 msgid "Shared With Me"
 msgstr "与我分享"
 
@@ -5196,9 +5070,8 @@ msgstr "拉动："
 #: yaffo/templates/sharing/_transfers_panel.html:86
 #, python-format
 msgid ""
-"This transfer reached %(budget)s over the shared relay. Relay traffic is "
-"metered — if both devices can be on the same network, that is the free "
-"path."
+"This transfer reached %(budget)s over the shared relay. Relay traffic is metered — if both "
+"devices can be on the same network, that is the free path."
 msgstr "本次转账达到 %(budget)s 通过共享中继。中继流量是按流量计量的 - 如果两个设备可以位于同一网络上，则这是免费路径。"
 
 #: yaffo/templates/sharing/_transfers_panel.html:92
@@ -5258,8 +5131,7 @@ msgstr "选择一个下载目录，然后才能从此设备中提取文件。"
 msgid "Set download directory"
 msgstr "设置下载目录"
 
-#: yaffo/templates/sharing/files.html:142
-#: yaffo/templates/utilities/_service_test_result.html:36
+#: yaffo/templates/sharing/files.html:142 yaffo/templates/utilities/_service_test_result.html:36
 msgid "Size"
 msgstr "尺寸"
 
@@ -5277,26 +5149,23 @@ msgstr "设备共享"
 
 #: yaffo/templates/sharing/settings.html:8
 msgid ""
-"Pair your other Yaffo devices to share photos between them — device to "
-"device, never through a server."
+"Pair your other Yaffo devices to share photos between them — device to device, never through a "
+"server."
 msgstr "将您的其他 Yaffo 设备配对，以便在设备之间共享照片 - 设备到设备，无需通过服务器。"
 
 #: yaffo/templates/themes_page/index.html:6
 msgid "Themes - Yaffo"
 msgstr "主题-Yaffo"
 
-#: yaffo/templates/themes_page/index.html:22
-#: yaffo/templates/utilities/_base.html:105
+#: yaffo/templates/themes_page/index.html:22 yaffo/templates/utilities/_base.html:105
 msgid "System"
 msgstr "系统"
 
-#: yaffo/templates/themes_page/index.html:29
-#: yaffo/templates/themes_page/index.html:47
+#: yaffo/templates/themes_page/index.html:29 yaffo/templates/themes_page/index.html:47
 msgid "default"
 msgstr "默认"
 
-#: yaffo/templates/themes_page/index.html:35
-#: yaffo/templates/utilities/_base.html:23
+#: yaffo/templates/themes_page/index.html:35 yaffo/templates/utilities/_base.html:23
 #: yaffo/templates/utilities/_base.html:119
 msgid "Custom"
 msgstr "风俗"
@@ -5323,16 +5192,15 @@ msgstr "存储在应用程序数据库中的自定义主题。"
 
 #: yaffo/templates/themes_page/index.html:90
 msgid ""
-"The assistant has an unpublished design for this theme. Save it to make "
-"it live, or discard the draft."
+"The assistant has an unpublished design for this theme. Save it to make it live, or discard the "
+"draft."
 msgstr "助手对此主题有一个未发布的设计。保存它以使其生效，或者丢弃草稿。"
 
 #: yaffo/templates/themes_page/index.html:95
 msgid "Save draft"
 msgstr "保存草稿"
 
-#: yaffo/templates/themes_page/index.html:99
-#: yaffo/templates/utilities/automations_edit.html:67
+#: yaffo/templates/themes_page/index.html:99 yaffo/templates/utilities/automations_edit.html:67
 msgid "Discard"
 msgstr "丢弃"
 
@@ -5349,9 +5217,7 @@ msgid "System themes are hand-crafted and have no conversation."
 msgstr "系统主题是手工制作的，没有对话。"
 
 #: yaffo/templates/themes_page/index.html:112
-msgid ""
-"No conversation yet — describe the look you want and the assistant will "
-"build it."
+msgid "No conversation yet — describe the look you want and the assistant will build it."
 msgstr "还没有对话 - 描述您想要的外观，助手将构建它。"
 
 #: yaffo/templates/themes_page/index.html:126
@@ -5403,13 +5269,10 @@ msgid "Add a new service…"
 msgstr "添加新服务…"
 
 #: yaffo/templates/utilities/_base.html:30
-msgid ""
-"Connect another photo service. Describe it, and Yaffo writes and tests "
-"the connection."
+msgid "Connect another photo service. Describe it, and Yaffo writes and tests the connection."
 msgstr "连接其他照片服务。描述一下，Yaffo 会编写并测试连接。"
 
-#: yaffo/templates/utilities/_base.html:37
-#: yaffo/templates/utilities/sync_service.html:103
+#: yaffo/templates/utilities/_base.html:37 yaffo/templates/utilities/sync_service.html:103
 msgid "Service"
 msgstr "服务"
 
@@ -5433,18 +5296,15 @@ msgstr "例如：给妈妈。接下来选择文件夹以及要发送的内容。
 msgid "e.g. Flickr sets. Next you describe the service in a chat."
 msgstr "例如：Flickr 相册集。接下来在聊天中描述这项服务。"
 
-#: yaffo/templates/utilities/_base.html:80
-#: yaffo/templates/utilities/_base.html:104
+#: yaffo/templates/utilities/_base.html:80 yaffo/templates/utilities/_base.html:104
 msgid "Automations"
 msgstr "自动化"
 
-#: yaffo/templates/utilities/_base.html:92
-#: yaffo/templates/utilities/index_photos.html:19
+#: yaffo/templates/utilities/_base.html:92 yaffo/templates/utilities/index_photos.html:19
 msgid "Library Health"
 msgstr "媒体库健康状况"
 
-#: yaffo/templates/utilities/_base.html:98
-#: yaffo/templates/utilities/remove_duplicates.html:9
+#: yaffo/templates/utilities/_base.html:98 yaffo/templates/utilities/remove_duplicates.html:9
 msgid "Remove Duplicates"
 msgstr "删除重复项"
 
@@ -5468,8 +5328,7 @@ msgstr "还没有自定义自动化"
 msgid "Services"
 msgstr "服务"
 
-#: yaffo/templates/utilities/_base.html:134
-#: yaffo/templates/utilities/sync_service.html:79
+#: yaffo/templates/utilities/_base.html:134 yaffo/templates/utilities/sync_service.html:79
 msgid "Draft"
 msgstr "草稿"
 
@@ -5552,8 +5411,8 @@ msgstr[0] "推送 %(num)d 张照片"
 
 #: yaffo/templates/utilities/_service_test_result.html:46
 msgid ""
-"Uploads in a Test are recorded, not sent, so the service's real replies "
-"are missing; errors here can come from that."
+"Uploads in a Test are recorded, not sent, so the service's real replies are missing; errors here "
+"can come from that."
 msgstr "在测试中，上传操作会被记录而不会发送，因此不会收到服务的真实回复；这里出现的错误可能是由此造成的。"
 
 #: yaffo/templates/utilities/_service_test_result.html:47
@@ -5587,12 +5446,12 @@ msgstr "无。"
 
 #: yaffo/templates/utilities/_sign_in_fields.html:8
 msgid ""
-"Your server's address, like photos.example.com. Yaffo uses https unless "
-"you type http://, which is only allowed for a server on your home "
-"network. Yaffo talks only to this server for this account."
+"Your server's address, like photos.example.com. Yaffo uses https unless you type http://, which "
+"is only allowed for a server on your home network. Yaffo talks only to this server for this "
+"account."
 msgstr ""
-"你的服务器地址，例如 photos.example.com。Yaffo 默认使用 https，除非你输入 "
-"http://；仅当服务器位于你的家庭网络中时才允许使用 http。对于此账户，Yaffo 只会与这台服务器通信。"
+"你的服务器地址，例如 photos.example.com。Yaffo 默认使用 https，除非你输入 http://；仅当服务器位于你的家庭网络中时才允许使用 "
+"http。对于此账户，Yaffo 只会与这台服务器通信。"
 
 #: yaffo/templates/utilities/_sign_in_fields.html:11
 msgid "Server address"
@@ -5604,18 +5463,15 @@ msgstr "photos.example.com 或 http://192.168.1.20:2283"
 
 #: yaffo/templates/utilities/_sign_in_fields.html:18
 msgid ""
-"This server is on my home network and uses http. I understand the key "
-"travels unencrypted on my network."
+"This server is on my home network and uses http. I understand the key travels unencrypted on my "
+"network."
 msgstr "此服务器位于我的家庭网络中并使用 http。我了解密钥会在我的网络中以未加密方式传输。"
 
 #: yaffo/templates/utilities/_sign_in_fields.html:26
-msgid ""
-"Yaffo checks the key, then keeps it in your system's keychain. It's never"
-" shown again."
+msgid "Yaffo checks the key, then keeps it in your system's keychain. It's never shown again."
 msgstr "Yaffo 会验证密钥，然后将其保存在系统钥匙串中。此后不会再显示。"
 
-#: yaffo/templates/utilities/automations.html:60
-#: yaffo/templates/utilities/automations_edit.html:5
+#: yaffo/templates/utilities/automations.html:60 yaffo/templates/utilities/automations_edit.html:5
 #: yaffo/templates/utilities/sync_detail.html:99
 msgid "Automations - Yaffo"
 msgstr "自动化 - Yaffo"
@@ -5633,9 +5489,7 @@ msgid "Run…"
 msgstr "跑步…"
 
 #: yaffo/templates/utilities/automations.html:96
-msgid ""
-"A built-in automation that ships with Yaffo. System automations cannot be"
-" edited or deleted."
+msgid "A built-in automation that ships with Yaffo. System automations cannot be edited or deleted."
 msgstr "Yaffo 附带的内置自动化功能。系统自动化无法编辑或删除。"
 
 #: yaffo/templates/utilities/automations.html:98
@@ -5647,8 +5501,7 @@ msgstr "尚无描述 - 使用“编辑详细信息”添加描述。"
 msgid "Configuration"
 msgstr "配置"
 
-#: yaffo/templates/utilities/automations.html:122
-#: yaffo/templates/utilities/sync_detail.html:484
+#: yaffo/templates/utilities/automations.html:122 yaffo/templates/utilities/sync_detail.html:484
 msgid "Edit automation"
 msgstr "编辑自动化"
 
@@ -5680,13 +5533,10 @@ msgid "No conversation yet — describe the photo rule you want."
 msgstr "尚无对话——请描述你想要的照片规则。"
 
 #: yaffo/templates/utilities/automations_edit.html:27
-msgid ""
-"No conversation yet — describe what you want and the assistant will build"
-" it."
+msgid "No conversation yet — describe what you want and the assistant will build it."
 msgstr "还没有对话——描述你想要什么，助手就会构建它。"
 
-#: yaffo/templates/utilities/automations_edit.html:34
-#: yaffo/templates/utilities/sync_service.html:107
+#: yaffo/templates/utilities/automations_edit.html:34 yaffo/templates/utilities/sync_service.html:107
 msgid "Code"
 msgstr "代码"
 
@@ -5718,8 +5568,7 @@ msgstr "测试…"
 msgid "Publish draft"
 msgstr "发布草稿"
 
-#: yaffo/templates/utilities/automations_runs.html:11
-#: yaffo/templates/utilities/index_photos.html:128
+#: yaffo/templates/utilities/automations_runs.html:11 yaffo/templates/utilities/index_photos.html:128
 msgid "Run history"
 msgstr "运行历史"
 
@@ -5856,9 +5705,7 @@ msgid "Triggers · %(name)s"
 msgstr "触发器· %(name)s"
 
 #: yaffo/templates/utilities/automations_triggers_edit.html:17
-msgid ""
-"Add, edit, enable, or remove the triggers that decide when this "
-"automation runs."
+msgid "Add, edit, enable, or remove the triggers that decide when this automation runs."
 msgstr "添加、编辑、启用或删除决定此自动化何时运行的触发器。"
 
 #: yaffo/templates/utilities/index_photos.html:7
@@ -5911,8 +5758,8 @@ msgstr "一切已同步"
 
 #: yaffo/templates/utilities/index_photos.html:81
 msgid ""
-"Every photo on the filesystem is indexed, every database entry has its "
-"file, and every thumbnail is in place."
+"Every photo on the filesystem is indexed, every database entry has its file, and every thumbnail "
+"is in place."
 msgstr "文件系统上的每张照片都已建立索引，每个数据库条目都有对应的文件，每个缩略图也都已就位。"
 
 #: yaffo/templates/utilities/index_photos.html:85
@@ -5925,8 +5772,8 @@ msgstr "为它们建立索引"
 
 #: yaffo/templates/utilities/index_photos.html:88
 msgid ""
-"Library entries whose file was deleted, or whose media folder was removed"
-" from Settings. Removing them also removes their faces."
+"Library entries whose file was deleted, or whose media folder was removed from Settings. Removing"
+" them also removes their faces."
 msgstr "文件已删除或媒体文件夹已从设置中移除的媒体库条目。移除它们也会移除其中的人脸。"
 
 #: yaffo/templates/utilities/index_photos.html:89
@@ -5935,9 +5782,8 @@ msgstr "移除它们"
 
 #: yaffo/templates/utilities/index_photos.html:91
 msgid ""
-"Face crops and video posters are gone from the thumbnail folder, so they "
-"show as broken images. Regenerating writes them again from your photos "
-"and videos; faces keep their people."
+"Face crops and video posters are gone from the thumbnail folder, so they show as broken images. "
+"Regenerating writes them again from your photos and videos; faces keep their people."
 msgstr "人脸裁剪图和视频海报已从缩略图文件夹中消失，因此显示为损坏的图像。重新生成会根据你的照片和视频重新写入它们；人脸仍会保留其所属的人物。"
 
 #: yaffo/templates/utilities/index_photos.html:94
@@ -5948,12 +5794,9 @@ msgstr[0] "无法索引 %(num)d 个文件"
 
 #: yaffo/templates/utilities/index_photos.html:95
 msgid ""
-"They still show in your library, but without the date, location, faces or"
-" labels that indexing reads. Yaffo leaves them alone until a file "
-"changes; retry after fixing a file or updating Yaffo."
-msgstr ""
-"它们仍会显示在你的媒体库中，但缺少索引读取的日期、位置、人脸或标签。在文件发生变化之前，Yaffo 不会处理它们；请在修复文件或更新 Yaffo "
-"后重试。"
+"They still show in your library, but without the date, location, faces or labels that indexing "
+"reads. Yaffo leaves them alone until a file changes; retry after fixing a file or updating Yaffo."
+msgstr "它们仍会显示在你的媒体库中，但缺少索引读取的日期、位置、人脸或标签。在文件发生变化之前，Yaffo 不会处理它们；请在修复文件或更新 Yaffo 后重试。"
 
 #: yaffo/templates/utilities/index_photos.html:96
 msgid "Retry all"
@@ -5973,8 +5816,8 @@ msgstr "未配置媒体目录"
 #, python-format
 msgid ""
 "\n"
-"                Please configure media directories in <a "
-"href=\"%(settings_url)s\">Settings</a> to start indexing photos.\n"
+"                Please configure media directories in <a href=\"%(settings_url)s\">Settings</a> "
+"to start indexing photos.\n"
 "            "
 msgstr ""
 "\n"
@@ -6105,9 +5948,7 @@ msgid "Remove Selected Duplicates"
 msgstr "删除选定的重复项"
 
 #: yaffo/templates/utilities/sync_detail.html:22
-msgid ""
-"Want to keep these photos where they are? Add the folder as a media "
-"folder in Settings instead."
+msgid "Want to keep these photos where they are? Add the folder as a media folder in Settings instead."
 msgstr "想让这些照片留在原处吗？请在“设置”中将该文件夹添加为媒体文件夹。"
 
 #: yaffo/templates/utilities/sync_detail.html:29
@@ -6146,8 +5987,7 @@ msgstr "选择此文件夹"
 msgid "Run now"
 msgstr "立即运行"
 
-#: yaffo/templates/utilities/sync_detail.html:131
-#: yaffo/templates/utilities/sync_service.html:108
+#: yaffo/templates/utilities/sync_detail.html:131 yaffo/templates/utilities/sync_service.html:108
 #: yaffo/templates/utilities/sync_service.html:245
 msgid "Test"
 msgstr "测试"
@@ -6156,35 +5996,29 @@ msgstr "测试"
 msgid "Since"
 msgstr "自"
 
-#: yaffo/templates/utilities/sync_detail.html:161
-#: yaffo/templates/utilities/sync_service.html:199
+#: yaffo/templates/utilities/sync_detail.html:161 yaffo/templates/utilities/sync_service.html:199
 msgid "Username"
 msgstr "用户名"
 
-#: yaffo/templates/utilities/sync_detail.html:165
-#: yaffo/templates/utilities/sync_service.html:200
+#: yaffo/templates/utilities/sync_detail.html:165 yaffo/templates/utilities/sync_service.html:200
 msgid "App password"
 msgstr "应用专用密码"
 
-#: yaffo/templates/utilities/sync_detail.html:167
-#: yaffo/templates/utilities/sync_service.html:200
+#: yaffo/templates/utilities/sync_detail.html:167 yaffo/templates/utilities/sync_service.html:200
 msgid ""
-"Yaffo keeps it in your system's keychain to sign in again. Use an app "
-"password or a dedicated user if the service offers one."
+"Yaffo keeps it in your system's keychain to sign in again. Use an app password or a dedicated "
+"user if the service offers one."
 msgstr "Yaffo 会将其保存在系统钥匙串中，以便再次登录。请使用应用专用密码；如果服务提供专用用户，也可以使用专用用户。"
 
-#: yaffo/templates/utilities/sync_detail.html:179
-#: yaffo/templates/utilities/sync_service.html:105
+#: yaffo/templates/utilities/sync_detail.html:179 yaffo/templates/utilities/sync_service.html:105
 msgid "Account"
 msgstr "账户"
 
-#: yaffo/templates/utilities/sync_detail.html:188
-#: yaffo/templates/utilities/sync_service.html:179
+#: yaffo/templates/utilities/sync_detail.html:188 yaffo/templates/utilities/sync_service.html:179
 msgid "Signed in"
 msgstr "已登录"
 
-#: yaffo/templates/utilities/sync_detail.html:189
-#: yaffo/templates/utilities/sync_service.html:179
+#: yaffo/templates/utilities/sync_detail.html:189 yaffo/templates/utilities/sync_service.html:179
 msgid "Needs sign-in"
 msgstr "需要登录"
 
@@ -6194,8 +6028,7 @@ msgid "Also used by %(num)d other sync"
 msgid_plural "Also used by %(num)d other syncs"
 msgstr[0] "也被另外 %(num)d 个同步使用"
 
-#: yaffo/templates/utilities/sync_detail.html:197
-#: yaffo/templates/utilities/sync_service.html:193
+#: yaffo/templates/utilities/sync_detail.html:197 yaffo/templates/utilities/sync_service.html:193
 msgid "Sign in again"
 msgstr "重新登录"
 
@@ -6211,16 +6044,13 @@ msgstr "输入新密钥或使用其他账号"
 msgid "Enter the password again or use a different account"
 msgstr "重新输入密码或使用其他账号"
 
-#: yaffo/templates/utilities/sync_detail.html:211
-#: yaffo/templates/utilities/sync_service.html:204
+#: yaffo/templates/utilities/sync_detail.html:211 yaffo/templates/utilities/sync_service.html:204
 msgid "Connect"
 msgstr "连接"
 
 #: yaffo/templates/utilities/sync_detail.html:215
 #, python-format
-msgid ""
-"Connect Yaffo to %(service)s with a key from your account. Yaffo only "
-"uses it for this service."
+msgid "Connect Yaffo to %(service)s with a key from your account. Yaffo only uses it for this service."
 msgstr "使用你账号中的密钥将 Yaffo 连接到 %(service)s。Yaffo 仅将其用于此服务。"
 
 #: yaffo/templates/utilities/sync_detail.html:215
@@ -6236,12 +6066,11 @@ msgstr "连接到 %(service)s"
 #: yaffo/templates/utilities/sync_detail.html:218
 #, python-format
 msgid ""
-"Sign in to %(service)s in your browser. Yaffo only reads from it; your "
-"password never reaches Yaffo."
+"Sign in to %(service)s in your browser. Yaffo only reads from it; your password never reaches "
+"Yaffo."
 msgstr "在浏览器中登录 %(service)s。Yaffo 只会读取其中的内容；你的密码不会传给 Yaffo。"
 
-#: yaffo/templates/utilities/sync_detail.html:222
-#: yaffo/templates/utilities/sync_service.html:193
+#: yaffo/templates/utilities/sync_detail.html:222 yaffo/templates/utilities/sync_service.html:193
 #, python-format
 msgid "Sign in to %(service)s"
 msgstr "登录 %(service)s"
@@ -6260,8 +6089,8 @@ msgstr "正在其他设备上登录？"
 
 #: yaffo/templates/utilities/sync_detail.html:244
 msgid ""
-"Use this when this browser can't reach Yaffo directly, such as when Yaffo"
-" runs on another computer."
+"Use this when this browser can't reach Yaffo directly, such as when Yaffo runs on another "
+"computer."
 msgstr "当此浏览器无法直接连接到 Yaffo 时（例如 Yaffo 在另一台电脑上运行），请使用此选项。"
 
 #: yaffo/templates/utilities/sync_detail.html:245
@@ -6317,17 +6146,14 @@ msgid "Every photo and video the device shares here."
 msgstr "此设备在此处共享的所有照片和视频。"
 
 #: yaffo/templates/utilities/sync_detail.html:306
-msgid ""
-"Choose filters on the next screen, from the device's own people, labels, "
-"and dates."
+msgid "Choose filters on the next screen, from the device's own people, labels, and dates."
 msgstr "在下一屏幕中，使用此设备自己的人员、标签和日期设置筛选条件。"
 
 #: yaffo/templates/utilities/sync_detail.html:307
 msgid "Change the filter"
 msgstr "更改筛选条件"
 
-#: yaffo/templates/utilities/sync_detail.html:313
-#: yaffo/templates/utilities/sync_detail.html:371
+#: yaffo/templates/utilities/sync_detail.html:313 yaffo/templates/utilities/sync_detail.html:371
 msgid "Choose filters"
 msgstr "选择筛选条件"
 
@@ -6363,8 +6189,7 @@ msgstr "自定义规则"
 msgid "Describe which photos to send, then publish the rule."
 msgstr "描述要发送哪些照片，然后发布规则。"
 
-#: yaffo/templates/utilities/sync_detail.html:371
-#: yaffo/templates/utilities/sync_detail.html:372
+#: yaffo/templates/utilities/sync_detail.html:371 yaffo/templates/utilities/sync_detail.html:372
 msgid "Save selection"
 msgstr "保存所选内容"
 
@@ -6384,16 +6209,15 @@ msgstr "媒体文件夹"
 msgid "Subfolder"
 msgstr "子文件夹"
 
-#: yaffo/templates/utilities/sync_detail.html:394
-#: yaffo/templates/utilities/sync_detail.html:395
+#: yaffo/templates/utilities/sync_detail.html:394 yaffo/templates/utilities/sync_detail.html:395
 msgid "New photos go into this folder of your library."
 msgstr "新照片将放入资料库中的此文件夹。"
 
 #: yaffo/templates/utilities/sync_detail.html:400
 msgid ""
-"How new photos are arranged in that folder. Keep the source's folders "
-"mirrors the folders inside the one you import from; the others go by each"
-" photo's capture date. Photos already imported stay where they are."
+"How new photos are arranged in that folder. Keep the source's folders mirrors the folders inside "
+"the one you import from; the others go by each photo's capture date. Photos already imported stay"
+" where they are."
 msgstr "设置新照片在该文件夹中的排列方式。“保留来源文件夹结构”会镜像导入来源中的文件夹；其他选项则按每张照片的拍摄日期排列。已导入的照片会保留在原处。"
 
 #: yaffo/templates/utilities/sync_detail.html:402
@@ -6421,21 +6245,17 @@ msgid "Loading…"
 msgstr "正在加载…"
 
 #: yaffo/templates/utilities/sync_detail.html:469
-msgid ""
-"Turning this sync on lets Yaffo do this, on its schedule, until you turn "
-"it off:"
+msgid "Turning this sync on lets Yaffo do this, on its schedule, until you turn it off:"
 msgstr "开启此同步后，Yaffo 将按计划执行以下操作，直到您将其关闭："
 
 #: yaffo/templates/utilities/sync_detail.html:476
 msgid ""
-"Changing the device, what it shares, or where photos go turns the sync "
-"off until you review it again."
+"Changing the device, what it shares, or where photos go turns the sync off until you review it "
+"again."
 msgstr "更改设备、共享内容或照片存放位置后，同步将关闭，直到您再次审核。"
 
 #: yaffo/templates/utilities/sync_detail.html:478
-msgid ""
-"Changing the account, folder, or where photos go turns the sync off until"
-" you review it again."
+msgid "Changing the account, folder, or where photos go turns the sync off until you review it again."
 msgstr "更改账户、文件夹或照片存放位置后，同步将关闭，直到您再次审核。"
 
 #: yaffo/templates/utilities/sync_detail.html:481
@@ -6446,8 +6266,7 @@ msgstr "要开启此同步吗？"
 msgid "Enable"
 msgstr "使能够"
 
-#: yaffo/templates/utilities/sync_filter.html:11
-#: yaffo/templates/utilities/sync_peer_filter.html:12
+#: yaffo/templates/utilities/sync_filter.html:11 yaffo/templates/utilities/sync_peer_filter.html:12
 #, python-format
 msgid "Choose photos for %(name)s - Yaffo"
 msgstr "为 %(name)s 选择照片 - Yaffo"
@@ -6456,8 +6275,7 @@ msgstr "为 %(name)s 选择照片 - Yaffo"
 msgid "Send these photos"
 msgstr "发送这些照片"
 
-#: yaffo/templates/utilities/sync_filter.html:39
-#: yaffo/templates/utilities/sync_peer_filter.html:41
+#: yaffo/templates/utilities/sync_filter.html:39 yaffo/templates/utilities/sync_peer_filter.html:41
 #, python-format
 msgid "Choose photos for %(name)s"
 msgstr "为 %(name)s 选择照片"
@@ -6469,18 +6287,12 @@ msgid_plural "%(num)d photos match"
 msgstr[0] "匹配 %(num)d 张照片"
 
 #: yaffo/templates/utilities/sync_filter.html:41
-msgid ""
-"Set the filters. Photos that match later are sent too, and photos that "
-"stop matching are removed."
+msgid "Set the filters. Photos that match later are sent too, and photos that stop matching are removed."
 msgstr "设置筛选条件。之后符合条件的照片也会发送，不再符合条件的照片将被移除。"
 
 #: yaffo/templates/utilities/sync_filter.html:45
 msgid "Choose at least one filter: sending your whole library isn't offered here."
 msgstr "至少选择一个筛选条件：此处不提供发送整个资料库的选项。"
-
-#: yaffo/templates/utilities/sync_items.html:10
-msgid "Show"
-msgstr "显示"
 
 #: yaffo/templates/utilities/sync_items.html:20
 msgid "Retry failed"
@@ -6531,15 +6343,11 @@ msgstr[0] "%(num)d 个文件匹配"
 
 #: yaffo/templates/utilities/sync_peer_filter.html:45
 #, python-format
-msgid ""
-"From %(device)s › %(share)s. Photos the device adds later that match are "
-"imported too."
+msgid "From %(device)s › %(share)s. Photos the device adds later that match are imported too."
 msgstr "来自 %(device)s › %(share)s。此设备之后添加的匹配照片也会导入。"
 
 #: yaffo/templates/utilities/sync_peer_filter.html:51
-msgid ""
-"Choose at least one filter. To import the whole share, pick Everything in"
-" the share instead."
+msgid "Choose at least one filter. To import the whole share, pick Everything in the share instead."
 msgstr "请至少选择一个筛选条件。若要导入整个共享内容，请改选“共享中的所有内容”。"
 
 #: yaffo/templates/utilities/sync_service.html:11
@@ -6562,19 +6370,18 @@ msgstr "修改内容"
 #: yaffo/templates/utilities/sync_service.html:55
 #, python-format
 msgid ""
-"%(num)d sync uses this service. If the new version can call more than "
-"before, it asks for your approval again before it runs."
+"%(num)d sync uses this service. If the new version can call more than before, it asks for your "
+"approval again before it runs."
 msgid_plural ""
-"%(num)d syncs use this service. If the new version can call more than "
-"before, they ask for your approval again before they run."
+"%(num)d syncs use this service. If the new version can call more than before, they ask for your "
+"approval again before they run."
 msgstr[0] "%(num)d 次同步使用此服务。如果新版本能调用的内容比之前更多，它会在运行前再次征求你的批准。"
 
 #: yaffo/templates/utilities/sync_service.html:64
 msgid "Regenerate"
 msgstr "重新生成"
 
-#: yaffo/templates/utilities/sync_service.html:68
-#: yaffo/templates/utilities/sync_service.html:257
+#: yaffo/templates/utilities/sync_service.html:68 yaffo/templates/utilities/sync_service.html:257
 msgid "Publish"
 msgstr "发布"
 
@@ -6592,8 +6399,8 @@ msgstr "已发布"
 
 #: yaffo/templates/utilities/sync_service.html:80
 msgid ""
-"A service Yaffo can import from or send to. Describe it in the chat; the "
-"builder writes and tests it, and you publish it."
+"A service Yaffo can import from or send to. Describe it in the chat; the builder writes and tests"
+" it, and you publish it."
 msgstr "Yaffo 可以从中导入或向其发送内容的服务。在聊天中描述它；构建器会编写并测试它，然后由你发布。"
 
 #: yaffo/templates/utilities/sync_service.html:86
@@ -6606,9 +6413,8 @@ msgstr "应用凭据已保存。"
 
 #: yaffo/templates/utilities/sync_service.html:91
 msgid ""
-"This service needs updating: it doesn't pass the current version's "
-"checks, so syncs using it are paused. Regenerate asks the builder to fix "
-"it."
+"This service needs updating: it doesn't pass the current version's checks, so syncs using it are "
+"paused. Regenerate asks the builder to fix it."
 msgstr "此服务需要更新：它未通过当前版本的检查，因此使用它的同步已暂停。点击“重新生成”可让构建器修复它。"
 
 #: yaffo/templates/utilities/sync_service.html:96
@@ -6625,8 +6431,8 @@ msgstr "描述此服务…"
 
 #: yaffo/templates/utilities/sync_service.html:99
 msgid ""
-"No conversation yet. For example: \"Import photos from my Immich server\""
-" or \"Send albums to Flickr as sets\"."
+"No conversation yet. For example: \"Import photos from my Immich server\" or \"Send albums to "
+"Flickr as sets\"."
 msgstr "尚无对话。例如：“从我的 Immich 服务器导入照片”或“将相册作为 Flickr 照片集发送”。"
 
 #: yaffo/templates/utilities/sync_service.html:104
@@ -6722,14 +6528,12 @@ msgstr "应用凭据"
 #: yaffo/templates/utilities/sync_service.html:151
 #, python-format
 msgid ""
-"%(service)s needs to know which app is asking: register Yaffo with it "
-"once, and every sync using this service reuses it. Kept in your system's "
-"keychain, never in Yaffo's database, never sent to the AI model. Saving "
-"new ones signs every sync using this service out."
+"%(service)s needs to know which app is asking: register Yaffo with it once, and every sync using "
+"this service reuses it. Kept in your system's keychain, never in Yaffo's database, never sent to "
+"the AI model. Saving new ones signs every sync using this service out."
 msgstr ""
-"%(service)s 需要知道是哪个应用在发起请求：只需向它注册一次 "
-"Yaffo，使用此服务的每次同步都会重复使用该注册信息。凭据保存在您系统的钥匙串中，不会存入 Yaffo 数据库，也不会发送给 AI "
-"模型。保存新凭据会使所有使用此服务的同步退出登录。"
+"%(service)s 需要知道是哪个应用在发起请求：只需向它注册一次 Yaffo，使用此服务的每次同步都会重复使用该注册信息。凭据保存在您系统的钥匙串中，不会存入 Yaffo "
+"数据库，也不会发送给 AI 模型。保存新凭据会使所有使用此服务的同步退出登录。"
 
 #: yaffo/templates/utilities/sync_service.html:152
 msgid "Saved"
@@ -6749,8 +6553,8 @@ msgstr "测试账户"
 
 #: yaffo/templates/utilities/sync_service.html:175
 msgid ""
-"The account Test reads from while you build. It's saved like any sign-in,"
-" so a sync set up with this service finds it already signed in."
+"The account Test reads from while you build. It's saved like any sign-in, so a sync set up with "
+"this service finds it already signed in."
 msgstr "构建时，Test 使用此账户读取数据。它会像任何登录信息一样保存，因此使用此服务配置的同步会发现它已处于登录状态。"
 
 #: yaffo/templates/utilities/sync_service.html:185
@@ -6759,8 +6563,8 @@ msgstr "允许实时读取"
 
 #: yaffo/templates/utilities/sync_service.html:186
 msgid ""
-"The builder may make read-only calls to this account while building; the "
-"responses go to the AI model."
+"The builder may make read-only calls to this account while building; the responses go to the AI "
+"model."
 msgstr "构建器在构建期间可能会对此账户进行只读调用；响应会发送给 AI 模型。"
 
 #: yaffo/templates/utilities/sync_service.html:211
@@ -6768,9 +6572,7 @@ msgid "Endpoints"
 msgstr "端点"
 
 #: yaffo/templates/utilities/sync_service.html:211
-msgid ""
-"Found in the code. Nothing else can be called. You approve this list when"
-" you publish."
+msgid "Found in the code. Nothing else can be called. You approve this list when you publish."
 msgstr "在代码中找到。无法调用其他内容。发布时由你批准此列表。"
 
 #: yaffo/templates/utilities/sync_service.html:217
@@ -6799,9 +6601,8 @@ msgstr "测试草稿"
 
 #: yaffo/templates/utilities/sync_service.html:235
 msgid ""
-"Runs the draft once: reads go to the test account for real, and nothing "
-"is ever sent or changed. The builder sees the result with your next "
-"message."
+"Runs the draft once: reads go to the test account for real, and nothing is ever sent or changed. "
+"The builder sees the result with your next message."
 msgstr "运行一次草稿：读取会真实地发送到测试账户，且不会发送或更改任何内容。构建器会在你发送下一条消息时看到结果。"
 
 #: yaffo/templates/utilities/sync_service.html:241

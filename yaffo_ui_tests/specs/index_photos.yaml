@@ -80,6 +80,22 @@ scenarios:
       - After the job, Missing Thumbnails shows 0 and the section is hidden
       - The face's crop file exists again and the face is still assigned to the same person
 
+  - name: file_sync_repairs_and_cleans_thumbnails_without_photo_changes
+    goal: File sync maintains thumbnails even when the photo index already matches the filesystem
+    priority: high
+    steps:
+      - Start with no unindexed photos or orphaned media entries and note the imported count
+      - Delete an assigned face's thumbnail and place an unreferenced image in the sandbox thumbnail directory
+      - Open the File sync automation, click Run, and select the current media folder
+      - Wait for cleanup and thumbnail repair, then rescan Library Health
+    verify:
+      - File sync removes the unreferenced image and restores the missing crop
+      - Library Health returns to Everything is in sync with the same imported count
+      - The repaired face still belongs to the same person
+      - Orphan database dependents are also swept on idle syncs (covered by Python database tests)
+    cleanup:
+      - Remove the temporary unreferenced image if the run failed before cleaning it
+
   # NOT EXERCISED: reaching this state means removing the seeded library
   # directory; if the hourly file_sync automation ticks in that window it deletes
   # every media row as "unconfigured", destroying the shared sandbox.

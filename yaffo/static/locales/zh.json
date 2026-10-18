@@ -95,7 +95,9 @@
       "noneSelected": "已跳过 — 未选择面",
       "requestFailed": "错误： {{reason}}",
       "selectPersonFirst": "请先选择一个人",
-      "videoPreviewUnavailable": "视频无法预览"
+      "videoPreviewUnavailable": "视频无法预览",
+      "ignoredBadge": "已忽略",
+      "personSimilarity": "{{name}}: {{value}}"
     },
     "people": {
       "created": "创建了“{{name}}\"",
@@ -209,7 +211,13 @@
       "removeMessage_one": "删除此人选定的面孔？",
       "removeMessage_other": "删除 {{count}} 从这个人中选择面孔？",
       "removeTitle": "删除面孔",
-      "selectRequired": "请至少选择一张要删除的面孔"
+      "selectRequired": "请至少选择一张要删除的面孔",
+      "moveConfirm": "移动",
+      "moveMessage_one": "将选中的人脸移至{{person}}？",
+      "moveMessage_other": "将选中的 {{count}} 张人脸移至{{person}}？",
+      "movePersonRequired": "选择要将人脸移至的人物",
+      "moveSelectRequired": "请至少选择一张要移动的人脸",
+      "moveTitle": "移动人脸"
     }
   },
   "pages": {
