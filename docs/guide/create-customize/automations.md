@@ -12,7 +12,7 @@ Open **Library** → **Automations**.
 
 ![The Automations page with the system and custom list, and a selected automation's details and run history](assets/automations/automations-list.webp)
 
-<div class="screenshot-annotation" data-x="19" data-y="29" data-region="2.75 26.8 17.4 65.7" markdown="1">
+<div class="screenshot-annotation" data-x="18.6" data-y="29.3" data-region="2.8 26.8 17.4 65.8" markdown="1">
 
 ### Automation List
 
@@ -22,7 +22,7 @@ badge marks enabled ones. Select an automation to see its setup and run history.
 
 </div>
 
-<div class="screenshot-annotation" data-x="62" data-y="11.4" data-region="63.3 9.1 33 4.7" markdown="1">
+<div class="screenshot-annotation" data-x="94.3" data-y="11.5" data-region="63.4 9.7 32.4 3.6" markdown="1">
 
 ### Switch and Actions
 
@@ -32,7 +32,7 @@ also has **Edit**, **Edit details**, and **Delete**.
 
 </div>
 
-<div class="screenshot-annotation" data-x="96" data-y="23.8" data-region="21.5 20.7 75.7 6.1" markdown="1">
+<div class="screenshot-annotation" data-x="95.7" data-y="23.2" data-region="21.5 20.7 75.7 6.1" markdown="1">
 
 ### When
 
@@ -41,7 +41,7 @@ Expand **When** to see and edit the automation's schedules and events.
 
 </div>
 
-<div class="screenshot-annotation" data-x="96" data-y="33.7" data-region="21.5 29.2 75.7 9" markdown="1">
+<div class="screenshot-annotation" data-x="95.7" data-y="31.7" data-region="21.5 29.2 75.7 8.9" markdown="1">
 
 ### Run History
 
@@ -132,7 +132,7 @@ The test is a safe dry-run:
 
 ![A custom automation editor showing its conversation, published code, and safe dry-run result](assets/automations/automation-test.webp)
 
-<div class="screenshot-annotation" data-x="46" data-y="14.5" data-region="1.4 12.6 46.1 51.6" markdown="1">
+<div class="screenshot-annotation" data-x="46" data-y="15.1" data-region="1.4 12.6 46.1 51.6" markdown="1">
 
 ### Conversation
 
@@ -140,7 +140,7 @@ Describe what the automation should do, and the assistant writes or changes it. 
 
 </div>
 
-<div class="screenshot-annotation" data-x="97" data-y="14.6" data-region="51 14 46.5 33.2" markdown="1">
+<div class="screenshot-annotation" data-x="95.6" data-y="16.5" data-region="51.1 14 46.1 33.2" markdown="1">
 
 ### Code
 
@@ -148,7 +148,7 @@ The code the assistant wrote. It runs only on indexed photos.
 
 </div>
 
-<div class="screenshot-annotation" data-x="60" data-y="50" data-region="51 48.4 7.2 3.4" markdown="1">
+<div class="screenshot-annotation" data-x="59.7" data-y="50.1" data-region="51.1 48.4 7.1 3.5" markdown="1">
 
 ### Test
 
@@ -156,7 +156,7 @@ Choose a file or folder to run a safe dry-run on.
 
 </div>
 
-<div class="screenshot-annotation" data-x="97" data-y="56" data-region="51 53 46.2 18" markdown="1">
+<div class="screenshot-annotation" data-x="95.6" data-y="55.5" data-region="51.1 53 46.1 18" markdown="1">
 
 ### Test Result
 
@@ -164,7 +164,7 @@ What the automation would do, such as its queries and moves. Nothing is written 
 
 </div>
 
-<div class="screenshot-annotation" data-x="79" data-y="5.3" data-region="81 3.5 15.8 3.5" markdown="1">
+<div class="screenshot-annotation" data-x="95.3" data-y="5.2" data-region="80.9 3.5 15.8 3.5" markdown="1">
 
 ### Back to Automation
 
@@ -191,7 +191,7 @@ several:
 
 ![The trigger editor with a new hourly schedule ready to save](assets/automations/automation-triggers.webp)
 
-<div class="screenshot-annotation" data-x="36" data-y="16.5" data-region="1.2 15.2 33 2.8" markdown="1">
+<div class="screenshot-annotation" data-x="97.1" data-y="16.4" data-region="1.4 15.5 97.1 1.9" markdown="1">
 
 ### Trigger List
 
@@ -199,7 +199,7 @@ The automation's triggers. With none, it runs only when you start it.
 
 </div>
 
-<div class="screenshot-annotation" data-x="33.5" data-y="32" data-region="4.8 30.5 26.5 13.5" markdown="1">
+<div class="screenshot-annotation" data-x="95.6" data-y="29.8" data-region="2.9 27.3 94.1 17" markdown="1">
 
 ### Schedule
 
@@ -207,7 +207,7 @@ Choose a common schedule or write a cron expression. **Runs** says when it will 
 
 </div>
 
-<div class="screenshot-annotation" data-x="34.5" data-y="52.5" data-region="5.5 50.5 26.7 8.5" markdown="1">
+<div class="screenshot-annotation" data-x="95.6" data-y="48.3" data-region="2.9 45.8 94.1 13.6" markdown="1">
 
 ### Scope
 
@@ -215,7 +215,7 @@ Which media the run covers, such as everything in your media folders.
 
 </div>
 
-<div class="screenshot-annotation" data-x="25" data-y="62.8" data-region="2.8 60.6 20.2 4.6" markdown="1">
+<div class="screenshot-annotation" data-x="21.4" data-y="62.9" data-region="2.9 60.8 19.9 4.3" markdown="1">
 
 ### Save or Cancel
 

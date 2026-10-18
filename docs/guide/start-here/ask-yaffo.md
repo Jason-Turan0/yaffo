@@ -24,7 +24,7 @@ in a panel over the page you're on, so you can keep working while it answers.
 
 ![The full Ask Yaffo page with the conversation list beside a conversation, one step's script expanded](assets/ask-yaffo/ask-yaffo-conversation.webp)
 
-<div class="screenshot-annotation" data-x="20" data-y="3" data-region="1.2 1.5 18.7 18.8" markdown="1">
+<div class="screenshot-annotation" data-x="18.3" data-y="4.2" data-region="1.1 1.7 18.7 96.5" markdown="1">
 
 ### Conversation List
 
@@ -32,7 +32,7 @@ Earlier conversations, kept until you delete them. **Delete all conversations** 
 
 </div>
 
-<div class="screenshot-annotation" data-x="31.5" data-y="4.7" data-region="21.9 3 8.1 3.4" markdown="1">
+<div class="screenshot-annotation" data-x="31.5" data-y="4.6" data-region="21.9 2.9 8.1 3.5" markdown="1">
 
 ### New and Delete
 
@@ -40,7 +40,7 @@ Earlier conversations, kept until you delete them. **Delete all conversations** 
 
 </div>
 
-<div class="screenshot-annotation" data-x="44" data-y="30.5" data-region="22.7 27.8 20.3 5.2" markdown="1">
+<div class="screenshot-annotation" data-x="42.3" data-y="30.3" data-region="22.2 27.8 21.6 5.1" markdown="1">
 
 ### Sources
 
@@ -48,7 +48,7 @@ The guide pages a how-to answer used.
 
 </div>
 
-<div class="screenshot-annotation" data-x="51" data-y="40" data-region="22.7 38.7 27.3 13.9" markdown="1">
+<div class="screenshot-annotation" data-x="49.3" data-y="41" data-region="22.2 38.5 28.6 14.2" markdown="1">
 
 ### Activity
 
@@ -56,7 +56,7 @@ Each check or script appears as a line under the answer. Expand it to see what w
 
 </div>
 
-<div class="screenshot-annotation" data-x="37" data-y="60" data-region="22.7 58 13.1 4.2" markdown="1">
+<div class="screenshot-annotation" data-x="34.9" data-y="60.1" data-region="22.2 58.4 14.2 3.5" markdown="1">
 
 ### Open Links
 
@@ -64,7 +64,7 @@ Links into the app, such as a gallery filtered to the photos the answer found. N
 
 </div>
 
-<div class="screenshot-annotation" data-x="96" data-y="82" data-region="22.2 80 75.4 17" markdown="1">
+<div class="screenshot-annotation" data-x="97.3" data-y="80.3" data-region="21 77.8 77.7 20.4" markdown="1">
 
 ### Message Box
 
@@ -86,7 +86,7 @@ remove the chip with its ✕, then send it.
 
 ![The Ask Yaffo panel opened from a Library Health error, with the error attached above the suggested question](assets/ask-yaffo/ask-yaffo-context.webp)
 
-<div class="screenshot-annotation" data-x="92" data-y="8" data-region="6.4 2.7 91 3.5" markdown="1">
+<div class="screenshot-annotation" data-x="98.5" data-y="4.2" data-region="3.7 1.7 96.3 5.7" markdown="1">
 
 #### Panel Toolbar
 
@@ -94,7 +94,7 @@ Switch conversations, start a **New** one, delete this one, open the full page, 
 
 </div>
 
-<div class="screenshot-annotation" data-x="92" data-y="12.5" data-region="7.2 13.3 88.4 3" markdown="1">
+<div class="screenshot-annotation" data-x="95" data-y="15.3" data-region="7.2 13.6 89.3 3.4" markdown="1">
 
 #### Model Notice
 
@@ -102,7 +102,7 @@ The model Ask Yaffo uses, from **Settings** → **AI Generation**, with a link t
 
 </div>
 
-<div class="screenshot-annotation" data-x="87" data-y="79.5" data-region="7.2 78.1 74.8 2.9" markdown="1">
+<div class="screenshot-annotation" data-x="95" data-y="79.6" data-region="7.2 78.1 89.3 2.9" markdown="1">
 
 #### Attached Context
 
@@ -110,7 +110,7 @@ What went wrong, attached from the error you started from. Remove it with its **
 
 </div>
 
-<div class="screenshot-annotation" data-x="92" data-y="84" data-region="7.2 82.5 89.3 16.3" markdown="1">
+<div class="screenshot-annotation" data-x="95" data-y="84.1" data-region="7.2 81.6 89.3 17.1" markdown="1">
 
 #### Suggested Question
 
@@ -200,7 +200,7 @@ you approve.
 
 ![A proposed change card that creates an album, adds 14 photos to it, and tags them, with Approve and Decline](assets/ask-yaffo/ask-yaffo-change-card.webp)
 
-<div class="screenshot-annotation" data-x="97" data-y="43" data-region="65.8 41.5 31.8 9" markdown="1">
+<div class="screenshot-annotation" data-x="95.1" data-y="44.5" data-region="66.8 42 29.8 7.9" markdown="1">
 
 ### Proposed Steps
 
@@ -208,7 +208,7 @@ Each step with the number of items it affects. Yaffo writes this card, not the A
 
 </div>
 
-<div class="screenshot-annotation" data-x="78.5" data-y="51.6" data-region="66.5 50.5 10 2.4" markdown="1">
+<div class="screenshot-annotation" data-x="95.1" data-y="51.7" data-region="66.8 50.8 29.8 1.7" markdown="1">
 
 ### Undo Status
 
@@ -216,7 +216,7 @@ Whether the change can be undone. [Read about undo](#undo-a-change).
 
 </div>
 
-<div class="screenshot-annotation" data-x="75" data-y="54.3" data-region="66.6 53.2 7.4 2.3" markdown="1">
+<div class="screenshot-annotation" data-x="95.1" data-y="57.4" data-region="66.8 53.5 29.8 1.7" markdown="1">
 
 ### Show Script
 
@@ -224,7 +224,7 @@ The script that found the items and proposed the change.
 
 </div>
 
-<div class="screenshot-annotation" data-x="82" data-y="58" data-region="84 56.4 12.8 3.6" markdown="1">
+<div class="screenshot-annotation" data-x="95.1" data-y="61.2" data-region="84.3 56.6 12.3 3.1" markdown="1">
 
 ### Approve or Decline
 
@@ -316,7 +316,7 @@ documentation without reading local diagnostics or public web pages.
 
 ![The Assistant section of Settings, with what it can look at and the groups of changes it can propose](assets/ask-yaffo/settings-assistant.webp)
 
-<div class="screenshot-annotation" data-x="89.5" data-y="7" data-region="91.4 5.4 6.2 3.4" markdown="1">
+<div class="screenshot-annotation" data-x="90.1" data-y="7.1" data-region="91.6 5.8 5.8 2.5" markdown="1">
 
 ### Enabled
 
@@ -324,7 +324,7 @@ Shows or hides Ask Yaffo.
 
 </div>
 
-<div class="screenshot-annotation" data-x="96" data-y="18" data-region="2.6 16.4 94.8 13.5" markdown="1">
+<div class="screenshot-annotation" data-x="95.9" data-y="16.8" data-region="2.6 14.3 94.8 15.2" markdown="1">
 
 ### What It Can Look At
 
@@ -332,7 +332,7 @@ What the assistant may check on this computer. Turn everything off and it answer
 
 </div>
 
-<div class="screenshot-annotation" data-x="96" data-y="36.5" data-region="2.6 34.7 94.8 53.3" markdown="1">
+<div class="screenshot-annotation" data-x="95.9" data-y="37.1" data-region="2.6 34.6 94.8 53.5" markdown="1">
 
 ### Changes It Can Propose
 
@@ -340,7 +340,7 @@ One group per kind of change, with how many are on. [Read about what it can chan
 
 </div>
 
-<div class="screenshot-annotation" data-x="25.5" data-y="92.6" data-region="2.6 90.4 20.9 4.6" markdown="1">
+<div class="screenshot-annotation" data-x="21.9" data-y="92.7" data-region="2.6 90.3 20.8 4.7" markdown="1">
 
 ### Confirm Large Changes
 

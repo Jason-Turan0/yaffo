@@ -93,6 +93,11 @@ export default defineWalkthrough({
     page: "create-customize/photo-services",
     shots: {
         "new-photo-service.webp": {
+            annotations: {
+                "add-a-new-service": "#newAutomationModal .choice-card:has(input[value=service])",
+                "name": "#newAutomationModal .form-group:has(#new-automation-name)",
+                "create": "#newAutomationModal .modal-content button.btn-primary",
+            },
             viewport: {width: 1400, height: 1000},
             goto: "/utilities/automations",
             clip: "#newAutomationModal .modal-content",
@@ -104,6 +109,12 @@ export default defineWalkthrough({
             teardown: restorePagesBar,
         },
         "service-builder.webp": {
+            annotations: {
+                "draft-badge": ".utilities-content .chip:text-is(\"Draft\")",
+                "service-builder": ".service-builder .automation-conversation",
+                "builder-tabs": ".service-tabs",
+                "delete": ".utilities-content button.btn-danger:has-text(\"Delete\")",
+            },
             viewport: {width: 1400, height: 1000},
             goto: "/utilities/automations",
             clip: ".utilities-content",

@@ -5,8 +5,8 @@ import {copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync}
 import {dirname, join} from "path";
 import {compareShots, renderReviewSheet} from "./compare";
 import type {CompareResult} from "./compare";
-import type {Box} from "./framing";
-import {resolveClip, resolveIgnoreRegions} from "./framing";
+import type {AnnotationGeometry, Box} from "./framing";
+import {resolveAnnotations, resolveClip, resolveIgnoreRegions} from "./framing";
 import {APP_UNREACHABLE, waitForApp} from "./app_reachability";
 import {toWebp} from "./encode";
 import {createObserver, PAGE_HEADER, RUN_HEADER, takeServerObservation} from "./observe";
@@ -50,6 +50,8 @@ export interface RawShot {
      * Absent when the page could not be read, which leaves the decision to pixels.
      */
     layout?: LayoutLine[];
+    /** Measured annotation boxes, keyed by annotation heading id; see `Shot.annotations`. */
+    annotations?: Record<string, AnnotationGeometry>;
 }
 
 export interface RawResult {
@@ -183,6 +185,10 @@ const captureOne = async (
                 const stagedPng = stagedPngFor(stagingDir, target);
                 mkdirSync(dirname(stagedPng), {recursive: true});
                 await page.screenshot({path: stagedPng, clip, scale: "device"});
+                // Measured after the screenshot rather than beside the clip: a page still
+                // settling (the trigger editor's cron preview is one) would otherwise put
+                // every marker below it a few pixels off what the image shows.
+                const annotations = await resolveAnnotations(page, shot, clip);
 
                 shots.push({
                     target,
@@ -190,6 +196,7 @@ const captureOne = async (
                     height: Math.round(clip?.height ?? shot.viewport.height),
                     ignore,
                     ...(layout ? {layout} : {}),
+                    ...(Object.keys(annotations).length ? {annotations} : {}),
                 });
                 console.log(`      captured ${filename}`);
             } finally {

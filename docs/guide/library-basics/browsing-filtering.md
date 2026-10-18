@@ -9,7 +9,7 @@ videos as a grid, with filters on the left.
 
 ![Photo library](assets/browsing-filtering/gallery-home.webp)
 
-<div class="screenshot-annotation" data-x="10" data-y="5.8" data-region="1.5 3 18.5 96" markdown="1">
+<div class="screenshot-annotation" data-x="19.8" data-y="4.6" data-region="1.1 2.1 20.1 97.9" markdown="1">
 
 ### Filter Sidebar
 
@@ -17,7 +17,7 @@ Narrows the gallery to matching media. [Read about filters](#use-the-filter-side
 
 </div>
 
-<div class="screenshot-annotation" data-x="37" data-y="10.5" data-region="24 9.3 11.5 2.5" markdown="1">
+<div class="screenshot-annotation" data-x="85.6" data-y="10.6" data-region="24.1 9.5 62.9 2.1" markdown="1">
 
 ### Photo Count
 
@@ -25,7 +25,7 @@ How many photos match out of your whole library.
 
 </div>
 
-<div class="screenshot-annotation" data-x="86" data-y="8" data-region="88 6.3 9.6 3.7" markdown="1">
+<div class="screenshot-annotation" data-x="86.6" data-y="14.1" data-region="88.1 6.4 9.3 3.5" markdown="1">
 
 ### Grid and Timeline
 
@@ -33,7 +33,7 @@ Switch between the photo grid and the timeline view.
 
 </div>
 
-<div class="screenshot-annotation" data-x="39.5" data-y="18.5" data-region="22.7 16.5 18.3 39" markdown="1">
+<div class="screenshot-annotation" data-x="39.4" data-y="19.2" data-region="22.7 16.7 18.2 40.2" markdown="1">
 
 ### Media Card
 
@@ -66,7 +66,7 @@ The filter sidebar narrows the gallery to matching media.
 
 ![Gallery filter sidebar](assets/browsing-filtering/gallery-filter-sidebar.webp)
 
-<div class="screenshot-annotation" data-x="92" data-y="4.2" data-region="81 3.2 7 2.2" markdown="1">
+<div class="screenshot-annotation" data-x="90" data-y="4.3" data-region="81.1 3.4 7.4 1.7" markdown="1">
 
 ### Sidebar Settings
 
@@ -74,7 +74,7 @@ Choose which filter groups are visible. [Read about configuring the sidebar](#co
 
 </div>
 
-<div class="screenshot-annotation" data-x="92" data-y="8" data-region="11.5 5.5 77 10" markdown="1">
+<div class="screenshot-annotation" data-x="87" data-y="8.3" data-region="11.5 5.8 76.9 9.7" markdown="1">
 
 ### Year and Month
 
@@ -82,7 +82,7 @@ Find media from a time period.
 
 </div>
 
-<div class="screenshot-annotation" data-x="92" data-y="52" data-region="11.5 50.5 77 8" markdown="1">
+<div class="screenshot-annotation" data-x="87" data-y="53" data-region="11.5 50.5 76.9 6.9" markdown="1">
 
 ### Location Filters
 
@@ -90,7 +90,7 @@ Filter by assigned location names, or find photos that still need one.
 
 </div>
 
-<div class="screenshot-annotation" data-x="92" data-y="61.5" data-region="11.5 60 77 7.5" markdown="1">
+<div class="screenshot-annotation" data-x="87" data-y="61" data-region="11.5 58.5 76.9 9" markdown="1">
 
 ### Proximity Search
 
@@ -98,7 +98,7 @@ Find photos within a distance of a place.
 
 </div>
 
-<div class="screenshot-annotation" data-x="92" data-y="93" data-region="11.5 91.3 77 6.2" markdown="1">
+<div class="screenshot-annotation" data-x="87" data-y="93.8" data-region="11.5 91.3 76.9 6" markdown="1">
 
 ### Apply or Clear
 

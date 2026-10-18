@@ -17,7 +17,7 @@ immediately and opens its design view.
 
 ![The Florida Trip design view with page settings, assistant conversation, and two widgets](assets/custom-pages/custom-page-design.webp)
 
-<div class="screenshot-annotation" data-x="26" data-y="4" data-region="1.2 1.5 25.8 40.7" markdown="1">
+<div class="screenshot-annotation" data-x="25.5" data-y="4.1" data-region="1.1 1.6 25.9 40.7" markdown="1">
 
 ### Page Settings
 
@@ -31,7 +31,7 @@ Click **Save** to commit page settings and manual layout changes.
 
 </div>
 
-<div class="screenshot-annotation" data-x="26" data-y="46" data-region="1.2 44.3 25.8 54.1" markdown="1">
+<div class="screenshot-annotation" data-x="25.5" data-y="46.8" data-region="1.1 44.3 25.9 54.1" markdown="1">
 
 ### Assistant
 
@@ -40,7 +40,7 @@ Describe the page or widget you want, and the Assistant builds or changes it.
 
 </div>
 
-<div class="screenshot-annotation" data-x="85" data-y="3.8" data-region="28.4 1.5 70.5 4.5" markdown="1">
+<div class="screenshot-annotation" data-x="97.4" data-y="3.8" data-region="28.4 1.6 70.4 4.4" markdown="1">
 
 ### Widget Controls
 
@@ -50,7 +50,7 @@ it. Drag the header to move the widget.
 
 </div>
 
-<div class="screenshot-annotation" data-x="96" data-y="10" data-region="28.4 6 70.5 80.8" markdown="1">
+<div class="screenshot-annotation" data-x="97.9" data-y="9.3" data-region="27.9 0.8 71.6 86.8" markdown="1">
 
 ### Canvas
 

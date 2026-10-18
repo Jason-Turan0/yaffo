@@ -14,7 +14,7 @@ clicking a card in the gallery.
 
 ![A photo detail page with file information, location, people, detected faces, and labels](assets/photo-details/media-detail.webp)
 
-<div class="screenshot-annotation" data-x="25" data-y="12" data-region="2.8 9 23 26" markdown="1">
+<div class="screenshot-annotation" data-x="21.8" data-y="12.4" data-region="4 9.9 19.3 24.4" markdown="1">
 
 ### File Information and Actions
 
@@ -27,7 +27,7 @@ this item's derived data and removes its face-to-person assignments.
 
 </div>
 
-<div class="screenshot-annotation" data-x="25" data-y="39" data-region="2.8 36 23 16" markdown="1">
+<div class="screenshot-annotation" data-x="21.8" data-y="39.3" data-region="4 36.8 19.3 13.5" markdown="1">
 
 ### Location
 
@@ -38,7 +38,7 @@ location view. A location name and GPS coordinates are separate pieces of data.
 
 </div>
 
-<div class="screenshot-annotation" data-x="25" data-y="58" data-region="2.8 52 23 22" markdown="1">
+<div class="screenshot-annotation" data-x="21.8" data-y="55.4" data-region="4 52.9 19.3 19.7" markdown="1">
 
 ### People and Faces
 
@@ -49,7 +49,7 @@ highlight it in the photo, or click the thumbnail to reassign it.
 
 </div>
 
-<div class="screenshot-annotation" data-x="25" data-y="80" data-region="2.8 74 23 17" markdown="1">
+<div class="screenshot-annotation" data-x="21.8" data-y="77.6" data-region="4 75.1 19.3 15.3" markdown="1">
 
 ### Labels and Tags
 
@@ -60,7 +60,7 @@ Tags are your editable name/value pairs; use **Edit Tags** to change them.
 
 </div>
 
-<div class="screenshot-annotation" data-x="95" data-y="4" data-region="92 1.8 5.5 5.5" markdown="1">
+<div class="screenshot-annotation" data-x="92.2" data-y="4" data-region="93.7 2.4 2.9 3.4" markdown="1">
 
 ### Favorite
 

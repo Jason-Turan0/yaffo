@@ -114,6 +114,12 @@ export default defineWalkthrough({
             },
         },
         "custom-page-design.webp": {
+            annotations: {
+                "page-settings": ".editor-panel .editor-card",
+                "assistant": ".editor-panel .chat-card",
+                "widget-controls": ".editor-canvas .widget-header >> nth=0",
+                "canvas": ".editor-canvas .grid-stack",
+            },
             viewport: {width: 1400, height: 1200},
             goto: NAV_START,
             clip: ".page-design",

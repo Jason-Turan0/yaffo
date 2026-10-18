@@ -5,6 +5,7 @@
  *   npm run docs:capture -- --docker
  *   npm run docs:capture -- --docker --promote library-basics/browsing-filtering
  *   npm run docs:capture                  # host browser against a host sandbox
+ *   npm run docs:capture -- --docker --sync-annotations   # markers only, no images
  *
  * Captures land in .staging/ and are compared against what is committed. Nothing
  * touches docs/ unless --promote is passed, so a plain run can answer "is anything
@@ -32,6 +33,7 @@ import {existsSync, readFileSync, writeFileSync} from "fs";
 import {join, resolve} from "path";
 import {pathToFileURL} from "url";
 import {parse as parseYaml} from "yaml";
+import {syncAnnotations} from "./annotations";
 import {loadWalkthroughs} from "./load";
 import {lockShotEntry} from "./lockfile";
 import {currentHead, dependencyHashes} from "./dependency_changes";
@@ -101,6 +103,10 @@ export const main = async (
     dockerEnv: Record<string, string> = DOCKER_ENV
 ): Promise<number> => {
     const promote = args.includes("--promote");
+    // Promotion moves annotation markers with their images. This writes the markers
+    // alone, for a page whose screenshots are current but whose markers were placed
+    // by hand or predate their selectors.
+    const annotationsOnly = args.includes("--sync-annotations");
     const useDocker = args.includes("--docker");
     // The GitHub discovery capture hands walkthrough defects to docs:heal. This is
     // deliberately opt-in: verification captures omit it and remain strict.
@@ -214,6 +220,15 @@ export const main = async (
             failed++;
             console.error(`  ! ${result.error}`);
         }
+    }
+
+    if (promote || annotationsOnly) {
+        // Same rule as the lockfile: geometry from a failed or unstable capture is not
+        // a verified layout, so it never reaches the page.
+        const verified = results.filter((result) =>
+            !result.error && !result.shots.some((shot) => shot.status === "unstable"));
+        const report = syncAnnotations(GUIDE_DIR, verified);
+        if (report.length) console.log(`\nAnnotations:\n${report.map((line) => `  ${line}`).join("\n")}`);
     }
 
     const shots = results.flatMap((result) => result.shots);

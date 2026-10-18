@@ -14,6 +14,14 @@ export default defineWalkthrough({
 
     shots: {
         "faces-review.webp": {
+            annotations: {
+                "unassigned-count": ".main-content[data-unassigned-count] .page-header",
+                "assign-or-ignore": ".person-assign-select, #sidebar-assign-selected-btn, #sidebar-ignore-btn",
+                "create-person": ".new-person-controls",
+                "keyboard-shortcuts": ".keyboard-shortcuts-list:has(.shortcuts-heading)",
+                "grouping": ".filter-group:has(#group-by-people), .filter-group:has(#threshold-range)",
+                "cluster": "#clusters .suggestion-group:visible >> nth=0",
+            },
             viewport: {width: 1400, height: 1600},
             goto: "/faces?group_by=similarity&threshold=50",
             clip: ".main-container-layout",
@@ -22,6 +30,12 @@ export default defineWalkthrough({
             },
         },
         "people-list.webp": {
+            annotations: {
+                "add-person": ".main-content .js-add-person >> nth=0",
+                "person": ".people-table .person-name >> nth=0",
+                "face-and-photo-counts": ".people-table th:text-is(\"Faces\"), .people-table th:text-is(\"Photos\"), .people-table td[data-label=\"Faces\"], .people-table td[data-label=\"Photos\"]",
+                "edit-and-delete": ".people-table tbody tr:first-child .action-link",
+            },
             viewport: {width: 1400, height: 900},
             goto: "/people",
             clip: ".main-content",

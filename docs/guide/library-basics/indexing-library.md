@@ -52,7 +52,7 @@ see the files it's about.
 
 ![The Library Health page showing library counts and an in-sync result](assets/indexing-library/library-health.webp)
 
-<div class="screenshot-annotation" data-x="81" data-y="9.5" data-region="82.5 6.5 14.3 6" markdown="1">
+<div class="screenshot-annotation" data-x="95.3" data-y="8.9" data-region="82.4 6.4 14.4 6.4" markdown="1">
 
 #### Reindex Library
 
@@ -60,7 +60,7 @@ Rebuilds every indexed item, including detected faces. It removes face assignmen
 
 </div>
 
-<div class="screenshot-annotation" data-x="97" data-y="24" data-region="1.5 22.5 97 43.5" markdown="1">
+<div class="screenshot-annotation" data-x="97.1" data-y="25.7" data-region="1.4 23.2 97.1 42" markdown="1">
 
 #### Library Counts
 
@@ -68,7 +68,7 @@ Files on disk, imported and indexed items, items not yet indexed, orphaned entri
 
 </div>
 
-<div class="screenshot-annotation" data-x="97" data-y="72" data-region="1.5 69.5 97 27" markdown="1">
+<div class="screenshot-annotation" data-x="97.1" data-y="73" data-region="1.4 70.5 97.1 26.6" markdown="1">
 
 #### Library Status
 

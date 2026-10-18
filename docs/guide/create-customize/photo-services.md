@@ -20,7 +20,7 @@ Open **Library** → **Automations**, click **New automation**, choose
 
 ![The new automation dialog with Add a new service selected](assets/photo-services/new-photo-service.webp)
 
-<div class="screenshot-annotation" data-x="93" data-y="54" data-region="9 52.5 81 12" markdown="1">
+<div class="screenshot-annotation" data-x="89.1" data-y="55.4" data-region="9.4 52.9 81.2 12.6" markdown="1">
 
 ### Add a New Service
 
@@ -28,7 +28,7 @@ Choose this to build a reusable connection instead of a sync.
 
 </div>
 
-<div class="screenshot-annotation" data-x="93" data-y="70" data-region="9 68.5 81 9" markdown="1">
+<div class="screenshot-annotation" data-x="89.1" data-y="71" data-region="9.4 68.5 81.2 12.7" markdown="1">
 
 ### Name
 
@@ -36,7 +36,7 @@ A name for the service, such as **Flickr exports**.
 
 </div>
 
-<div class="screenshot-annotation" data-x="93" data-y="90" data-region="76 87.5 15 5" markdown="1">
+<div class="screenshot-annotation" data-x="89.9" data-y="90.2" data-region="75.9 87.7 15.4 5.4" markdown="1">
 
 ### Create
 
@@ -60,7 +60,7 @@ options, and supported actions.
 
 ![A new service in the builder, with its conversation and the Overview, Account, Access, Code, and Test tabs](assets/photo-services/service-builder.webp)
 
-<div class="screenshot-annotation" data-x="10" data-y="8.6" data-region="2.8 7.6 5.8 2" markdown="1">
+<div class="screenshot-annotation" data-x="10" data-y="9" data-region="3.2 7.9 5.3 2.2" markdown="1">
 
 ### Draft Badge
 
@@ -68,7 +68,7 @@ The service stays a draft until you publish it.
 
 </div>
 
-<div class="screenshot-annotation" data-x="57" data-y="17" data-region="1.2 15 57.3 29.5" markdown="1">
+<div class="screenshot-annotation" data-x="56.9" data-y="16.9" data-region="1.4 14.4 57 29.7" markdown="1">
 
 ### Service Builder
 
@@ -76,7 +76,7 @@ Describe the service and the direction photos travel. The builder writes the con
 
 </div>
 
-<div class="screenshot-annotation" data-x="98" data-y="17" data-region="61.5 15.5 35.5 3" markdown="1">
+<div class="screenshot-annotation" data-x="95.6" data-y="17" data-region="62 15.2 35.2 3.5" markdown="1">
 
 ### Builder Tabs
 
@@ -84,7 +84,7 @@ Describe the service and the direction photos travel. The builder writes the con
 
 </div>
 
-<div class="screenshot-annotation" data-x="85.5" data-y="5.4" data-region="87.5 3.6 9.5 3.6" markdown="1">
+<div class="screenshot-annotation" data-x="86.1" data-y="5.8" data-region="87.6 3.8 9.2 3.8" markdown="1">
 
 ### Delete
 

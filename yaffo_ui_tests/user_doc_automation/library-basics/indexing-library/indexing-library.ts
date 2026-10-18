@@ -21,6 +21,11 @@ export default defineWalkthrough({
 
     shots: {
         "library-health.webp": {
+            annotations: {
+                "reindex-library": "#reindex-button",
+                "library-counts": ".stats-grid",
+                "library-status": "#library-status",
+            },
             viewport: {width: 1400, height: 1000},
             goto: "/library/health",
             clip: ".utility-page",

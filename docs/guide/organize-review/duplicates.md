@@ -9,7 +9,7 @@ Use it as a review workflow, not as an automatic delete button.
 
 ![The duplicate scan configuration with one four-file sample directory](assets/duplicates/utilities-remove-duplicates.webp)
 
-<div class="screenshot-annotation" data-x="97" data-y="7" data-region="1.3 4 97.5 25" markdown="1">
+<div class="screenshot-annotation" data-x="97.1" data-y="6.7" data-region="1.4 4.2 97.1 26" markdown="1">
 
 ### Scan Totals
 
@@ -17,7 +17,7 @@ How many media files and directories the scan will cover.
 
 </div>
 
-<div class="screenshot-annotation" data-x="79" data-y="64" data-region="3.5 66 93 10" markdown="1">
+<div class="screenshot-annotation" data-x="94.8" data-y="64.3" data-region="3.7 61.8 92.7 14" markdown="1">
 
 ### Directory
 
@@ -25,7 +25,7 @@ A folder to scan. Type a path or **Browse** to one; **Delete** removes it from t
 
 </div>
 
-<div class="screenshot-annotation" data-x="26" data-y="77" data-region="3.5 79.5 31.5 9.8" markdown="1">
+<div class="screenshot-annotation" data-x="33.4" data-y="82.5" data-region="3.7 80 31.3 9.4" markdown="1">
 
 ### Rescan and Add
 
@@ -33,7 +33,7 @@ A folder to scan. Type a path or **Browse** to one; **Delete** removes it from t
 
 </div>
 
-<div class="screenshot-annotation" data-x="49.5" data-y="84.5" data-region="35.2 79.5 12.3 9.8" markdown="1">
+<div class="screenshot-annotation" data-x="46" data-y="82.5" data-region="35.3 80 12.2 9.4" markdown="1">
 
 ### Find Duplicates
 
@@ -75,7 +75,7 @@ visual fingerprint.
 
 ![Duplicate results with two groups and one selected copy in each](assets/duplicates/duplicate-results.webp)
 
-<div class="screenshot-annotation" data-x="97" data-y="12" data-region="1.4 10.5 97.1 8.3" markdown="1">
+<div class="screenshot-annotation" data-x="97.1" data-y="13.1" data-region="1.4 10.6 97.1 8.2" markdown="1">
 
 ### Result Totals
 
@@ -83,7 +83,7 @@ Media processed, duplicate groups found, and how many copies are selected.
 
 </div>
 
-<div class="screenshot-annotation" data-x="97.5" data-y="25.5" data-region="3.6 23.3 92.7 4.5" markdown="1">
+<div class="screenshot-annotation" data-x="94.8" data-y="25.5" data-region="3.7 23.3 92.7 4.5" markdown="1">
 
 ### Action
 
@@ -91,7 +91,7 @@ What happens to the selected copies. [Read about the actions](#choose-an-action)
 
 </div>
 
-<div class="screenshot-annotation" data-x="25" data-y="30.8" data-region="3.6 29.3 19.7 3.1" markdown="1">
+<div class="screenshot-annotation" data-x="21.7" data-y="30.9" data-region="3.7 29.4 19.6 2.9" markdown="1">
 
 ### Remove Button
 
@@ -99,7 +99,7 @@ What happens to the selected copies. [Read about the actions](#choose-an-action)
 
 </div>
 
-<div class="screenshot-annotation" data-x="5.5" data-y="44.5" data-region="3.9 42.5 29.6 20.5" markdown="1">
+<div class="screenshot-annotation" data-x="32.2" data-y="44.9" data-region="3.7 42.4 30 20.9" markdown="1">
 
 ### Keeper
 
@@ -107,7 +107,7 @@ The first card in each group starts unselected as the copy to keep. This is a st
 
 </div>
 
-<div class="screenshot-annotation" data-x="63.5" data-y="44.5" data-region="35 42.4 30 21" markdown="1">
+<div class="screenshot-annotation" data-x="63.5" data-y="44.9" data-region="35 42.4 30 20.9" markdown="1">
 
 ### Selected Copy
 

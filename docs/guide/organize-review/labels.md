@@ -10,7 +10,7 @@ when you did not tag them manually.
 
 ![The Photo labels settings section with the enabled starter vocabulary](assets/labels/settings-labels.webp)
 
-<div class="screenshot-annotation" data-x="97" data-y="21" data-region="2.6 19.5 94.9 6.7" markdown="1">
+<div class="screenshot-annotation" data-x="95.9" data-y="22.1" data-region="2.6 19.6 94.8 7.2" markdown="1">
 
 ### Filter Labels
 
@@ -18,7 +18,7 @@ Type to narrow the label list.
 
 </div>
 
-<div class="screenshot-annotation" data-x="97" data-y="30" data-region="2.6 28.5 94 38" markdown="1">
+<div class="screenshot-annotation" data-x="95.9" data-y="31.6" data-region="2.6 29.1 94.8 37.3" markdown="1">
 
 ### Label Pills
 
@@ -26,7 +26,7 @@ Click a name to turn the label on or off. ⓘ shows its prompt, and the bin remo
 
 </div>
 
-<div class="screenshot-annotation" data-x="98" data-y="72.5" data-region="2.6 69 94.9 7.5" markdown="1">
+<div class="screenshot-annotation" data-x="95.9" data-y="71.7" data-region="2.6 69.2 94.8 7.2" markdown="1">
 
 ### Add Label
 
@@ -34,7 +34,7 @@ A short label name and an optional prompt that describes what it should match. [
 
 </div>
 
-<div class="screenshot-annotation" data-x="16.5" data-y="87.3" data-region="2.6 84 12.4 6.8" markdown="1">
+<div class="screenshot-annotation" data-x="13.5" data-y="86.5" data-region="2.6 84 12.4 6.8" markdown="1">
 
 ### Re-classify All Photos
 
@@ -118,7 +118,7 @@ Open **Library** → **Automations** → **Classify labels**, then expand
 
 ![The Classify labels automation configuration with confidence and per-photo limits](assets/labels/classify-labels-automation.webp)
 
-<div class="screenshot-annotation" data-x="55" data-y="20" data-region="3 18.5 50.5 31" markdown="1">
+<div class="screenshot-annotation" data-x="51.6" data-y="22.4" data-region="3.2 19.9 49.9 29.2" markdown="1">
 
 ### Confidence Threshold
 
@@ -126,7 +126,7 @@ The minimum similarity for a label. Higher values give fewer, more confident lab
 
 </div>
 
-<div class="screenshot-annotation" data-x="55" data-y="55.5" data-region="3 53.5 50.5 22.5" markdown="1">
+<div class="screenshot-annotation" data-x="51.6" data-y="57" data-region="3.2 54.5 49.9 20.4" markdown="1">
 
 ### Max Labels per Photo
 
@@ -134,7 +134,7 @@ How many of the highest-scoring labels each item keeps.
 
 </div>
 
-<div class="screenshot-annotation" data-x="11.5" data-y="85" data-region="3.2 80.3 6.4 9.7" markdown="1">
+<div class="screenshot-annotation" data-x="11.1" data-y="85.3" data-region="3.2 80.4 6.4 9.8" markdown="1">
 
 ### Save
 

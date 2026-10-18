@@ -10,7 +10,7 @@ location names.
 
 ![The Locations page with its filter sidebar and clustered map markers](assets/locations/locations-map.webp)
 
-<div class="screenshot-annotation" data-x="21" data-y="3.4" data-region="1.2 1 20 78.9" markdown="1">
+<div class="screenshot-annotation" data-x="19.8" data-y="3.5" data-region="1.1 1 20.1 79" markdown="1">
 
 ### Filters
 
@@ -20,7 +20,7 @@ chooses which filters the sidebar shows.
 
 </div>
 
-<div class="screenshot-annotation" data-x="51" data-y="5" data-region="22.7 1 76.1 5.9" markdown="1">
+<div class="screenshot-annotation" data-x="95.9" data-y="5.1" data-region="24.1 4.5 73.3 1.2" markdown="1">
 
 ### Selection Hint
 
@@ -29,7 +29,7 @@ Hold **Shift** and click or drag to select several clusters at once.
 
 </div>
 
-<div class="screenshot-annotation" data-x="27" data-y="10" data-region="23.1 8.4 2.2 3.2" markdown="1">
+<div class="screenshot-annotation" data-x="26.5" data-y="10" data-region="23.3 8.6 1.7 2.9" markdown="1">
 
 ### Zoom
 
@@ -72,7 +72,7 @@ several markers.
 
 ![The location selection panel with previews, recommendations, assignment controls, and selected clusters](assets/locations/locations-selection-panel.webp)
 
-<div class="screenshot-annotation" data-x="80" data-y="4" data-region="3.9 1.5 92.2 7.4" markdown="1">
+<div class="screenshot-annotation" data-x="94.6" data-y="4" data-region="3.9 1.5 92.2 7.4" markdown="1">
 
 ### Selection Summary
 
@@ -81,7 +81,7 @@ panel and clears the selection.
 
 </div>
 
-<div class="screenshot-annotation" data-x="93" data-y="11" data-region="3.9 8.9 92.2 47.9" markdown="1">
+<div class="screenshot-annotation" data-x="94.6" data-y="11.4" data-region="3.9 8.9 92.2 47.8" markdown="1">
 
 ### Preview
 
@@ -91,7 +91,7 @@ selector or the thumbnail strip, or collapse the section for more room.
 
 </div>
 
-<div class="screenshot-annotation" data-x="93" data-y="59" data-region="3.9 56.8 92.2 18.1" markdown="1">
+<div class="screenshot-annotation" data-x="94.6" data-y="59.2" data-region="3.9 56.7 92.2 18.1" markdown="1">
 
 ### Assign a Name
 
@@ -103,7 +103,7 @@ selected photo. Or type a name and click **Assign to All**.
 
 </div>
 
-<div class="screenshot-annotation" data-x="93" data-y="77" data-region="3.9 74.9 92.2 14.1" markdown="1">
+<div class="screenshot-annotation" data-x="94.6" data-y="77.4" data-region="3.9 74.9 92.2 14.1" markdown="1">
 
 ### Selected Clusters
 
@@ -111,7 +111,7 @@ Each selected cluster with its photo count and current location names.
 
 </div>
 
-<div class="screenshot-annotation" data-x="93" data-y="91" data-region="3.9 89 92.2 9.5" markdown="1">
+<div class="screenshot-annotation" data-x="94.6" data-y="91.5" data-region="3.9 89 92.2 9.5" markdown="1">
 
 ### Clear Actions
 

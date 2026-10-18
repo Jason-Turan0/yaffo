@@ -609,8 +609,25 @@ published Custom Pages example, which shows page content rather than controls, a
 the two-chip label crop on Labels, which is too small to mark. Use H4 annotation
 headings when the screenshot sits inside an H3 section, such as a chooser panel.
 Add `annotated-screenshot--narrow` to the wrapper for a portrait screenshot, such
-as a side panel, so it gets a narrower column. Recheck the
-coordinates whenever one of those screenshots is recaptured with a different layout.
+as a side panel, so it gets a narrower column.
+
+Coordinates are measured, not placed by eye. Each annotated shot in a walkthrough
+declares `annotations`: the annotation heading's id (`### Library Counts` ->
+`library-counts`) mapped to a selector for the element it describes. A selector
+matching several elements frames all of them. Capture measures every box in the
+settled page, relative to the shot's crop, and carries it in `raw.json`.
+`--promote` writes the geometry into the page's `data-x`, `data-y`, and
+`data-region` along with the images; `--sync-annotations` writes it without
+promoting images. The marker goes on the region's right edge, near its top.
+`lib/user_doc_automation/annotations.ts` does the writing and reports annotations
+the walkthrough measures but the page lacks, and annotations the page has but the
+walkthrough does not measure. Those keep their written geometry, which is the
+escape hatch for content no selector reaches: the Locations clusters are drawn on
+the map canvas. A selector that matches nothing visible fails the shot, so a
+renamed element reaches the healer instead of leaving a marker in the wrong place.
+
+The generation and fix prompts describe all four components from one source,
+`lib/user_doc_automation/guide_components.ts`.
 
 The screenshot remains a single Markdown image reference, so capture and validation
 remain unchanged. Marker positions are authored metadata: when a screenshot is

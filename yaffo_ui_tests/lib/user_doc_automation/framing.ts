@@ -104,3 +104,109 @@ export const resolveIgnoreRegions = async (
     }
     return boxes;
 };
+
+/** Where an annotation sits in its image, in percent of the image's width and height. */
+export interface AnnotationGeometry {
+    /** `left top width height`, as the markdown's `data-region` takes it. */
+    region: [number, number, number, number];
+    /** The numbered marker's centre. */
+    marker: [number, number];
+}
+
+const tenth = (value: number): number => Math.round(value * 10) / 10;
+const clamp = (value: number, low: number, high: number): number => Math.min(high, Math.max(low, value));
+
+/** Below this width and height, in percent, a region is a control rather than a panel. */
+const SMALL = 12;
+
+/**
+ * Turn element boxes into an annotation, relative to the image they appear in.
+ *
+ * Several boxes are framed together. A control gets its marker beside it, so the
+ * marker never hides the label it explains; on the image's right edge that is its
+ * left side. A panel gets its marker inside its top-right corner, which is usually
+ * empty, rather than outside where it lands on the neighbouring panel.
+ */
+export const annotationGeometry = (
+    boxes: Box[],
+    origin: {x: number; y: number},
+    size: {width: number; height: number}
+): AnnotationGeometry => {
+    const left = Math.min(...boxes.map((box) => box.x));
+    const top = Math.min(...boxes.map((box) => box.y));
+    const right = Math.max(...boxes.map((box) => box.x + box.width));
+    const bottom = Math.max(...boxes.map((box) => box.y + box.height));
+    const x0 = clamp((left - origin.x) / size.width * 100, 0, 100);
+    const y0 = clamp((top - origin.y) / size.height * 100, 0, 100);
+    const x1 = clamp((right - origin.x) / size.width * 100, 0, 100);
+    const y1 = clamp((bottom - origin.y) / size.height * 100, 0, 100);
+    const region: [number, number, number, number] = [tenth(x0), tenth(y0), tenth(x1 - x0), tenth(y1 - y0)];
+    const small = x1 - x0 < SMALL && y1 - y0 < SMALL;
+    const markerX = !small ? x1 - 1.5 : x1 > 96 ? x0 - 1.5 : x1 + 1.5;
+    const markerY = small ? (y0 + y1) / 2 : y0 + Math.min((y1 - y0) / 2, 2.5);
+    return {region, marker: [tenth(clamp(markerX, 1, 99)), tenth(clamp(markerY, 1, 99))]};
+};
+
+/** How close two markers may sit, in percent, before the later one moves. */
+const MARKER_GAP = 3;
+
+/**
+ * Move markers that would overlap down until they don't. Nested regions share a
+ * top-right corner (a panel and the header inside it), and two markers in one spot
+ * read as one.
+ */
+export const spreadMarkers = (geometry: Record<string, AnnotationGeometry>): void => {
+    const placed: [number, number][] = [];
+    for (const annotation of Object.values(geometry)) {
+        const [x] = annotation.marker;
+        let [, y] = annotation.marker;
+        while (placed.some(([px, py]) => Math.abs(px - x) < MARKER_GAP && Math.abs(py - y) < MARKER_GAP) && y < 99) {
+            y = Math.min(99, y + MARKER_GAP);
+        }
+        annotation.marker = [x, tenth(y)];
+        placed.push(annotation.marker);
+    }
+};
+
+/** The part of the page a screenshot actually contains: the clip, cut to the viewport. */
+export const capturedArea = (clip: Box | undefined, viewport: {width: number; height: number}): Box => {
+    if (!clip) return {x: 0, y: 0, ...viewport};
+    const x = Math.max(clip.x, 0);
+    const y = Math.max(clip.y, 0);
+    return {
+        x,
+        y,
+        width: Math.min(clip.x + clip.width, viewport.width) - x,
+        height: Math.min(clip.y + clip.height, viewport.height) - y,
+    };
+};
+
+/**
+ * Measure a shot's annotations in the state it is captured in. A selector that frames
+ * nothing visible is a walkthrough defect, so it fails the shot rather than leaving a
+ * marker pointing at stale coordinates.
+ */
+export const resolveAnnotations = async (
+    page: Page,
+    shot: Shot,
+    clip: Box | undefined
+): Promise<Record<string, AnnotationGeometry>> => {
+    // The image is the clip cut to the viewport: a clip taller than the viewport is
+    // silently truncated (see `Shot.viewport`), so measuring against the clip itself
+    // would place every marker too high, by more the further down it sits.
+    const visible = capturedArea(clip, shot.viewport);
+    const origin = visible;
+    const size = visible;
+    const geometry: Record<string, AnnotationGeometry> = {};
+    for (const [id, selector] of Object.entries(shot.annotations ?? {})) {
+        const boxes: Box[] = [];
+        for (const element of await page.locator(selector).all()) {
+            const box = await element.boundingBox();
+            if (box && box.width > 0 && box.height > 0) boxes.push(box);
+        }
+        if (!boxes.length) throw new Error(`Annotation ${id}: no visible element for ${selector}`);
+        geometry[id] = annotationGeometry(boxes, origin, size);
+    }
+    spreadMarkers(geometry);
+    return geometry;
+};

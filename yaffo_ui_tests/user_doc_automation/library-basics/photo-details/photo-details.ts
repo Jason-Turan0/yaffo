@@ -14,6 +14,13 @@ export default defineWalkthrough({
 
     shots: {
         "media-detail.webp": {
+            annotations: {
+                "file-information-and-actions": ".photo-sidebar .detail-section:has(> h3:text-matches(\"^File Information$\"))",
+                "location": ".photo-sidebar .detail-section:has(> h3:text-matches(\"^Location$\"))",
+                "people-and-faces": ".photo-sidebar .detail-section:has(> h3:text-matches(\"^(Person|People) \\\\(\")), .photo-sidebar .detail-section-faces",
+                "labels-and-tags": ".photo-sidebar .detail-section:has(> h3:text-matches(\"^(Label|Labels|Tag|Tags) \\\\(\"))",
+                "favorite": ".photo-viewer .favorite-toggle",
+            },
             viewport: {width: 1400, height: 1250},
             goto: ({mediaIdByFilename}) =>
                 mediaIdByFilename(DETAIL_IMAGE).then((id) => `/media/view/${id}`),

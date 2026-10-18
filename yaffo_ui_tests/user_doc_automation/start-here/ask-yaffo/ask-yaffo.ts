@@ -232,6 +232,14 @@ export default defineWalkthrough({
 
     shots: {
         "ask-yaffo-conversation.webp": {
+            annotations: {
+                "conversation-list": ".assistant-sidebar",
+                "new-and-delete": "#assistant-new, #assistant-delete",
+                "sources": "#assistant-panel .assistant-sources",
+                "activity": "#assistant-panel details.assistant-activity[open]",
+                "open-links": "#assistant-panel .assistant-links",
+                "message-box": "#assistant-chat-form",
+            },
             viewport: {width: 1440, height: 1000},
             goto: "/assistant",
             clip: ".assistant-page",
@@ -252,6 +260,12 @@ export default defineWalkthrough({
         // Cropped to the panel. The page behind is blanked: it can't show the failure
         // the chip names, and the crop's framing margin would show a sliver of it.
         "ask-yaffo-context.webp": {
+            annotations: {
+                "panel-toolbar": "#assistant-panel .assistant-toolbar",
+                "model-notice": "#assistant-panel .assistant-notice",
+                "attached-context": "#assistant-context",
+                "suggested-question": "#assistant-chat-form .form-group, #assistant-chat-form .chat-dialog-actions",
+            },
             viewport: {width: 1440, height: 1000},
             goto: "/library/health",
             clip: "#assistant-panel",
@@ -279,6 +293,12 @@ export default defineWalkthrough({
         },
         // A whole viewport: the panel floats over the page it was opened from.
         "ask-yaffo-change-card.webp": {
+            annotations: {
+                "proposed-steps": ".assistant-plan .assistant-plan-title, .assistant-plan .assistant-plan-steps",
+                "undo-status": ".assistant-plan .assistant-plan-facts",
+                "show-script": ".assistant-plan .assistant-tool-script > summary",
+                "approve-or-decline": ".assistant-plan .assistant-plan-actions button",
+            },
             viewport: {width: 1200, height: 860},
             goto: "/",
             setup: async (page) => {
@@ -289,6 +309,12 @@ export default defineWalkthrough({
             },
         },
         "settings-assistant.webp": {
+            annotations: {
+                "enabled": ".assistant-master-switch",
+                "what-it-can-look-at": ".assistant-settings-block:not(:has(.assistant-action-groups))",
+                "changes-it-can-propose": ".assistant-settings-block:has(.assistant-action-groups) > :not(.assistant-confirm-threshold)",
+                "confirm-large-changes": ".assistant-confirm-threshold > *",
+            },
             viewport: {width: 1400, height: 2600},
             goto: "/settings",
             clip: "#assistant-section",

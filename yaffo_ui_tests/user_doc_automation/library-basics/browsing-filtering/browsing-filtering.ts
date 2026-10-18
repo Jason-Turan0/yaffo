@@ -20,6 +20,12 @@ export default defineWalkthrough({
     shots: {
         // "Browse the Gallery"
         "gallery-home.webp": {
+            annotations: {
+                "filter-sidebar": "#home-filters",
+                "photo-count": ".photo-gallery .page-header .subtitle",
+                "grid-and-timeline": ".view-toggle",
+                "media-card": ".photo-grid .photo-card >> nth=0",
+            },
             viewport: {width: 1400, height: 1100},
             // Two pieces of state are pinned here, for different reasons.
             //
@@ -41,6 +47,13 @@ export default defineWalkthrough({
 
         // "Use the Filter Sidebar"
         "gallery-filter-sidebar.webp": {
+            annotations: {
+                "sidebar-settings": "#configure-filters-btn",
+                "year-and-month": ".filter-group:has(#year-select), .filter-group:has(#month-select)",
+                "location-filters": ".filter-group:has(.location-proximity-filter) > :not(.location-proximity-filter)",
+                "proximity-search": ".location-proximity-filter",
+                "apply-or-clear": "#filter-form .filter-btn, #filter-form .clear-filters",
+            },
             // Tall enough for the whole sidebar to lay out. The element's own box is
             // capped by the viewport, so a short viewport truncates the shot mid-filter
             // instead of failing.

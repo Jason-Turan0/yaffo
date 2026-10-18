@@ -22,6 +22,7 @@ const renderReviewSheet = jest.fn<(
 ) => boolean>();
 const captureLayout = jest.fn<(page: unknown, shot: {clip?: string}) => Promise<string[]>>();
 const resolveClip = jest.fn<(page: unknown, shot: unknown) => Promise<Box | undefined>>();
+const resolveAnnotations = jest.fn(async () => ({}));
 const resolveIgnoreRegions = jest.fn<(
     page: unknown,
     shot: unknown,
@@ -42,7 +43,7 @@ await jest.unstable_mockModule("@playwright/test", () => ({
 }));
 await jest.unstable_mockModule("../compare", () => ({compareShots, renderReviewSheet}));
 await jest.unstable_mockModule("../layout", () => ({captureLayout}));
-await jest.unstable_mockModule("../framing", () => ({resolveClip, resolveIgnoreRegions}));
+await jest.unstable_mockModule("../framing", () => ({resolveAnnotations, resolveClip, resolveIgnoreRegions}));
 await jest.unstable_mockModule("../encode", () => ({toWebp}));
 await jest.unstable_mockModule("../observe", () => ({
     createObserver,

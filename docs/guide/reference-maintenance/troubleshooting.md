@@ -20,7 +20,7 @@ to indexing or background jobs.
 
 ![The Library Health page showing the diagnostic library counts and status](assets/troubleshooting/library-health-status.webp)
 
-<div class="screenshot-annotation" data-x="81" data-y="9.5" data-region="82.5 6.5 14.3 6" markdown="1">
+<div class="screenshot-annotation" data-x="95.3" data-y="8.9" data-region="82.4 6.4 14.4 6.4" markdown="1">
 
 #### Reindex Library
 
@@ -28,7 +28,7 @@ Rebuilds every indexed item, including detected faces. It removes face assignmen
 
 </div>
 
-<div class="screenshot-annotation" data-x="97" data-y="24" data-region="1.5 22.5 97 43.5" markdown="1">
+<div class="screenshot-annotation" data-x="97.1" data-y="25.7" data-region="1.4 23.2 97.1 42" markdown="1">
 
 #### Library Counts
 
@@ -36,7 +36,7 @@ Files on disk, imported and indexed items, items not yet indexed, orphaned entri
 
 </div>
 
-<div class="screenshot-annotation" data-x="97" data-y="72" data-region="1.5 69.5 97 27" markdown="1">
+<div class="screenshot-annotation" data-x="97.1" data-y="73" data-region="1.4 70.5 97.1 26.6" markdown="1">
 
 #### Library Status
 
@@ -313,7 +313,7 @@ threshold often improves results.
 
 ![The AI Generation settings with a provider chosen, showing its models and API-key status](assets/troubleshooting/ai-generation-status.webp)
 
-<div class="screenshot-annotation" data-x="34" data-y="23.7" data-region="2.5 21.5 30 4.5" markdown="1">
+<div class="screenshot-annotation" data-x="95.9" data-y="24.6" data-region="2.6 22.6 94.8 3.9" markdown="1">
 
 #### Active Model
 
@@ -321,7 +321,7 @@ The provider and model Yaffo will use.
 
 </div>
 
-<div class="screenshot-annotation" data-x="96" data-y="32" data-region="2.5 30.5 95 12" markdown="1">
+<div class="screenshot-annotation" data-x="95.9" data-y="32.5" data-region="2.6 30 94.8 12.1" markdown="1">
 
 #### Provider
 
@@ -329,7 +329,7 @@ Choose a provider to look up its models and show its key settings.
 
 </div>
 
-<div class="screenshot-annotation" data-x="96" data-y="48" data-region="2.5 46.5 95 12.5" markdown="1">
+<div class="screenshot-annotation" data-x="95.9" data-y="49" data-region="2.6 46.5 94.8 12.1" markdown="1">
 
 #### Model
 
@@ -337,7 +337,7 @@ Search the provider's models and select one.
 
 </div>
 
-<div class="screenshot-annotation" data-x="96" data-y="64" data-region="2.5 62 95 30" markdown="1">
+<div class="screenshot-annotation" data-x="95.9" data-y="65.4" data-region="2.6 62.9 94.8 29.2" markdown="1">
 
 #### API Key
 
