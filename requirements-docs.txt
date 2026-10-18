@@ -1,0 +1,35 @@
+# Fully pinned MkDocs toolchain for the docs site (CI build + local preview).
+# Transitive deps are pinned too: selectolax 1.x makes mkdocs-glightbox 0.5.2
+# drop every <img> from the built pages.
+# Install: pip install -r requirements-docs.txt
+babel==2.18.0
+backrefs==8.1
+certifi==2026.7.22
+charset-normalizer==3.5.2
+click==8.5.0
+colorama==0.4.6
+ghp-import==2.1.0
+idna==3.20
+Jinja2==3.1.6
+Markdown==3.11.1
+MarkupSafe==3.0.4
+mergedeep==1.3.4
+mkdocs==1.6.1
+mkdocs-get-deps==0.2.2
+mkdocs-glightbox==0.5.2
+mkdocs-material==9.7.7
+mkdocs-material-extensions==1.3.1
+packaging==26.3
+paginate==0.5.7
+pathspec==1.1.1
+platformdirs==4.13.4
+Pygments==2.21.0
+pymdown-extensions==12.3
+python-dateutil==2.9.0.post0
+PyYAML==6.0.3
+pyyaml_env_tag==1.1
+requests==2.34.2
+selectolax==0.4.11
+six==1.17.0
+urllib3==2.8.0
+watchdog==6.0.0

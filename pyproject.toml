@@ -102,6 +102,8 @@ dev = [
 docs = [
     "mkdocs-material==9.7.7",
     "mkdocs-glightbox==0.5.2",
+    # selectolax 1.x makes glightbox drop every <img>; full pins in requirements-docs.txt.
+    "selectolax==0.4.11",
 ]
 
 [project.scripts]
