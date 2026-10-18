@@ -103,7 +103,6 @@ def test_face_assignment_counts_committed_chunks_without_duplicate_links(
     session.add_all(Face(id=i, media_item_id=i, status=FACE_STATUS_UNASSIGNED) for i in (1, 2, 3))
     session.commit()
     monkeypatch.setattr(faces, "_FLUSH_SIZE", 1)
-    monkeypatch.setattr(faces, "get_similarity_bounds", lambda s: (0.4, 0.8))
     monkeypatch.setattr(faces.person_repository, "get_people_with_embeddings", lambda s: [7])
     monkeypatch.setattr(faces, "calculate_face_similarity", lambda face, people: {7: 1.0})
     _lock_second_call(monkeypatch, faces.person_repository, "bulk_link_faces_to_people")

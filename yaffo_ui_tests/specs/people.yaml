@@ -109,6 +109,29 @@ scenarios:
       - After removing, the face count for that person decreases
       - A success message is displayed
       - The removed face becomes available again on the face assignment page
+  - name: people_can_move_faces_to_another_person
+    goal: The user can move faces from one person to another from the person's faces view
+    priority: medium
+    steps:
+      - Create two people and assign one pool face to the first (setup via API, then wait for the background assignment)
+      - Open the first person's faces view and select the face
+      - Choose the second person in the "Move Selected to" picker (#move-target-person, a searchable-select) and click Move Selected (#move-selected-faces)
+      - Before confirming the move, cancel it once and reload to verify the face still belongs to the first person, then repeat and confirm
+      - Cleanup — delete both people, which unassigns the face back to the pool
+    verify:
+      - A success message is displayed and the face leaves the first person's view (the move is synchronous, no taskq wait)
+      - The face is shown on the second person's faces view
+  - name: people_can_show_likely_misassigned_or_unmatched_faces
+    goal: The "Show" choice lists all faces, only likely misassigned ones, or only ones that look like nobody
+    priority: medium
+    steps:
+      - Open a person's faces view (Show = All faces), choose Likely misassigned and apply, choose Looks like nobody and apply, then return to All faces and apply
+    verify:
+      - The matching radio (input[name="show"]) is checked each time; each of the three options has an info tip (.help-tip[data-tooltip])
+      - All faces shows no .face-closer-to line
+      - Likely misassigned shows a .face-closer-to line on every face (or the empty state when none)
+      - Looks like nobody shows no .face-closer-to line (or the empty state when none)
+      - Applying each choice persists its show parameter in the URL and restores the matching checked radio
   # ---------------------------------------------------------------------------
   # Responsive coverage (P3 — people). The shared shell contract itself is verified
   # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen
@@ -166,6 +189,14 @@ scenarios:
       - The typed name is still there
       - The dialog still fits inside the viewport
 
+  - name: the_actions_panel_stays_in_view_while_the_faces_grid_scrolls
+    goal: On desktop the sidebar column (Actions + Filters) sticks and scrolls as one
+    priority: medium
+    steps:
+      - At 1440x700 open a person's faces view with page-size=1000 and scroll to the bottom
+    verify:
+      - The Actions panel and its Move Selected button are still within the viewport
+      - (Skipped when the fixture has too few faces to scroll the page)
   - name: person_faces_route_renders_without_horizontal_overflow_at_every_contract_width
     goal: The per-person face gallery is contained at every supported width
     priority: high

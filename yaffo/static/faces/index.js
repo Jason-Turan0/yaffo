@@ -16,6 +16,14 @@
  * @property {number} [media_item_id]
  * @property {string} [media_type]
  * @property {FaceRegion | null} [region]
+ * @property {boolean} [ignored]
+ * @property {FaceMatch[]} [matches]
+ *
+ * A person a face matched above the threshold (Group by People), best first.
+ * @typedef {Object} FaceMatch
+ * @property {number} person_id
+ * @property {string} name
+ * @property {number} similarity
  *
  * A person offered as a keyboard/shortcut assignment target.
  * @typedef {Object} PersonShortcut
@@ -36,6 +44,27 @@ const facesWindow = window;
 facesWindow.PHOTO_ORGANIZER = facesWindow.PHOTO_ORGANIZER || {};
 const facesNamespace = facesWindow.PHOTO_ORGANIZER.faces =
     /** @type {FacesNamespace} */ (facesWindow.PHOTO_ORGANIZER.faces || {});
+
+// The People filter only narrows "Group by People" (similarity clusters have no
+// person), so it hides while Similarity is chosen. Its checkboxes are disabled while
+// hidden so a stale selection isn't submitted with the form.
+facesNamespace.initFilters = () => {
+    const group = document.getElementById('people-filter-group');
+    if (!group) return;
+    const sync = () => {
+        const checked = /** @type {HTMLInputElement | null} */ (
+            document.querySelector('input[name="group_by"]:checked'));
+        const hide = checked?.value === 'similarity';
+        group.hidden = hide;
+        group.querySelectorAll('input[name="person"]').forEach((input) => {
+            /** @type {HTMLInputElement} */ (input).disabled = hide;
+        });
+    };
+    document.querySelectorAll('input[name="group_by"]').forEach((radio) => {
+        radio.addEventListener('change', sync);
+    });
+    sync();
+};
 
 // Edge length of the source-photo preview in either presentation, in CSS pixels.
 const PREVIEW_SIZE = 320;
@@ -194,12 +223,17 @@ facesNamespace.initAssignment = (
         return preview;
     };
 
-    // Re-load /faces with the current filters, resetting to page 1: assignments
-    // shrink the unassigned set, so page 1 always holds the next batch and the
-    // server renders the "All Faces Assigned!" panel once it's empty.
+    // Re-load /faces with the current filters, continuing after this batch's last
+    // face. Faces that stay in the pool (skipped clusters, or ignored faces when
+    // they're included) would otherwise bring the same batch back forever. The
+    // server renders "You've reached the end" (with Start over) past the last face,
+    // and "All Faces Assigned!" once the pool is empty.
     const loadNextBatch = () => {
         const url = new URL(window.location.href);
         url.searchParams.delete('page');
+        const nextAfter = /** @type {HTMLElement | null} */ (
+            document.querySelector('.main-content'))?.dataset.nextAfter;
+        if (nextAfter) url.searchParams.set('after', nextAfter);
         window.location.assign(url.toString());
     };
 
@@ -248,12 +282,16 @@ facesNamespace.initAssignment = (
         grid.innerHTML = shown.map(face => {
             const similarity = face.similarity != null ? face.similarity : '';
             const selected = selectedIds.has(face.id) ? ' selected' : '';
+            const ignored = face.ignored ? ' face-ignored' : '';
             // data-region is single-quoted: it holds JSON, whose own quotes are double.
-            return `<div class="face${selected}" data-face-id="${face.id}"`
+            return `<div class="face${selected}${ignored}" data-face-id="${face.id}"`
                 + ` data-similarity="${similarity}" data-date="${face.photo_date || ''}"`
                 + ` data-media-type="${face.media_type || ''}" data-source="${sourceUrl(face)}"`
                 + ` data-region='${face.region ? JSON.stringify(face.region) : ''}'>`
                 + `<img src="${thumbUrl(face.id)}" data-fallback="${placeholderUrl}" width="100" height="100">`
+                + (face.ignored
+                    ? `<span class="face-ignored-badge">${i18n.t('faces:assignment.ignoredBadge')}</span>`
+                    : '')
                 + `</div>`;
         }).join('');
         grid.querySelectorAll('.face').forEach((faceEl) => {
@@ -412,7 +450,19 @@ facesNamespace.initAssignment = (
             note.textContent = i18n.t('faces:assignment.videoPreviewUnavailable');
             previewParts.push(note);
         }
-        if (hasSimilarity) {
+        // A face that matched several people lists each of them, best first, rather
+        // than only the most likely one.
+        const record = faces.find((face) => String(face.id) === faceEl.dataset.faceId);
+        const matches = record?.matches ?? [];
+        if (matches.length > 1) {
+            matches.forEach((match) => {
+                previewParts.push(document.createTextNode(i18n.t('faces:assignment.personSimilarity', {
+                    name: match.name,
+                    value: i18n.percent(match.similarity, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                })));
+                previewParts.push(document.createElement('br'));
+            });
+        } else if (hasSimilarity) {
             previewParts.push(document.createTextNode(
                 i18n.t('common:similarityValue', { value: similarityText })
             ));

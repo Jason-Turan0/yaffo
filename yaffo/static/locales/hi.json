@@ -95,7 +95,9 @@
       "noneSelected": "छोड़ दिया गया - कोई चेहरा चयनित नहीं",
       "requestFailed": "गलती: {{reason}}",
       "selectPersonFirst": "कृपया पहले एक व्यक्ति का चयन करें",
-      "videoPreviewUnavailable": "वीडियो के लिए पूर्वावलोकन उपलब्ध नहीं है"
+      "videoPreviewUnavailable": "वीडियो के लिए पूर्वावलोकन उपलब्ध नहीं है",
+      "ignoredBadge": "अनदेखा किया गया",
+      "personSimilarity": "{{name}}: {{value}}"
     },
     "people": {
       "created": "बनाया था \"{{name}}\"",
@@ -209,7 +211,13 @@
       "removeMessage_one": "इस व्यक्ति से चयनित चेहरा हटाएं?",
       "removeMessage_other": "हटाना {{count}} इस व्यक्ति से चयनित चेहरे?",
       "removeTitle": "चेहरे हटाएँ",
-      "selectRequired": "कृपया हटाने के लिए कम से कम एक चेहरा चुनें"
+      "selectRequired": "कृपया हटाने के लिए कम से कम एक चेहरा चुनें",
+      "moveConfirm": "स्थानांतरित करें",
+      "moveMessage_one": "चुने गए चेहरे को {{person}} में स्थानांतरित करें?",
+      "moveMessage_other": "चुने गए {{count}} चेहरों को {{person}} में स्थानांतरित करें?",
+      "movePersonRequired": "चुनें कि चेहरों को किस व्यक्ति में स्थानांतरित करना है",
+      "moveSelectRequired": "कृपया स्थानांतरित करने के लिए कम से कम एक चेहरा चुनें",
+      "moveTitle": "चेहरे स्थानांतरित करें"
     }
   },
   "pages": {

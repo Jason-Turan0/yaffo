@@ -479,6 +479,15 @@ index-photos button (`scan_media_dirs` + `perform_sync` are shared with the
 route), so its import/index Jobs show up in the UI exactly like a hand-triggered
 sync — tagged with `automation_id` as the run history.
 
+Every successful reconciliation also removes unreferenced thumbnail files,
+sweeps person links, labels and tags whose face or media item is gone, and checks
+for missing face crops and video posters. Missing thumbnails with an available
+original are queued through the existing thumbnail repair job, preserving face
+assignments and ignored status. These checks run even when there are no photos
+to index or remove; the sync run records `thumbnail_repair_job_id` when it queues
+a repair. Cancelled runs and runs skipped because library jobs are active do not
+perform this maintenance.
+
 ### `auto_assign_faces`
 
 `tasks/auto_assign_faces_automation.py` — a system automation

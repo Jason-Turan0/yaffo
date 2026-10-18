@@ -92,7 +92,9 @@
   "faces": {
     "assignment": {
       "clusterSkipped": "Cluster skipped",
+      "ignoredBadge": "Ignored",
       "noneSelected": "Skipped — no faces selected",
+      "personSimilarity": "{{name}}: {{value}}",
       "requestFailed": "Error: {{reason}}",
       "selectPersonFirst": "Please select a person first",
       "videoPreviewUnavailable": "Preview not available for videos"
@@ -205,6 +207,12 @@
       "title": "Delete Person"
     },
     "faces": {
+      "moveConfirm": "Move",
+      "moveMessage_one": "Move the selected face to {{person}}?",
+      "moveMessage_other": "Move the {{count}} selected faces to {{person}}?",
+      "movePersonRequired": "Choose who to move the faces to",
+      "moveSelectRequired": "Please select at least one face to move",
+      "moveTitle": "Move Faces",
       "removeConfirm": "Remove",
       "removeMessage_one": "Remove the selected face from this person?",
       "removeMessage_other": "Remove the {{count}} selected faces from this person?",

@@ -110,7 +110,21 @@
         {% macro render_filters() %}
             {% include "filters/_year.html" %}
             {% include "filters/_month.html" %}
-            {% include "filters/_person.html" %}
+            {# People only narrows "Group by People"; similarity clusters have no person.
+               faces/index.js toggles it as the Group by radio changes. #}
+            {% set people_without_match_type = true %}
+            {% set people_filter_hidden = filters.selected_group_by == 'similarity' %}
+            {% include "filters/_people.html" %}
+            {% set include_ignored_help = _("Faces you ignored earlier join the groups, marked Ignored.") %}
+            <div class="filter-group filter-checkbox-row">
+                <label class="filter-checkbox">
+                    <input type="checkbox" name="include_ignored" value="1"
+                           {% if filters.selected_include_ignored %}checked{% endif %}>
+                    <span>{{ _("Include ignored faces") }}</span>
+                </label>
+                <button type="button" class="help-tip" data-icon="info"
+                        aria-label="{{ include_ignored_help }}" data-tooltip="{{ include_ignored_help }}"></button>
+            </div>
             <div class="filter-group">
                 <label for="group-by-people">{{ _("Group by") }}</label>
                 <div class="radio-group">
@@ -212,10 +226,33 @@
         {% endmacro %}
         {{ render_sidebar(url_for('faces_index'), filters, render_filters, render_actions,
                         panel_prefix='faces') }}
-        <div class="main-content" data-unassigned-count="{{ unassigned_face_count }}">
-            {% call page_header(_("Unassigned Faces")) %}
-                {% trans count=faces|length, shown=faces|length|format_integer, total=unassigned_face_count|format_integer %}Showing {{ shown }} of {{ total }} unassigned face{% pluralize %}Showing {{ shown }} of {{ total }} unassigned faces{% endtrans %}
+        {# data-next-after: the cursor faces/index.js reloads with once this batch's
+           clusters run out (the last face of the batch, in date-then-id order). #}
+        <div class="main-content" data-unassigned-count="{{ unassigned_face_count }}"
+             {% if next_after %}data-next-after="{{ next_after }}"{% endif %}>
+            {% set header_actions %}
+                {% if start_over_url %}
+                    <a href="{{ start_over_url }}" class="action-link" id="faces-start-over">{{ _("Start over") }}</a>
+                {% endif %}
+                {% if next_batch_url %}
+                    <a href="{{ next_batch_url }}" class="action-link" id="faces-next-batch">{{ _("Next batch") }}</a>
+                {% endif %}
+            {% endset %}
+            {# No subtitle for an empty batch ("Showing 0–0 of 0"): the empty-state panel
+               below says why -- nothing left, or past the end of the pool. #}
+            {% if faces %}
+            {% call page_header(_("Unassigned Faces"), actions=header_actions) %}
+                {% set first = (batch_start + 1 if faces else batch_start) | format_integer %}
+                {% set last = batch_end | format_integer %}
+                {% if filters.selected_include_ignored %}
+                    {% trans count=unassigned_face_count, total=unassigned_face_count|format_integer %}Showing {{ first }}–{{ last }} of {{ total }} unassigned and ignored face{% pluralize %}Showing {{ first }}–{{ last }} of {{ total }} unassigned and ignored faces{% endtrans %}
+                {% else %}
+                    {% trans count=unassigned_face_count, total=unassigned_face_count|format_integer %}Showing {{ first }}–{{ last }} of {{ total }} unassigned face{% pluralize %}Showing {{ first }}–{{ last }} of {{ total }} unassigned faces{% endtrans %}
+                {% endif %}
             {% endcall %}
+            {% else %}
+            {{ page_header(_("Unassigned Faces"), actions=header_actions) }}
+            {% endif %}
             <div id="clusters">
                 {% if face_suggestions | length > 0 %}
                     {% for faceSuggestion in face_suggestions %}
@@ -278,10 +315,18 @@
                         </div>
                     {% endfor %}
                 {% endif %}
-                {% if face_suggestions | length == 0 and unassigned_face_count > 0 %}
+                {% if not faces and unassigned_face_count > 0 %}
+                    {# Paged past the last face; earlier ones are still in the pool. #}
+                    <div class="empty-state" id="faces-end-of-pool">
+                        <h2>{{ _("You've reached the end") }}</h2>
+                        <p>{{ _("There are no more faces after this point.") }}
+                            <a href="{{ start_over_url }}">{{ _("Start over") }}</a></p>
+                    </div>
+                {% elif face_suggestions | length == 0 and unassigned_face_count > 0 %}
                     <div class="empty-state">
                         <h2>{{ _("No results found") }}</h2>
-                        <p>{{ _("Double-check the applied filters or decrease the similarity threshold.") }}</p>
+                        <p>{{ _("Double-check the applied filters or decrease the similarity threshold.") }}
+                            {% if next_batch_url %}<a href="{{ next_batch_url }}">{{ _("Next batch") }}</a>{% endif %}</p>
                     </div>
                 {% endif %}
                 {% if unassigned_face_count == 0 %}
@@ -304,6 +349,7 @@
     <script>
         document.addEventListener('yaffo:app-init-complete', (event) => {
             const app = event.detail.app;
+            app.faces.initFilters();
             app.faces.assignment = app.faces.initAssignment(
                 {{ sample_size | tojson }},
                 {{ shortcut_people | tojson }},

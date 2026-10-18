@@ -15,6 +15,8 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = pytest.mark.unit
+
 STATIC_DIR = Path(__file__).resolve().parents[2] / "yaffo" / "static"
 
 # The shared boundaries documented in docs/development/responsive.md. A page may
@@ -27,9 +29,12 @@ ALLOWED_BREAKPOINTS = {
     "max-width: 900px",    # two-column page layouts become one
     "max-width: 1200px",   # the narrow shell: Menu, navbar-hosted page panels
     "min-width: 641px",    # the 640 boundary's complement
+    "width > 1200px",      # desktop complement: sidebar panels stick as one column
 }
 
-MEDIA_WIDTH_RE = re.compile(r"\(\s*(max|min)-width\s*:\s*([0-9.]+)px\s*\)")
+MEDIA_WIDTH_RE = re.compile(
+    r"\(\s*(?:(max|min)-width\s*:\s*|width\s*(>=|<=|>|<|=)\s*)([0-9.]+)px\s*\)"
+)
 
 # Declaration blocks. Flat enough for this codebase: an @media wrapper contains
 # its rules, and each inner rule still matches as a brace pair with no braces.
@@ -77,10 +82,10 @@ def test_media_queries_use_the_shared_breakpoints(css_file: Path) -> None:
     for line_number, line in enumerate(text.splitlines(), start=1):
         if "@media" not in line:
             continue
-        for direction, pixels in MEDIA_WIDTH_RE.findall(line):
+        for direction, operator, pixels in MEDIA_WIDTH_RE.findall(line):
             measure = float(pixels)
             rounded = int(measure) if measure == int(measure) else measure
-            width = f"{direction}-width: {rounded}px"
+            width = f"{direction}-width: {rounded}px" if direction else f"width {operator} {rounded}px"
             if width not in ALLOWED_BREAKPOINTS:
                 violations.append(f"  line {line_number}: ({width})")
 
@@ -93,6 +98,20 @@ def test_media_queries_use_the_shared_breakpoints(css_file: Path) -> None:
         "ALLOWED_BREAKPOINTS with a comment saying what changes there, and "
         "record it in docs/development/responsive.md."
     )
+
+
+@pytest.mark.parametrize("query, allowed", [("width > 1200px", True), ("width > 1173px", False)])
+def test_range_queries_follow_the_shared_breakpoints(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, query: str, allowed: bool,
+) -> None:
+    monkeypatch.setattr(f"{__name__}.STATIC_DIR", tmp_path)
+    stylesheet = tmp_path / "range.css"
+    stylesheet.write_text(f"@media ({query}) {{ .sidebar {{ position: sticky; }} }}", encoding="utf-8")
+    if allowed:
+        test_media_queries_use_the_shared_breakpoints(stylesheet)
+    else:
+        with pytest.raises(AssertionError, match="1173px"):
+            test_media_queries_use_the_shared_breakpoints(stylesheet)
 
 
 @pytest.mark.parametrize("css_file", _css_files(), ids=_relative)

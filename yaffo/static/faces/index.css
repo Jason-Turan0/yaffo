@@ -327,6 +327,22 @@
     object-fit: cover;
 }
 
+/* An ignored face (the "Include ignored faces" filter): labelled so it reads apart
+   from the unassigned ones around it. Clear of the selection checkbox (top-left). */
+.face-ignored-badge {
+    position: absolute;
+    inset-inline-end: 4px;
+    inset-block-start: 4px;
+    z-index: 2;
+    padding: 1px 6px;
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-xs);
+    pointer-events: none;
+}
+
 /* Touch users need an explicit preview action; desktop/fine-pointer users keep
    the original hover popover. The button never doubles as selecting the face. */
 .face-preview-button {

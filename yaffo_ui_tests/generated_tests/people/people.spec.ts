@@ -16,10 +16,12 @@ const EDIT_NAME = `SpecTestEdit-${UNIQ}`;
 const RENAMED_NAME = `SpecTestRenamed-${UNIQ}`;
 const DELETE_NAME = `SpecTestDelete-${UNIQ}`;
 const FACES_NAME = `SpecTestFaces-${UNIQ}`;
+const MOVE_FROM_NAME = `SpecTestMoveFrom-${UNIQ}`;
+const MOVE_TO_NAME = `SpecTestMoveTo-${UNIQ}`;
 // One unbroken run of characters — the long-content case a person's name can
 // actually produce, and the one that widens a table if nothing breaks it.
 const LONG_NAME = `SpecTestUnbrokenPersonName${'x'.repeat(60)}-${UNIQ}`;
-const ALL_TEST_NAMES = [LIST_NAME, ADD_NAME, EDIT_NAME, RENAMED_NAME, DELETE_NAME, FACES_NAME, LONG_NAME];
+const ALL_TEST_NAMES = [LIST_NAME, ADD_NAME, EDIT_NAME, RENAMED_NAME, DELETE_NAME, FACES_NAME, MOVE_FROM_NAME, MOVE_TO_NAME, LONG_NAME];
 
 // Generous per-test budget: the face-assignment waits can sit behind minutes of
 // queued model work when the whole suite runs in parallel.
@@ -105,22 +107,12 @@ async function unassignedFaceIds(page: Page): Promise<number[]> {
   return (await unassignedFaceIdsByGroup(page)).flat();
 }
 
-async function activeSimilarityClusterFaceIds(page: Page): Promise<number[]> {
-  await page.goto('/faces?group_by=similarity&threshold=2');
-  const firstGroup = page.locator('.suggestion-group').first();
-  if (await firstGroup.count() === 0) return [];
-  const json = await firstGroup.getAttribute('data-faces');
-  return json ? (JSON.parse(json) as { id: number }[]).map(face => face.id) : [];
-}
-
-// The face_assignment suite mutates its active similarity cluster while running
-// in parallel. Reserve that cluster dynamically, then take a face from the tail
-// of the complete unassigned pool.
+// Each suite runs against its own disposable sandbox. A loose similarity cluster
+// can contain the whole pool, so it must not be excluded from setup choices.
 async function pickPoolFaceId(page: Page): Promise<number> {
-  const reservedFaceIds = new Set(await activeSimilarityClusterFaceIds(page));
   const byGroup = await unassignedFaceIdsByGroup(page);
-  const candidates = byGroup.flat().filter(id => !reservedFaceIds.has(id));
-  expect(candidates.length, 'expected an unassigned face outside the active similarity cluster').toBeGreaterThan(0);
+  const candidates = byGroup.flat();
+  expect(candidates.length, 'expected an unassigned face in this suite’s sandbox').toBeGreaterThan(0);
   return candidates[candidates.length - 1];
 }
 
@@ -321,6 +313,92 @@ test.describe('People', () => {
 
     await deletePersonViaApi(page, personId);
   });
+
+  test('people_can_move_faces_to_another_person', async ({ page }) => {
+    const fromId = await createPersonViaApi(page, MOVE_FROM_NAME);
+    const toId = await createPersonViaApi(page, MOVE_TO_NAME);
+    const faceId = await pickPoolFaceId(page);
+    await assignFaceToPersonViaApi(page, faceId, fromId);
+    await waitForFaceAssigned(page, fromId, faceId);
+
+    // Select the face, pick the other person in the searchable picker, move it.
+    const card = page.locator(`.face-card[data-face-id="${faceId}"]`);
+    await card.click();
+    await expect(card).toHaveClass(/selected/);
+    // The open picker must not be clipped by the short Actions panel (it once was,
+    // with a scrollbar on the panel): its last option is really drawn on top.
+    const picker = page.locator('#move-form .searchable-select-wrapper');
+    await picker.locator('.searchable-select-display').click();
+    const lastOption = picker.locator('.searchable-select-option').last();
+    await expect(lastOption).toBeVisible();
+    expect(await lastOption.evaluate((option) => {
+      const box = option.getBoundingClientRect();
+      const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+      return option === hit || option.contains(hit);
+    })).toBe(true);
+    await picker.locator('.searchable-select-display').click();  // close; the helper reopens it
+    await pickSearchableOption(page.locator('#move-form'), '#move-target-person', MOVE_TO_NAME);
+    await expect(page.locator('#move-target-person')).toHaveValue(String(toId));
+    await page.locator('#move-selected-faces').click();
+    await expect(page.locator('#global-confirm-dialog')).toHaveClass(/active/);
+    await expect(page.locator('#global-confirm-dialog')).toContainText(MOVE_TO_NAME);
+    await page.locator('#confirm-dialog-cancel').click();
+    await expect(card).toHaveClass(/selected/);
+    await page.reload();
+    await expect(card).toBeVisible();
+    await card.click();
+    await pickSearchableOption(page.locator('#move-form'), '#move-target-person', MOVE_TO_NAME);
+    await page.locator('#move-selected-faces').click();
+    await expect(page.locator('#global-confirm-dialog')).toHaveClass(/active/);
+    await page.locator('#confirm-dialog-confirm').click();
+
+    // The move is synchronous: the face leaves this person and is the other's now.
+    await expect(flashSuccess(page)).toBeVisible();
+    await expect(page.locator('.face-card')).toHaveCount(0);
+    await page.goto(`/people/${toId}/faces`);
+    await expect(page.locator(`.face-card[data-face-id="${faceId}"]`)).toBeVisible();
+
+    // Deleting the person unassigns the face, restoring the shared pool.
+    await deletePersonViaApi(page, toId);
+    await deletePersonViaApi(page, fromId);
+    await waitForFaceBackInPool(page, faceId);
+  });
+
+  test('people_can_show_likely_misassigned_or_unmatched_faces', async ({ page }) => {
+    // Read-only: whatever the fixture's people look like, each "Show" option must
+    // render checked, explain itself through an info tip, and list only its faces.
+    const personId = await firstPersonId(page);
+    const option = (value: string) => page.locator(`input[name="show"][value="${value}"]`);
+
+    await page.goto(`/people/${personId}/faces`);
+    await expect(option('all')).toBeChecked();
+    await expect(page.locator('.show-filter .filter-option-row .help-tip[data-tooltip]')).toHaveCount(3);
+    await expect(page.locator('.face-closer-to')).toHaveCount(0);
+
+    await option('misassigned').check();
+    await page.locator('#filter-form button[type="submit"]').click();
+    await expect(page).toHaveURL(/show=misassigned/);
+    await expect(option('misassigned')).toBeChecked();
+    const flagged = page.locator('.face-card');
+    if (await flagged.count() === 0) {
+      await expect(page.locator('.empty-state')).toBeVisible();
+    } else {
+      await expect(flagged.locator('.face-closer-to')).toHaveCount(await flagged.count());
+    }
+
+    await option('nobody').check();
+    await page.locator('#filter-form button[type="submit"]').click();
+    await expect(page).toHaveURL(/show=nobody/);
+    await expect(option('nobody')).toBeChecked();
+    await expect(page.locator('.face-closer-to')).toHaveCount(0);
+    if (await page.locator('.face-card').count() === 0) {
+      await expect(page.locator('.empty-state')).toBeVisible();
+    }
+    await option('all').check();
+    await page.locator('#filter-form button[type="submit"]').click();
+    await expect(page).toHaveURL(/show=all/);
+    await expect(option('all')).toBeChecked();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -462,6 +540,23 @@ test.describe('People — responsive', () => {
     await expectFitsViewport(page, '#addModal .modal-content');
 
     await modal.locator('.modal-actions [name="cancel"]').click();
+  });
+
+  test('the Actions panel stays in view while the faces grid scrolls', async ({ page }) => {
+    // The sidebar column sticks and scrolls as one; Actions used to scroll away while
+    // only Filters stuck.
+    await page.setViewportSize({ width: 1440, height: 420 });  // short, so a few faces scroll
+    const personId = await firstPersonId(page);
+    await page.goto(`/people/${personId}/faces?page-size=1000`);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const scrolled = await page.evaluate(() => window.scrollY);
+    test.skip(scrolled < 200, 'not enough faces in the fixture to scroll the page');
+
+    const actions = await page.locator('#person-faces-actions').boundingBox();
+    expect(actions).not.toBeNull();
+    expect(actions!.y).toBeGreaterThanOrEqual(0);
+    expect(actions!.y).toBeLessThan(420);
+    await expect(page.locator('#move-selected-faces')).toBeInViewport();
   });
 
   test('the person faces route renders without page-level overflow at every contract width', async ({ page }) => {

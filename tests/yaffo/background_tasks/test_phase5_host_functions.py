@@ -15,7 +15,7 @@ from yaffo.db import db
 from yaffo.distance_units import get_saved_distance_unit
 from yaffo.i18n import get_saved_locale
 from yaffo.db.models import (
-    FACE_STATUS_UNASSIGNED, JOB_STATUS_COMPLETED, JOB_STATUS_RUNNING, ClassificationLabel, Face, Job, JobResult,
+    FACE_STATUS_IGNORED, FACE_STATUS_UNASSIGNED, JOB_STATUS_COMPLETED, JOB_STATUS_RUNNING, ClassificationLabel, Face, Job, JobResult,
     MediaItem, MediaLabel, Person, PersonEmbedding, Tag,
 )
 
@@ -75,6 +75,71 @@ def test_find_similar_faces_scores_unassigned_faces_against_a_person(session):
     assert [f["face_id"] for f in faces] == [1, 2]  # the other-looking face is below the threshold
     assert faces[0]["media_item_id"] == 1 and faces[0]["score"] >= faces[1]["score"]
     assert compare.find_similar_faces(session, 99) == []
+
+
+def _people(session):
+    """Billy looks like [1, 0, 0], Sally like [0, 1, 0]; Nobody has no gallery yet."""
+    for person_id, name, vector in [(1, "Billy", [1, 0, 0]), (2, "Sally", [0, 1, 0])]:
+        session.add(Person(id=person_id, name=name, avg_embedding=_unit(vector)))
+        session.add(PersonEmbedding(person_id=person_id, life_stage="unknown", avg_embedding=_unit(vector)))
+    session.add(Person(id=3, name="Nobody"))
+    session.commit()
+
+
+def test_match_faces_scores_faces_of_any_status_against_every_person(session):
+    _faces(session, [[1, 0, 0], [0, 1, 0]])
+    session.query(Face).filter(Face.id == 2).update({Face.status: FACE_STATUS_IGNORED})
+    _people(session)
+
+    result = compare.match_faces(session, [2, 1, 999])
+
+    assert [r["face_id"] for r in result] == [2, 1]  # face_ids order; unknown id skipped
+    assert result[0]["media_item_id"] == 2
+    assert [m["person_name"] for m in result[0]["matches"]] == ["Sally", "Billy"]  # best first
+    assert [m["person_name"] for m in result[1]["matches"]] == ["Billy", "Sally"]  # Nobody has no gallery
+    assert result[1]["matches"][0]["score"] > 0.99
+
+
+def test_match_faces_scores_the_same_as_find_similar_faces(session):
+    _faces(session, [[1, 0, 0], [0.95, 0.05, 0]])
+    _people(session)
+
+    similar = {f["face_id"]: f["score"] for f in compare.find_similar_faces(session, 1, 0, 10)}
+    matched = {r["face_id"]: r["matches"][0]["score"] for r in compare.match_faces(session, [1, 2], [1])}
+
+    assert matched == similar
+
+
+def test_match_faces_narrows_to_person_ids(session):
+    _faces(session, [[1, 0, 0]])
+    _people(session)
+
+    result = compare.match_faces(session, [1], [2])
+
+    assert [m["person_id"] for m in result[0]["matches"]] == [2]
+    assert compare.match_faces(session, [1], [3]) == []  # no gallery: nothing to score against
+    assert compare.match_faces(session, []) == []
+
+
+def test_match_faces_bounds_comparisons_and_checks_args(session, monkeypatch):
+    _faces(session, [[1, 0, 0]] * 3)
+    _people(session)
+    monkeypatch.setattr(compare, "MAX_FACE_COMPARISONS", 4)
+
+    assert len(compare.match_faces(session, [1, 2, 3], [1])) == 3  # 3 faces x 1 person
+    with pytest.raises(ValueError, match="3 faces x 2 people"):
+        compare.match_faces(session, [1, 2, 3])
+    with pytest.raises(ValueError, match="face_ids"):
+        compare.match_faces(session, 1)
+    with pytest.raises(ValueError, match="person_ids"):
+        compare.match_faces(session, [1], ["Billy"])
+
+
+def test_match_faces_summary_names_the_person(session):
+    _people(session)
+
+    assert compare.summarize_match_faces([[1, 2], [1]], session) == "Match 2 faces to Billy"
+    assert compare.summarize_match_faces([[1]], session) == "Match 1 face to known people"
 
 
 def test_set_person_birthdate_and_undo_respects_a_later_change(session):

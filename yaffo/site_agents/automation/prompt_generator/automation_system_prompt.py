@@ -109,6 +109,8 @@ def _sources() -> str:
         'Filter columns with operators at the top level, e.g. {"source": "media_items",',
         '"year": {"eq": 2024}, "id": {"in": [1,2,3]}, "limit": 24}. Operators: eq, ne,',
         "lt, lte, gt, gte, contains, in, prefix (path columns: matches a leading prefix / subtree).",
+        'Order and page row queries with "sort_by": [{"field": "id", "direction": "desc"}]',
+        '(direction defaults to asc) and "offset": N alongside "limit".',
         "Some tables also accept host-derived filter columns (disk paths never exposed; a",
         "photo's media_dir_id / relative_path, which move_media_item also addresses by):",
         *calculated_filter_lines(FIELDS_BY_SOURCE),

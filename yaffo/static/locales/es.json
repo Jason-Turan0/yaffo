@@ -95,7 +95,9 @@
       "noneSelected": "Omitido: no hay caras seleccionadas",
       "requestFailed": "Error: {{reason}}",
       "selectPersonFirst": "Por favor seleccione una persona primero",
-      "videoPreviewUnavailable": "Vista previa no disponible para vídeos"
+      "videoPreviewUnavailable": "Vista previa no disponible para vídeos",
+      "ignoredBadge": "Ignorado",
+      "personSimilarity": "{{name}}: {{value}}"
     },
     "people": {
       "created": "Creado \"{{name}}\"",
@@ -209,7 +211,13 @@
       "removeMessage_one": "¿Eliminar la cara seleccionada de esta persona?",
       "removeMessage_other": "¿Eliminar las caras seleccionadas {{count}} de esta persona?",
       "removeTitle": "Quitar caras",
-      "selectRequired": "Por favor seleccione al menos una cara para eliminar"
+      "selectRequired": "Por favor seleccione al menos una cara para eliminar",
+      "moveConfirm": "Mover",
+      "moveMessage_one": "¿Mover el rostro seleccionado a {{person}}?",
+      "moveMessage_other": "¿Mover los {{count}} rostros seleccionados a {{person}}?",
+      "movePersonRequired": "Elige a quién mover los rostros",
+      "moveSelectRequired": "Selecciona al menos un rostro para mover",
+      "moveTitle": "Mover rostros"
     }
   },
   "pages": {

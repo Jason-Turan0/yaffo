@@ -189,9 +189,9 @@ test.describe('Face Assignment', () => {
       page.locator('#sidebar-assign-selected-btn').click(),
     ]);
     expect(response.ok()).toBeTruthy();
-    await expect(page.locator('.notification.visible')).toBeVisible();
 
-    // Assignment completes in a background task; the face lands on Obama's page
+    // Advancing past the last cluster navigates away and clears its toast.
+    // The persisted assignment is the success signal across either path.
     await waitForFaceAssigned(page, obama.id, faceId!);
   });
 
@@ -258,6 +258,143 @@ test.describe('Face Assignment', () => {
     }
   });
 
+  test('ignored faces join the pool only when the filter asks for them', async ({ page }) => {
+    const subtitle = page.locator('.subtitle');
+    const checkbox = page.locator('input[name="include_ignored"]');
+    /** @returns every face across all clusters (only the active one is painted). */
+    const payloadFaces = async (): Promise<Array<{ id: number; ignored: boolean }>> => {
+      const faces = [];
+      for (const group of await page.locator('.suggestion-group').all()) {
+        faces.push(...JSON.parse(await group.getAttribute('data-faces') ?? '[]'));
+      }
+      return faces;
+    };
+    /** Setup/cleanup only: the fixture has no ignored faces, so ignore one and restore it. */
+    const patchFace = async (body: object) => {
+      const status = await page.evaluate(async (payload) => {
+        const response = await fetch('/api/faces', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        return response.status;
+      }, body);
+      expect(status).toBe(200);
+    };
+
+    await page.goto('/faces?group_by=people&threshold=2');
+    const [target] = await payloadFaces();
+    expect(target, 'the fixture should leave unassigned faces').toBeDefined();
+    await patchFace({ ids: [target.id], status: 'IGNORED' });
+    try {
+      await page.goto('/faces?group_by=people&threshold=2');
+      await expect(checkbox).not.toBeChecked();
+      await expect(subtitle).toContainText(/unassigned faces/);
+      await expect(subtitle).not.toContainText(/ignored/);
+      const hidden = await payloadFaces();
+      expect(hidden.map(face => face.id)).not.toContain(target.id);
+      expect(hidden.some(face => face.ignored)).toBe(false);
+
+      await page.goto('/faces?group_by=people&threshold=2&include_ignored=1');
+      await expect(checkbox).toBeChecked();
+      await expect(subtitle).toContainText(/unassigned and ignored faces/);
+      const shown = await payloadFaces();
+      expect(shown.filter(face => face.ignored).map(face => face.id)).toEqual([target.id]);
+      expect(shown.length).toBe(hidden.length + 1);
+      const groups = page.locator('.suggestion-group');
+      const targetIndex = await groups.evaluateAll((elements, id) => elements.findIndex(element =>
+        JSON.parse(element.getAttribute('data-faces') ?? '[]').some((face: { id: number }) => face.id === id)), target.id);
+      expect(targetIndex).toBeGreaterThanOrEqual(0);
+      for (let index = 0; index < targetIndex; index++) {
+        await page.locator('.suggestion-group:not([hidden]) .skip-cluster-btn').click();
+      }
+      const ignored = page.locator(`.face[data-face-id="${target.id}"]`);
+      await expect(ignored).toHaveClass(/face-ignored/);
+      await expect(ignored.locator('.face-ignored-badge')).toHaveText('Ignored');
+    } finally {
+      await patchFace({ ids: [target.id], person_id: null });  // un-ignore: back to unassigned
+    }
+  });
+
+  test('People filters keep multiple selections only for Group by People', async ({ page }) => {
+    await page.goto('/faces?group_by=people&threshold=2');
+    const people = page.locator('#people-filter-group');
+    const choices = people.locator('input[name="person"]');
+    expect(await choices.count()).toBeGreaterThanOrEqual(2);
+    await expect(people.locator('input[name="person-match-type"]')).toHaveCount(0);
+    await people.locator('.multi-select-header').click();
+    await choices.nth(0).check();
+    await choices.nth(1).check();
+    const selected = await choices.evaluateAll(elements => elements.slice(0, 2).map(element =>
+      (element as HTMLInputElement).value));
+    await people.locator('.multi-select-header').click();
+
+    await page.locator('#group-by-similarity').check();
+    await expect(people).toBeHidden();
+    await expect(choices.nth(0)).toBeDisabled();
+    await expect(choices.nth(1)).toBeDisabled();
+    await page.locator('#group-by-people').check();
+    await expect(people).toBeVisible();
+    await expect(choices.nth(0)).toBeEnabled();
+    await expect(choices.nth(0)).toBeChecked();
+    await expect(choices.nth(1)).toBeChecked();
+    await page.locator('#filter-form button[type="submit"]').click();
+    await expect(page).toHaveURL(/group_by=people/);
+    expect(new URL(page.url()).searchParams.getAll('person')).toEqual(selected);
+    for (const value of selected) await expect(people.locator(`input[value="${value}"]`)).toBeChecked();
+
+    await page.locator('#group-by-similarity').check();
+    await page.locator('#filter-form button[type="submit"]').click();
+    await expect(page).toHaveURL(/group_by=similarity/);
+    expect(new URL(page.url()).searchParams.has('person')).toBe(false);
+    await expect(people).toBeHidden();
+  });
+
+  test('Next batch and Start over preserve filters while changing the face cursor', async ({ page }) => {
+    await page.goto('/faces?group_by=people&threshold=2&batch_size=25&include_ignored=1');
+    await expect(page.locator('.subtitle')).toContainText(/1–25 of/);
+    await page.locator('#faces-next-batch').click();
+    await expect(page).toHaveURL(/after=/);
+    await expect(page.locator('.subtitle')).toContainText(/26–/);
+    await expect(page.locator('input[name="include_ignored"]')).toBeChecked();
+    await page.locator('#faces-start-over').click();
+    await expect(page.locator('.subtitle')).toContainText(/1–25 of/);
+    const params = new URL(page.url()).searchParams;
+    expect(params.has('after')).toBe(false);
+    expect(params.get('group_by')).toBe('people');
+    expect(params.get('threshold')).toBe('2');
+    expect(params.get('include_ignored')).toBe('1');
+    await expect(page.locator('#faces-start-over')).toHaveCount(0);
+  });
+
+  test('skipping every cluster moves on to the next batch instead of reloading the same one', async ({ page }) => {
+    // Read-only: skipping changes nothing, so the shared pool is untouched. Before the
+    // `after` cursor, skipped faces stayed in the pool and the same batch came back.
+    await page.goto('/faces?group_by=people&threshold=2&batch_size=25');
+    const subtitle = page.locator('.subtitle');
+    await expect(subtitle).toContainText(/1–25 of/);
+    const firstBatchIds = new Set<number>();
+    for (const group of await page.locator('.suggestion-group').all()) {
+      for (const face of JSON.parse(await group.getAttribute('data-faces') ?? '[]')) firstBatchIds.add(face.id);
+    }
+
+    // Skip clusters until the page navigates to the next batch.
+    await expect(async () => {
+      if (!page.url().includes('after=')) {
+        await page.locator('.suggestion-group:not([hidden]) .skip-cluster-btn').click({ timeout: 1000 });
+      }
+      expect(page.url()).toContain('after=');
+    }).toPass({ timeout: 20_000 });
+
+    await expect(subtitle).toContainText(/26–/);
+    for (const group of await page.locator('.suggestion-group').all()) {
+      for (const face of JSON.parse(await group.getAttribute('data-faces') ?? '[]')) {
+        expect(firstBatchIds.has(face.id), `face ${face.id} came back in the next batch`).toBe(false);
+      }
+    }
+    await expect(page.locator('#faces-start-over')).toBeVisible();
+  });
+
   test('keyboard shortcuts enable quick face assignment', async ({ page }) => {
     const person = await createPersonViaApi(page, 'TestKeyboardPerson');
     await page.goto('/faces?group_by=similarity&threshold=2');
@@ -297,8 +434,8 @@ test.describe('Face Assignment', () => {
   test('face page navigation works', async ({ page }) => {
     await page.goto('/faces?group_by=similarity&threshold=2');
 
-    // The header reports the size of the unassigned pile
-    await expect(page.locator('.subtitle')).toContainText(/Showing [\d,.]+ of [\d,.]+ unassigned/);
+    // The header reports which slice of the unassigned pile this batch is
+    await expect(page.locator('.subtitle')).toContainText(/Showing [\d,.]+–[\d,.]+ of [\d,.]+ unassigned/);
 
     const firstGroup = page.locator('.suggestion-group').first();
     await expect(firstGroup).toBeVisible();

@@ -8,6 +8,7 @@ import pytest
 
 from yaffo.db import db
 from yaffo.db.models import (
+    FACE_STATUS_ASSIGNED,
     FACE_STATUS_IGNORED,
     FACE_STATUS_PROCESSING,
     FACE_STATUS_UNASSIGNED,
@@ -81,7 +82,7 @@ def test_rejects_faces_that_are_not_a_list(client, faces):
 def test_assigning_already_assigned_faces_conflicts(app, client):
     with app.app_context():
         face_ids = _add_unassigned_faces(2)
-        db.session.get(Face, face_ids[0]).status = FACE_STATUS_IGNORED
+        db.session.get(Face, face_ids[0]).status = FACE_STATUS_ASSIGNED
         person = Person(name="Ada")
         db.session.add(person)
         db.session.commit()
@@ -94,6 +95,54 @@ def test_assigning_already_assigned_faces_conflicts(app, client):
         "error": "One or more faces are no longer available",
         "code": "faces_not_available",
     }
+
+
+def test_ignored_faces_can_be_assigned(app, client, monkeypatch):
+    """The Faces page's "Include ignored faces" filter shows ignored faces next to
+    unassigned ones, so a mixed selection must assign rather than conflict."""
+    queued = []
+    monkeypatch.setattr(
+        "yaffo.routes.api.assign_faces_to_person",
+        lambda person_id, face_ids: queued.append((person_id, face_ids)),
+    )
+    with app.app_context():
+        face_ids = _add_unassigned_faces(2)
+        db.session.get(Face, face_ids[0]).status = FACE_STATUS_IGNORED
+        person = Person(name="Ada")
+        db.session.add(person)
+        db.session.commit()
+        person_id = person.id
+
+    response = client.patch("/api/faces", json={"ids": face_ids, "person_id": person_id})
+
+    assert response.status_code == 200
+    assert queued == [(person_id, face_ids)]
+    with app.app_context():
+        assert {status for (status,) in db.session.query(Face.status)} == {FACE_STATUS_PROCESSING}
+
+
+def test_ignoring_already_ignored_faces_succeeds(app, client):
+    with app.app_context():
+        face_ids = _add_unassigned_faces(2)
+        db.session.get(Face, face_ids[0]).status = FACE_STATUS_IGNORED
+        db.session.commit()
+
+    response = client.patch("/api/faces", json={"ids": face_ids, "status": FACE_STATUS_IGNORED})
+
+    assert response.status_code == 200
+    with app.app_context():
+        assert {status for (status,) in db.session.query(Face.status)} == {FACE_STATUS_IGNORED}
+
+
+def test_ignoring_assigned_faces_conflicts(app, client):
+    with app.app_context():
+        face_ids = _add_unassigned_faces(1)
+        db.session.get(Face, face_ids[0]).status = FACE_STATUS_ASSIGNED
+        db.session.commit()
+
+    response = client.patch("/api/faces", json={"ids": face_ids, "status": FACE_STATUS_IGNORED})
+
+    assert response.status_code == 409
 
 
 def test_unknown_person_is_not_found(app, client):

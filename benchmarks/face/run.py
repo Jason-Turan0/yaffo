@@ -54,6 +54,18 @@ def _print_recognition(rows):
               f"{r.ms_per_face:>9.0f}")
 
 
+def _print_calibration(rows):
+    print("\n=== SCORE CALIBRATION (where this model's similarity scale sits) ===")
+    print(f"{'backend':<28}{'EER thr':>8}{'FAR1%':>7}{'imp p99':>8}{'imp max':>8}"
+          f"{'gen p5':>8}{'gen p50':>8}{'gen p95':>8}   suggested 0%-100%")
+    print("-" * 104)
+    for r in rows:
+        low, high = r.suggested_band
+        print(f"{r.backend:<28}{r.eer_threshold:>8.3f}{r.threshold_far_1pct:>7.3f}{r.impostor_p99:>8.3f}"
+              f"{r.impostor_max:>8.3f}{r.genuine_p5:>8.3f}{r.genuine_p50:>8.3f}{r.genuine_p95:>8.3f}"
+              f"   {low:.3f} - {high:.3f}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Face detection/recognition benchmark")
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
@@ -115,6 +127,7 @@ def main() -> None:
 
     _print_detection(det_rows)
     _print_recognition(rec_rows)
+    _print_calibration(rec_rows)
 
     if args.json:
         args.json.write_text(json.dumps(out, indent=2))

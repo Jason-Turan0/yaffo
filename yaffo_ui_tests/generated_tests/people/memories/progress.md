@@ -53,6 +53,19 @@
   empty) `.empty-state` "No faces found".
 - Deleting a person unassigns their faces (status back to unassigned) — verified by
   polling the pool for the face id.
+- Move (2026-10-18): the Actions panel has a second form `#move-form` → POST
+  `/people/<id>/faces/move` with `faces` + `target_person`. The picker
+  `#move-target-person` is ALWAYS a searchable-select (native select hidden: use
+  `pickSearchableOption(page.locator('#move-form'), '#move-target-person', name)`,
+  not `selectOption`); `#move-selected-faces` → global confirm → submit. The move
+  is SYNCHRONOUS (no taskq wait): the face is on the target's view after redirect.
+- "Show" choice (2026-10-18, replaced the "Only likely misassigned" checkbox): radios
+  `input[name="show"]` = `all` (default) | `misassigned` | `nobody`, each in a
+  `.show-filter .filter-option-row` with a `.help-tip[data-tooltip]`; drive by URL
+  (`?show=misassigned`). Misassigned cards have a `.face-closer-to` line ("Closer to
+  NAME: N%") and only flag faces whose other score clears the band floor; "nobody"
+  lists faces low for this person AND everyone (no closer-to line). With none,
+  `.empty-state`. Fixture people rarely look alike, so assert structure, not faces.
 
 ## 2026-08-30 — responsive rollout (P3: faces and people)
 
@@ -101,3 +114,8 @@ width to **672px at a 320px viewport**. Fixed in `static/people/faces.css`.
   branch renders `.empty-state` instead. `templates/people/list.html` used to
   close `.main-content` inside the truthy branch only, leaving the element
   unclosed in the empty case; that is fixed.
+
+- Sticky sidebar column (2026-10-18): on desktop (>1200px) `.sidebar-container`
+  itself is sticky with its own scroll; the panels inside are static. Actions no
+  longer scrolls away with the grid. Below 1200px nothing changed (panels live in
+  the navbar). The person faces Actions panel no longer has its own overflow rule.

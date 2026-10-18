@@ -60,6 +60,7 @@ SAMPLE_ARGS = {
 READ_SCRIPTS = {
     "data_query": 'data_query({"source": "media_items", "limit": 1})',
     "match_people": "match_people(1)",
+    "match_faces": "match_faces([1])",
     "face_similarity": "face_similarity(1, 1)",
     "suggest_face_clusters": "suggest_face_clusters()",
     "find_similar_faces": "find_similar_faces(1)",

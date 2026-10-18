@@ -28,6 +28,8 @@ from typing import Any, Callable, Optional
 from sqlalchemy import func, or_, text
 from sqlalchemy.orm import Session
 
+from yaffo.db.repositories.media_integrity_repository import orphaned_person_link
+
 import yaffo
 from yaffo import config as app_config
 from yaffo.db.models import (
@@ -167,7 +169,7 @@ TOOLS: tuple[DiagnosticTool, ...] = (
     DiagnosticTool(
         "face_consistency", DIAG_LIBRARY,
         "Counts and sample ids for each inconsistent face state: linked to a person but not ASSIGNED, "
-        "stuck PROCESSING, ignored but still linked.",
+        "stuck PROCESSING, ignored but still linked, and orphan person links whose face or photo is gone.",
     ),
     DiagnosticTool(
         "date_outliers", DIAG_LIBRARY,
@@ -656,9 +658,11 @@ class DiagnosticsToolProvider(ToolProvider):
 
     def _face_consistency(self, args: dict) -> Output:
         counts = self._face_counts(samples=True)
+        orphan_links = self.session.query(PersonFace).filter(orphaned_person_link()).count()
         queued = self._face_tasks_queued()
         samples = counts["samples"]
         lines = [
+            f"Orphan person links (face or photo missing): {orphan_links}",
             f"Linked to a person but not ASSIGNED: {counts['linked_not_assigned']}"
             + (f" (e.g. face ids {samples['linked_not_assigned']})" if samples["linked_not_assigned"] else ""),
             f"PROCESSING: {counts['processing']} with {queued} face task(s) queued or running"
@@ -666,7 +670,7 @@ class DiagnosticsToolProvider(ToolProvider):
             f"IGNORED but still linked: {counts['ignored_linked']}"
             + (f" (e.g. face ids {samples['ignored_linked']})" if samples["ignored_linked"] else ""),
         ]
-        problems = counts["linked_not_assigned"] + counts["ignored_linked"] + (counts["processing"] if not queued else 0)
+        problems = orphan_links + counts["linked_not_assigned"] + counts["ignored_linked"] + (counts["processing"] if not queued else 0)
         return Output("\n".join(lines), count=problems)
 
     def _date_outliers(self, args: dict) -> Output:

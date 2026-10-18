@@ -95,7 +95,9 @@
       "noneSelected": "تم التخطي — لم يتم تحديد أي وجوه",
       "requestFailed": "خطأ: {{reason}}",
       "selectPersonFirst": "الرجاء اختيار شخص أولا",
-      "videoPreviewUnavailable": "المعاينة غير متاحة لمقاطع الفيديو"
+      "videoPreviewUnavailable": "المعاينة غير متاحة لمقاطع الفيديو",
+      "ignoredBadge": "تم تجاهله",
+      "personSimilarity": "{{name}}: {{value}}"
     },
     "people": {
       "created": "مخلوق \"{{name}}\"",
@@ -209,7 +211,13 @@
       "removeMessage_one": "هل تريد إزالة الوجه المحدد من هذا الشخص؟",
       "removeMessage_other": "إزالة {{count}} وجوه مختارة من هذا الشخص؟",
       "removeTitle": "إزالة الوجوه",
-      "selectRequired": "الرجاء تحديد وجه واحد على الأقل لإزالته"
+      "selectRequired": "الرجاء تحديد وجه واحد على الأقل لإزالته",
+      "moveConfirm": "نقل",
+      "moveMessage_one": "هل تريد نقل الوجه المحدد إلى {{person}}؟",
+      "moveMessage_other": "هل تريد نقل الوجوه المحددة وعددها {{count}} إلى {{person}}؟",
+      "movePersonRequired": "اختر الشخص الذي تريد نقل الوجوه إليه",
+      "moveSelectRequired": "يرجى تحديد وجه واحد على الأقل لنقله",
+      "moveTitle": "نقل الوجوه"
     }
   },
   "pages": {

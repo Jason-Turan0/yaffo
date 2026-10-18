@@ -81,6 +81,28 @@ _CALCULATED: dict[type, dict[str, Any]] = {
 # Reserved query keys (directives, not columns); they win over any same-named
 # column so they can't be shadowed.
 _LIMIT = {"type": "integer", "minimum": 1, "description": "Max rows to return."}
+_OFFSET = {"type": "integer", "minimum": 0, "description": "Rows to skip before returning (for paging)."}
+SORT_DIRECTIONS = ("asc", "desc")
+
+
+def _sort_by_schema(fields: dict[str, dict]) -> dict:
+    """`sort_by`: an ordered list of {field, direction?} keys over the source's real
+    columns (calculated columns aren't SQL columns, so they can't be sorted on).
+    `direction` defaults to asc."""
+    return {
+        "type": "array",
+        "minItems": 1,
+        "description": "Sort keys, most significant first.",
+        "items": {
+            "type": "object",
+            "properties": {
+                "field": {"enum": list(fields)},
+                "direction": {"enum": list(SORT_DIRECTIONS)},
+            },
+            "required": ["field"],
+            "additionalProperties": False,
+        },
+    }
 
 
 def _json_type(column: Any) -> Optional[dict]:
@@ -290,9 +312,11 @@ def _requires_rules(source: str) -> list[dict]:
 
 def _rows_branch(source: str, fields: dict[str, dict]) -> dict:
     """A row-fetch query: a discriminating `source` const, per-column operator
-    filters, `limit`, and nothing else (fail closed)."""
+    filters, `sort_by` / `offset` / `limit`, and nothing else (fail closed)."""
     properties = _filters_for(source, fields)
     properties["source"] = {"const": source}
+    properties["sort_by"] = _sort_by_schema(fields)
+    properties["offset"] = _OFFSET
     properties["limit"] = _LIMIT
     branch = {
         "type": "object",
@@ -414,7 +438,7 @@ _OPERATORS = {
 }
 
 # Keys that are query directives, not column filters.
-_RESERVED_KEYS = ("source", "op", "field", "limit")
+_RESERVED_KEYS = ("source", "op", "field", "sort_by", "offset", "limit")
 
 
 def _where_conditions(table, query: dict, source: str) -> list:
@@ -445,9 +469,27 @@ def _aggregate_select(table, query: dict, conditions: list) -> Select:
     return stmt.where(*conditions) if conditions else stmt
 
 
+def _order_by(table, query: dict) -> list:
+    """ORDER BY for a rows query: the `sort_by` keys, then the primary-key columns not
+    already sorted on as a tiebreak, so `offset` pages are stable (SQLite gives no
+    order guarantee without one). Empty when neither `sort_by` nor `offset` is given,
+    leaving unpaged queries as they were."""
+    if "sort_by" not in query and "offset" not in query:
+        return []
+    keys = query.get("sort_by", [])
+    order = [
+        table.c[key["field"]].desc() if key.get("direction") == "desc" else table.c[key["field"]].asc()
+        for key in keys
+    ]
+    sorted_fields = {key["field"] for key in keys}
+    order.extend(column.asc() for column in table.primary_key.columns if column.name not in sorted_fields)
+    return order
+
+
 def build_query(query: dict, extra_conditions: tuple = ()) -> Select:
     """Translate one table query into a SQLAlchemy Select. A rows query selects the
-    source's exposed columns with the per-column operator filters + `limit`; an
+    source's exposed columns with the per-column operator filters, `sort_by`
+    (ORDER BY, primary key as tiebreak), `offset`, and `limit`; an
     aggregate query (`op` present) builds the count / facet / range. `extra_conditions`
     are pre-built WHERE clauses (e.g. the calculated-column path filters resolved by
     resolve_query) ANDed in. Pure translation — assumes the query passed
@@ -460,6 +502,11 @@ def build_query(query: dict, extra_conditions: tuple = ()) -> Select:
     stmt = select(*(table.c[name] for name in FIELDS_BY_SOURCE[source]))
     if conditions:
         stmt = stmt.where(*conditions)
+    order = _order_by(table, query)
+    if order:
+        stmt = stmt.order_by(*order)
+    if "offset" in query:
+        stmt = stmt.offset(query["offset"])
     if "limit" in query:
         stmt = stmt.limit(query["limit"])
     return stmt

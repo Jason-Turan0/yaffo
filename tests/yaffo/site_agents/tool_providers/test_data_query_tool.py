@@ -123,6 +123,25 @@ class TestSourceSchema:
 
 
 class TestCallToolContract:
+    def test_paging_keys_are_advertised_and_passed_to_the_resolver(self, monkeypatch):
+        # sort_by / offset are database-level query keys, so the tool forwards them
+        # as-is for resolve_query to validate and apply.
+        seen = {}
+
+        def _resolve(session, args):
+            seen.update(args)
+            return []
+
+        _patch(monkeypatch, "yaffo.site_agents.common.tool_providers.data_query_tool.resolve_query", _resolve)
+        provider = data_query_tool.DataQueryToolProvider(session=object())
+        query = {"source": "people", "sort_by": [{"field": "name", "direction": "desc"}], "offset": 10, "limit": 5}
+
+        provider.call_tool("run_data_query", query)
+
+        assert seen == query
+        schema = next(t for t in provider.get_tools() if t.name == "run_data_query").input_schema
+        assert {"sort_by", "offset", "limit"} <= set(schema["properties"])
+
     def test_unknown_tool_name_is_reported(self, monkeypatch):
         provider = _provider(monkeypatch, [])
         assert provider.call_tool("nope", {}) == "Unknown tool: nope"

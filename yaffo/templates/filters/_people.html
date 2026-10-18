@@ -1,14 +1,18 @@
 {% from "filters/_matchType.html" import render_match_type  %}
+{# `people_without_match_type` (set by the including page) drops the Any/All toggle,
+   for screens where an item has only one person -- e.g. a face on the Faces page. #}
 
-<div class="filter-group">
+<div class="filter-group" id="people-filter-group"{% if people_filter_hidden %} hidden{% endif %}>
     <label>{{ _("People") }}</label>
+    {% if not people_without_match_type %}
     {{ render_match_type("person-match-type", filters.selected_person_match_type)}}
+    {% endif %}
 
     <div class="multi-select-wrapper"
          data-placeholder="{{ _('All People') }}"
          data-single-format="{name}"
          data-multi-format="{{ _('{count} people selected') }}"
-         data-match-type-id="person-match-type"
+         {% if not people_without_match_type %}data-match-type-id="person-match-type"{% endif %}
          data-searchable="true"
          data-search-placeholder="{{ _('Search people…') }}"
         >
@@ -24,6 +28,7 @@
                        value="{{ person.id }}"
                        data-label="{{ person.name }}"
                        {% if person.id in filters.selected_person_ids %}checked{% endif %}
+                       {% if people_filter_hidden %}disabled{% endif %}
                        onchange="updateMultiSelectText(this)">
                 <span>{{ person.name }}</span>
             </label>

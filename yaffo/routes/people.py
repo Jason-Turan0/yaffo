@@ -1,7 +1,8 @@
+from collections import Counter
 from datetime import date
 
 from flask import Flask, render_template, request, redirect, url_for, flash
-from flask_babel import gettext
+from flask_babel import gettext, ngettext
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload, aliased
 
@@ -11,16 +12,24 @@ from yaffo.db.repositories.person_repository import (
     clear_faces,
     delete_person,
     get_media_item_ids_for_person,
-    get_similarity_bounds,
+    likely_misassigned_faces,
+    unmatched_faces,
     update_person_embedding,
 )
 from yaffo.db.repositories.media_repository import get_distinct_months, get_distinct_years
-from yaffo.domain.compare_utils import ui_threshold_to_similarity, similarity_to_ui_percent
+from yaffo.domain.compare_utils import ui_threshold_to_similarity, similarity_to_ui_fraction
 from yaffo.background_tasks.events import emit_event
+from yaffo.background_tasks.tasks.assign_faces_to_person import assign_faces_to_person_now
 from yaffo.utils.context import context
 
 DEFAULT_THRESHOLD = 0.95  # configurable similarity threshold
 FACE_LOAD_LIMIT = 250
+
+# The person faces page's "Show" choice: every face, or one of the two review lists.
+SHOW_ALL = "all"
+SHOW_MISASSIGNED = "misassigned"
+SHOW_UNMATCHED = "nobody"
+SHOW_FINDERS = {SHOW_MISASSIGNED: likely_misassigned_faces, SHOW_UNMATCHED: unmatched_faces}
 
 
 def _parse_optional_gender(raw_gender: str | None) -> int | None:
@@ -172,6 +181,10 @@ def init_people_routes(app: Flask):
         page = request.args.get("page", default=1, type=int)
         page_size = request.args.get("page-size", type=int)
         filter_face_page_size = page_size if page_size else FACE_LOAD_LIMIT
+        # "Show": every face, only those that look more like someone else, or only
+        # those that look like nobody (the two can't overlap, hence one choice).
+        show = request.args.get("show")
+        show = show if show in SHOW_FINDERS else SHOW_ALL
 
         if not person:
             flash(gettext("Person not found"), "error")
@@ -195,26 +208,39 @@ def init_people_routes(app: Flask):
             query = query.filter(photo_alias.year == year)
         if month:
             query = query.filter(photo_alias.month == month)
-        # Sliders are 0-100 UI values; PersonFace.similarity is stored cosine. The
-        # band the 0-100 scale maps onto is read from the live data, not hardcoded.
-        bounds = get_similarity_bounds(db.session)
+        # Sliders are 0-100 UI values; PersonFace.similarity is stored cosine, mapped
+        # through the face model's fixed band (compare_utils.SIMILARITY_BANDS).
         if min_similarity and min_similarity > 0:
-            query = query.filter(PersonFace.similarity > ui_threshold_to_similarity(min_similarity, *bounds))
+            query = query.filter(PersonFace.similarity > ui_threshold_to_similarity(min_similarity))
         if max_similarity and max_similarity > 0:
-            query = query.filter(PersonFace.similarity < ui_threshold_to_similarity(max_similarity, *bounds))
+            query = query.filter(PersonFace.similarity < ui_threshold_to_similarity(max_similarity))
 
-        # Get total count for pagination
-        total_faces = query.count()
-
-        # Apply pagination
         offset = (page - 1) * filter_face_page_size
-        faces = (
-            query
-            .order_by(PersonFace.similarity)
-            .limit(filter_face_page_size)
-            .offset(offset)
-            .all()
-        )
+        matches_by_face_id = {}
+        if show in SHOW_FINDERS:
+            # The check scores every matching face, so it runs over the filtered ids
+            # and the page is cut from its ordered result.
+            matches = SHOW_FINDERS[show](
+                db.session, person_id, [face_id for (face_id,) in query.with_entities(Face.id).all()])
+            total_faces = len(matches)
+            page_matches = matches[offset:offset + filter_face_page_size]
+            matches_by_face_id = {match.face_id: match for match in page_matches}
+            faces_by_id = {face.id: face for face in query.filter(Face.id.in_(list(matches_by_face_id))).all()}
+            faces = [faces_by_id[match.face_id] for match in page_matches if match.face_id in faces_by_id]
+            # Offer the person most of these look like as the move target.
+            suggested_person_id = (
+                Counter(match.other_person_id for match in matches).most_common(1)[0][0]
+                if matches and show == SHOW_MISASSIGNED else None)
+        else:
+            total_faces = query.count()
+            faces = (
+                query
+                .order_by(PersonFace.similarity)
+                .limit(filter_face_page_size)
+                .offset(offset)
+                .all()
+            )
+            suggested_person_id = None
 
         filters = {
             "years": get_distinct_years(db.session),
@@ -225,19 +251,34 @@ def init_people_routes(app: Flask):
             "page_size": filter_face_page_size,
             "min_similarity": min_similarity,
             "max_similarity": max_similarity,
+            "show": show,
         }
 
-        face_data = [
-            {
+        def face_entry(face: Face) -> dict:
+            match = matches_by_face_id.get(face.id)
+            # In a filtered view the score is the freshly computed one the check
+            # used, so the numbers on the card agree with why it's listed.
+            similarity = match.similarity if match else face.person_face.similarity
+            # Percent on the slider's 0-100 scale, unrounded: the card shows one decimal.
+            def ui_percent(score: float) -> float:
+                return similarity_to_ui_fraction(score) * 100
+
+            return {
                 "face": face,
-                "similarity": face.person_face.similarity,
-                "similarity_pct": (
-                    similarity_to_ui_percent(face.person_face.similarity, *bounds)
-                    if face.person_face.similarity is not None else None
-                ),
+                "similarity": similarity,
+                "similarity_pct": ui_percent(similarity) if similarity is not None else None,
+                "closer_to": {
+                    "person_id": match.other_person_id,
+                    "name": match.other_person_name,
+                    "similarity_pct": ui_percent(match.other_similarity),
+                } if match and show == SHOW_MISASSIGNED else None,
             }
-            for face in faces
-        ]
+
+        face_data = [face_entry(face) for face in faces]
+        # Everyone but this person, as targets for "Move Selected to".
+        other_people = (
+            db.session.query(Person).filter(Person.id != person_id).order_by(Person.name).all()
+        )
 
         pagination = {
             "current_page": page,
@@ -246,7 +287,9 @@ def init_people_routes(app: Flask):
             "page_sizes": [50, 100, 250, 500, 1000],
         }
 
-        return render_template("people/faces.html", person=person, faces=face_data, filters=filters, pagination=pagination)
+        return render_template("people/faces.html", person=person, faces=face_data, filters=filters,
+                               pagination=pagination, other_people=other_people,
+                               suggested_person_id=suggested_person_id)
 
     @app.route("/people/<int:person_id>/faces/remove", methods=["POST"])
     def person_faces_remove(person_id):
@@ -264,3 +307,39 @@ def init_people_routes(app: Flask):
             emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": cleared.media_item_ids})
         flash(gettext("Person updated"), "success")
         return redirect(request.referrer or url_for("faces_index"))
+
+    @app.route("/people/<int:person_id>/faces/move", methods=["POST"])
+    def person_faces_move(person_id):
+        """Reassign selected faces from this person to another, e.g. faces the
+        "likely misassigned" filter shows look more like a sibling. Both people's
+        galleries are rebuilt: the target's by the assignment, this person's here."""
+        back = request.referrer or url_for("person_faces", person_id=person_id)
+        person = db.session.get(Person, person_id)
+        if not person:
+            flash(gettext("Person not found"), "error")
+            return redirect(url_for("people_list"))
+        target = db.session.get(Person, request.form.get("target_person", type=int) or 0)
+        if target is None or target.id == person_id:
+            flash(gettext("Choose another person to move the faces to"), "error")
+            return redirect(back)
+        try:
+            requested = {int(face_id) for face_id in request.form.getlist("faces")}
+        except ValueError:
+            requested = set()
+        # Only faces that really are this person's move; anything else is ignored.
+        face_ids = sorted(
+            face_id for (face_id,) in db.session.query(PersonFace.face_id)
+            .filter(PersonFace.person_id == person_id, PersonFace.face_id.in_(requested))
+        ) if requested else []
+        if not face_ids:
+            flash(gettext("No faces selected"), "error")
+            return redirect(back)
+
+        assign_faces_to_person_now(db.session, target.id, face_ids)
+        update_person_embedding(person_id, db.session)
+        flash(ngettext(
+            "Moved %(count)s face to %(person)s",
+            "Moved %(count)s faces to %(person)s",
+            len(face_ids), count=len(face_ids), person=target.name,
+        ), "success")
+        return redirect(back)

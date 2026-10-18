@@ -133,3 +133,33 @@
         height: 140px;
     }
 }
+
+/* Who a likely-misassigned face looks more like, under its own similarity. */
+.face-closer-to {
+    margin-top: 3px;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--color-danger);
+}
+
+/* "Move Selected to" sits under "Remove Selected" in the actions panel, laid out
+   like the Faces page's "Assign to Person" picker. */
+.move-faces-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.move-faces-form label {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+}
+
+/* "Show": three stacked options, each with an info tip beside its label (outside
+   it, so tapping the tip doesn't pick the option). */
+.show-filter .radio-group {
+    flex-direction: column;
+    gap: 6px;
+}

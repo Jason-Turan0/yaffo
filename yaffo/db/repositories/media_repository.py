@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 
 from sqlalchemy import insert, or_, update
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from yaffo.db.models import Face, PersonFace, MediaItem, MediaLabel, Tag, MEDIA_STATUS_INDEXED
 from yaffo.sync.deletes import announce_deleted, queue_target_removals
 
@@ -14,6 +14,17 @@ _DELETE_CHUNK = 500
 def get_faces_for_media_item(session: Session, media_item_id: int, limit: int | None = None) -> list[Face]:
     query = session.query(Face).filter_by(media_item_id=media_item_id)
     return (query.limit(limit) if limit is not None else query).all()
+
+
+def get_faces_by_ids(session: Session, face_ids: list[int]) -> list[Face]:
+    """The faces with these ids and their photos (for life-stage scoring), in no
+    particular order; unknown ids are skipped. Chunked under SQLite's bound-param cap."""
+    ids = list(dict.fromkeys(face_ids))
+    faces: list[Face] = []
+    for start in range(0, len(ids), _DELETE_CHUNK):
+        chunk = ids[start:start + _DELETE_CHUNK]
+        faces.extend(session.query(Face).options(joinedload(Face.media_item)).filter(Face.id.in_(chunk)).all())
+    return faces
 
 
 def get_media_item_ids_for_faces(session: Session, face_ids: list[int]) -> list[int]:

@@ -134,6 +134,16 @@ describe('faces initAssignment — rendering & selection', () => {
     expect(document.querySelector('.sample-range').textContent).toBe('1–3');
   });
 
+  it('marks ignored faces (the "Include ignored faces" filter) and only those', async () => {
+    fixture(group([{ id: 1 }, { id: 2, ignored: true }, { id: 3, ignored: false }]));
+    await init();
+
+    const ignored = activeFaces().filter((el) => el.classList.contains('face-ignored'));
+    expect(ignored.map((el) => el.dataset.faceId)).toEqual(['2']);
+    expect(document.querySelectorAll('.face-ignored-badge').length).toBe(1);
+    expect(ignored[0].querySelector('.face-ignored-badge')).not.toBeNull();
+  });
+
   it('toggles a single face off when clicked', async () => {
     fixture(group([{ id: 1 }, { id: 2 }, { id: 3 }]));
     const api = await init();
@@ -324,6 +334,39 @@ describe('faces initAssignment — phone source preview modal', () => {
     expect(openPreview(1)).toContain('similarityValue');
   });
 
+  it('lists every person a face matched, not only the most likely', async () => {
+    fixture(group([{
+      id: 1, similarity: 0.62, photo_date: '2020-01-01',
+      matches: [
+        { person_id: 7, name: 'Nathan', similarity: 0.62 },
+        { person_id: 3, name: 'Chase', similarity: 0.55 },
+      ],
+    }]));
+    const t = vi.spyOn(window.testI18n, 't');
+    await init();
+
+    const text = openPreview(1);
+    // testI18n renders the key; both people appear, best first, instead of one line.
+    expect(text).not.toContain('similarityValue');
+    expect(text.match(/faces:assignment\.personSimilarity/g)).toHaveLength(2);
+    const named = t.mock.calls
+      .filter(([key]) => key === 'faces:assignment.personSimilarity')
+      .map(([, values]) => values.name);
+    expect(named).toEqual(['Nathan', 'Chase']);
+  });
+
+  it('keeps the single similarity line when a face matched one person', async () => {
+    fixture(group([{
+      id: 1, similarity: 0.62, photo_date: '2020-01-01',
+      matches: [{ person_id: 7, name: 'Nathan', similarity: 0.62 }],
+    }]));
+    await init();
+
+    const text = openPreview(1);
+    expect(text).toContain('similarityValue');
+    expect(text).not.toContain('personSimilarity');
+  });
+
   it('omits the similarity line for a face with no score', async () => {
     // Similarity-grouped clusters carry no per-face score. The empty data-attribute
     // must not read as 0 — that painted every face as "0%".
@@ -493,5 +536,45 @@ describe('faces initAssignment — helpers & shortcuts', () => {
 
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ person_ids: [8, 4] });
+  });
+});
+
+describe('faces initFilters — People filter only for Group by People', () => {
+  const filters = (groupBy) => {
+    document.body.innerHTML = `
+      <input type="radio" name="group_by" value="people" ${groupBy === 'people' ? 'checked' : ''}>
+      <input type="radio" name="group_by" value="similarity" ${groupBy === 'similarity' ? 'checked' : ''}>
+      <div class="filter-group" id="people-filter-group">
+        <input type="checkbox" name="person" value="1" checked>
+        <input type="checkbox" name="person" value="2">
+      </div>`;
+  };
+  const group = () => document.getElementById('people-filter-group');
+  const people = () => [...document.querySelectorAll('input[name="person"]')];
+  const choose = (value) => {
+    const radio = document.querySelector(`input[name="group_by"][value="${value}"]`);
+    radio.checked = true;
+    radio.dispatchEvent(new Event('change'));
+  };
+
+  it('hides and disables the People filter while Similarity is chosen', async () => {
+    filters('people');
+    (await loadModule('faces/index.js')).faces.initFilters();
+    expect(group().hidden).toBe(false);
+
+    choose('similarity');
+    expect(group().hidden).toBe(true);
+    expect(people().every((input) => input.disabled)).toBe(true);
+
+    choose('people');
+    expect(group().hidden).toBe(false);
+    expect(people().some((input) => input.disabled)).toBe(false);
+    expect(people()[0].checked).toBe(true);  // the selection survives the round trip
+  });
+
+  it('starts hidden when the page loads grouped by Similarity', async () => {
+    filters('similarity');
+    (await loadModule('faces/index.js')).faces.initFilters();
+    expect(group().hidden).toBe(true);
   });
 });

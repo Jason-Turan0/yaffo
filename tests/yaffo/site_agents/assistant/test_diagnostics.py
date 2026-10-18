@@ -1,7 +1,6 @@
 """Diagnostic tools against a real database, queue store, media dir and logs."""
 import json
 import time
-from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine
@@ -116,6 +115,21 @@ def test_face_consistency(env):
     assert "Linked to a person but not ASSIGNED: 2" in text
     assert "PROCESSING: 1 with 0 face task(s)" in text
     assert "IGNORED but still linked: 1" in text
+    assert "Orphan person links (face or photo missing): 0" in text
+
+
+def test_face_consistency_reports_orphan_person_links(env):
+    provider, session = env[:2]
+    session.add_all([
+        PersonFace(person_id=1, face_id=999),
+        Face(id=13, media_item_id=999, status=FACE_STATUS_ASSIGNED),
+        PersonFace(person_id=1, face_id=13),
+    ])
+    session.commit()
+    text, activity = _call(provider, "face_consistency")
+    assert "Orphan person links (face or photo missing): 2" in text
+    assert activity["count"] == 6
+    assert session.query(PersonFace).count() == 4
 
 
 def test_media_item_report(env):

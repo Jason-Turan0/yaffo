@@ -135,7 +135,9 @@ HOST_API: tuple[HostFunction, ...] = (
             "`query` is a dict naming a source, with optional per-column "
             'operator filters and a limit, e.g. {"source": "media_items", "year": '
             '{"eq": 2024}, "id": {"in": [1, 2, 3]}, "limit": 24}. Operators: eq, ne, '
-            "lt, lte, gt, gte, contains, in. You never touch the database directly "
+            "lt, lte, gt, gte, contains, in. Row queries also take `sort_by` "
+            '([{"field": "id", "direction": "desc"}]) and `offset` for paging. '
+            "You never touch the database directly "
             "-- declare what you want and the server resolves it. Photo rows also "
             "carry `media_dir_id` and `relative_path` (the file's location, never an "
             "absolute path) -- pass media_dir_id to move_media_items."
@@ -368,6 +370,22 @@ HOST_API: tuple[HostFunction, ...] = (
         profiles=frozenset({"automation", "assistant"}),
         summarize=compare.summarize_match_people,
         mutating=False
+    ),
+    HostFunction(
+        description=(
+            "Score any faces (by face id, whatever their status: unassigned, ignored or "
+            "assigned) against people -- every person with assigned faces, or just "
+            "person_ids. Scores use the person's faces from the same stage of life, the "
+            "same 0.0-1.0 scale as find_similar_faces. Unknown face ids and people with no "
+            "assigned faces are skipped. At most 5,000 face x person comparisons per call "
+            "(e.g. 5,000 faces against one person): page through faces with data_query "
+            "(sort_by id + offset + limit) and call it once per page."
+        ),
+        example='scored = match_faces([f["id"] for f in page], [person_id])',
+        impl=compare.match_faces,
+        profiles=frozenset({"automation", "assistant"}),
+        summarize=compare.summarize_match_faces,
+        mutating=False,
     ),
     HostFunction(
         description=(

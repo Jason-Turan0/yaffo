@@ -82,6 +82,36 @@
     color: var(--color-text);
 }
 
+/* A filter control with an info tip explaining it: a boolean (.filter-checkbox-row)
+   or one option of a choice (.filter-option-row). The tip sits beside the label,
+   not inside it, so tapping it doesn't toggle the control. */
+.filter-group.filter-checkbox-row,
+.filter-option-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.filter-checkbox-row .help-tip[data-icon]::before,
+.filter-option-row .help-tip[data-icon]::before {
+    display: block;
+}
+
+@media (hover: none), (pointer: coarse) {
+    .filter-checkbox-row .help-tip,
+    .filter-option-row .help-tip {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .filter-checkbox-row .help-tip[data-tooltip]:focus::after,
+    .filter-checkbox-row .help-tip[data-tooltip]:active::after,
+    .filter-option-row .help-tip[data-tooltip]:focus::after,
+    .filter-option-row .help-tip[data-tooltip]:active::after {
+        opacity: 1;
+    }
+}
+
 .filter-group input[type="range"] {
     width: 100%;
     padding: 0;
@@ -130,6 +160,34 @@
 
 .sidebar-actions {
     position: static;
+}
+
+/* Desktop: the whole column sticks and scrolls as one, so the Actions panel stays
+   in reach while a long grid scrolls -- it used to scroll away while Filters (the
+   only sticky panel) stayed. Sticking each panel separately would stack them at the
+   same offset, Filters sliding over Actions. Inside the column the panels neither
+   stick nor scroll on their own, so a dropdown near a panel's bottom isn't clipped
+   by that panel. The 4px padding (cancelled by the margin) keeps the panels'
+   shadows clear of the column's scroll box. Below the breakpoint the panels move
+   into the navbar (responsive.css), so none of this applies. */
+@media (width > 1200px) {
+    .sidebar-container {
+        position: sticky;
+        top: calc(var(--navbar-height, 64px) + 12px);  /* + the 4px padding = the panels' old 16px */
+        align-self: flex-start;
+        width: calc(280px + 8px);
+        max-height: calc(100vh - var(--navbar-height, 64px) - 28px);
+        max-height: calc(100dvh - var(--navbar-height, 64px) - 28px);
+        padding: 4px;
+        margin: -4px;
+        overflow-y: auto;
+    }
+
+    .sidebar-container > .sidebar {
+        position: static;
+        max-height: none;
+        overflow: visible;
+    }
 }
 
 .sidebar h2 {

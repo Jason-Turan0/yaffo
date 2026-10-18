@@ -74,12 +74,71 @@ def summarize_match_people(args: list[Any], session: Session) -> str:
     return f"Match faces in {media_item_label(session, media_item_id)} to known people"
 
 
-def _min_similarity(session: Session, threshold: Any) -> float:
-    """The Faces page's 0-100 similarity scale as a cosine similarity, calibrated to
-    this library's band."""
+# Face x person comparisons per match_faces call (the match_people bound).
+MAX_FACE_COMPARISONS = 5000
+
+
+def _id_list(value: Any, name: str) -> list[int]:
+    if not isinstance(value, list) or any(type(item) is not int for item in value):
+        raise ValueError(f"{name} must be a list of integer ids")
+    return value
+
+
+def match_faces(
+    session: Session, face_ids: list[int], person_ids: list[int] | None = None,
+) -> Annotated[list[dict], "A list of {face_id, media_item_id, matches: [{person_id, person_name, score (0.0–1.0)}]}, "
+                           "in face_ids order, each face's matches most similar first."]:
+    """Score the given faces (any status) against people: every person with an
+    assigned face, or only `person_ids`. Each face is scored against the person's
+    faces from the same stage of life, as find_similar_faces does. Unknown face ids
+    and people with no assigned faces yet are skipped. At most 5,000 face x person
+    comparisons per call: page through faces (data_query sort_by + offset) for more."""
+    face_ids = _id_list(face_ids, "face_ids")
+    if person_ids is not None:
+        person_ids = _id_list(person_ids, "person_ids")
+    people = person_repository.get_people_with_embeddings(session)
+    if person_ids is not None:
+        wanted = set(person_ids)
+        people = [person for person in people if person.id in wanted]
+    unique_face_ids = list(dict.fromkeys(face_ids))
+    if len(unique_face_ids) * max(1, len(people)) > MAX_FACE_COMPARISONS:
+        raise ValueError(
+            f"match_faces compares at most {MAX_FACE_COMPARISONS} face x person pairs per call "
+            f"({len(unique_face_ids)} faces x {len(people)} people); pass fewer face_ids or person_ids"
+        )
+    if not unique_face_ids or not people:
+        return []
+    face_by_id = {face.id: face for face in media_repository.get_faces_by_ids(session, unique_face_ids)
+                  if face.embedding is not None}
+    faces = [face_by_id[face_id] for face_id in unique_face_ids if face_id in face_by_id]
+    matches: dict[int, list[dict]] = {face.id: [] for face in faces}
+    for person in people:
+        for face_id, score in calculate_similarity(person, faces).items():
+            matches[face_id].append({"person_id": person.id, "person_name": person.name, "score": round(score, 4)})
+    return [
+        {"face_id": face.id, "media_item_id": face.media_item_id,
+         "matches": sorted(matches[face.id], key=lambda match: match["score"], reverse=True)}
+        for face in faces
+    ]
+
+
+def summarize_match_faces(args: list[Any], session: Session) -> str:
+    face_ids = args[0] if args and isinstance(args[0], list) else []
+    person_ids = args[1] if len(args) > 1 and isinstance(args[1], list) else None
+    faces = f"{len(face_ids)} face{'' if len(face_ids) == 1 else 's'}"
+    if person_ids is None:
+        return f"Match {faces} to known people"
+    if len(person_ids) == 1:
+        return f"Match {faces} to {person_label(session, person_ids[0])}"
+    return f"Match {faces} to {len(person_ids)} people"
+
+
+def _min_similarity(threshold: Any) -> float:
+    """The Faces page's 0-100 similarity scale as a cosine similarity, on the face
+    model's fixed similarity band."""
     if not isinstance(threshold, (int, float)) or isinstance(threshold, bool) or not 0 <= threshold <= 100:
         raise ValueError("threshold must be a number from 0 to 100")
-    return ui_threshold_to_similarity(threshold, *person_repository.get_similarity_bounds(session))
+    return ui_threshold_to_similarity(threshold)
 
 
 def _bounded_limit(limit: Any, maximum: int) -> int:
@@ -94,7 +153,7 @@ def suggest_face_clusters(
     """Group unassigned faces that look alike, as the Faces page does (Group by:
     Similarity), over the oldest 2,000 unassigned faces. `threshold` is the page's
     0-100 similarity scale: higher gives tighter, smaller clusters."""
-    min_similarity = _min_similarity(session, threshold)
+    min_similarity = _min_similarity(threshold)
     limit = _bounded_limit(limit, 200)
     faces = person_repository.unassigned_faces(session, MAX_UNASSIGNED_FACES)
     photo_of_face = {face.id: face.media_item_id for face in faces}
@@ -119,7 +178,7 @@ def find_similar_faces(
     faces, scored against the person's faces from the same stage of life.
     `threshold` is the Faces page's 0-100 similarity scale. Empty when the person
     is unknown or has no assigned faces yet."""
-    min_similarity = _min_similarity(session, threshold)
+    min_similarity = _min_similarity(threshold)
     limit = _bounded_limit(limit, MAX_UNASSIGNED_FACES)
     person = person_repository.get_person_by_id(session, person_id)
     if person is None:

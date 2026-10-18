@@ -53,7 +53,7 @@ window.PHOTO_ORGANIZER.people.initFaces = (i18n, _config) => {
                 : Number(card.dataset.similarity);
             const date = window.PHOTO_ORGANIZER.utils?.date?.format(card.dataset.date) || '';
             const similarityText = Number.isFinite(similarity)
-                ? i18n.percent(similarity / 100)
+                ? i18n.percent(similarity / 100, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
                 : i18n.t('common:notAvailable');
             tooltip.replaceChildren(
                 document.createTextNode(i18n.t('common:dateValue', { value: date })),
@@ -96,36 +96,69 @@ window.PHOTO_ORGANIZER.people.initFaces = (i18n, _config) => {
         setAllSelected(false);
     });
 
+    /** @returns {HTMLInputElement[]} the checked face checkboxes */
+    const selectedCheckboxes = () => Array.from(
+        document.querySelectorAll('.face-card input[type="checkbox"]:checked'),
+    ).filter((checkbox) => checkbox instanceof HTMLInputElement);
+
+    /**
+     * Copy the selected face ids into a form's hidden container and submit it.
+     * @param {HTMLInputElement[]} checkboxes
+     * @param {string} containerId
+     * @param {string} formId
+     */
+    const submitSelection = (checkboxes, containerId, formId) => {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.replaceChildren(...checkboxes.map((checkbox) => {
+            const hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = 'faces';
+            hidden.value = checkbox.value;
+            return hidden;
+        }));
+        const form = document.getElementById(formId);
+        if (form instanceof HTMLFormElement) form.submit();
+    };
+
     document.getElementById('remove-selected-faces')?.addEventListener('click', async () => {
-        const selectedCheckboxes = document.querySelectorAll(
-            '.face-card input[type="checkbox"]:checked',
-        );
-        if (selectedCheckboxes.length === 0) {
+        const selected = selectedCheckboxes();
+        if (selected.length === 0) {
             window.notification.warning(i18n.t('people:faces.selectRequired'));
             return;
         }
 
         const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
             title: i18n.t('people:faces.removeTitle'),
-            message: i18n.t('people:faces.removeMessage', { count: selectedCheckboxes.length }),
+            message: i18n.t('people:faces.removeMessage', { count: selected.length }),
             confirmText: i18n.t('people:faces.removeConfirm'),
             confirmClass: 'btn-danger',
         });
         if (!confirmed) return;
+        submitSelection(selected, 'selected-faces-container', 'remove-form');
+    });
 
-        const container = document.getElementById('selected-faces-container');
-        if (!container) return;
-        container.replaceChildren();
-        selectedCheckboxes.forEach((checkbox) => {
-            if (!(checkbox instanceof HTMLInputElement)) return;
-            const hidden = document.createElement('input');
-            hidden.type = 'hidden';
-            hidden.name = 'faces';
-            hidden.value = checkbox.value;
-            container.appendChild(hidden);
+    document.getElementById('move-selected-faces')?.addEventListener('click', async () => {
+        const selected = selectedCheckboxes();
+        if (selected.length === 0) {
+            window.notification.warning(i18n.t('people:faces.moveSelectRequired'));
+            return;
+        }
+        const target = document.getElementById('move-target-person');
+        if (!(target instanceof HTMLSelectElement) || !target.value) {
+            window.notification.warning(i18n.t('people:faces.movePersonRequired'));
+            return;
+        }
+
+        const person = target.options[target.selectedIndex]?.text.trim() ?? '';
+        const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
+            title: i18n.t('people:faces.moveTitle'),
+            message: i18n.t('people:faces.moveMessage', { count: selected.length, person }),
+            confirmText: i18n.t('people:faces.moveConfirm'),
+            confirmClass: 'btn-primary',
         });
-        const form = document.getElementById('remove-form');
-        if (form instanceof HTMLFormElement) form.submit();
+        if (!confirmed) return;
+        submitSelection(selected, 'move-faces-container', 'move-form');
     });
 
     return { setAllSelected };

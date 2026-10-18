@@ -2,12 +2,13 @@ import tempfile
 import shutil
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 import pytest
 import numpy as np
 from PIL import Image
 import piexif
 
+from yaffo.db.models import Face, MediaItem, MediaLabel, PersonFace, Tag
 from yaffo.utils.index_photos import (
     get_photo_files,
     save_face_thumbnail,
@@ -511,6 +512,7 @@ class TestDeleteOrphanedPhotos:
         mock_face_query = Mock()
         mock_tag_query = Mock()
         mock_photo_query = Mock()
+        mock_dependent_query = Mock()
 
         mock_face_query.filter.return_value.all.return_value = []  # no thumbnails to unlink
         mock_face_query.filter.return_value.delete.return_value = 5
@@ -520,13 +522,14 @@ class TestDeleteOrphanedPhotos:
         # Setup query to return appropriate mocks (identity, since columns
         # overload == to build SQL clauses rather than booleans)
         def query_side_effect(model):
-            from yaffo.db.models import Face, MediaItem, Tag
             if model is Face.full_file_path or model is Face:
                 return mock_face_query
             elif model is Tag:
                 return mock_tag_query
             elif model is MediaItem:
                 return mock_photo_query
+            elif model is MediaLabel or model is PersonFace:
+                return mock_dependent_query
 
         mock_db_session.query.side_effect = query_side_effect
 
