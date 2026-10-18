@@ -28,6 +28,8 @@ const CONTAINER_STAGING = `${CONTAINER_CWD}/.doc-staging/captures`;
 export const DOCS_NETWORK = "yaffo-docs";
 export const DOCS_APP_CONTAINER = "yaffo-docs-app";
 export const DOCS_APP_PORT = 5002;
+export const DOCS_PEER_PORT = DOCS_APP_PORT + 1;
+export const CONTAINER_PEER_URL = `http://${DOCS_APP_CONTAINER}:${DOCS_PEER_PORT}`;
 /** The sandbox as the capture container addresses it. */
 export const CONTAINER_BASE_URL = `http://${DOCS_APP_CONTAINER}:${DOCS_APP_PORT}`;
 
@@ -153,6 +155,8 @@ export interface AppContainerOptions {
     detach?: boolean;
     /** Host port the sandbox is published on, at loopback only. */
     hostPort?: number;
+    /** Build or serve a second Yaffo instance in the same container. */
+    withPeer?: boolean;
     mounts?: {data: string; assets: string};
 }
 
@@ -177,9 +181,11 @@ export const buildAppArgs = (options: AppContainerOptions): string[] => {
         "--network", DOCS_NETWORK,
         ...(serve ? [
             "--name", DOCS_APP_CONTAINER,
+            "--label", `yaffo.docs.peer=${Boolean(options.withPeer)}`,
             // Loopback only: the host's own tools (docs:heal's browser, your browser)
             // use it, and nothing else on the LAN should.
             "-p", `127.0.0.1:${options.hostPort ?? DOCS_APP_PORT}:${DOCS_APP_PORT}`,
+            ...(options.withPeer ? ["-p", `127.0.0.1:${(options.hostPort ?? DOCS_APP_PORT) + 1}:${DOCS_PEER_PORT}`] : []),
         ] : []),
         "-v", `${options.repoDir}:${CONTAINER_REPO}:ro`,
         "-v", `${CONTAINER_CWD}/node_modules`,
@@ -214,6 +220,7 @@ export const buildAppArgs = (options: AppContainerOptions): string[] => {
         ...(serve
             ? ["--port", String(DOCS_APP_PORT), "--preseeded", "--docs"]
             : ["--build-seed", "--docs"]),
+        ...(options.withPeer ? ["--peer"] : []),
     ];
 };
 
@@ -247,6 +254,12 @@ const docker = (args: string[], dockerEnv: Record<string, string>, inherit = fal
 /** Whether the documentation sandbox container is up. */
 export const appContainerRunning = (dockerEnv: Record<string, string> = {}): boolean => {
     const result = docker(["inspect", "--format", "{{.State.Running}}", DOCS_APP_CONTAINER], dockerEnv);
+    return result.status === 0 && result.stdout.trim() === "true";
+};
+
+/** Whether the running app was launched with the peer enabled. */
+export const appContainerHasPeer = (dockerEnv: Record<string, string> = {}): boolean => {
+    const result = docker(["inspect", "--format", '{{index .Config.Labels "yaffo.docs.peer"}}', DOCS_APP_CONTAINER], dockerEnv);
     return result.status === 0 && result.stdout.trim() === "true";
 };
 

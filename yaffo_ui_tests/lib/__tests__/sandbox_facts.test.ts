@@ -27,13 +27,6 @@ describe("describeSandboxFacts", () => {
         expect(text).toContain("mediaIdByFilename");
     });
 
-    // These exist so duplicate detection has something to find; a shot of one is
-    // colour bars, not a photo library.
-    it("warns off the synthetic test patterns", () => {
-        const text = describeSandboxFacts(facts({videos: ["1mb-example-video-file.mp4"]}));
-        expect(text).toMatch(/1mb-example-video-file\.mp4`\s+← synthetic test pattern/);
-    });
-
     it("leaves real media unflagged", () => {
         const text = describeSandboxFacts(facts({videos: ["2021-07-11_boy-and-the-waves.mp4"]}));
         expect(text).toMatch(/boy-and-the-waves\.mp4`$/m);

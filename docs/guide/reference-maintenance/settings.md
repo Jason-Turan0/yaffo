@@ -74,8 +74,11 @@ that section.
 
 ## Media Directories
 
-The folders Yaffo scans for photos and videos to index. Yaffo reads these files
-in place; it does not move or modify your originals.
+The folders Yaffo scans for photos and videos to index. Yaffo indexes these files
+in place. Adding a directory does not move or modify the originals. If you
+enable metadata write-back through
+[Export photo tag](../create-customize/automations.md#write-metadata-back-to-files),
+that automation writes the selected fields into the original files.
 
 - **Add Directory** — type a path or **Browse…** to a folder, then add it.
 - **Remove** — stop scanning a folder. This does not delete anything on disk.

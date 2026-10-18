@@ -10,11 +10,11 @@
 > gates, the agentic loop (evidence, triage, fix, tool loop, preflight, sandbox facts),
 > and six entry points. The server-side observer is `yaffo/doc_observer.py`.
 >
-> **Content** — `yaffo_ui_tests/user_doc_automation/spec.yaml` declares **25 guide
-> pages**. There are **20 walkthroughs and lockfiles covering 52 committed
-> screenshots**, including two dependency-only walkthroughs. Sixteen pages also have
+> **Content** — `yaffo_ui_tests/user_doc_automation/spec.yaml` declares **27 guide
+> pages**. There are **25 walkthroughs and lockfiles covering 83 committed
+> screenshots**, including two dependency-only walkthroughs. Seventeen pages also have
 > generation catalogs; a catalog is not required for capture or healing discovery.
-> All 20 lockfiles carry a watermark and dependency fingerprints.
+> All 25 lockfiles carry a watermark and dependency fingerprints.
 >
 > **Entry points**, all working: `docs:capture` (deterministic capture, `--promote`
 > writes into the guide, `--docker` containerizes, `--defer-errors` hands a thrown
@@ -303,8 +303,8 @@ describe the exact files on disk that were captured.
 **A page with no watermark is skipped only by Detector B, not reported wholly clean.**
 Its dependency hashes can still be checked without a commit reference.
 
-All 20 pages with walkthroughs currently have lockfiles carrying watermarks and
-dependency fingerprints. The five pages marked `walkthrough: false` have no
+All 25 pages with walkthroughs currently have lockfiles carrying watermarks and
+dependency fingerprints. The two pages marked `walkthrough: false` have no
 watermark, so quoted-string detection reports them as unwatermarked. This is not a
 claim that their prose is current. Detection output depends on the current checkout
 and its changes relative to each page's saved state.
@@ -488,14 +488,23 @@ same container, and the same seeded fixture produce the same images *and* the sa
 dependency set. Nothing about either output is inferred from a heuristic.
 
 The reference comparison and uninstalling pages have `walkthrough: false`. The
-other 20 pages have walkthroughs.
+other 25 pages have walkthroughs.
 `start-here/concepts` and `library-basics/organizing-photos` capture no images and
-exist for dependency observation; the remaining 18 walkthroughs own 52 screenshots.
+exist for dependency observation; the remaining 23 walkthroughs own 83 screenshots.
 
 `create-customize/automations` uses the seeded, disabled **File favorite kid photos**
 automation for three stable shots and a real dry-run. Its flow creates and removes a
 temporary custom automation while covering details, assistant generation, schedules,
 events, system restrictions, and deletion.
+
+`organize-review/albums` creates and deletes demonstration albums while leaving
+the seeded volleyball album unchanged. The Sharing section has separate
+walkthroughs for pairing, granting access, receiving photos, and transfers.
+Their helpers in `user_doc_automation/_support/` pair the two sandbox instances,
+use stable local device labels, revoke demonstration grants, and dismiss finished
+transfer records. Downloaded demonstration copies stay in the peer's data directory.
+Pairing codes and device timestamps have comparison-only ignore regions. Relay-only
+states are explained in prose because this fixture uses the local-network path.
 
 ### Walkthroughs are generated, committed, and editable
 
@@ -1068,8 +1077,8 @@ quarantine or repair retry handling.
 fixture facts in the prompt. Media are identified by stable filenames rather than
 persisted numeric IDs, which can change on reseeding. `mediaIdByFilename` resolves
 IDs at runtime for both shot `goto` functions and dependency-only `flows`.
-Fixture facts use basenames rather than absolute paths and exclude synthetic
-`1mb-example-video-file*` test patterns.
+Fixture facts use basenames rather than absolute paths. The shared library contains
+real photos and the beach video; duplicate samples live outside the indexed library.
 
 **`preflight.ts`** verifies that the browser tool can navigate. A connected MCP
 server can advertise tools without being able to launch its browser. Preflight
@@ -1365,18 +1374,28 @@ TypeScript suites in `lib/user_doc_automation/__tests__/`, run with
 `npm run test:unit`, cover entry points, capture and Docker execution, environment
 boundaries, dependency/string detection, layout comparison, triage, and repair gates.
 
-## The documentation fixture
+## The shared sandbox fixture
 
-`buildDocumentationFixture` in `lib/services/isolated_runner.ts` builds the
-library used by documentation capture. `docs:sandbox:build` runs fixture setup in
+`buildSeedCache` in `lib/services/isolated_runner.ts` builds the
+library used by both documentation capture and the Playwright sandbox. `docs:sandbox:build` runs fixture setup in
 the pinned image; CI caches its data and assets using keys derived from fixture
 inputs and processing code.
 
+Pass `--peer` to both `docs:sandbox:build` and `docs:sandbox:start` to include the
+Obama peer library in the same app container. The peer data directory is
+`/tmp/yaffo-docs/peer`, covered by the existing data mount/cache. Host browsers reach
+it at `http://127.0.0.1:5003`; capture containers use `http://yaffo-docs-app:5003`.
+Both instances run P2P with separate QUIC ports and a deliberately unreachable hub,
+so pairing and transfers use LAN discovery. They start unpaired; pairing through the
+UI persists across restarts because sandbox-only device keys live in each data
+directory. Rebuilding resets the fixtures and keys. Detached startup waits for both
+HTTP servers. CI builds and starts with `--peer`.
+
 - **Video content.** The library includes
   `test_data/bennett/2021_gulf_beach_trip/2021-07-11_113104_boy-and-the-waves.mp4`.
-  Recursive video indexing (`YAFFO_SEED_RECURSIVE_VIDEOS=1`) includes nested fixture
-  videos. Synthetic `1mb-example-video-file*.mp4` patterns are excluded from the docs
-  library but remain available to UI tests. Video metadata must preserve camera-local
+  Video indexing always includes nested fixture videos. Synthetic test videos are
+  excluded from both sandbox libraries; the Python duplicate-detection unit tests
+  retain their separate video fixtures. Video metadata must preserve camera-local
   time; use exiftool's `DateTimeOriginal` when regenerating the fixture clip. See
   `docs/development/video.md`.
 

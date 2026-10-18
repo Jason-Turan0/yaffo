@@ -27,18 +27,8 @@ export default defineWalkthrough({
                 "media-card": ".photo-grid .photo-card >> nth=0",
             },
             viewport: {width: 1400, height: 1100},
-            // Two pieces of state are pinned here, for different reasons.
-            //
-            // `view` is persisted server-side and the timeline scrubber rewrites it,
-            // so an unpinned "/" inherits whatever the last visitor left behind.
-            //
-            // `year` is a workaround, not a preference. The shared fixture carries
-            // two 1mb-example-video-file test patterns that remove_duplicates needs,
-            // and being the newest videos they land in row two and dominate the shot.
-            // Scoping to the 2021 trip gives 13 real photos and one real clip, so the
-            // card affordances the page describes (play badge, duration) are still
-            // visible. Drop this once the docs run has its own fixture composition —
-            // see "Fixture work still required" in the plan.
+            // Pin the gallery view and the beach trip so the shot includes photo
+            // cards alongside the real video's play badge and duration.
             goto: "/?view=grid&year=2021",
             clip: ".main-container-layout",
             // End on a whole row; a raw height cut slices the bottom tiles in half.

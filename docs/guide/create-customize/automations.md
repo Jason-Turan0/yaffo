@@ -76,7 +76,7 @@ enabled, disabled, and tuned, but not deleted. They include:
 - **Auto-assign faces** — assigns new faces to people that already match.
 - **Classify labels** — runs label classification on new photos.
 - **Duplicate scan** — looks for duplicate photos.
-- **Export photo tag** — writes selected tags back to photo metadata.
+- **Export photo tag** — [writes selected metadata into the original files](#write-metadata-back-to-files).
 - **File sync** — keeps the index in step with your media folders.
 - **Geotag from neighbors** — fills in missing GPS from nearby photos taken close
   in time.
@@ -84,6 +84,41 @@ enabled, disabled, and tuned, but not deleted. They include:
 Select a system automation to turn its switch on or off or **Run…** it on demand.
 Open **When** to edit its triggers and **Configuration** to adjust its settings,
 such as a similarity threshold.
+
+### Write Metadata Back to Files
+
+Yaffo stores your organization in its database. **Export photo tag** can also
+write selected information into the original media files so other applications
+can read it. This changes files in your media directories; it does not create
+exported copies like a **Send to…** sync.
+
+Open **Library** → **Automations** → **Export photo tag**, then expand
+**Configuration**. All five export options are off by default:
+
+| Option | Written to the file |
+|---|---|
+| **Export Location Tags** | The assigned location name, rather than GPS coordinates. |
+| **Export People Tags** | Names of people assigned to faces in the photo. People tags are not written to videos. |
+| **Export Labels** | Classification labels as keywords. |
+| **Export Custom Tags** | Manual tags as keywords: `name: value`, or just `name` when there is no value. |
+| **Export Favorite** | A `Favorite` keyword when the item is marked as a favorite. |
+
+Choose the fields you want and click **Save**. Turn the automation on and check
+**When** for its triggers. With the photo-modified event trigger, later changes
+to affected items write the enabled fields. To write metadata for existing
+items, choose **Run…** and review its scope before starting. Check **Run
+history** afterwards; if a write fails, check that the original is available,
+writable, and in a supported format.
+
+Write-back supports JPEG, PNG, HEIC/HEIF, and supported video containers. Metadata
+fields vary by format and by what another application can read. This automation
+does not export capture-date corrections, GPS coordinates, or album membership.
+
+Turning an export option off stops future writes for that field; it does not
+remove metadata already written. Do not rely on deleting a tag or unmarking a
+favorite in Yaffo to erase its embedded value: keyword writes through ExifTool
+merge with existing keywords. If you need to remove embedded metadata, inspect
+the original file in a metadata editor.
 
 ## Create a Custom Automation
 

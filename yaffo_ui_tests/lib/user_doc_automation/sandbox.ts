@@ -5,6 +5,8 @@
  *   npm run docs:sandbox:build             # build the fixture (slow; reused after)
  *   npm run docs:sandbox:start             # serve it; Ctrl-C stops it
  *   npm run docs:sandbox:start -- --detach # serve in the background, wait for ready
+ *   npm run docs:sandbox:build -- --peer   # build both fixture libraries
+ *   npm run docs:sandbox:start -- --peer --detach
  *   npm run docs:sandbox:stop
  *
  * The fixture is built and served by the same image on every machine so thumbnails,
@@ -17,8 +19,10 @@ import {pathToFileURL} from "url";
 import {resolve} from "path";
 import {
     appContainerRunning,
+    appContainerHasPeer,
     DOCS_APP_CONTAINER,
     DOCS_APP_PORT,
+    DOCS_PEER_PORT,
     docsMounts,
     dockerAvailable,
     prepareAppResources,
@@ -32,11 +36,12 @@ const HOST_URL = `http://127.0.0.1:${DOCS_APP_PORT}`;
 // Emulated amd64 on Apple Silicon starts slowly; CI is native and ready in seconds.
 const READY_TIMEOUT_MS = 300_000;
 
-const waitForReady = async (dockerEnv: Record<string, string>): Promise<boolean> => {
+const waitForReady = async (dockerEnv: Record<string, string>, withPeer: boolean): Promise<boolean> => {
     const deadline = Date.now() + READY_TIMEOUT_MS;
     while (Date.now() < deadline) {
         try {
-            if ((await fetch(HOST_URL)).ok) return true;
+            const urls = [HOST_URL, ...(withPeer ? [`http://127.0.0.1:${DOCS_PEER_PORT}`] : [])];
+            if ((await Promise.all(urls.map(async url => (await fetch(url)).ok))).every(Boolean)) return true;
         } catch {
             // Not listening yet.
         }
@@ -52,9 +57,10 @@ export const main = async (
 ): Promise<number> => {
     const [command] = args;
     if (!["build", "start", "stop"].includes(command)) {
-        console.error("Usage: sandbox.ts build | start [--detach] | stop");
+        console.error("Usage: sandbox.ts build [--peer] | start [--peer] [--detach] | stop");
         return 2;
     }
+    const withPeer = args.includes("--peer");
     if (!dockerAvailable(dockerEnv)) {
         console.error("Docker is not reachable. Start Docker Desktop or Rancher Desktop, " +
             "then `npm run docker:build:docs-capture`. See README.md#docker.");
@@ -68,6 +74,11 @@ export const main = async (
                 "the fixture build replaces the database it is serving.");
             return 1;
         }
+        if (withPeer && !appContainerHasPeer(dockerEnv)) {
+            console.error("The docs sandbox is running without a peer. Stop it, then start with --peer.");
+            return 1;
+        }
+        if (withPeer && !(await waitForReady(dockerEnv, true))) return 1;
         console.log(`${DOCS_APP_CONTAINER} is already running at ${HOST_URL}`);
         return 0;
     }
@@ -77,14 +88,15 @@ export const main = async (
     const mounts = docsMounts();
     prepareAppResources(mounts, dockerEnv);
     if (command === "build") {
-        return runAppContainer({repoDir: REPO, mode: "fixture", mounts}, dockerEnv);
+        return runAppContainer({repoDir: REPO, mode: "fixture", mounts, withPeer}, dockerEnv);
     }
 
     const detach = args.includes("--detach");
-    const code = runAppContainer({repoDir: REPO, mode: "serve", detach, mounts}, dockerEnv);
+    const code = runAppContainer({repoDir: REPO, mode: "serve", detach, mounts, withPeer}, dockerEnv);
     if (!detach || code !== 0) return code;
-    if (await waitForReady(dockerEnv)) {
-        console.log(`✅ ${DOCS_APP_CONTAINER} is ready at ${HOST_URL}`);
+    if (await waitForReady(dockerEnv, withPeer)) {
+        console.log(`✅ ${DOCS_APP_CONTAINER} is ready at ${HOST_URL}` +
+            (withPeer ? `; peer at http://127.0.0.1:${DOCS_PEER_PORT}` : ""));
         return 0;
     }
     console.error(`${DOCS_APP_CONTAINER} did not become ready. Its output:`);

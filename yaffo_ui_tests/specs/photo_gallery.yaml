@@ -7,7 +7,7 @@ tags:
 
 preconditions:
   - Application is running
-  - Database contains sample photos and browser-playable (h264) sample videos
+  - Database contains Bennett photos and the browser-playable (h264) beach video, 2021-07-11_113104_boy-and-the-waves.mp4
 
 context:
   - tag: gallery-template

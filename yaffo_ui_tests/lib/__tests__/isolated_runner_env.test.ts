@@ -3,7 +3,7 @@ import {readFileSync} from "node:fs";
 import {join} from "node:path";
 import {
     environmentFileContents, environmentWithoutProviderKeys, IsolatedEnvironment, needsFakeSyncServices,
-    PROVIDER_KEY_ENV_VARS,
+    PROVIDER_KEY_ENV_VARS, p2pEnv,
 } from "@lib/services/isolated_runner";
 
 describe("environmentWithoutProviderKeys", () => {
@@ -33,5 +33,19 @@ describe("the CI environment file", () => {
         const environment = {tempDir: "/tmp/yaffo_test_1", fakeImmichUrl: "http://127.0.0.1:7001"} as IsolatedEnvironment;
         expect(environmentFileContents(environment)).toBe(
             "FAKE_FLICKR_URL=\nFAKE_ONEDRIVE_URL=\nFAKE_IMMICH_URL=http://127.0.0.1:7001\nYAFFO_DATA_DIR=/tmp/yaffo_test_1\n");
+    });
+});
+
+
+describe("sandbox P2P identities", () => {
+    it("keeps test identities ephemeral and docs identities scoped to their persisted data directories", () => {
+        expect(p2pEnv(5002)).toMatchObject({YAFFO_P2P_EPHEMERAL_IDENTITY: "1", YAFFO_P2P_PORT: "15002"});
+        expect(p2pEnv(5002)).not.toHaveProperty("YAFFO_P2P_KEY_FILE");
+        expect(p2pEnv(5002, "/tmp/docs")).toMatchObject({
+            YAFFO_P2P_EPHEMERAL_IDENTITY: "0", YAFFO_P2P_KEY_FILE: join("/tmp/docs", "p2p-key.pem"),
+        });
+        expect(p2pEnv(5003, "/tmp/docs/peer")).toMatchObject({
+            YAFFO_P2P_PORT: "15003", YAFFO_P2P_KEY_FILE: join("/tmp/docs/peer", "p2p-key.pem"),
+        });
     });
 });

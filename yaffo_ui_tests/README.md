@@ -233,6 +233,11 @@ data when Playwright exits or you press Ctrl+C. Enter `q` at either menu to quit
 Sharing scenarios depend on earlier scenarios: run the complete sharing suite
 in order in UI mode.
 
+Playwright uses the same primary seed content as documentation capture: the Bennett
+photos and beach video, "Maya's Big Game" album, example page drafts and Flickr
+service, plus duplicate samples outside the indexed library. Synthetic test videos
+are not copied into the sandbox.
+
 Build the seed cache once with `npm run seed:build`, or pass `--fresh` to seed
 new data. Reports are written to `reports/local__<suite>/`.
 
@@ -437,7 +442,9 @@ containing directory, gives each directory a disposable copy of the cached
 database/media tree, and cleans that copy after the directory finishes. Set
 `TEST_SANDBOX_CONCURRENCY` to change the number of simultaneous directories
 (default `5`), or pass one or more directories/specs after `--` to run a subset.
-If the default port range is occupied, set `TEST_SANDBOX_BASE_PORT` or pass
+The runner searches for free port pairs starting at 5002, skipping occupied
+ports automatically. Sharing suites also check the corresponding peer transport
+ports. To change where the search starts, set `TEST_SANDBOX_BASE_PORT` or pass
 `--base-port <port>` after `--`.
 
 #### Troubleshooting local failures
@@ -453,7 +460,7 @@ TEST_SANDBOX_CONCURRENCY=1 npm run test:sandboxed -- --base-port 5202
 
 The sharing command starts both instances and selects the sharing project.
 Run its complete spec: the scenarios depend on pairing, grants, and downloads
-created by earlier scenarios. A missing `Seeded Album` can mean the tests are
+created by earlier scenarios. A missing `Maya's Big Game` can mean the tests are
 using a modified or different library; inspect the failure's `error-context.md`
 before changing the locator. If the cache itself is stale, rebuild it with
 `npm run seed:build` before rerunning.
@@ -640,6 +647,24 @@ npm run docs:sandbox:build     # slow, especially emulated; reused until rebuilt
 npm run docs:sandbox:start     # Ctrl-C stops it; add -- --detach to background it
 ```
 
+For sharing documentation, build and start both installations:
+
+```bash
+npm run docs:sandbox:stop
+npm run docs:sandbox:build -- --peer
+npm run docs:sandbox:start -- --peer --detach
+```
+
+The primary is at `http://127.0.0.1:5002`; the peer is at
+`http://127.0.0.1:5003`. Both run inside `yaffo-docs-app`, with separate databases,
+workers, and P2P ports. From the capture container, the peer is
+`http://yaffo-docs-app:5003`. Pair the devices through the Sharing UI; they start
+unpaired. The peer data lives at `/tmp/yaffo-docs/peer` inside the existing data
+volume. Sandbox device keys persist there and in the primary directory, so pairing
+survives a stop/start; rebuilding replaces the fixture and resets pairing.
+`docs:sandbox:stop` stops both instances. Starting with `--peer` requires a fixture
+built with `--peer`; stop an already-running single-instance sandbox before switching.
+
 ```bash
 npm run docs:capture:docker
 npm run docs:capture:docker -- --promote library-basics/browsing-filtering
@@ -677,7 +702,8 @@ to its data and asset volumes. Neither gets a provider key, and the capture's
 environment is an allowlist (see `lib/user_doc_automation/env.ts`) that deliberately
 carries no `DOCKER_HOST` — the daemon socket is root on the host, and handing it to
 generated code would make the container pointless. The app uses keyring's null
-backend: the container has no OS keychain, and the docs sandbox stores no secrets.
+backend: the container has no OS keychain. With a peer, sandbox device keys are
+stored only in the fixture data directories.
 
 `npm run isolatedEnvironment:start:docs` still serves a host-built fixture on
 `127.0.0.1:5002` for quick host-side work with `npm run docs:capture`. Never promote

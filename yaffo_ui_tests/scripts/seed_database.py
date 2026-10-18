@@ -696,25 +696,17 @@ def seed_example_page_drafts(db) -> None:
           f"started {running.started_at.isoformat()} UTC)")
 
 
-def seed_albums(db, docs: bool = False) -> None:
-    """One album with a few members, so album screens have something to show without a
-    test having to build one first. Runs AFTER indexing — an album needs media items.
-
-    The documentation instance gets a presentable album instead: the volleyball
-    photos as "Maya's Big Game". The UI tests keep "Seeded Album", which their specs
-    select by name."""
+def seed_albums(db, seed_profile: str) -> None:
+    """Seed the primary library's volleyball album after indexing."""
     from yaffo.db.models import MediaItem
     from yaffo.db.repositories import album_repository
 
-    if album_repository.list_albums(db.session):
+    if seed_profile != SEED_PROFILE_BENNETT or album_repository.list_albums(db.session):
         return
-    query = db.session.query(MediaItem.id)
-    if docs:
-        name, description = "Maya's Big Game", "Her volleyball tournament, July 2026"
-        query = query.filter(MediaItem.full_file_path.like("%/volleyball/%")).order_by(MediaItem.date_taken)
-    else:
-        name, description = "Seeded Album", "Seeded for UI tests"
-        query = query.order_by(MediaItem.date_taken.desc()).limit(4)
+    name, description = "Maya's Big Game", "Her volleyball tournament, July 2026"
+    query = db.session.query(MediaItem.id).filter(
+        MediaItem.full_file_path.like("%/volleyball/%")
+    ).order_by(MediaItem.date_taken)
     photo_ids = [row[0] for row in query.all()]
     if not photo_ids:
         print("  Skipped album seed: no indexed media items")
@@ -756,8 +748,7 @@ def index_media_library(photos_dir: Path, thumbnail_dir: Path) -> int:
         processed_results.append(indexed_photo)
         print(f"  Indexed: {photo_path.name}")
 
-    video_glob = "**/*.mp4" if os.environ.get("YAFFO_SEED_RECURSIVE_VIDEOS") == "1" else "*.mp4"
-    for video_path in sorted(photos_dir.glob(video_glob), key=lambda path: path.name.lower()):
+    for video_path in sorted(photos_dir.rglob("*.mp4"), key=lambda path: path.name.lower()):
         try:
             indexed_video = index_video(video_path, thumbnail_dir)
         except Exception as e:
@@ -877,11 +868,9 @@ def seed_database() -> int:
         seed_media_labels(db)
 
         # After indexing: an album needs media items to hold.
-        seed_albums(db, docs=os.environ.get("YAFFO_SEED_DOCS") == "1")
+        seed_albums(db, seed_profile)
 
-        # Documentation only: the UI-test databases start with no custom services,
-        # and the sync-service specs create their own.
-        if os.environ.get("YAFFO_SEED_DOCS") == "1":
+        if seed_profile == SEED_PROFILE_BENNETT:
             seed_example_photo_service(db)
             seed_example_page_drafts(db)
 

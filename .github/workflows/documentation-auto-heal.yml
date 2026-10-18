@@ -17,7 +17,7 @@ on:
       - "yaffo_ui_tests/package.json"
       - "yaffo_ui_tests/scripts/seed_database.py"
       - "yaffo_ui_tests/test_data/bennett/**"
-      - "yaffo_ui_tests/test_data/mp4/**"
+      - "yaffo_ui_tests/test_data/obama/**"
       - "yaffo_ui_tests/user_doc_automation/**"
   workflow_dispatch:
     inputs:
@@ -83,7 +83,7 @@ jobs:
       - name: Compute documentation fixture cache key
         id: seed-key
         run: |
-          echo "seed_key=docs-seed-${{ runner.os }}-${{ hashFiles('yaffo_ui_tests/test_data/bennett/**', 'yaffo_ui_tests/test_data/mp4/**', 'yaffo_ui_tests/scripts/seed_database.py', 'yaffo_ui_tests/lib/services/isolated_runner.ts', 'yaffo_ui_tests/docker/docs-capture/Dockerfile', 'yaffo/utils/index_photos.py', 'yaffo/utils/index_video.py', 'yaffo/utils/face_analysis.py', 'yaffo/utils/image_classifier.py', 'yaffo/download_assets.py', 'yaffo/db/models.py', 'pyproject.toml') }}-v2" >> "$GITHUB_OUTPUT"
+          echo "seed_key=docs-seed-${{ runner.os }}-${{ hashFiles('yaffo_ui_tests/test_data/bennett/**', 'yaffo_ui_tests/test_data/obama/**', 'yaffo_ui_tests/scripts/seed_database.py', 'yaffo_ui_tests/lib/services/isolated_runner.ts', 'yaffo_ui_tests/docker/docs-capture/Dockerfile', 'yaffo/utils/index_photos.py', 'yaffo/utils/index_video.py', 'yaffo/utils/face_analysis.py', 'yaffo/utils/image_classifier.py', 'yaffo/download_assets.py', 'yaffo/db/models.py', 'pyproject.toml') }}-v2" >> "$GITHUB_OUTPUT"
 
   seed-cache:
     name: Build documentation fixture
@@ -121,7 +121,7 @@ jobs:
         # Created first so Docker does not create the bind sources root-owned.
         run: |
           mkdir -p "$DOCS_DATA_MOUNT" "$DOCS_ASSET_MOUNT"
-          npm run docs:sandbox:build
+          npm run docs:sandbox:build -- --peer
 
   heal:
     name: Heal ${{ matrix.page }}
@@ -183,7 +183,7 @@ jobs:
         # The app runs in the docs image too, so its thumbnails, face and label results,
         # and fixture paths match a local capture. Published on 127.0.0.1:5002 for the
         # healer's host browser; the capture container reaches it over the docs network.
-        run: npm run docs:sandbox:start -- --detach
+        run: npm run docs:sandbox:start -- --peer --detach
       - name: Validate documentation automation
         working-directory: yaffo_ui_tests
         run: npm run docs:validate

@@ -1,7 +1,7 @@
 import { rename } from 'node:fs/promises';
 import { join } from 'node:path';
 import { test, expect, Page } from '@playwright/test';
-import { findFirstPhotoIdWithDetectedFaces, findMediaIdByFilename, PRIMARY_DETAIL_IMAGE } from '../_support/media-test-data';
+import { findFirstPhotoIdWithDetectedFaces, findMediaIdByFilename, PRIMARY_DETAIL_IMAGE, PRIMARY_VIDEO } from '../_support/media-test-data';
 import {
   CONTRACT_WIDTHS,
   VIEWPORTS,
@@ -209,13 +209,10 @@ test.describe('Photo Details - Responsive', () => {
   });
 
   test('photo_details_video_fits_a_narrow_viewport - a video detail page contains its player', async ({ page, request }) => {
-    const listing = await request.get('/?media-type=video&page-size=50');
-    expect(listing.ok()).toBeTruthy();
-    const match = (await listing.text()).match(/\/media\/view\/(\d+)/);
-    expect(match, 'Expected at least one seeded video').not.toBeNull();
+    const videoId = await findMediaIdByFilename(request, PRIMARY_VIDEO);
 
     await page.setViewportSize(VIEWPORTS.narrow);
-    await page.goto(`/media/view/${match![1]}`);
+    await page.goto(`/media/view/${videoId}`);
 
     const player = page.locator('video.photo-main, img.photo-main, .media-missing');
     await expect(player.first()).toBeVisible();
@@ -225,14 +222,10 @@ test.describe('Photo Details - Responsive', () => {
   });
 
   test('photo_details_missing_video_state_fits_a_narrow_viewport - a missing source remains a usable detail page', async ({ page, request }) => {
-    const listing = await request.get('/?media-type=video&page-size=50');
-    expect(listing.ok()).toBeTruthy();
-    const videoIds = [...new Set([...((await listing.text()).matchAll(/\/media\/view\/(\d+)/g))]
-      .map((match) => match[1]))];
-    expect(videoIds.length, 'Expected at least one seeded video').toBeGreaterThan(0);
+    const videoId = await findMediaIdByFilename(request, PRIMARY_VIDEO);
 
     await page.setViewportSize(VIEWPORTS.narrow);
-    await page.goto(`/media/view/${videoIds.at(-1)}`);
+    await page.goto(`/media/view/${videoId}`);
 
     const fileInfo = page.locator('.detail-section').filter({ hasText: 'File Information' });
     const fileName = (await fileInfo.locator('.detail-item').filter({ hasText: 'Name:' })

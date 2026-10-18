@@ -22,8 +22,8 @@ import {
 // else depends on).
 test.describe.configure({ mode: 'default' });
 
-const SEEDED_ALBUM = 'Seeded Album';
-const SEEDED_MEMBER_COUNT = 4;
+const SEEDED_ALBUM = "Maya's Big Game";
+const SEEDED_MEMBER_COUNT = 3;
 
 // The app-wide confirm modal (components/confirm-dialog.js) — albums.js opens it
 // for delete/remove; no native window.confirm is involved.
@@ -165,7 +165,7 @@ test.describe('Albums Feature', () => {
     const modal = page.locator('#editAlbumModal');
     await expect(modal).toBeVisible();
     await expect(page.locator('#edit-album-name')).toHaveValue(SEEDED_ALBUM);
-    await expect(page.locator('#edit-album-description')).toHaveValue('Seeded for UI tests');
+    await expect(page.locator('#edit-album-description')).toHaveValue('Her volleyball tournament, July 2026');
 
     // Rename it
     await page.locator('#edit-album-name').fill('Renamed Album E2E');
@@ -195,7 +195,7 @@ test.describe('Albums Feature', () => {
     await page.locator('#edit-album-details-button').click();
     await expect(modal).toBeVisible();
     await page.locator('#edit-album-name').fill(SEEDED_ALBUM);
-    await page.locator('#edit-album-description').fill('Seeded for UI tests');
+    await page.locator('#edit-album-description').fill('Her volleyball tournament, July 2026');
     await modal.locator('button[type="submit"]').click();
     await page.waitForURL(albumPath);
     await expect(page.locator('.page-header h1')).toContainText(SEEDED_ALBUM);
