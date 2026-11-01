@@ -23,7 +23,7 @@ except ImportError:
     _build_info = None
 
 MICROSOFT_CLIENT_ID = "de78c8bb-c682-4f8c-853c-979edc53a42c"
-GOOGLE_CLIENT_ID = "150163256384-1mduv8hmpulmc4tmu4nhquu19rcsp5ff.apps.googleusercontent.com"
+GOOGLE_CLIENT_ID = "16676249361-fo2997thqmohfd97uvtqbvv94akjpoud.apps.googleusercontent.com"
 
 
 def microsoft_client_id() -> str:

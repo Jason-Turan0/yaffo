@@ -129,9 +129,9 @@ Library API any more, which matches the design (it isn't planned).
 
 Steps in the [Google Cloud console](https://console.cloud.google.com):
 
-1. **New project** `Yaffo` (registered: project ID `yaffo-511203`, with a
-   billing account linked because the form requires one; the Photos Library
-   API has no charges). **APIs & Services → Enable APIs** → *Photos Library
+1. **Project:** Yaffo's Google Cloud project, `gen-lang-client-0392476874`
+   (display name *Yaffo*; it also holds the hub, demo, DNS and Gemini key).
+   A billing account must be linked; the Photos Library API has no charges. **APIs & Services → Enable APIs** → *Photos Library
    API*.
 2. **Google Auth Platform → Branding:**
    - App name `Yaffo`, user support email, and developer contact email.
@@ -173,7 +173,13 @@ found all three remote IDs. The Google Auth Platform console still shows
 branding links and authorized domain, and no restricted scopes. The demo video
 and verification submission remain.
 
-**Registered 2026-10-09:**
+**Moved 2026-11-01:** the consent screen and *Yaffo desktop* client were
+recreated in `gen-lang-client-0392476874` so all of Yaffo lives in one
+project. The original registration in `yaffo-511203` was retired. The client
+ID changed; builds made before the move sign in with the old client and stop
+working once that project is deleted.
+
+**Registered 2026-10-09 (original, project `yaffo-511203`, retired):**
 - Project `yaffo-511203`, in Testing, with turan.jason@gmail.com as the
   test user.
 - Desktop client *Yaffo desktop*.
@@ -250,7 +256,7 @@ Registered values:
 | Variable | Value |
 |---|---|
 | `YAFFO_OAUTH_MICROSOFT_CLIENT_ID` | `de78c8bb-c682-4f8c-853c-979edc53a42c` |
-| `YAFFO_OAUTH_GOOGLE_CLIENT_ID` | `150163256384-1mduv8hmpulmc4tmu4nhquu19rcsp5ff.apps.googleusercontent.com` (project `yaffo-511203`, client *Yaffo desktop*) |
+| `YAFFO_OAUTH_GOOGLE_CLIENT_ID` | `16676249361-fo2997thqmohfd97uvtqbvv94akjpoud.apps.googleusercontent.com` (project `gen-lang-client-0392476874`, client *Yaffo desktop*) |
 | `YAFFO_OAUTH_GOOGLE_CLIENT_SECRET` | not committed (secret scanners reject it on push). Set it when building: `packaging/bump_version.py` stamps it into the generated `yaffo/_build_info.py`, and the release workflow reads it from the repository secret of the same name. In a dev checkout, export it before running the app. It is still not confidential: it ships inside every build |
 
 `scripts/oauth_probe.py` reads the same variables. Until Phase 2 adds the
